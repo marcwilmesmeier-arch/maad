@@ -32,9 +32,17 @@ bevor sie angelegt waren), siehe Git-Verlauf. Der Rauchtest schlägt jetzt bei s
 
 ## C – Aufräumen (Lint-Hinweise, `node tools/lint.mjs --alle`)
 
-- 73 × `==` statt `===`: einzeln prüfen, ob die Typen sicher gleich sind.
-- 72 unbenutzte lokale Variablen: entfernen, wenn die Initialisierung keine Nebenwirkung hat.
-- 11 × `var`: durch `let`/`const` ersetzen.
+Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 8 × `var` → `let`/`const`.
+
+- 3 × `==` bleiben bewusst: `x.j == k` (`26-modellier-modus/030-leiste.js`, Schlüssel ist Text), `e[k] == v`
+  (Auswahllisten im Layout-Panel, Text gegen Zahl) und `k == b.levels.length - 1` (`05-…/030-mini.js`, Typ von
+  `k` nicht eindeutig).
+- 3 × `var` bleiben bewusst (`SK`, `SKLN`, `SZ` in `26-modellier-modus`): werden aus früheren Dateien schon vor
+  ihrer Definition gelesen (dann `undefined`); mit `let`/`const` wäre das ein Fehler.
+- 23 unbenutzte Variablen bleiben: Sie werden später noch zugewiesen (`pages++`, `moved = …`) oder stehen mit
+  einem Funktionsaufruf in einer Mehrfachdeklaration. Einzeln prüfen.
+- In der Bilanz-/Mengenausgabe wird ein Abschnitt mit `zoD(…)` erzeugt, aber nie angezeigt (früher Variable
+  `fl`). Fachlich klären: vergessen oder absichtlich ausgeblendet?
 - `treePruneB()` ist eine leere Funktion (Baumzuschnitt abgeschaltet): Aufrufer entfernen oder Funktion wiederherstellen.
 - Der MapTiler-Schlüssel steht im Code (`02-geodaten/010-kontextdaten.js`). Im MapTiler-Konto auf die eigene
   Domain beschränken.

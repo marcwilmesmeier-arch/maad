@@ -149,16 +149,6 @@ function lnPoint() {
   hd.addEventListener('pointerup', end);
   hd.addEventListener('pointercancel', end);
 
-  const upd = () => {
-    const l = num(document.getElementById('lnL').value),
-      a = num(document.getElementById('lnA').value);
-    LN.ovr = l > 0 || a != null ? { len: l > 0 ? l : null, ang: a } : null;
-    const q = lnPoint();
-    if (q) {
-      LN.last = q;
-      drawOv(q);
-    }
-  };
   ['lnL', 'lnA'].forEach((id) => {
     const el = document.getElementById(id);
     el.addEventListener('input', () => {

@@ -106,9 +106,7 @@ function pitPatch(m) {
   m.needsUpdate = true;
 }
 function pitBuild() {
-  const E = [],
-    GR = [],
-    items = [];
+  const items = [];
   let gi = 0;
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(b.levels || []).some((l) => l.ug)) return;

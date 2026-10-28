@@ -234,7 +234,7 @@ function clip3(poly, H) {
     const inp = out;
     out = [];
     if (!inp.length) break;
-    const d = (p) => (sg * p[ax] <= H ? H - sg * p[ax] : H - sg * p[ax]);
+
     for (let i = 0; i < inp.length; i++) {
       const a = inp[i],
         b = inp[(i + 1) % inp.length],

@@ -1,8 +1,7 @@
 // ---- Gebäudemaske für das Kronenmodell aus dem Höhenmodell selbst (Frankreich/Österreich): Dächer sind ebene Flächen, Kronen nicht
 function atMorph(m, W, H, r, dil) {
   const t = new Uint8Array(W * H),
-    o = new Uint8Array(W * H),
-    v = dil ? 1 : 0;
+    o = new Uint8Array(W * H);
   for (let j = 0; j < H; j++) {
     const b = j * W;
     for (let i = 0; i < W; i++) {

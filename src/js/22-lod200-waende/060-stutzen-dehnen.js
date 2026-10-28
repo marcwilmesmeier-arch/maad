@@ -164,8 +164,7 @@ function l2Fix(segs) {
         };
         segs = segs.map((s) => {
           s = s.slice();
-          const sx = s[2] - s[0],
-            sz = s[3] - s[1];
+
           [1, 0].forEach((end) => {
             const E = end ? [s[2], s[3]] : [s[0], s[1]],
               F = end ? [s[0], s[1]] : [s[2], s[3]];

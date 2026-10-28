@@ -117,7 +117,6 @@ function ktCard() {
   if (!b) return '';
   const A = cfp(b),
     B = ktBox(A),
-    f = (x) => String(Math.round(x * 100) / 100).replace('.', ','),
     ip = (js, v, u) =>
       `<input type="number" style="width:76px" min="0.5" step="0.05" value="${Math.round(v * 100) / 100}" onchange="${js}"> ${u || 'm'}`;
   let h =

@@ -200,7 +200,6 @@ function l2Auto(k, a, b) {
 }
 function l2Build(k, a) {
   const L = [],
-    d = (v) => Math.round(v) / 100,
     SM = {
       Kalksandstein: ['Kalksandstein-Mauerwerk', '331', '012'],
       Hochlochziegel: ['Hochlochziegel gefüllt', '331', '012'],

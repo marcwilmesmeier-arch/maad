@@ -154,7 +154,7 @@ function grEdges(lv) {
                 }),
               ),
             );
-            const vs2 = r.length ? lv._vt : [];
+
             const sv = new Set(lv._vt.map(l2k));
             vt.forEach((v) => {
               if (!sv.has(l2k(v))) lv._vt.push(v);

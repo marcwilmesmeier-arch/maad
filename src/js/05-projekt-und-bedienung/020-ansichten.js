@@ -94,7 +94,7 @@ function vwGo(i) {
   S.vact = null;
   if (!!S.m3 !== v.m3) {
     S.vgo = 1;
-    const d0 = V.d;
+
     setMode(v.m3 ? 1 : 0, 1);
     S.vgo = 0;
     V.d = v.d * 1.6;
@@ -150,7 +150,6 @@ function vwStep() {
     S.vanim = null;
   }
 }
-var anHook, homeHook, lbHook;
 function anView() {
   return S.vact != null ? S.views[S.vact] || null : null;
 }

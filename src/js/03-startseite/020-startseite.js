@@ -325,9 +325,7 @@ addEventListener('resize', () => VCP.forEach(([, p, b]) => vcPlace(p, b)));
 // ---- Aufbau
 function homeChips() {
   const nb = GEO.ranges ? GEO.ranges.length : 0,
-    np = AL.length,
-    W = innerWidth,
-    Hh = innerHeight;
+    np = AL.length;
   const _n = (v) => Math.round(v).toLocaleString('de-DE'),
     _a = GEO.acc || {},
     _res = GEO.N ? Math.round(GEO.size / GEO.N) : 0,
@@ -777,7 +775,7 @@ function homePos() {
     ry = Math.min(Hh * 0.33, 300);
   HOME.cp = [-148, -32, 32, 148, 90].map((a) => {
     const r = (a * Math.PI) / 180;
-    return [W / 2 + rx * Math.cos(r) + (a == 90 ? 40 : 0), Hh * 0.47 + ry * Math.sin(r)];
+    return [W / 2 + rx * Math.cos(r) + (a === 90 ? 40 : 0), Hh * 0.47 + ry * Math.sin(r)];
   });
   document.querySelectorAll('.hchip').forEach((e, i) => {
     if (HOME.cp[i]) {

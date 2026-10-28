@@ -227,7 +227,7 @@ function lbUpdate() {
   }
   const P = anP(),
     cp = act().position;
-  let k = 0;
+
   const ids = [...LB.el.keys()];
   LB.el.forEach((o, id) => {
     const l = o.l,

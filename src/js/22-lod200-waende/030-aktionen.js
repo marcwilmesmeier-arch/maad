@@ -51,7 +51,6 @@ function l2Target() {
   const G_ = l2Els(b),
     lv = grLv(b);
   if (!lv || lv.dg) return null;
-  const li = G_.lv.findIndex((l) => l.li === lv.i);
   let el = S.l2.sel && G_.els.find((x) => x.id === S.l2.sel);
   if (!el && GRS.sel && GRS.sel.k === 'c') {
     el = G_.els.find((x) => x.li === lv.i && x.gid === GRS.sel.g && x.kind !== 'AW');
@@ -563,7 +562,6 @@ function l2Draw() {
   const T_ = l2Target();
   if (T_ && T_.el.gid && T_.el.kind !== 'AW') {
     const D = l2Data(T_.lv),
-      al = D.al[T_.el.gid] || 'm',
       c = (T_.lv.obj.cuts || []).filter((c) => c[4] === T_.el.gid);
     x.save();
     x.setLineDash([5, 4]);

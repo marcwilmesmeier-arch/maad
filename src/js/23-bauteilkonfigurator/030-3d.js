@@ -83,7 +83,7 @@ function l2cPv(c) {
     const tot = Ls.reduce((s, l) => s + l.d, 0) * X;
     if (cat === 'W') {
       let x = -tot / 2;
-      const n = Ls.length;
+
       Ls.forEach((l, i) => {
         const w = l.d * X,
           H = 1.0 - i * 0.07;
@@ -93,7 +93,7 @@ function l2cPv(c) {
     } else {
       const n = Ls.length;
       let y = 0;
-      const tt = tot;
+
       for (let i = n - 1; i >= 0; i--) {
         const l = Ls[i],
           hh = l.d * X,

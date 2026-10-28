@@ -177,7 +177,7 @@ function l2ViewN(b, nx, nz, pos) {
 function l2FacGb(b, g, yr) {
   try {
     if (!b.fd) return '';
-    const V = fdViews(b);
+    fdViews(b);
     let sx = 0,
       sz = 0,
       sy = 0,

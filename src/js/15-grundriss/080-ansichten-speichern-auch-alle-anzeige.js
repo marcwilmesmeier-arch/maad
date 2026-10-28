@@ -456,7 +456,6 @@ function grUnBuild() {
       o.material && o.material.dispose && o.material.dispose();
     });
   });
-  const L = LY.find((l) => l[1] === 'un');
   G.un.visible = zoUnVis();
   S.bld.forEach((b) => {
     if (b.ex || !b.ub || b._y == null) return;

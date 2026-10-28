@@ -782,7 +782,6 @@ function xlPlace(s, q, items, media) {
   return q;
 }
 function xlRows(rs, ang0, tt) {
-  const fz = (n) => n;
   return rs.map((r) => ({
     nr: r.n,
     bz: r.bz || '',
@@ -814,8 +813,7 @@ const XLRC = (g) => [
 function xlPlans(kind, d) {
   const b = d.b,
     bn = b.name || b.id,
-    o = [],
-    fz = (v, n) => v.toFixed(n).replace('.', ',');
+    o = [];
   if (kind === 'lev') {
     const g = new Map();
     b.levels.forEach((l, i) => {

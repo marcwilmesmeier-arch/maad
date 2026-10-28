@@ -40,7 +40,7 @@ function anFinish() {
   if (!t) return;
   const need = t.k === 'poly' ? 3 : 2;
   if (t.p.length >= need) {
-    const o = anNew(t.k, t.p, { a0: t.a0 || 0, a1: t.a1 || 0 });
+    anNew(t.k, t.p, { a0: t.a0 || 0, a1: t.a1 || 0 });
     anTouch();
     AN.tool = 'sel';
     anBarUpd();
@@ -99,7 +99,7 @@ function anDelSel() {
       const q = anPt(e);
       if (!q) return;
       if (t === 'text') {
-        const o = anNew('text', [q], { t: 'Text', s: AN.cur.ts, b: 0, bg: 0, fn: AN.cur.fn });
+        anNew('text', [q], { t: 'Text', s: AN.cur.ts, b: 0, bg: 0, fn: AN.cur.fn });
         anTouch();
         AN.tool = 'sel';
         anBarUpd();

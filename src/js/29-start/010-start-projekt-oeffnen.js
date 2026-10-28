@@ -5,7 +5,7 @@
     '#mid>canvas{transition:opacity .45s ease}body.cur #mid>canvas{opacity:0;transition:none}body.home #r,body.home #rph,body.home #tbar,body.home #pc{display:none!important}';
   document.head.appendChild(st);
 })();
-var _curT = 0;
+let _curT = 0;
 function bootCur(on) {
   clearTimeout(_curT);
   if (on) {

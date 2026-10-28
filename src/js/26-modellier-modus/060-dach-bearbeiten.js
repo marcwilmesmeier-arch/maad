@@ -4,6 +4,8 @@
    P Ziehen & Schieben auf der gezeichneten Fläche: HOCH = echte Geschosse mit diesem Grundriss (eigene Geschossnummern), RUNTER = Innenhof, aus den Geschossen ausgeschnitten.
    Innenhof: Wandflächen zum Hof greifen und ziehen (Hof wird kleiner/größer), Boden greifen = Tiefe ändern, M verschiebt, Entf füllt wieder.
    Beim Aufstocken des Gebäudes laufen die Höfe nach oben mit. Datenmodell siehe gr_zn.js (b.voids, l.faces). */
+// var bewusst: 030-leiste und 120-modellier fragen SZ vorher mit typeof ab
+// eslint-disable-next-line no-var
 var SZ = { d: null, op: null };
 SKT.push(['r', 'Rechteck', 'R'], ['z', 'Linie', 'L']);
 function szSp(e) {

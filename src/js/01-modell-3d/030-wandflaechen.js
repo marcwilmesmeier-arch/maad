@@ -940,7 +940,7 @@ function updSel() {
     nx = ((c[1] - a[1]) / l) * sg * 0.04,
     nz = (-(c[0] - a[0]) / l) * sg * 0.04,
     key = [a, c, z0, z1].join();
-  if (sq.userData.key == key) return;
+  if (sq.userData.key === key) return;
   sq.userData.key = key;
   const V3 = (p, z) => new T.Vector3(p[0] + nx, z, p[1] + nz);
   sq.geometry.dispose();
@@ -1199,7 +1199,7 @@ function fInfo(h) {
     f = lf(b, L[h.k]);
   let z = b._y;
   for (let j = 0; j < h.k; j++) z += L[j].h;
-  if (h.t == 'top') {
+  if (h.t === 'top') {
     const c = cen(f);
     return { pos: new T.Vector3(c[0], z + L[h.k].h + 0.05, c[1]), n: new T.Vector3(0, 1, 0) };
   }
@@ -1242,7 +1242,7 @@ function placeHc() {
       for (let j = 0; j < hv.k; j++) z0 += L[j].h;
       const z1 = z0 + L[hv.k].h,
         key = [b.id, hv.k, hv.i, z0, z1, f.map((q) => q[0] + ',' + q[1]).join(';')].join('|');
-      if (hl.userData.key != key) {
+      if (hl.userData.key !== key) {
         hl.userData.key = key;
         const pts = [],
           v3 = (q, z) => new T.Vector3(q[0], z, q[1]),
@@ -1273,7 +1273,7 @@ function placeHc() {
     if (patchKnob()) return;
     if (!ok) return;
     const fi = fInfo(h);
-    if (h.t == 'wall') {
+    if (h.t === 'wall') {
       const sf = selOk();
       if (h.g) fi.pos.y = h.b._y + h.b._h + (h.b._roofH || 0) * 0.35;
       else if (!(sf && sf.b === h.b)) fi.pos.y = h.b._y + (h.b._ug || 0) + (h.b._h - (h.b._ug || 0)) / 2;
@@ -1373,7 +1373,7 @@ function drawOv(cur) {
   if (S.tool === 'f' && S.shape !== 'free' && !S.closed)
     $('hud').textContent =
       S.hs ||
-      (S.shape == 'rect'
+      (S.shape === 'rect'
         ? 'Rechteck: 1. Klick erste Ecke, 2. Klick Kante/Ausrichtung, 3. Klick Breite'
         : 'Kreis: Mittelpunkt klicken, Radius ziehen, erneut klicken – oder Radius rechts eingeben');
   if (S.tool === 't')
@@ -1447,7 +1447,7 @@ function drawOv0(cur) {
         : 'Fläche zeichnen: Punkte klicken · Punkte/Kanten rasten ein · rechter Winkel rastet ein · Shift = frei'
       : S.tool === 'm'
         ? 'Messen: zwei Punkte klicken' +
-          (S.meas.length == 2
+          (S.meas.length === 2
             ? ` → ${f1(Math.hypot(S.meas[0][0] - S.meas[1][0], S.meas[0][1] - S.meas[1][1]), 2)} m`
             : '')
         : S.tool === 'b'

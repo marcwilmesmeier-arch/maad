@@ -461,7 +461,6 @@ function gPts(b) {
       y0 = 1e18,
       x1 = -1e18,
       y1 = -1e18;
-    const nr = dv.getUint32(o, h.le);
     o += 4;
     const np = dv.getUint32(o, h.le);
     o += 4;
@@ -940,7 +939,6 @@ function canopyBasis(DG, DO, bl, skip, ex) {
         }
       }
       const cr = Math.max(1.2, Math.min(9, rm)),
-        x = -hx + (i + 0.5) * res - 0,
         E = DO.minx + (i + 0.5) * res,
         N = DO.maxy - (j + 0.5) * DO.resY,
         ll = utm2ll(E, N, DO.zone || 32),

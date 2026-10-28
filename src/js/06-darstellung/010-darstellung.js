@@ -78,7 +78,7 @@ function drDs() {
 function drLL() {
   return [GEO.lat || 52.27, GEO.lon || 8.53];
 }
-var _stTimes = {};
+const _stTimes = {};
 function drTimes(ds) {
   const [la, lo] = drLL(),
     k = ds + '|' + la.toFixed(2) + '|' + lo.toFixed(2);

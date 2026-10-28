@@ -541,7 +541,6 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
         if (oc.indexOf('anLock') >= 0) {
           const lk = /🔒/.test(l);
           b.classList.add('th-lock');
-          const t = b.getAttribute('title');
           b.innerHTML =
             thSV(
               lk

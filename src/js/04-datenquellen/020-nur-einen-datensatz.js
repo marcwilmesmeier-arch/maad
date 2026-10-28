@@ -808,7 +808,6 @@ function srcData() {
   return D;
 }
 function srOpts(tab) {
-  const dis = GEO.busy ? ' disabled' : '';
   if (tab === 'fl') {
     const w = WMSK.by;
     return `<div class="opt"><b>Flurkarte als Bild (WMS) – Bayern</b><div class="stn" style="margin:0">Für Länder ohne Flurstücks-Vektordienst lädt maad ein Kartenbild der Parzellarkarte und legt es als Ebene „Flurkarte (Bild)" auf das Gelände. ${esc(w.note)} Lizenz: ${esc(w.src)}.</div><label><input type="checkbox" ${S.wmsOn ? 'checked' : ''} onchange="S.wmsOn=this.checked"> Beim Laden eines Ausschnitts in Bayern die Parzellarkarte als Bild laden</label><label>Darstellung <select onchange="S.wmsLay=this.value">${Object.entries(

@@ -223,7 +223,7 @@ async function l2Demo() {
   S.l2.demo = id;
   const W = (ms) => new Promise((r) => setTimeout(r, ms)),
     ok = () => S.l2.demo === id;
-  const undoSteps = [];
+
   let addedG = null;
   const T0 = l2on();
   try {

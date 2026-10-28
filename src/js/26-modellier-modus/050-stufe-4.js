@@ -1,6 +1,8 @@
 // ================= Stufe 4: Teilen (L) =================
 // Wandfläche mit einer senkrechten Linie teilen (Klick auf die Fläche; Fang auf Mitte und auf Fluchten anderer Geschosse; Zahl + Enter = Abstand von der nächsten Ecke).
 // Gilt für alle Geschosse der Fläche, Alt = nur dieses Geschoss. Danach lassen sich die Teile einzeln mit Ziehen & Schieben ziehen (Erker, Loggia, Rücksprung).
+// var bewusst: 020-darstellung und 030-leiste fragen SKLN vorher mit typeof ab
+// eslint-disable-next-line no-var
 var SKLN = new T.LineSegments(
   new T.BufferGeometry(),
   new T.LineDashedMaterial({
@@ -69,9 +71,6 @@ function skSplitPos(e, alt) {
 }
 function skSplitTargets(lh) {
   const b = lh.en.b,
-    ux = lh.u[0],
-    uz = lh.u[1],
-    a = lh.a,
     out = [];
   const ents = lh.alt ? [{ b, j: lh.en.j, i: lh.en.i }] : skGroup(lh.en);
   ents.forEach((g) => {
@@ -225,7 +224,7 @@ function skLKeys(e) {
 
 // ================= Stufe 5: Inferenz-Anzeige =================
 // Marker (kleiner weißer Punkt mit grauem Rand wie die Stützpunkte der Modellierung) + Hinweistext; Hilfslinien: rot = Ost/West, grün = Nord/Süd, blau = senkrecht, magenta = Fang auf parallele Wand/Ausgangsposition.
-var SKI = new T.Group();
+const SKI = new T.Group();
 SKI.renderOrder = 9;
 sc.add(SKI);
 function skIfClear() {

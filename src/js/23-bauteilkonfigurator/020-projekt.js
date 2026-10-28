@@ -367,7 +367,7 @@ function l2cRender() {
     d = document.createElement('div');
     d.id = 'l2c';
     document.body.appendChild(d);
-    const st = d.style;
+
     L2C.drag = null;
     d.addEventListener('pointerdown', (ev) => {
       const hd = ev.target.closest('#l2ch');

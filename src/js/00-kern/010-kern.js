@@ -10,6 +10,8 @@ const logErr = (() => {
     console.warn('[maad] Fehler in ' + wo + ':', e);
   };
 })();
+// Haken, die loop() in jedem Frame aufruft (werden in 03-startseite und 07-analyse belegt)
+let anHook, homeHook, lbHook;
 // ======================================================================
 // REGEL: Gleiche Funktionen stehen NUR hier (eine Quelle). Oberes Menü,
 // Rechtsklick-Menü und Planen-Leiste werden daraus erzeugt – nie von Hand
@@ -206,7 +208,7 @@ const inP = (pt, p) => {
   let c = false;
   for (let i = 0, j = p.length - 1; i < p.length; j = i++)
     if (
-      p[i][1] > pt[1] != p[j][1] > pt[1] &&
+      p[i][1] > pt[1] !== p[j][1] > pt[1] &&
       pt[0] < ((p[j][0] - p[i][0]) * (pt[1] - p[i][1])) / (p[j][1] - p[i][1]) + p[i][0]
     )
       c = !c;

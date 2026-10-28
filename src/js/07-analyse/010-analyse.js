@@ -165,7 +165,7 @@ function nav() {
   $('tabs').innerHTML =
     TABS.map(
       (t) =>
-        `<button class="tab ${S.tab == t ? 'on' : ''}" onclick="go('${t}')"><i>${IC[t]}</i>${t === 'Kontext' ? 'Datenebenen' : t === 'Analyse' ? 'Grundstück und Umgebung' : t}</button>`,
+        `<button class="tab ${S.tab === t ? 'on' : ''}" onclick="go('${t}')"><i>${IC[t]}</i>${t === 'Kontext' ? 'Datenebenen' : t === 'Analyse' ? 'Grundstück und Umgebung' : t}</button>`,
     ).join('') +
     '<button class="tab" id="bly" onclick="layOpen()" title="Seitenlayout mit Ansichten, Kennzahlen, Legende und Texten als PDF"><i>▤</i>Layout</button>';
   // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js (danach)
@@ -212,7 +212,7 @@ function rr() {
     const R = $('pc'),
       b = S.sel;
     let h = '';
-    if (S.tab == 'Kontext') {
+    if (S.tab === 'Kontext') {
       h =
         `${ocHtml()}` +
         (AL.length
@@ -230,7 +230,7 @@ function rr() {
               `<div class="card">${x.use} · ${x.levels.length} Geschosse<br>Höhe ${f1(x.levels.length * 3, 1)} m <span class="wa">(geschätzt)</span><br><span style="color:var(--mu)">Quelle: ${x.src}</span></div>`,
           )
           .join('');
-    } else if (S.tab == 'Planen') {
+    } else if (S.tab === 'Planen') {
       if (S.tool === 'f' && !S.closed) h = shapePanel();
       else if (S.closed && S.dm === 'area') h = areaForm();
       else if (S.closed)
@@ -245,7 +245,7 @@ function rr() {
           roofRow(b) +
           b.levels
             .map((l, i) => {
-              const r = `<div class="lr${sk === i ? ' on' : ''}" data-k="${i}" onfocusin="selL(${i})" onclick="selL(${i})" style="display:grid;grid-template-columns:44px minmax(58px,1fr) 58px 24px 24px 24px;gap:4px;align-items:center;margin-bottom:4px;padding:2px 4px;border-radius:6px"><b><span title="${esc(l.use || b.use || 'Wohnen')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background:${S.uses[l.use || b.use || 'Wohnen']}"></span>${l.name}</b><input type="number" step="0.1" min="2" value="${l.h}" onchange="lh(${i},this.value)"><span style="color:var(--mu);font-size:11px;line-height:1.2">${z < 0 ? '' : '+'}${f1(z, 2)}<br>${f1(larea(b, l) + (PXM.lv[i] || 0))} m²</span>${l.fp ? `<button class="sm" title="Grundriss zurücksetzen" onclick="lr(${i})">↺</button>` : '<span></span>'}<button class="sm" title="${l.ug ? 'Geschoss nach unten kopieren' : 'Geschoss nach oben kopieren'}" aria-label="Geschoss kopieren" onclick="event.stopPropagation();lcp(${i})">${l.ug ? '⇣' : '⇡'}</button><button class="sm" title="Geschoss löschen" aria-label="Geschoss löschen" onclick="event.stopPropagation();lrm(${i})">✕</button><button class="pri lrx" style="grid-column:1/-1;margin:2px 0;${sk === i ? '' : 'display:none'}" onclick="event.stopPropagation();grOpenLv('${esc(b.id)}','${i}')">▦ Grundriss öffnen</button><label class="lrx" style="grid-column:1/-1;display:${sk === i ? 'flex' : 'none'};gap:6px;align-items:center;font-size:11px;color:var(--mu)">Nutzung<select style="flex:1" onchange="lUseSet(${i},this.value)">${USES.map((u) => `<option ${u == (l.use || b.use || 'Wohnen') ? 'selected' : ''}>${u}</option>`).join('')}</select></label></div>`;
+              const r = `<div class="lr${sk === i ? ' on' : ''}" data-k="${i}" onfocusin="selL(${i})" onclick="selL(${i})" style="display:grid;grid-template-columns:44px minmax(58px,1fr) 58px 24px 24px 24px;gap:4px;align-items:center;margin-bottom:4px;padding:2px 4px;border-radius:6px"><b><span title="${esc(l.use || b.use || 'Wohnen')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background:${S.uses[l.use || b.use || 'Wohnen']}"></span>${l.name}</b><input type="number" step="0.1" min="2" value="${l.h}" onchange="lh(${i},this.value)"><span style="color:var(--mu);font-size:11px;line-height:1.2">${z < 0 ? '' : '+'}${f1(z, 2)}<br>${f1(larea(b, l) + (PXM.lv[i] || 0))} m²</span>${l.fp ? `<button class="sm" title="Grundriss zurücksetzen" onclick="lr(${i})">↺</button>` : '<span></span>'}<button class="sm" title="${l.ug ? 'Geschoss nach unten kopieren' : 'Geschoss nach oben kopieren'}" aria-label="Geschoss kopieren" onclick="event.stopPropagation();lcp(${i})">${l.ug ? '⇣' : '⇡'}</button><button class="sm" title="Geschoss löschen" aria-label="Geschoss löschen" onclick="event.stopPropagation();lrm(${i})">✕</button><button class="pri lrx" style="grid-column:1/-1;margin:2px 0;${sk === i ? '' : 'display:none'}" onclick="event.stopPropagation();grOpenLv('${esc(b.id)}','${i}')">▦ Grundriss öffnen</button><label class="lrx" style="grid-column:1/-1;display:${sk === i ? 'flex' : 'none'};gap:6px;align-items:center;font-size:11px;color:var(--mu)">Nutzung<select style="flex:1" onchange="lUseSet(${i},this.value)">${USES.map((u) => `<option ${u === (l.use || b.use || 'Wohnen') ? 'selected' : ''}>${u}</option>`).join('')}</select></label></div>`;
               z += l.h;
               return r;
             })
@@ -259,9 +259,9 @@ function rr() {
           plotInfo() +
           `<h4>Planen</h4><div class="card">1. Grundstück anklicken<br>2. <b>Gebäude</b> (F) zeichnen<br>3. Enter → Geschosse eingeben<br>4. Freie <b>Flächen</b> (Grün, Platz, Wasser) ergänzen<br>5. In 3D betrachten, Variante speichern</div><button class="pri" onclick="plusBld()">+ Gebäude</button><button class="sm" style="margin-top:6px" onclick="setShape(S.shape,'area')">+ Fläche</button>` +
           parHint();
-    } else if (S.tab == 'Analyse') {
+    } else if (S.tab === 'Analyse') {
       h = anPanel(b);
-    } else if (S.tab == 'Varianten') {
+    } else if (S.tab === 'Varianten') {
       h =
         `<h4>Varianten</h4><button class="pri" onclick="sv()">Aktuellen Stand speichern</button>` +
           S.variants.map(vCard).join('') || '';
@@ -438,22 +438,22 @@ addEventListener('keydown', (e) => {
   if (typeof LAY !== 'undefined' && LAY.open) return;
   if (typeof HOME !== 'undefined' && HOME.open) return;
   const k = e.key.toLowerCase();
-  if (e.ctrlKey && k == 'z') {
+  if (e.ctrlKey && k === 'z') {
     e.preventDefault();
     undo();
-  } else if (k == 'v') tool('v');
-  else if (k == 'x') tool('x');
-  else if (k == 'f') {
+  } else if (k === 'v') tool('v');
+  else if (k === 'x') tool('x');
+  else if (k === 'f') {
     if (S.tool !== 'f') setShape(S.shape);
-  } else if (k == 'b') {
+  } else if (k === 'b') {
     tool('b');
-  } else if (k == 'm') tool('m');
-  else if (k == 'l') tool('L');
-  else if (k == 't') tool('t');
-  else if (k == 'g' && !e.ctrlKey && !e.metaKey && !e.altKey) grOpen();
-  else if (k == '2') setMode(0, 1);
-  else if (k == '3') setMode(1, 1);
-  else if (k == 'escape') {
+  } else if (k === 'm') tool('m');
+  else if (k === 'l') tool('L');
+  else if (k === 't') tool('t');
+  else if (k === 'g' && !e.ctrlKey && !e.metaKey && !e.altKey) grOpen();
+  else if (k === '2') setMode(0, 1);
+  else if (k === '3') setMode(1, 1);
+  else if (k === 'escape') {
     if (S.tool === 'L') {
       tool('v');
       return;
@@ -464,11 +464,11 @@ addEventListener('keydown', (e) => {
     cancel();
     tool('v');
     H();
-  } else if (k == 'delete' && S.tool === 'L') {
+  } else if (k === 'delete' && S.tool === 'L') {
     if (LB.sel) lbDel(LB.sel);
-  } else if (k == 'delete' && LB.sel && !S.sel) {
+  } else if (k === 'delete' && LB.sel && !S.sel) {
     lbDel(LB.sel);
-  } else if (k == 'delete') {
+  } else if (k === 'delete') {
     const a = ed();
     if (patchSel()) patchDel();
     else if (a && S.vi != null && a.length > 3 && (a !== S.draft || S.closed)) {
@@ -484,14 +484,14 @@ addEventListener('keydown', (e) => {
     } else if (GEO.tsel && !S.sel) treeDel();
     else if (GEO.sel && !S.sel) ctxDel();
     else del();
-  } else if (k == 'backspace' && S.fd && S.fd.pts.length) {
+  } else if (k === 'backspace' && S.fd && S.fd.pts.length) {
     S.fd.pts.pop();
     fdDraw(S.fd.cur);
-  } else if (k == 'backspace' && S.draft.length && !S.closed) {
+  } else if (k === 'backspace' && S.draft.length && !S.closed) {
     S.draft.pop();
     drawOv();
-  } else if (k == 'enter' && S.tool == 'f') {
-    S.fd ? fdEnter() : S.shape == 'free' ? draftClose() : shapeOk();
+  } else if (k === 'enter' && S.tool === 'f') {
+    S.fd ? fdEnter() : S.shape === 'free' ? draftClose() : shapeOk();
   }
 });
 // Startaufruf verschoben nach start() in 29-start/010-start-projekt-oeffnen.js
@@ -534,7 +534,6 @@ addEventListener('keydown', (e) => {
         tip.innerHTML =
           (ex || '') +
           (a && !HNR.hvB ? '<b>Flurstück ' + esc(a.id) + '</b><br>' + f1(a.af || a.area) + ' m²' : '');
-        const r = cv.getBoundingClientRect();
         tip.style.left = Math.min(innerWidth - 150, e.clientX + 14) + 'px';
         tip.style.top = e.clientY + 16 + 'px';
         tip.style.display = 'block';

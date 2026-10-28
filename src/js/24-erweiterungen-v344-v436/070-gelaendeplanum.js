@@ -96,7 +96,7 @@ function plvBuild() {
     plvClear();
     PLV.sig = plvSig();
     if (!PLM.a.some((a) => a.on !== false)) return;
-    const { wpp, D } = pbWpp();
+    const { wpp } = pbWpp();
     let u = wpp;
     if (S.m3) u /= Math.max(0.45, Math.cos(Math.min(1.2, V.pol || 0)));
     PLV.w = u;

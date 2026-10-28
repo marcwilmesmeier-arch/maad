@@ -275,11 +275,11 @@ function szAngSnap(d, p, alt, sn) {
   return { p: [r5(q[0]), r5(q[1])], lab: best.lab };
 }
 // ---- Vorschau
-var SZP = new T.LineSegments(
+const SZP = new T.LineSegments(
   new T.BufferGeometry(),
   new T.LineBasicMaterial({ color: 0x2f7fd0, depthTest: false, transparent: true }),
 );
-var SZPs = SZP.material,
+const SZPs = SZP.material,
   SZPd = new T.LineDashedMaterial({
     color: 0xffffff,
     dashSize: 0.6,

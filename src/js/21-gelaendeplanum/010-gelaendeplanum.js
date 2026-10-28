@@ -205,7 +205,6 @@ function plmAvg(poly) {
   return c ? { avg: s / c, tn, tx } : { avg: GHf(...cen(poly)), tn: 0, tx: 0 };
 }
 function plmBalance(a) {
-  const z0 = a.z;
   let lo = -1e9,
     hi = 1e9;
   const s0 = plmStats(a, 3);
@@ -325,7 +324,7 @@ function plmPaint() {
       lw = Math.max(1.1, 0.13 * K);
     for (const a of PLM.a) {
       if (a.on === false) continue;
-      const sel = a.id === PLM.sel;
+
       c.beginPath();
       a.poly.forEach(([x, z], i) => (i ? c.lineTo(X(x), X(z)) : c.moveTo(X(x), X(z))));
       c.closePath();

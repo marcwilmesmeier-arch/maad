@@ -164,7 +164,6 @@ function fdTypeAdd() {
 function fdTypeDel(i) {
   const t = S.ft[i];
   if (!t || t.df) return;
-  const b = fdB();
   hist();
   S.bld.forEach((x) => {
     if (!x.fd) return;

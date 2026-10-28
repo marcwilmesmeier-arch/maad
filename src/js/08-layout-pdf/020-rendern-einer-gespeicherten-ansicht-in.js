@@ -345,8 +345,7 @@ function layLockProp(e) {
   const v = e.v || {};
   if (!v.locked)
     return '<div style="color:var(--mu);font-size:11px;margin-top:6px">Ansicht ist nicht fixiert: kein Maßstab, keine Anmerkungen. Im Hauptfenster die gespeicherte Ansicht aufrufen und mit 🔒 fixieren.</div>';
-  const ck = (k, l) =>
-    `<label class="lp">${l}<input type="checkbox" ${e[k] !== false ? 'checked' : ''} onchange="layPut('${k}',this.checked)"></label>`;
+
   return (
     `<div style="margin-top:6px;border-top:1px solid var(--ln);padding-top:6px">🔒 fixierte Ansicht` +
     (v.m3
@@ -469,8 +468,7 @@ function layAdd(type, v, name) {
       layRender();
       layProp();
     })();
-  const [pw, ph] = layPage(),
-    id = 'e' + ++LAY.n,
+  const id = 'e' + ++LAY.n,
     kd = layKd(),
     b = { id, type, x: 15 + (LAY.els.length % 6) * 4, y: 15 + (LAY.els.length % 6) * 4 };
   if (type === 'box') Object.assign(b, { w: 60, h: 30, fc: '#E9EDEF', fa: 1, rx: 0, bw: kd.w, bc: kd.c });

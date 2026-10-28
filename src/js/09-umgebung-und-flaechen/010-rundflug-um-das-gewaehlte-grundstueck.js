@@ -183,7 +183,7 @@ function areaSelDraw() {
 
 // ---- Eigene Flächen & Straßen: immer vor dem Grundstück, Kontur nachträglich bearbeitbar; Straßen = Linie mit ausgerundeten Ecken, Breite/Radius änderbar
 const UE = { w: 6, r: 10, drag: null, raf: 0 };
-var GU = new T.Group();
+const GU = new T.Group();
 sc.add(GU);
 function ueRound(pts, r) {
   const n = pts.length;

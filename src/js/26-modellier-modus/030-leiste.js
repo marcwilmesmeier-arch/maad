@@ -238,7 +238,7 @@ function skOpApply(op, d) {
       m = o.length,
       r = o.map((q) => q.slice());
     op.ents
-      .filter((x) => x.j == k)
+      .filter((x) => x.j == k) // == bewusst: k ist Objektschlüssel (Text), x.j eine Zahl
       .forEach((x) => {
         const q = offEdge(o, x.i, x.n, d);
         r[x.i] = q[x.i];
@@ -486,7 +486,7 @@ SK.opDownP = function (e) {
     return true;
   }
   SK.prevEn = en;
-  const op = skOpStart(en, e);
+  skOpStart(en, e);
   skVcbShow();
   $('hud').textContent =
     'Ziehen & Schieben · Maus ziehen (oder klicken, bewegen, klicken) · Zahl + Enter = exakt';

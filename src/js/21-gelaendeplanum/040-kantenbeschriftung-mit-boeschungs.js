@@ -100,8 +100,7 @@ function plmLabels() {
       L = a.poly.length;
     cm.updateMatrixWorld();
     while (plmPills.length < L) {
-      const d = document.createElement('div'),
-        k = plmPills.length;
+      const d = document.createElement('div');
       d.style.cssText =
         'position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;background:#E9EDEF;color:#111;border:1.5px solid #5E7F92;border-radius:11px;padding:1px 7px;font:600 11px sans-serif;white-space:nowrap;box-shadow:0 1px 4px #0004;user-select:none';
       ['pointerdown', 'mousedown', 'dblclick', 'wheel'].forEach((ev) =>
@@ -122,7 +121,6 @@ function plmLabels() {
       }
       const P0 = a.poly[k],
         P1 = a.poly[(k + 1) % L],
-        N = a.nr[k],
         mx = (P0[0] + P1[0]) / 2,
         mz = (P0[1] + P1[1]) / 2,
         v = new T.Vector3(mx, gh(mx, mz) + 0.4, mz).project(cm);

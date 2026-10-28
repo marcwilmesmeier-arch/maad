@@ -2,6 +2,8 @@
    Stufe 1: Auswahl wie Modellier – Klick = Fläche, Doppelklick = Fläche in einer Flucht über alle Geschosse, Dreifachklick = ganzes Gebäude,
    Shift = umschalten, Strg = hinzufügen, Strg+Shift = abziehen, Shift+Ziehen = Fenster (links→rechts: komplett enthalten, rechts→links: berührt),
    Strg+A = alles, Esc/Klick ins Leere = Auswahl aufheben. */
+// var bewusst: 05-projekt-und-bedienung liest SK schon vor dieser Datei (dann undefined)
+// eslint-disable-next-line no-var
 var SK = {
   on: false,
   tool: 's',

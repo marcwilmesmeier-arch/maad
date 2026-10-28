@@ -2,7 +2,7 @@
 function rmTarget() {
   if (S.closed && S.dk === 'rect' && S.tool === 'f') return S.draft;
   const b = S.sel;
-  if (b && !b.ex && b.kind === 'rect' && S.bld.includes(b) && cfp(b).length == 4) return cfp(b);
+  if (b && !b.ex && b.kind === 'rect' && S.bld.includes(b) && cfp(b).length === 4) return cfp(b);
   return null;
 }
 function rmDims(f) {
@@ -19,7 +19,7 @@ function rmDims(f) {
 }
 function updRM() {
   const f = rmTarget(),
-    d = f && f.length == 4 ? rmDims(f) : null,
+    d = f && f.length === 4 ? rmDims(f) : null,
     m = $('rm');
   m.style.display = d ? 'flex' : 'none';
   if (!d || m.contains(document.activeElement)) return;
@@ -41,8 +41,8 @@ function rmSet(k, v) {
     p3 = f[3],
     u = [(p1[0] - a[0]) / d.l, (p1[1] - a[1]) / d.l],
     w = [(p3[0] - a[0]) / d.w, (p3[1] - a[1]) / d.w],
-    L = k == 'l' ? x : d.l,
-    W = k == 'w' ? x : d.w;
+    L = k === 'l' ? x : d.l,
+    W = k === 'w' ? x : d.w;
   f[1] = [a[0] + u[0] * L, a[1] + u[1] * L];
   f[3] = [a[0] + w[0] * W, a[1] + w[1] * W];
   f[2] = [f[1][0] + w[0] * W, f[1][1] + w[1] * W];
@@ -76,7 +76,7 @@ function shapeGeo(cur) {
     th = ((parseFloat(S.num.a) || 0) * Math.PI) / 180 + drRot(),
     u = [Math.cos(th), Math.sin(th)],
     v = [-u[1], u[0]];
-  if (sh == 'rect') {
+  if (sh === 'rect') {
     const L = parseFloat(S.num.l),
       W = parseFloat(S.num.w),
       nu = !!(L && W),
@@ -135,7 +135,7 @@ function shapeGeo(cur) {
       done: nu,
     };
   }
-  if (sh == 'poly') {
+  if (sh === 'poly') {
     const n = Math.max(3, Math.min(64, Math.round(S.sides || 6))),
       C0 = A || cur;
     if (!C0) return null;
@@ -229,18 +229,18 @@ function shapePanel() {
   if (S.dm === 'street') return stPanel();
   const sh = S.shape,
     btn = (k, t) =>
-      `<button class="sm" style="flex:1;${sh == k ? 'background:var(--ln);font-weight:600' : ''}" onclick="setShape('${k}',S.dm)">${t}</button>`,
+      `<button class="sm" style="flex:1;${sh === k ? 'background:var(--ln);font-weight:600' : ''}" onclick="setShape('${k}',S.dm)">${t}</button>`,
     inp = (k, t, ph) =>
       `${t}<input type="number" step="0.1" placeholder="${ph}" value="${S.num[k]}" oninput="S.num.${k}=this.value;if(S.lastQ)shapeUpd(S.lastQ)" onkeydown="if(event.key=='Enter')shapeOk()">`,
     hint =
-      sh == 'free'
+      sh === 'free'
         ? 'Punkte klicken, Enter oder Doppelklick schließt. Nahe Punkte, Kanten und rechte Winkel rasten ein (Shift = frei).'
-        : sh == 'rect'
+        : sh === 'rect'
           ? '1. Klick = erste Ecke, 2. Klick = gegenüberliegende Ecke. Oder nach dem 1. Klick Länge;Breite tippen + Enter.'
-          : sh == 'poly'
+          : sh === 'poly'
             ? 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Seitenzahl tippen, z. B. 8s + Enter.'
             : 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Oder Radius tippen + Enter.';
-  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh == 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh == 'circ' ? inp('r', 'Radius (m)', 'frei') : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh != 'free' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
+  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh === 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh === 'circ' ? inp('r', 'Radius (m)', 'frei') : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh !== 'free' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
 }
 function cutMove(e) {
   const c = S.cut,
@@ -296,7 +296,7 @@ function cutPrev(e) {
   if (!(sf && sf.b === S.sel)) S.hv = null;
   else if (S.hv && S.hv.k !== sf.k) S.hv = null;
   const h = S.hov;
-  if (h && h.t == 'wall' && h.b === S.sel && S.bld.includes(h.b)) {
+  if (h && h.t === 'wall' && h.b === S.sel && S.bld.includes(h.b)) {
     const R = cutRange(h.b, h.k);
     if (R) {
       const c = edgeInfo(h.b, h.k, h.i);
@@ -520,7 +520,7 @@ function hover(e) {
 function hover0(e) {
   ray(e);
   if (S.hov && hc.visible && rc.intersectObject(hc)[0]) {
-    cv.style.cursor = S.hov.t == 'wall' ? CUR : 'ns-resize';
+    cv.style.cursor = S.hov.t === 'wall' ? CUR : 'ns-resize';
     return;
   }
   if (S.hb && handle.visible && rc.intersectObject(handle)[0]) {
@@ -607,10 +607,10 @@ function startFace(e) {
   nav();
   const fi = fInfo(h);
   dr.f = { h, mv: 0 };
-  S.selF = wasF ? { b, k: h.k, i: h.t == 'wall' ? h.i : -1 } : null;
+  S.selF = wasF ? { b, k: h.k, i: h.t === 'wall' ? h.i : -1 } : null;
   H();
-  cv.style.cursor = h.t == 'wall' ? CUR : 'ns-resize';
-  if (h.t == 'top') dr.f.h0 = b.levels[h.k].h;
+  cv.style.cursor = h.t === 'wall' ? CUR : 'ns-resize';
+  if (h.t === 'top') dr.f.h0 = b.levels[h.k].h;
   else {
     dr.f.n = [fi.n.x, fi.n.z];
     dr.f.y = fi.pos.y;
@@ -618,7 +618,7 @@ function startFace(e) {
     dr.f.i = h.i;
     const m = lf(b, b.levels[h.k]).length;
     const js = (e.shiftKey || !wasF ? b.levels.map((l, j) => j) : [h.k]).filter(
-      (j) => lf(b, b.levels[j]).length == m,
+      (j) => lf(b, b.levels[j]).length === m,
     );
     dr.f.tg = js.map((j) => ({ l: b.levels[j], o: lf(b, b.levels[j]).map((q) => q.slice()) }));
     dr.f.bfp =
@@ -1056,12 +1056,12 @@ function snapBasis(p, e, i, A) {
       }
     }
   }
-  if (t == 'pt') {
+  if (t === 'pt') {
     lab += ' · Punkt';
     sn = [q];
   }
-  if (t == 'edge') lab += ' · Grenze';
-  if (sn && t != 'pt') lab += ' · fluchtet';
+  if (t === 'edge') lab += ' · Grenze';
+  if (sn && t !== 'pt') lab += ' · fluchtet';
   return { p: q, t, lab, sn };
 }
 const refresh = (A) => {
@@ -1078,7 +1078,7 @@ cv.addEventListener('pointerdown', (e) => {
   dr = { x: e.clientX, y: e.clientY, m: 0, btn: e.button };
   btStart(e);
   const LT = S.tool === 'L';
-  if (!LT && S.hb && handle.visible && e.button == 0) {
+  if (!LT && S.hb && handle.visible && e.button === 0) {
     ray(e);
     if (rc.intersectObject(handle)[0]) {
       S.sel = S.hb;
@@ -1087,7 +1087,7 @@ cv.addEventListener('pointerdown', (e) => {
       hist();
     }
   }
-  if (!LT && !dr.h && e.button == 0 && hc.visible) {
+  if (!LT && !dr.h && e.button === 0 && hc.visible) {
     ray(e);
     if (rc.intersectObject(hc)[0]) {
       if (S.hcP) startPatch(e);
@@ -1101,7 +1101,7 @@ cv.addEventListener('pointerdown', (e) => {
     S.hvB = null;
     S.hvR = null;
   }
-  if (!LT && !dr.h && !dr.f && e.button == 0) {
+  if (!LT && !dr.h && !dr.f && e.button === 0) {
     const A = edv();
     if (A) {
       const g = ground(e);
@@ -1147,7 +1147,7 @@ cv.addEventListener('pointermove', (e) => {
         b = h.b;
       f.mv = 1;
       dr.m = 1;
-      if (h.t == 'top') {
+      if (h.t === 'top') {
         const nh = Math.min(8, Math.max(2, Math.round((f.h0 - (e.clientY - dr.y) * mpp() * 1.1) * 20) / 20));
         b.levels[h.k].h = nh;
         mesh(b);
@@ -1200,7 +1200,7 @@ cv.addEventListener('pointermove', (e) => {
       }
       return;
     }
-    if (S.tool === 'x' && dr.btn == 0 && S.geo) {
+    if (S.tool === 'x' && dr.btn === 0 && S.geo) {
       if (Math.hypot(dx, dy) > 4) {
         dr.m = 1;
         mqDraw(dr.x, dr.y, e.clientX, e.clientY);
@@ -1211,7 +1211,7 @@ cv.addEventListener('pointermove', (e) => {
     if (dr.m && !camLocked()) {
       const ddx = e.clientX - (dr.lx ?? dr.x),
         ddy = e.clientY - (dr.ly ?? dr.y);
-      if (S.m3 && dr.btn == 0) {
+      if (S.m3 && dr.btn === 0) {
         V.az -= ddx * 0.006;
         V.pol = Math.min(
           typeof camxPolMax === 'function' ? camxPolMax() : 1.5,
@@ -1894,12 +1894,12 @@ function tgLayer() {
 function tgInfo() {}
 function tgl(k) {
   S[k] = !S[k];
-  if (k == 'wire') S.wf.visible = S.wire;
-  if (k == 'wire') {
+  if (k === 'wire') S.wf.visible = S.wire;
+  if (k === 'wire') {
     const e = $('wirck');
     if (e) e.checked = S.wire;
   }
-  if (k == 'sun') {
+  if (k === 'sun') {
     $('sunck').checked = S.sun;
     sunUp();
     drUi();

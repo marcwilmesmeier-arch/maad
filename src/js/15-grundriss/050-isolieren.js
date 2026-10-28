@@ -252,7 +252,7 @@ function zoRender() {
             tbo += k.brioi;
             tbu += k.briui;
             tr += grOf(b);
-            const fl = zoD(
+            zoD(
               'bf' + b.id,
               'Flächen' + (P.length > 1 ? ' · ' + esc(b.name || b.id) : ''),
               '',

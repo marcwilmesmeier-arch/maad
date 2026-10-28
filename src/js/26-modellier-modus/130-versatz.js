@@ -271,7 +271,7 @@ addEventListener(
           if (res.err) {
             szMsg(res.err);
             szRestore(r.src.b, r.s0);
-            const q = ofApply(r.src, r.v);
+            ofApply(r.src, r.v);
             szRefresh(r.src.b);
             SK.vcb = '';
             skVcbShow();

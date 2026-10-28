@@ -128,8 +128,7 @@ function exApply() {
           exOff(b, it.el.kind === 'DE' ? it.el.li + 1 : it.el.li) +
           (it.el.kind === 'RD' ? S.expl.cur * exP().v : 0);
       /* LOD300: letzte 30 % der Explosion – Außenwände (und Giebel) rücken nach außen von der Geschossdecke weg */
-      let ox = 0,
-        oz = 0;
+      let ox = 0;
       const hh = exP().h;
       if (hh > 0 && it.el.kind === 'AW' && l23()) {
         const e = it.el;

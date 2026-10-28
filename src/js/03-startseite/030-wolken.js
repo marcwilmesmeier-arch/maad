@@ -190,7 +190,7 @@ function birdsUp(now) {
         const tip = [A[0] - 0.4 - k * 0.55, A[1] + f * 1.1 - 0.1 * k, sd * (3.65 + 1.7 - 0.25 * k)];
         P.push(
           p0,
-          p1.map((v, i) => (i == 2 ? v - sd * 0.12 : v)),
+          p1.map((v, i) => (i === 2 ? v - sd * 0.12 : v)),
           tip,
         );
       }

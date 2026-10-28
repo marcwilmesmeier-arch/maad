@@ -344,7 +344,8 @@ function l2GeoStufe1(b) {
         o = (exn.get(l2k(P)) || []).find((z) => z.g !== g),
         h = o && o.g,
         sh = g.sh || 0;
-      let hr = null;
+      let hr = null,
+        th; // läuft h durch? (nur gesetzt, wenn h existiert)
       if (h) {
         const PG = GP(h.r.T),
           ord = 'cdbi',
@@ -357,7 +358,7 @@ function l2GeoStufe1(b) {
           hg = [G[0], nx ? nx[1] : pv ? pv[2] : 0, pv ? pv[2] : nx ? nx[1] : 0];
         }
         hr = hg;
-        var th = isThru(g, ix, h);
+        th = isThru(g, ix, h);
         const ck = l2k(P);
         (R.cn = R.cn || {})[li + '|' + ck] = {
           k: ck,
@@ -376,9 +377,7 @@ function l2GeoStufe1(b) {
           f0 = r.es[0],
           f1 = r.es[r.es.length - 1],
           i0 = sd(f0),
-          i1 = 1 - sd(f1),
-          P0 = i0 ? f0.e.q : f0.e.p,
-          P1 = i1 ? f1.e.q : f1.e.p;
+          i1 = 1 - sd(f1);
         return [[inner(f0, i0, fc, 1), inner(f1, i1, fc, 1), inner(f1, i1, fc), inner(f0, i0, fc)]];
       };
       r.quads = mq();
@@ -550,42 +549,7 @@ function l2GeoStufe1(b) {
       const t = ((b[0] - a[0]) * db[1] - (b[1] - a[1]) * db[0]) / det;
       return [a[0] + da[0] * t, a[1] + da[1] * t];
     };
-    const inset = (f) => {
-      const rg = f.o,
-        n = rg.length,
-        ed = rg.map((p, i) => {
-          const q = rg[(i + 1) % n],
-            a = l2k(p),
-            c = l2k(q),
-            x = extI.get(a < c ? a + '|' + c : c + '|' + a),
-            dd = [q[0] - p[0], q[1] - p[1]];
-          return {
-            p: x
-              ? [
-                  p[0] + x.n[0] * (C ? x.d / 2 - (x.sh || 0) : x.tO || 0),
-                  p[1] + x.n[1] * (C ? x.d / 2 - (x.sh || 0) : x.tO || 0),
-                ]
-              : p,
-            d: dd,
-            fl: !!x,
-            sh: x
-              ? [
-                  x.n[0] * (C ? x.d / 2 - (x.sh || 0) : x.tO || 0),
-                  x.n[1] * (C ? x.d / 2 - (x.sh || 0) : x.tO || 0),
-                ]
-              : [0, 0],
-          };
-        });
-      const o = rg.map((p, i) => {
-        const A = ed[(i + n - 1) % n],
-          B = ed[i];
-        if (!A.fl && !B.fl) return p;
-        const r = lnI(A.p, A.d, B.p, B.d);
-        return r || [p[0] + (A.fl ? A.sh[0] : B.sh[0]), p[1] + (A.fl ? A.sh[1] : B.sh[1])];
-      });
-      const ar = l2QA(o) - f.h.reduce((s, h) => s + l2QA(h), 0);
-      return { o, h: f.h, a: ar, fa: f.fa, c: f.c };
-    };
+
     // Decke: eine durchgehende Platte über das ganze Geschoss (nicht über Wänden geteilt), Öffnungen nur für Treppenhaus/Schacht
     const offR = (rg, dd) => {
       const n = rg.length;
