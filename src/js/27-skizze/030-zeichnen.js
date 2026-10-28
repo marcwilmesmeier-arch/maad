@@ -58,7 +58,7 @@ function sksEnd() {
   drawOv();
   rr();
 }
-// close(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// draftClose(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 cv.addEventListener(
   'dblclick',
   (e) => {

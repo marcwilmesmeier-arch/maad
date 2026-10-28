@@ -1283,7 +1283,8 @@ cv.addEventListener('pointerup', (e) => {
     return;
   }
   if (d.v != null) {
-    if (!d.m && S.tool === 'f' && !S.closed && S.dm !== 'street' && d.v === 0 && S.draft.length >= 3) close();
+    if (!d.m && S.tool === 'f' && !S.closed && S.dm !== 'street' && d.v === 0 && S.draft.length >= 3)
+      draftClose();
     return;
   }
   if (d.m || d.h) return;
@@ -1448,7 +1449,7 @@ cv.addEventListener('dblclick', (e) => {
       return;
     }
   }
-  if (S.tool === 'f' && !S.closed && S.draft.length >= (S.dm === 'street' ? 2 : 3)) close();
+  if (S.tool === 'f' && !S.closed && S.draft.length >= (S.dm === 'street' ? 2 : 3)) draftClose();
 });
 cv.addEventListener(
   'wheel',
@@ -1466,7 +1467,8 @@ cv.addEventListener(
   },
   { passive: false },
 );
-function close() {
+// Zeichnung (Entwurf bzw. Straße) abschließen. Hieß früher close() und überdeckte damit window.close.
+function draftClose() {
   // ── Erweiterung aus 27-skizze/030-zeichnen.js
   if (sksOn() && S.shape === 'free') {
     const D = S.draft;

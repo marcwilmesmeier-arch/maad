@@ -491,7 +491,7 @@ addEventListener('keydown', (e) => {
     S.draft.pop();
     drawOv();
   } else if (k == 'enter' && S.tool == 'f') {
-    S.fd ? fdEnter() : S.shape == 'free' ? close() : shapeOk();
+    S.fd ? fdEnter() : S.shape == 'free' ? draftClose() : shapeOk();
   }
 });
 // Startaufruf verschoben nach start() in 29-start/010-start-projekt-oeffnen.js

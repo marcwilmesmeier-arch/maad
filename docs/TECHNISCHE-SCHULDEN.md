@@ -23,10 +23,11 @@ bevor sie angelegt waren), siehe Git-Verlauf. Der Rauchtest schlägt jetzt bei s
    und `vite-plugin-singlefile`, damit weiterhin eine Einzeldatei entsteht). Inline-`onclick` in HTML-Strings
    durch `addEventListener` ersetzen.
 5. **Sprechende Namen.** Viele Namen sind Kürzel (`lop`, `sv`, `fdE`, `SGK`). Beim Bearbeiten einer Datei die
-   dort definierten Namen ausschreiben. Vorher nach Vorkommen in HTML-Strings suchen.
+   dort definierten Namen ausschreiben, mit `node tools/umbenennen.mjs <alt> <neu>`. Das Werkzeug ändert nur echte
+   Bezüge und meldet Vorkommen in HTML-Strings (`onclick="…"`); diese mit `--auch-strings` mitändern.
 6. **Große Dateien teilen**, z. B. `13-geometrie-und-nutzung/010-hilfen-geometrie.js` (über 2000 Zeilen).
-7. **`function close()`** in `05-projekt-und-bedienung` überdeckt `window.close`. Umbenennen, dabei die Aufrufe
-   aus HTML-Strings mitziehen.
+7. ~~`function close()` überdeckt `window.close`~~ – erledigt am 28.10.2026: heißt jetzt `draftClose()`.
+   Für weitere Umbenennungen: `node tools/umbenennen.mjs <alt> <neu>` (siehe Punkt 5).
 8. **three.js r128** (2021) ist veraltet. Ein Update bringt API-Änderungen mit sich, dafür einen eigenen Schritt planen.
 
 ## C – Aufräumen (Lint-Hinweise, `node tools/lint.mjs --alle`)

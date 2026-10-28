@@ -14,14 +14,15 @@ npm run build        # erzeugt dist/maad.html
 
 `dist/maad.html` lässt sich direkt im Browser öffnen (Internetzugang für three.js, MapLibre und Kartendienste nötig).
 
-| Befehl                            | Zweck                                                                   |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `npm run build`                   | Einzeldatei bauen (`dist/maad.html`, dazu `dist/bundle.js` zur Analyse) |
-| `npm run format`                  | Quellen einheitlich formatieren (Prettier)                              |
-| `npm run lint`                    | Statische Prüfung; Meldungen zeigen auf `src/js/<datei>:<zeile>`        |
-| `npm test`                        | Rauchtest im Browser (lädt die App, bedient die Hauptbereiche)          |
-| `npm run check`                   | alles zusammen – vor jedem Commit ausführen                             |
-| `npm run vergleich -- <alt.html>` | Verhaltensvergleich mit einem älteren Build (für Umbauten; ca. 15 Min.) |
+| Befehl                                  | Zweck                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run build`                         | Einzeldatei bauen (`dist/maad.html`, dazu `dist/bundle.js` zur Analyse) |
+| `npm run format`                        | Quellen einheitlich formatieren (Prettier)                              |
+| `npm run lint`                          | Statische Prüfung; Meldungen zeigen auf `src/js/<datei>:<zeile>`        |
+| `npm test`                              | Rauchtest im Browser (lädt die App, bedient die Hauptbereiche)          |
+| `npm run check`                         | alles zusammen – vor jedem Commit ausführen                             |
+| `npm run vergleich -- <alt.html>`       | Verhaltensvergleich mit einem älteren Build (für Umbauten; ca. 15 Min.) |
+| `node tools/umbenennen.mjs <alt> <neu>` | globalen Namen in allen Dateien umbenennen (nur echte Bezüge)           |
 
 Für `npm test` einmalig den Browser installieren: `npx playwright install chromium`
 (oder einen vorhandenen nutzen: `CHROMIUM_PATH=/pfad/zu/chrome npm test`).
