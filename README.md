@@ -44,6 +44,7 @@ tests/
 docs/
   ARCHITEKTUR.md        wie der Code zusammenhängt, Regeln für Änderungen
   TECHNISCHE-SCHULDEN.md   bekannte Baustellen, priorisiert
+CLAUDE.md               Regeln für Claude (Cowork / Claude Code) beim Weiterentwickeln
 ```
 
 Eine Übersicht aller Bereiche und die Regeln für Änderungen stehen in [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
