@@ -1,0 +1,23 @@
+{
+  "name": "maad",
+  "version": "1.0.0",
+  "private": true,
+  "description": "maad – Planungswerkzeug für Grundstücke und Gebäude (Einzeldatei-Webanwendung)",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "format": "prettier --write \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\" \"*.md\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\"",
+    "lint": "node tools/build.mjs && node tools/lint.mjs",
+    "test": "node tools/build.mjs && node tests/smoke.test.mjs",
+    "check": "npm run format:check && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "globals": "17.13.0",
+    "maplibre-gl": "^5.24.0",
+    "playwright": "1.64.1",
+    "prettier": "3.9.10",
+    "three": "^0.128.0"
+  }
+}

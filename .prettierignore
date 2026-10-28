@@ -1,0 +1,6 @@
+dist/
+node_modules/
+src/data/
+src/assets/
+src/**/*.daten.js
+src/styles/schrift-*.css
