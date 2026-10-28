@@ -52,7 +52,7 @@ Eine Übersicht aller Bereiche und die Regeln für Änderungen stehen in [docs/A
 ## Die drei wichtigsten Regeln
 
 1. **Reihenfolge ist Verhalten.** Alle Dateien unter `src/js` werden in Pfadreihenfolge zu _einem_ Skript
-   zusammengesetzt. Spätere Dateien erweitern Funktionen früherer Dateien. Dateien nicht umnummerieren,
+   zusammengesetzt; Code, der beim Laden läuft, steht in `start()` am Ende. Dateien nicht umnummerieren,
    ohne die Abhängigkeiten zu prüfen.
 2. **Nie direkt `dist/maad.html` bearbeiten** – sie wird bei jedem Build überschrieben.
 3. **Vor jedem Commit `npm run check`.** Lint-Fehler und ein roter Rauchtest blockieren.
