@@ -281,8 +281,6 @@ addEventListener(
 // projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
 // projApplyPre(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
 // baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
-// Gebäude kopieren/verschieben/ändern löscht keine Bäume mehr (kein Abgleich zwischen den Geometrien)
-function treePruneB() {}
 // Eigene Flächen: Klick in die Fläche oder auf den Rand wählt sie (neueste, kleinste zuerst)
 function areaPickAt(g) {
   const tol = 6 * mpp();

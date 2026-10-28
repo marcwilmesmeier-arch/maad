@@ -43,6 +43,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   einem Funktionsaufruf in einer Mehrfachdeklaration. Einzeln prüfen.
 - In der Bilanz-/Mengenausgabe wird ein Abschnitt mit `zoD(…)` erzeugt, aber nie angezeigt (früher Variable
   `fl`). Fachlich klären: vergessen oder absichtlich ausgeblendet?
-- `treePruneB()` ist eine leere Funktion (Baumzuschnitt abgeschaltet): Aufrufer entfernen oder Funktion wiederherstellen.
 - Der MapTiler-Schlüssel steht im Code (`02-geodaten/010-kontextdaten.js`). Im MapTiler-Konto auf die eigene
   Domain beschränken.

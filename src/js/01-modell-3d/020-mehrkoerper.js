@@ -519,12 +519,6 @@ function mesh(b) {
   (b.ex ? G.ex : G.nb).add(g);
   if (!b.ex && S.zo) zoNew(b);
   if (S.hlk && !b.ex) hlApply();
-  if (!b.ex)
-    try {
-      treePruneB(b);
-    } catch (e) {
-      logErr(e, 'mesh');
-    }
   // ── Erweiterung aus 24-erweiterungen-v344-v436/070-gelaendeplanum.js (danach)
   try {
     if (typeof PLM !== 'undefined') {
