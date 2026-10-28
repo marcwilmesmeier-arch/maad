@@ -205,31 +205,8 @@ function L2ISO(m, bid, sel) {
     logErr(e, 'L2ISO');
   }
 }
-{
-  const _p = zoPick;
-  zoPick = function (i) {
-    if (S.l2.iso) {
-      S.l2.iso = null;
-      l2IsoApply(true);
-    }
-    return _p.apply(this, arguments);
-  };
-}
-{
-  const _x3 = exApply;
-  exApply = function () {
-    const r = _x3.apply(this, arguments);
-    try {
-      G.l2n.children.forEach((m) => {
-        const b = S.bld.find((z) => z.id === m.userData.bid);
-        if (b) m.position.y = m.userData.y0 + exOff(b, m.userData.li);
-      });
-    } catch (e) {
-      logErr(e, 'exApply');
-    }
-    return r;
-  };
-}
+// zoPick(): Erweiterung zusammengeführt, siehe 15-grundriss/050-isolieren.js
+// exApply(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js
 setInterval(() => {
   try {
     l2IsoApply();
@@ -491,16 +468,4 @@ function l2LayerQs(e) {
   });
   return out;
 }
-const l2MeshOrig = l2Mesh;
-{
-  const _m = l2Mesh;
-  l2Mesh = function (e) {
-    if (!l23()) return _m(e);
-    try {
-      return l2MeshL(e);
-    } catch (err) {
-      console.warn('LOD300', err);
-      return _m(e);
-    }
-  };
-}
+// l2Mesh(): Erweiterung zusammengeführt, siehe 22-lod200-waende/030-aktionen.js

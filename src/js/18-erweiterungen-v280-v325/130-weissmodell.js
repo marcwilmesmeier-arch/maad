@@ -34,23 +34,5 @@ function wmDefApply() {
   S.lyM.wm = b;
   lyMApply(b);
 }
-{
-  const _d = drSet;
-  drSet = function () {
-    const r = _d.apply(this, arguments);
-    try {
-      if (S.dar === 'wm' && !(S.lyM.wm && S.lyM.wm.wv === 2)) wmDefApply();
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _l = lyMLoad;
-  lyMLoad = function () {
-    const r = _l.apply(this, arguments);
-    S.wmPalDone = !!(S.lyM.wm && S.lyM.wm.wv === 2);
-    return r;
-  };
-}
+// drSet(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
+// lyMLoad(): Erweiterung zusammengeführt, siehe 18-erweiterungen-v280-v325/030-layer.js

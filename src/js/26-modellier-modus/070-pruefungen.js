@@ -92,17 +92,7 @@ function szFix(b) {
   }
   return any;
 }
-{
-  const _m = mesh;
-  mesh = function (b) {
-    try {
-      if (b && b.levels && b.levels.some((l) => l.faces && l.faces.length)) szFix(b);
-    } catch (x) {
-      console.warn('szFix', x);
-    }
-    return _m.apply(this, arguments);
-  };
-}
+// mesh(): Erweiterung zusammengeführt, siehe 01-modell-3d/020-mehrkoerper.js
 function szOkF(b, j, poly, skip) {
   if (poly.length < 3 || szA(poly) < 0.05 || znEdgesX(poly, poly)) return false;
   const I = boolInter([bpP(poly)], szExposed(b, j, skip));

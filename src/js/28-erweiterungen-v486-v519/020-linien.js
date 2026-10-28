@@ -244,39 +244,7 @@ function lnCommit() {
   const el = document.getElementById('lnL');
   if (el) el.focus();
 }
-// Fang: Ergebnis merken, getippte Werte uebersteuern
-{
-  const _s = snap;
-  snap = function (p, e, i, A) {
-    let r = _s.apply(this, arguments);
-    try {
-      if (
-        A === S.draft &&
-        S.tool === 'f' &&
-        S.dm === 'bld' &&
-        S.shape === 'free' &&
-        S.draft.length &&
-        r &&
-        r.p
-      ) {
-        LN.raw = r.p.slice();
-        LN.touch = r.t === 'pt' ? r.p.slice() : null;
-        if (S.fg) S.fg.arc = null;
-        if (LN.ovr) {
-          const q = lnPoint();
-          if (q) {
-            r = Object.assign({}, r, { p: q, t: 'ln', sn: null, lab: 'Eingabe' });
-            LN.touch = null;
-          }
-        }
-        LN.last = r.p.slice();
-      }
-    } catch (x) {
-      console.warn('lnSnap', x);
-    }
-    return r;
-  };
-}
+// snap(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 // Zeichnen: Farben, Endpunkte, Winkel
 const lnTex = (t) => {
   const c = document.createElement('canvas');
@@ -462,26 +430,8 @@ function lnScale() {
     sp.scale.set(52 * u * k, 19.5 * u * k, 1);
   });
 }
-{
-  const _d = drawOv;
-  drawOv = function () {
-    const r = _d.apply(this, arguments);
-    lnDraw();
-    return r;
-  };
-}
-{
-  const _p = placeHc;
-  placeHc = function () {
-    const r = _p.apply(this, arguments);
-    try {
-      lnScale();
-    } catch (e) {
-      logErr(e, 'placeHc');
-    }
-    return r;
-  };
-}
+// drawOv(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
+// placeHc(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
 setInterval(() => {
   try {
     if (!lnOn()) return;

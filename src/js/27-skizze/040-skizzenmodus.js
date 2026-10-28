@@ -41,73 +41,7 @@ function parDirs() {
 }
 const siteCorner = (q) =>
   P.some((a) => a.site && a.poly.some((c) => Math.hypot(c[0] - q[0], c[1] - q[1]) < 0.05));
-{
-  const _s = snap;
-  snap = function (p, e, i, A) {
-    let r = _s.apply(this, arguments);
-    if (!r) return r;
-    try {
-      if (
-        r.t === 'pt' &&
-        siteCorner(r.p) &&
-        !SKS.e.some((s) => [s.a, s.b].some((c) => Math.hypot(c[0] - r.p[0], c[1] - r.p[1]) < 0.05))
-      ) {
-        r = Object.assign({}, r, { sn: null, lab: (r.lab || '').replace(/ · Punkt$/, '') + ' · Grundstück' });
-      }
-      if (
-        (SNX.ref ||
-          (S.tool === 'f' && S.dm === 'bld' && S.shape === 'free' && A === S.draft && S.draft.length)) &&
-        r.t !== 'pt' &&
-        !(e && e.shiftKey)
-      ) {
-        const ref = SNX.ref || S.draft.at(-1),
-          vx = p[0] - ref[0],
-          vz = p[1] - ref[1],
-          L = Math.hypot(vx, vz);
-        if (L > 0.5) {
-          let best = null,
-            ba = 1;
-          parDirs().forEach((d) => {
-            const tl = d.sk ? PAR.tolSk : PAR.tol;
-            [
-              [d[0], d[1], 0],
-              [-d[1], d[0], 1],
-            ].forEach(([x, z, pp]) => {
-              const dot = vx * x + vz * z,
-                cr = Math.abs(vx * z - vz * x),
-                ang = Math.atan2(cr, Math.abs(dot)),
-                w = (ang / tl) * (d.sk ? 0.6 : 1);
-              if (ang < tl && w < ba) {
-                ba = w;
-                best = { x, z, dot, pp, ang };
-              }
-            });
-          });
-          if (best) {
-            let ob = 1e9;
-            if (r.t === 'ang') {
-              const rx = r.p[0] - ref[0],
-                rz = r.p[1] - ref[1];
-              ob = Math.abs(Math.atan2(vx * rz - vz * rx, vx * rx + vz * rz));
-            }
-            if (r.t !== 'ang' || best.ang <= ob || ba < 0.6) {
-              const q = [ref[0] + best.x * best.dot, ref[1] + best.z * best.dot];
-              r = {
-                p: q,
-                t: 'par',
-                lab: f1(Math.abs(best.dot), 2) + ' m · ' + (best.pp ? 'rechtwinklig' : 'parallel'),
-                sn: null,
-              };
-            }
-          }
-        }
-      }
-    } catch (x) {
-      console.warn('par', x);
-    }
-    return r;
-  };
-}
+// snap(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 // ---- Versatz in der Skizze
 const SOF = { d: null, re: null, last: null };
 function sofSource(e) {
@@ -326,43 +260,9 @@ addEventListener(
     return _k(e);
   };
 }
-{
-  const _t = skTool;
-  skTool = function (t) {
-    sofReset();
-    SOF.re = null;
-    return _t.apply(this, arguments);
-  };
-}
-// ---- Rechtsklick im Skizzenmodus
-{
-  const _c = cmShow;
-  cmShow = function (e) {
-    _c.apply(this, arguments);
-    try {
-      if (cmEl.classList.contains('on')) return;
-      if (!((S.tool === 'f' && S.dm === 'bld') || ((SK.used || SKS.e.length) && S.tool === 'v'))) return;
-      const w = cmEl.offsetWidth,
-        h = cmEl.offsetHeight;
-      cmEl.classList.add('on');
-      cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
-      cmEl.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px';
-    } catch (x) {
-      console.warn('cm', x);
-    }
-  };
-}
-{
-  const _b = baDo;
-  baDo = function (k) {
-    if (k === 'del' && SKS.sel.length && !S.sel) {
-      cmHide();
-      sksDelete();
-      return;
-    }
-    return _b.apply(this, arguments);
-  };
-}
+// skTool(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
+// cmShow(): Erweiterung zusammengeführt, siehe 13-geometrie-und-nutzung/010-hilfen-geometrie.js
+// baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
 // ---- Esc geht stufenweise zurück: 1× laufende Eingabe/Zeichnung abbrechen, 2× Werkzeug verlassen (oberste Ebene: Gebäude, Grundstücke … wählen)
 {
   const _e = SK.opEsc;

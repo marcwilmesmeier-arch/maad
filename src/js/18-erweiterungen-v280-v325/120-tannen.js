@@ -239,51 +239,9 @@ setInterval(() => {
     console.error(e);
   }
 }, 400);
-/* Layer-Schalter lädt die CORINE-Daten; neue Bäume setzen den Wald zurück */
-{
-  const _lv = lvis;
-  lvis = function (i, v) {
-    const r = _lv.apply(this, arguments);
-    try {
-      if (LY[i][1] === 'wld') {
-        if (v) {
-          if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
-          if (!OVD.clc) ovLoad('clc');
-        }
-        WLD.sig = '';
-        try {
-          lyRender();
-        } catch (e) {
-          logErr(e, 'lvis');
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _os = ovSync;
-  ovSync = function () {
-    const r = _os.apply(this, arguments);
-    try {
-      if (S.geo && wldOn() && !OVD.clc) ovLoad('clc');
-    } catch (e) {
-      logErr(e, 'ovSync');
-    }
-    return r;
-  };
-}
-{
-  const _tb = treesBuild;
-  treesBuild = function () {
-    const r = _tb.apply(this, arguments);
-    WLD.mod = false;
-    WLD.sig = '';
-    return r;
-  };
-}
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// ovSync(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/080-karten.js
+// treesBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
 window.wldSet = function (k, v) {
   if (k === 'nad') S.lc.nad = v;
 };
@@ -321,27 +279,7 @@ function wldStat() {
     return h;
   };
 }
-/* Grafikeffekt „Bäume · Nadelschalen“ im Panel „Darstellung“ (neben Laubschalen) */
-{
-  const _u = fxUi;
-  fxUi = function () {
-    const r = _u.apply(this, arguments);
-    try {
-      const e = document.getElementById('fxo');
-      if (!e || S.dar === 'wm' || e.querySelector('[data-nd]')) return r;
-      const o = S.fx[S.dar] || {},
-        ix = e.innerHTML.indexOf('<div class="dmu">');
-      if (ix < 0) return r;
-      e.innerHTML =
-        e.innerHTML.slice(0, ix) +
-        `<label data-nd="1">Bäume: Nadelschalen <input type="checkbox" ${o.nadel ? 'checked' : ''} onchange="fxSet('nadel',this.checked)"></label>` +
-        e.innerHTML.slice(ix);
-    } catch (e2) {
-      console.error(e2);
-    }
-    return r;
-  };
-}
+// fxUi(): Erweiterung zusammengeführt, siehe 18-erweiterungen-v280-v325/030-layer.js
 try {
   fxUi();
 } catch (e) {

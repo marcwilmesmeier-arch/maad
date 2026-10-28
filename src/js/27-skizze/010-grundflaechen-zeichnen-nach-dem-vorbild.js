@@ -257,6 +257,14 @@ function gdExUp(e) {
   return true;
 }
 function gdExCommit(n) {
+  // ── Erweiterung aus 27-skizze/030-zeichnen.js
+  const F = SKS.pend;
+  SKS.pend = null;
+  gdExCommitBasis(n);
+  if (F) sksConsume(F);
+}
+// gdExCommit() ohne die Erweiterungen darüber – wird von gdExCommit() gezielt aufgerufen
+function gdExCommitBasis(n) {
   GE.d = null;
   SZP.visible = false;
   SK.vcb = '';
@@ -386,22 +394,7 @@ function gdExCommit(n) {
     return _k(e);
   };
 }
-{
-  const _s = skBaSync;
-  skBaSync = function () {
-    _s();
-    try {
-      if (S.tool === 'f' && S.dm === 'bld') {
-        const m = { free: 'skz', rect: 'skr', circ: 'skk', poly: 'sko' }[S.shape];
-        document.querySelectorAll('[data-ba]').forEach((b) => {
-          if (b.dataset.ba === m) b.classList.add('on');
-        });
-      }
-    } catch (e) {
-      logErr(e, 'skBaSync');
-    }
-  };
-}
+// skBaSync(): Erweiterung zusammengeführt, siehe 26-modellier-modus/120-modellier.js
 SKBA.skk = 'c';
 SKBA.sko = 'o';
 

@@ -117,6 +117,12 @@ function admApply(part) {
   } catch (e) {
     logErr(e, 'admApply');
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js (danach)
+  try {
+    lyAfterRun();
+  } catch (e) {
+    logErr(e, 'admApply');
+  }
 }
 window.gfxDefApply = function (quiet) {
   const o = gfxDefGet();
@@ -379,45 +385,13 @@ function admLyBlock() {
   d.className = 'fl';
   document.body.appendChild(d);
 }
-{
-  const _n = nav;
-  nav = function () {
-    const r = _n.apply(this, arguments);
-    try {
-      if (admIs()) {
-        const t = $('tabs');
-        if (t && !$('badm'))
-          t.insertAdjacentHTML(
-            'beforeend',
-            '<button class="tab' +
-              ($('admp') && $('admp').style.display === 'block' ? ' on' : '') +
-              '" id="badm" onclick="admToggle()" title="Voreinstellungen für alle Anwender, Startansicht, Demokarte"><i>⚙</i>Admin</button>',
-          );
-      }
-    } catch (e) {
-      logErr(e, 'nav');
-    }
-    return r;
-  };
-}
+// nav(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 try {
   nav();
 } catch (e) {
   logErr(e, 'init');
 }
-{
-  const _d = drSet;
-  drSet = function () {
-    const r = _d.apply(this, arguments);
-    try {
-      const p = $('admp');
-      if (p && p.style.display === 'block') admRender();
-    } catch (e) {
-      logErr(e, 'drSet');
-    }
-    return r;
-  };
-}
+// drSet(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 /* Startseite: Darstellung mit ihren veröffentlichten Standardeinstellungen anwenden */
 function admModeApply(m) {
   const d = ADM.cfg.modes[m];

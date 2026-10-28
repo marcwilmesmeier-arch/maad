@@ -285,6 +285,16 @@ function skMkEl() {
   return d;
 }
 function skInferHover(e) {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  if (SK.hv && szSp(SK.hv)) {
+    try {
+      skMkEl().style.display = 'none';
+      skTip('', null);
+    } catch (e) {
+      logErr(e, 'skInferHover');
+    }
+    return;
+  }
   const mk = skMkEl();
   mk.style.display = 'none';
   skTip('', null);
@@ -346,159 +356,12 @@ function skIfOff() {
     logErr(e, 'skIfOff');
   }
 }
-// Hover einbinden (alle Werkzeuge ausser Teilen)
-{
-  const _h = hover;
-  hover = function (e) {
-    const r = _h.apply(this, arguments);
-    try {
-      if (skAct() && SK.tool !== 'l' && !SK.op && !SK.win) skInferHover(e);
-      else if (!skAct() || SK.tool === 'l') {
-        skMkEl().style.display = 'none';
-        if (SK.tool === 'l' && SK.lh) skTip(SK.lh.lab ? 'Fang: ' + SK.lh.lab : '', e);
-        else skTip('', null);
-      }
-    } catch (x) {
-      console.warn('skI', x);
-    }
-    return r;
-  };
-}
-// Ziehen & Schieben: Fang auf parallele Wand/Ausgangsposition
-{
-  const _a = skOpMouse;
-  skOpMouse = function (e) {
-    _a.apply(this, arguments);
-    try {
-      const op = SK.op;
-      if (!op) {
-        return;
-      }
-      if (op.top || !op.sn) {
-        skIf([]);
-        skTip('', null);
-        return;
-      }
-      const p = [];
-      op.tg.forEach((g) => {
-        if (g.i == null || g.top) return;
-        const l = op.b.levels[g.j],
-          f = lf(op.b, l),
-          a = f[g.i],
-          c = f[(g.i + 1) % f.length],
-          z0 = skZ(op.b, g.j),
-          z1 = z0 + l.h;
-        p.push(a[0], z0, a[1], c[0], z0, c[1], a[0], z1, a[1], c[0], z1, c[1]);
-      });
-      skIf([{ c: 0xd63ad6, p }]);
-      skTip(op.sn === 2 ? 'Ausgangsposition' : 'Parallel zu Wand/Grenze', e);
-    } catch (e) {
-      logErr(e, 'skOpMouse');
-    }
-  };
-}
-// Verschieben: Achsenhilfslinien, Eckfang, automatische Achsenerkennung
-{
-  const _m = skMMouse;
-  skMMouse = function (e) {
-    const op = SK.op;
-    let auto = null;
-    if (op && op.lock == null && !e.altKey && op.p0) {
-      const q = planePt(e, op.wy);
-      if (q) {
-        const dx = q[0] - op.p0[0],
-          dz = q[1] - op.p0[1],
-          L = Math.hypot(dx, dz);
-        if (L > 1) {
-          const ang = (Math.atan2(Math.abs(dz), Math.abs(dx)) * 180) / Math.PI;
-          if (ang < 3) auto = 'x';
-          else if (ang > 87) auto = 'z';
-        }
-      }
-    }
-    if (auto) {
-      op.lock = auto;
-      op.autoLock = 1;
-    }
-    _m.apply(this, arguments);
-    try {
-      if (!SK.op) return;
-      const o = SK.op,
-        wy = o.wy,
-        x0 = o.p0 ? o.p0[0] : 0,
-        z0 = o.p0 ? o.p0[1] : 0,
-        R = 60,
-        segs = [];
-      if (o.lock === 'x') segs.push({ c: 0xe53935, p: [x0 - R, wy, z0, x0 + R, wy, z0] });
-      else if (o.lock === 'z') segs.push({ c: 0x43a047, p: [x0, wy, z0 - R, x0, wy, z0 + R] });
-      else if (o.lock === 'y') segs.push({ c: 0x1e88e5, p: [x0, wy - R, z0, x0, wy + R, z0] });
-      const sn = o.snapPt,
-        mk = skMkEl();
-      if (sn) {
-        const sp = skProj(sn[0], wy, sn[1]);
-        mk.style.display = 'block';
-        mk.style.left = sp[0] + 'px';
-        mk.style.top = sp[1] + 'px';
-      } else mk.style.display = 'none';
-      skIf(segs);
-      skTip(
-        o.lock
-          ? (o.lock === 'x'
-              ? 'Entlang Ost/West (rot)'
-              : o.lock === 'z'
-                ? 'Entlang Nord/Süd (grün)'
-                : 'Senkrecht (blau)') + (o.autoLock ? ' – automatisch' : '')
-          : sn
-            ? 'Ecke'
-            : '',
-        e,
-      );
-      if (o.autoLock && o.lock) {
-        /* Auto-Sperre nur, solange der Winkel passt */
-      }
-    } catch (e) {
-      logErr(e, 'skMMouse');
-    }
-    if (op && op.autoLock) {
-      op.lock = null;
-      op.autoLock = 0;
-    }
-  };
-}
-// Aufraeumen
-{
-  const _e = skOpEnd;
-  skOpEnd = function (c) {
-    _e.apply(this, arguments);
-    try {
-      skIfOff();
-    } catch (e) {
-      logErr(e, 'skOpEnd');
-    }
-  };
-}
-{
-  const _e = skMEnd;
-  skMEnd = function (c) {
-    _e.apply(this, arguments);
-    try {
-      skIfOff();
-    } catch (e) {
-      logErr(e, 'skMEnd');
-    }
-  };
-}
-{
-  const _t = skTool;
-  skTool = function (t) {
-    _t.apply(this, arguments);
-    try {
-      skIfOff();
-    } catch (e) {
-      logErr(e, 'skTool');
-    }
-  };
-}
+// hover(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// skOpMouse(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
+// skMMouse(): Erweiterung zusammengeführt, siehe 26-modellier-modus/040-stufe-3.js
+// skOpEnd(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
+// skMEnd(): Erweiterung zusammengeführt, siehe 26-modellier-modus/040-stufe-3.js
+// skTool(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
 setInterval(() => {
   try {
     skBar();

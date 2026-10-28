@@ -71,29 +71,37 @@ Ordner dessen Namen, sonst `erweiterungen-vAAA-vBBB`.
 Dateien mit der Endung `.daten.js` enthalten nur eingebettete Daten (Schrift, Bild). Sie werden weder
 formatiert noch gelesen. Ändern: neu erzeugen statt von Hand bearbeiten.
 
-## Muster: Funktionen erweitern
+## Funktionen erweitern
 
-Viele spätere Dateien erweitern eine bestehende Funktion, statt sie zu ändern:
+Früher erweiterten spätere Dateien bestehende Funktionen zur Laufzeit
+(`const _tool = tool; tool = function () { … _tool.apply(this, arguments) … }`). Diese Schichten sind
+zusammengeführt: Jede Funktion ist jetzt **genau einmal** definiert, an ihrem ursprünglichen Ort. Erweiterungen
+aus anderen Bereichen stehen darin als markierte Abschnitte, in der Reihenfolge, in der sie laufen:
 
 ```js
-{
-  const _tool = tool;
-  tool = function (t) {
-    /* zusätzliches Verhalten */
-    return _tool.apply(this, arguments);
-  };
+function tool(t) {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/070-import.js
+  if (IMP.mode && t !== 'v') { … }          // läuft zuerst
+  …                                          // Code der ursprünglichen Funktion
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js (danach)
+  skBaSync();                                // läuft zuletzt
 }
 ```
 
-Etwa 130 Funktionen sind so in bis zu sieben Schichten erweitert (z. B. `lvis`, `drSet`, `rr`, `tool`). Was eine
-Funktion tatsächlich tut, ergibt sich erst aus allen Schichten in Ladereihenfolge. Zum Nachsehen:
+- Wo eine Erweiterung den alten Ablauf vorzeitig mit `return` verlassen kann, steht dieser in einer sofort
+  aufgerufenen Pfeilfunktion (`const r = (() => { … })();`). Danach folgt der Teil, der in jedem Fall läuft.
+- Ruft eine Erweiterung die alte Fassung gezielt auf (z. B. mit anderen Argumenten), hat diese einen eigenen Namen,
+  meist `<name>Basis`, und steht direkt unter der Funktion.
+- In der Datei, aus der eine Erweiterung stammt, steht ein Verweis:
+  `// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js`.
+- **Für neuen Code gilt:** die Funktion direkt ändern. Keine neuen Laufzeit-Umschreibungen (`f = function`).
+  Ausnahme: Erweiterungen, die nur unter einer Bedingung gelten (`if (ACC) { … }` im Kundenzugang).
 
-```bash
-grep -rn "^\s*tool = function\|const _[a-z]* = tool;" src/js
-```
+## Programmstart
 
-**Für neuen Code gilt:** Bestehende Funktion direkt ändern, statt eine weitere Schicht anzulegen. Die
-vorhandenen Schichten werden schrittweise zusammengeführt (siehe [TECHNISCHE-SCHULDEN.md](TECHNISCHE-SCHULDEN.md)).
+Alle Aufrufe, die beim Laden etwas ausführen (Platzhalter-Szene, Darstellung, Reiter, Startseite …), stehen in
+`start()` in `29-start/010-start-projekt-oeffnen.js` und laufen erst, wenn alle Dateien geladen sind. Neuer
+Startcode gehört dorthin, nicht in die Bereichsdateien.
 
 ## Fehlerbehandlung
 

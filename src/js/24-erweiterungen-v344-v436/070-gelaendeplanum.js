@@ -114,18 +114,7 @@ function plvBuild() {
     console.warn('Planum-Vektor', e);
   }
 }
-{
-  const _pp = plmPaint;
-  plmPaint = function () {
-    const r = _pp.apply(this, arguments);
-    try {
-      plvBuild();
-    } catch (e) {
-      logErr(e, 'plmPaint');
-    }
-    return r;
-  };
-}
+// plmPaint(): Erweiterung zusammengeführt, siehe 21-gelaendeplanum/010-gelaendeplanum.js
 setInterval(() => {
   try {
     const s = plvSig();
@@ -176,21 +165,7 @@ function plmFoot() {
   }
   return out;
 }
-{
-  const _mesh = mesh;
-  mesh = function () {
-    const r = _mesh.apply(this, arguments);
-    try {
-      if (typeof PLM !== 'undefined' && typeof plmTick === 'function') {
-        clearTimeout(PLM._ft);
-        PLM._ft = setTimeout(() => plmTick(), 30);
-      }
-    } catch (e) {
-      logErr(e, 'mesh');
-    }
-    return r;
-  };
-}
+// mesh(): Erweiterung zusammengeführt, siehe 01-modell-3d/020-mehrkoerper.js
 /* v435 Geländeausschnitt pixelgenau: Gebäudekubatur (Grundrisse UG..EG) wird zusätzlich im Gelände-Shader ausgeschnitten (discard), nicht nur über das Netz */
 function plmCut() {
   try {
@@ -212,11 +187,4 @@ function plmCut() {
     console.warn('plmCut', e);
   }
 }
-{
-  const _g = plmGeom;
-  plmGeom = function () {
-    const r = _g.apply(this, arguments);
-    plmCut();
-    return r;
-  };
-}
+// plmGeom(): Erweiterung zusammengeführt, siehe 21-gelaendeplanum/020-gelaendenetz.js

@@ -98,17 +98,7 @@ async function dgmUSA(lon, lat, size, lab) {
     };
   }
 }
-{
-  const _d = dgmLoad;
-  dgmLoad = async function (lon, lat, size, cov, lab) {
-    if (inUSA(lon, lat) && !((GEO.wcsDgm || '').trim() || (GEO.wcsDom || '').trim())) {
-      const dom = /dom/i.test(cov || '');
-      if (dom) return domUSA(lon, lat, size, lab || 'DOM1');
-      return dgmUSA(lon, lat, size, lab || 'DGM1');
-    }
-    return _d.apply(this, arguments);
-  };
-}
+// dgmLoad(): Erweiterung zusammengeführt, siehe 02-geodaten/060-hamburg.js
 /* Gebäude: New York mit Dachhöhen (ft → m); sonst bleibt MapTiler/OSM (Höhen aus OSM-Tags) */
 async function bldUSA(lon, lat, size) {
   const n = USA.nyc,
@@ -161,12 +151,4 @@ async function bldUSA(lon, lat, size) {
     name: 'New York City',
   };
 }
-{
-  const _b = bldLoad2;
-  bldLoad2 = async function (lon, lat, size) {
-    if (!inUSA(lon, lat)) return _b.apply(this, arguments);
-    const r = await bldUSA(lon, lat, size);
-    if (r.list.length) return { list: r.list, msg: r.msg, via: 'usa', prov: r.name };
-    return { list: [], msg: r.msg + ' MapTiler/OSM-Gebäude werden verwendet.', via: 'osm', prov: '' };
-  };
-}
+// bldLoad2(): Erweiterung zusammengeführt, siehe 02-geodaten/040-lod3.js

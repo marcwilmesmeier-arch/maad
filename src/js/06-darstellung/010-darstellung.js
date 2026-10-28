@@ -144,32 +144,37 @@ const drWarm = (el) => {
   );
 };
 function sunUp() {
-  const hr = +$('hr').value;
-  $('hl').textContent = drHM(hr);
-  const R = S.dar === 'real',
-    on = S.sun || R;
-  if (!on) {
-    const ch = sunL.castShadow;
-    sunL.castShadow = false;
-    sunL.position.set(-120, 200, 160);
-    sunL.intensity = 0.6 * S.sunK;
-    sunL.color.set('#ffffff');
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
+  const r = (() => {
+    const hr = +$('hr').value;
+    $('hl').textContent = drHM(hr);
+    const R = S.dar === 'real',
+      on = S.sun || R;
+    if (!on) {
+      const ch = sunL.castShadow;
+      sunL.castShadow = false;
+      sunL.position.set(-120, 200, 160);
+      sunL.intensity = 0.6 * S.sunK;
+      sunL.color.set('#ffffff');
+      if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
+      drSunInfo();
+      return;
+    }
+    const [la, lo] = drLL(),
+      sp = sunPos(drDs(), hr, la, lo),
+      d = sp.dir,
+      el = (sp.el * 180) / Math.PI,
+      cs = el > 0;
+    sunL.position.set(d[0] * 350, Math.max(d[1], 0.02) * 350, d[2] * 350);
+    const ch = sunL.castShadow !== cs;
+    sunL.castShadow = cs;
+    sunL.intensity = (cs ? 1.1 : 0.1) * S.sunK;
+    sunL.color.set(R ? drWarm(el) : '#ffffff');
     if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
     drSunInfo();
-    return;
-  }
-  const [la, lo] = drLL(),
-    sp = sunPos(drDs(), hr, la, lo),
-    d = sp.dir,
-    el = (sp.el * 180) / Math.PI,
-    cs = el > 0;
-  sunL.position.set(d[0] * 350, Math.max(d[1], 0.02) * 350, d[2] * 350);
-  const ch = sunL.castShadow !== cs;
-  sunL.castShadow = cs;
-  sunL.intensity = (cs ? 1.1 : 0.1) * S.sunK;
-  sunL.color.set(R ? drWarm(el) : '#ffffff');
-  if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
-  drSunInfo();
+  })();
+  if (sunL.castShadow) sunFit();
+  return r;
 }
 S.sunC = '#ffffff';
 S.sunK = 0.2;
@@ -187,6 +192,14 @@ function liUp(u) {
   hemi.intensity = R ? 0.5 : +$('lb').value;
   S.sunK = R ? 0.7 : +$('lk').value;
   sunUp();
+  // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
+  if (S.dar === 'real') {
+    const k = brK();
+    hemi.intensity = 0.5 * k;
+    S.sunK = 0.7 * k;
+    sunUp();
+  }
+  brPatch();
 }
 // ---- Himmel ----
 function drSky() {
@@ -218,6 +231,12 @@ function kontUp() {
   sc.traverse((o) => {
     if (o.userData && o.userData.kont) o.visible = !S.noK;
   });
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js (danach)
+  try {
+    bkApply(true);
+  } catch (e) {
+    logErr(e, 'kontUp');
+  }
 }
 // ---- Weißmodell: Farben/Texturen neutralisieren, Straßen/Plätze/Parzellen ausblenden ----
 const WM_HIDE = ['parcels', 'bplan', 'abst', 'wms', 'pv'];

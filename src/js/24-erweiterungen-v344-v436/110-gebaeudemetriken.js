@@ -42,37 +42,7 @@ function zoSelAll() {
     logErr(e, 'zoSelAll');
   }
 }
-{
-  const _z = zoRender;
-  zoRender = function () {
-    const r = _z.apply(this, arguments);
-    try {
-      const e = document.getElementById('zol');
-      if (!e) return r;
-      const o = document.getElementById('zoAll');
-      if (o) o.remove();
-      const bs = S.bld.filter((b) => !b.ex && b.fp);
-      if (bs.length < 2) return r;
-      let tg = 0,
-        tr = 0;
-      bs.forEach((b) => {
-        const k = bM(b);
-        tg += k.bgfoi + k.bgfui;
-        tr += grOf(b);
-      });
-      const on = !S.sel && S.multi && S.multi.length === bs.length && bs.every((b) => S.multi.includes(b)),
-        A = (v) => f1(v, 1) + ' m²',
-        ng = bs.reduce((n, b) => n + b.levels.length, 0),
-        h = `<div id="zoAll" class="${on ? 'on' : ''}" onclick="zoSelAll()" title="Anklicken: alle Gebäude auswählen"><div class="zt">${bs.length} Gebäude<span style="font-weight:400;color:var(--zm);font-size:11px;margin-left:6px">${ng} Geschosse</span></div><div class="zr"><span>BGF gesamt</span><span style="white-space:nowrap">${A(tg)}</span></div><div class="zr" style="font-size:11.5px;color:var(--zm)"><span>GR gesamt</span><span style="white-space:nowrap">${A(tr)}</span></div></div>`;
-      const m = e.querySelector('.mu');
-      if (m) m.insertAdjacentHTML('afterend', h);
-      else e.insertAdjacentHTML('afterbegin', h);
-    } catch (err) {
-      console.warn('Gesamtzeile', err);
-    }
-    return r;
-  };
-}
+// zoRender(): Erweiterung zusammengeführt, siehe 15-grundriss/050-isolieren.js
 
 // Flächenart 5-Zimmer-Wohnung bleibt für bestehende Projekte verfügbar
 {
@@ -157,125 +127,9 @@ GR.mxRasAuto = () => {
   MXS.pick = 0;
   mxRefresh();
 };
-{
-  const _d = grDown;
-  grDown = function (e) {
-    if (MXS.pick && e.button === 0) {
-      const p = grPt(e),
-        R = S.mx.ras;
-      if (MXS.pick === 1) {
-        R.ox = gr2(p.x);
-        R.oz = gr2(p.z);
-        MXS.pick = 2;
-      } else {
-        R.th = Math.atan2(p.z - R.oz, p.x - R.ox);
-        MXS.pick = 0;
-      }
-      GRS.ps = '';
-      GRS.dirty = 1;
-      try {
-        grTick(true);
-      } catch (e) {
-        logErr(e, 'grDown');
-      }
-      return;
-    }
-    return _d.apply(this, arguments);
-  };
-}
-{
-  const _g = grDraw;
-  grDraw = function () {
-    const r = _g.apply(this, arguments);
-    try {
-      if (!S.mx.ras.draw) return r;
-      const b = grB(),
-        cv = gD('grCv');
-      if (!b || !cv) return r;
-      const lv = grLv(b),
-        fr = mxFrame(b, lv),
-        R = S.mx.ras,
-        m = R.mod || 1.25,
-        x = cv.getContext('2d'),
-        P = (lv.fp || b.fp).map((p) => mxRot(p, fr.th)),
-        u0 = Math.min(...P.map((p) => p[0])) - 6,
-        u1 = Math.max(...P.map((p) => p[0])) + 6,
-        v0 = Math.min(...P.map((p) => p[1])) - 6,
-        v1 = Math.max(...P.map((p) => p[1])) + 6,
-        ln = (a, c, col, w) => {
-          const A = grTf(...mxBack(a, fr.th)),
-            B = grTf(...mxBack(c, fr.th));
-          x.strokeStyle = col;
-          x.lineWidth = w;
-          x.beginPath();
-          x.moveTo(A[0], A[1]);
-          x.lineTo(B[0], B[1]);
-          x.stroke();
-        },
-        px = m * GRS.view.s;
-      x.save();
-      if (px >= 7) {
-        for (let u = fr.r[0] + Math.ceil((u0 - fr.r[0]) / m) * m; u <= u1; u += m)
-          ln([u, v0], [u, v1], 'rgba(94,127,146,.18)', 1);
-        for (let v = fr.r[1] + Math.ceil((v0 - fr.r[1]) / m) * m; v <= v1; v += m)
-          ln([u0, v], [u1, v], 'rgba(94,127,146,.18)', 1);
-      }
-      if (R.ax > 0) {
-        x.font = '11px system-ui';
-        x.fillStyle = '#b5651d';
-        let i = 0;
-        for (let u = fr.r[0]; u <= u1; u += R.ax, i++) {
-          if (u < u0) continue;
-          ln([u, v0], [u, v1], 'rgba(181,101,29,.55)', 1.2);
-          const A = grTf(...mxBack([u, v0], fr.th));
-          x.fillText(String(i + 1), A[0] + 3, A[1] - 3);
-        }
-      }
-      const O = grTf(...mxBack(fr.r, fr.th));
-      x.fillStyle = '#5E7F92';
-      x.beginPath();
-      x.arc(O[0], O[1], 4, 0, 7);
-      x.fill();
-      x.restore();
-    } catch (e) {
-      logErr(e, 'grDraw');
-    }
-    return r;
-  };
-}
-// ---- Raster als Zeichenhilfe in der normalen Grundrissbearbeitung (Reiter Anzeige): Modul, Tragachsen, Ursprung/Richtung, Einrasten
-{
-  const _s = grSnap;
-  grSnap = function (p, shift, lv, mode) {
-    const r = _s.apply(this, arguments);
-    try {
-      const R = S.mx.ras;
-      if (R.draw && R.dsnap !== 0 && !r.t && !shift) {
-        const b = grB(),
-          fr = mxFrame(b, lv),
-          m = R.mod || 1.25,
-          q = mxRot([p.x, p.z], fr.th),
-          u = fr.r[0] + Math.round((q[0] - fr.r[0]) / m) * m,
-          v = fr.r[1] + Math.round((q[1] - fr.r[1]) / m) * m,
-          tol = (GRPX / GRS.view.s) * 1.2,
-          du = Math.abs(q[0] - u),
-          dv = Math.abs(q[1] - v),
-          nu = du < tol,
-          nv = dv < tol;
-        if (nu || nv) {
-          const w = mxBack([nu ? u : q[0], nv ? v : q[1]], fr.th);
-          r.x = w[0];
-          r.z = w[1];
-          r.t = nu && nv ? 'p' : 'g';
-          if (!(nu && nv)) r.gd = [];
-        }
-      }
-    } catch (e) {
-      logErr(e, 'grSnap');
-    }
-    return r;
-  };
-}
+// grDown(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js
+// grDraw(): Erweiterung zusammengeführt, siehe 15-grundriss/120-zeichnen.js
+// grSnap(): Erweiterung zusammengeführt, siehe 15-grundriss/110-ausrichtung.js
 function rasCard() {
   const R = S.mx.ras,
     ni = (k, l, u, mn, mx, sp) =>
@@ -291,20 +145,7 @@ function rasCard() {
     `<button class="full" onclick="GR.mxPick()" title="Im Plan zuerst den Ursprung, danach einen zweiten Punkt für die Richtung anklicken">${MXS.pick === 1 ? 'Ursprung anklicken …' : MXS.pick === 2 ? 'Richtung anklicken …' : 'Ursprung und Richtung im Plan wählen'}</button><button class="full" onclick="GR.mxRasAuto()">Automatisch (Hauptachse, linke untere Ecke)</button><div class="mu" style="margin-top:4px">Nur Zeichenhilfe: Linien, Rechtecke und Punkte rasten auf Rasterlinien ein (Shift = ohne Einrasten). </div></div>`
   );
 }
-{
-  const _g = grPanel;
-  grPanel = function (b) {
-    const h = _g.apply(this, arguments);
-    if (GRS.tab === 'a') {
-      try {
-        return h + rasCard();
-      } catch (e) {
-        logErr(e, 'grPanel');
-      }
-    }
-    return h;
-  };
-}
+// grPanel(): Erweiterung zusammengeführt, siehe 15-grundriss/100-kopf.js
 
 // ---- Gebäudemodell-Quelle im Projekt umstellbar (Datenquellen & Einstellungen): Automatisch / LoD2 / LoD1 / OSM
 S.gbMode = S.gbMode || 'auto';
@@ -314,55 +155,10 @@ const GBM = [
   ['lod1', 'LoD1 (Grundriss + gemessene Höhe, Esri/IOER, keine Dachform)'],
   ['osm', 'OSM-Gebäude (extrudiert, Höhe geschätzt)'],
 ];
-{
-  const _b = bldLoad2;
-  bldLoad2 = async function (lon, lat, size) {
-    const m = S.gbMode || 'auto';
-    if (m === 'osm')
-      return {
-        list: [],
-        msg: 'Gebäudemodell: OSM-Gebäude gewählt (Datenquellen & Einstellungen).',
-        via: 'osm',
-        prov: '',
-      };
-    if (m === 'lod1') {
-      const o = S.lod2On;
-      S.lod2On = true;
-      let r;
-      try {
-        r = await lod2Load(lon, lat, size);
-      } finally {
-        S.lod2On = o;
-      }
-      r.msg = 'Gebäudemodell: LoD1 gewählt (Grundriss + gemessene Höhe). ' + r.msg;
-      r.via = r.list.length ? 'esri' : 'osm';
-      r.prov = '';
-      return r;
-    }
-    return _b.apply(this, arguments);
-  };
-}
-{
-  const _l = lod3Ask;
-  lod3Ask = function () {
-    if ((S.gbMode || 'auto') !== 'auto') return Promise.resolve(false);
-    return _l.apply(this, arguments);
-  };
-}
+// bldLoad2(): Erweiterung zusammengeführt, siehe 02-geodaten/040-lod3.js
+// lod3Ask(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 function gbModeSet(v) {
   S.gbMode = v;
   srcOpen();
 }
-{
-  const _s = srcDetail;
-  srcDetail = function (tab, k) {
-    const h = _s.apply(this, arguments);
-    if (tab !== 'gb') return h;
-    const m = S.gbMode || 'auto',
-      can = S.geo && GEO.snap && !TB.busy && !GEO.busy;
-    return (
-      `<div class="opt" style="margin:0 0 8px;padding:6px 8px"><b>Gebäudemodell im Projekt</b><div style="margin:4px 0"><select onchange="gbModeSet(this.value)" style="max-width:100%">${GBM.map(([v, n]) => `<option value="${v}"${v === m ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select> <button class="sm"${can ? '' : ' disabled'} onclick="srReload('gb')" title="Lädt nur die Gebäude mit der gewählten Quelle neu, geplante Gebäude bleiben erhalten">Gebäudemodell jetzt neu laden</button></div><div class="stn" style="margin:0">Ist das geladene Modell nicht aktuell genug, z. B. LoD2 aus einem älteren Kachelstand, hier auf LoD1 oder OSM umstellen und neu laden. Die Wahl wird mit dem Projekt gespeichert${can ? '' : ' (Neu laden: erst ein Projekt mit Umgebung öffnen)'}.</div></div>` +
-      h
-    );
-  };
-}
+// srcDetail(): Erweiterung zusammengeführt, siehe 04-datenquellen/020-nur-einen-datensatz.js

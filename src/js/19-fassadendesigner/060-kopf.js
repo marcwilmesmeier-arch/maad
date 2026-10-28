@@ -186,18 +186,7 @@ function fdTypeDel(i) {
   }
 }
 
-// ---- Einstiege: Ansichtsleiste/Kontextmenü, Reiter „Planen“, Gebäudemetrik (Fassadenfläche)
-{
-  const _b = baDo;
-  baDo = function (k) {
-    if (k === 'fd') {
-      cmHide();
-      fdOpen();
-      return;
-    }
-    return _b.apply(this, arguments);
-  };
-}
+// baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
 function fdRows(b) {
   try {
     const R = fdStats(b);
@@ -320,16 +309,7 @@ function fdHlApply() {
     logErr(e, 'fdHlApply');
   }
 }
-{
-  const _h = hlApply;
-  hlApply = function () {
-    if (S.hlk === 'fdt') {
-      fdHlApply();
-      return;
-    }
-    return _h.apply(this, arguments);
-  };
-}
+// hlApply(): Erweiterung zusammengeführt, siehe 07-analyse/020-flaechen-rauminhalte.js
 function fdHl(bid, spec) {
   const sp = { t: 'bld', bid, k: 'fdt', fd: spec, lab: 'Fassade' },
     key = JSON.stringify(sp);

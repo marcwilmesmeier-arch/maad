@@ -1,5 +1,28 @@
 // ---- Ableitung der Bauteile aus Flächen und Schnittlinien
 function l2Geo(b) {
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
+  let r = l2GeoStufe1.apply(this, arguments);
+  if (!l23() || !r || !r.probe) return r;
+  const m = {};
+  r.probe.forEach((p) => {
+    if (!p.vk) return;
+    m[p.vk] = m[p.vk] == null ? p.t : Math.min(m[p.vk], p.t);
+  });
+  if (JSON.stringify(m) !== JSON.stringify(b._l2ref || {})) {
+    b._l2ref = m;
+    b._l2 = null;
+    r = l2GeoStufe1.apply(this, arguments);
+  }
+  return r;
+}
+// l2Geo() ohne die Erweiterungen darüber – wird von l2Geo() gezielt aufgerufen
+function l2GeoStufe1(b) {
+  // ── Erweiterung aus 23-bauteilkonfigurator/020-projekt.js
+  try {
+    l2Reg(b);
+  } catch (e) {
+    logErr(e, 'l2Geo');
+  }
   const key =
     grSig(b) +
     '|' +

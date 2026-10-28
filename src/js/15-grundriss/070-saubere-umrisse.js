@@ -274,29 +274,5 @@ setTimeout(() => {
     console.warn(e);
   }
 }, 0);
-// ---- Abstandsflächen werden ausgeblendet, solange die Explosionsansicht aktiv ist (auch bei angewähltem Gebäude)
-{
-  const _p = abstPaint;
-  abstPaint = function () {
-    if (S.expl && S.expl.on) {
-      const c = PL.abst.getContext('2d');
-      c.clearRect(0, 0, PW, PW);
-      S._abst = null;
-      return;
-    }
-    return _p.apply(this, arguments);
-  };
-}
-{
-  const _t = tgExp;
-  tgExp = function () {
-    const r = _t.apply(this, arguments);
-    try {
-      abstPaint();
-      recomp();
-    } catch (e) {
-      logErr(e, 'tgExp');
-    }
-    return r;
-  };
-}
+// abstPaint(): Erweiterung zusammengeführt, siehe 11-bearbeiten/010-werkzeug.js
+// tgExp(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js

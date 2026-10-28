@@ -392,6 +392,24 @@ function fdDrawView(g, b, V, ox, o) {
       });
     });
   }
+  // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
+  try {
+    fdDepthFx(g, b, V, ox, o);
+    g.save();
+    g.lineWidth = 2.8;
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+    g.strokeStyle = '#1F2A33';
+    g.beginPath();
+    V.bs.forEach((s) => {
+      g.moveTo(fdSX(s[0] + ox), fdSY(s[1]));
+      g.lineTo(fdSX(s[2] + ox), fdSY(s[3]));
+    });
+    g.stroke();
+    g.restore();
+  } catch (e) {
+    console.warn('FD-Tiefe', e);
+  }
 }
 function fdCvDraw() {
   const cv = fdE('fdCv');

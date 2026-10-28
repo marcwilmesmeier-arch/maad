@@ -77,46 +77,7 @@ function skCm(k) {
     console.warn('skCm', x);
   }
 }
-{
-  const _c = cmShow;
-  cmShow = function (e) {
-    cmHide();
-    if (_cmBase == null) _cmBase = cmEl.innerHTML;
-    cmEl.innerHTML = _cmBase;
-    _skm = null;
-    skMenuSync();
-    try {
-      if (SKS.e.length && !sksEntAt(e)) {
-        const h = sksHit(e);
-        if (h) {
-          SKS.sel = [{ k: h.k, i: h.i, f: h.f }];
-          sksRedraw();
-          const it = (k, t, d) =>
-            '<button onclick="skCm(\'' + k + '\')" title="' + d + '">' + t + '</button>';
-          cmEl.innerHTML =
-            h.k === 'f'
-              ? it('make', 'Gebäude erzeugen', 'Fläche nach oben ziehen: Geschosse wählen, Klick = Gebäude') +
-                it('ofs', 'Versatz', 'F – parallele Kopie der Außenkanten') +
-                '<hr>' +
-                it('del', 'Löschen', 'Entf – Fläche mit ihren Kanten löschen')
-              : it('split', 'Teilen', 'T – Kante an einem Punkt teilen') +
-                it('ofs', 'Versatz', 'F – Versatz') +
-                '<hr>' +
-                it('del', 'Löschen', 'Entf – Kante löschen');
-          cmEl.classList.add('on');
-          const w = cmEl.offsetWidth,
-            hh = cmEl.offsetHeight;
-          cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
-          cmEl.style.top = Math.min(e.clientY, innerHeight - hh - 8) + 'px';
-          return;
-        }
-      }
-    } catch (x) {
-      console.warn('cmsk', x);
-    }
-    return _c.apply(this, arguments);
-  };
-}
+// cmShow(): Erweiterung zusammengeführt, siehe 13-geometrie-und-nutzung/010-hilfen-geometrie.js
 // „+ Gebäude“ mit gewählter Skizzenfläche = Gebäude aus dieser Fläche erzeugen (nicht wieder in den Zeichenwerkzeugen landen)
 function plusBld() {
   const s = SKS.sel[0];
@@ -127,19 +88,5 @@ function plusBld() {
   setShape(S.shape, 'bld');
 }
 
-{
-  const _m = mk;
-  mk = function () {
-    const F = SKS.pend;
-    SKS.pend = null;
-    _m.apply(this, arguments);
-    if (F) sksConsume(F);
-  };
-}
-{
-  const _c = cancel;
-  cancel = function () {
-    SKS.pend = null;
-    return _c.apply(this, arguments);
-  };
-}
+// mk(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// cancel(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js

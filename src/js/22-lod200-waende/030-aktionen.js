@@ -99,6 +99,17 @@ function l2Dispose(g) {
   });
 }
 function l2Mesh(e) {
+  // ── Erweiterung aus 22-lod200-waende/080-isolieren-aus-der-gebaeudemetrik-in.js
+  if (!l23()) return l2MeshOrig(e);
+  try {
+    return l2MeshL(e);
+  } catch (err) {
+    console.warn('LOD300', err);
+    return l2MeshOrig(e);
+  }
+}
+// l2Mesh() ohne die Erweiterungen darüber – wird von l2Mesh() gezielt aufgerufen
+function l2MeshOrig(e) {
   const g = new T.Group();
   g.position.y = e.y0;
   const K = L2K[e.kind],
@@ -347,21 +358,7 @@ document.addEventListener('lotlod', () => {
     logErr(e, 'init>anonym');
   }
 });
-// ---- Grundriss: Darstellung, Treffer, Hover
-{
-  const _d = grDraw;
-  grDraw = function () {
-    const r = _d.apply(this, arguments);
-    if (l2on())
-      try {
-        l2Draw();
-      } catch (e) {
-        console.warn('LOD200 Plan', e);
-      }
-    else l2BarHide();
-    return r;
-  };
-}
+// grDraw(): Erweiterung zusammengeführt, siehe 15-grundriss/120-zeichnen.js
 function l2Draw() {
   const cv = gD('grCv'),
     b = grB();
@@ -587,95 +584,5 @@ function l2Draw() {
   l2Bar();
 }
 const L2B = new Map();
-{
-  const _m = grMove;
-  grMove = function (e) {
-    const r = _m.apply(this, arguments);
-    if (l2on()) {
-      try {
-        const b = grB();
-        if (b && !GRS.pan) {
-          const lv = grLv(b),
-            p = grPt(e),
-            w = lv.dg ? null : l2Hit(b, lv, p.x, p.z),
-            id = w ? w.id : null;
-          S.l2.mx = e.clientX;
-          S.l2.my = e.clientY;
-          if (id !== S.l2.hv) {
-            S.l2.hv = id;
-            GRS.dirty = 1;
-            L2AN || l2Run();
-          }
-          l2Tip(w, e);
-        }
-      } catch (e) {
-        logErr(e, 'grMove');
-      }
-    }
-    return r;
-  };
-}
-{
-  const _g = grDown;
-  grDown = function (e) {
-    if (
-      l2on() &&
-      GRS.tool === 'sel' &&
-      e.button === 0 &&
-      !(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)
-    ) {
-      const b = grB();
-      if (b && b._y != null) {
-        const lv = grLv(b),
-          p = grPt(e),
-          s0 = GRS.sel;
-        const hd0 = s0 && s0.k === 'c' ? grEdHit(lv, s0.g, p) : null;
-        if (hd0 && hd0.m === 'v') {
-          const v = hd0.grp.vs.find((z) => z.k === hd0.k);
-          S.l2.pt = v ? { g: s0.g, p: v.p.slice() } : null;
-          S.l2.bsig = '';
-          GRS.dirty = 1;
-        } else S.l2.pt = null;
-        if (!hd0 && !lv.dg && l23()) {
-          const G0 = l2Els(b),
-            tol = 9 / GRS.view.s;
-          for (const k in G0.cn || {}) {
-            const c = G0.cn[k];
-            if (c.li !== lv.i) continue;
-            if (Math.hypot(c.P[0] - p.x, c.P[1] - p.z) < tol) {
-              const na = c.a[0] === c.t ? c.a[1] : c.a[0];
-              grEdit((bb) => {
-                bb.l2 = bb.l2 || {};
-                const cn = (bb.l2.cn = bb.l2.cn || { m: 'l', o: {} });
-                cn.o = cn.o || {};
-                cn.o[c.k] = na;
-                bb._l2 = null;
-              });
-              S.l2.bsig = '';
-              GRS.dirty = 1;
-              l2Cap('Eckanschluss getauscht – die andere Wand läuft jetzt durch');
-              return;
-            }
-          }
-        }
-        if (!hd0 && !lv.dg) {
-          const w = l2Hit(b, lv, p.x, p.z);
-          if (w) {
-            S.l2.sel = w.id;
-            S.l2.pick = 0;
-            GRS.msel = [];
-            GRS.sel = w.gid && w.kind !== 'AW' ? { k: 'c', g: w.gid } : null;
-            GRS.dirty = 1;
-            GRS.ps = '';
-            S.l2.fl = lv.i;
-            L2AN || l2Run();
-            return;
-          }
-        }
-      }
-      S.l2.sel = null;
-      S.l2.pick = 0;
-    }
-    return _g.apply(this, arguments);
-  };
-}
+// grMove(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js
+// grDown(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js

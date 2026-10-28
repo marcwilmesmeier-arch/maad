@@ -52,42 +52,9 @@ function rfBtn() {
   d.title =
     'Darstellung der Startseite wechseln (Schattiert → Realistisch → Weißmodell) – jeweils mit den gespeicherten Voreinstellungen';
 }
-{
-  const _o = homeOpen;
-  homeOpen = function () {
-    const r = _o.apply(this, arguments);
-    try {
-      homePreset();
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _dl = demoLoad;
-  demoLoad = async function () {
-    const r = await _dl.apply(this, arguments);
-    try {
-      if (HOME.open) homePreset();
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _d = drSet;
-  drSet = function () {
-    const r = _d.apply(this, arguments);
-    try {
-      if (HOME.open) rfBtn();
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
+// homeOpen(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
+// demoLoad(): Erweiterung zusammengeführt, siehe 03-startseite/010-demokarte.js
+// drSet(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 try {
   if (HOME.open) rfBtn();
 } catch (e) {

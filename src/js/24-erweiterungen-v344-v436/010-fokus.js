@@ -317,13 +317,5 @@ setInterval(() => {
     console.warn('Fokus', e);
   }
 }, 400);
-{
-  const _gp = geoPick;
-  geoPick = function () {
-    return ISO3.on ? null : _gp.apply(this, arguments);
-  };
-  const _tp = treePick;
-  treePick = function () {
-    return ISO3.on ? null : _tp.apply(this, arguments);
-  };
-}
+// geoPick(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
+// treePick(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js

@@ -102,6 +102,20 @@ function skMVerts(op) {
   return C;
 }
 function skMStart(e, ent) {
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  if (SK.cp)
+    e = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      altKey: !!e.altKey,
+      shiftKey: !!e.shiftKey,
+      ctrlKey: true,
+      button: e.button || 0,
+    };
+  return skMStartBasis.call(this, e, ent);
+}
+// skMStart() ohne die Erweiterungen darüber – wird von skMStart() gezielt aufgerufen
+function skMStartBasis(e, ent) {
   const sel =
     SK.sel.length && SK.sel.some((x) => x.b === ent.b) ? [...new Set(SK.sel.map((x) => x.b))] : [ent.b];
   hist();
@@ -148,71 +162,146 @@ function skMStart(e, ent) {
   return op;
 }
 function skMMouse(e) {
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
+  // Verschieben: Achsenhilfslinien, Eckfang, automatische Achsenerkennung
   const op = SK.op;
-  let dx = 0,
-    dz = 0,
-    dy = 0,
-    sn = '';
-  if (op.lock === 'y') {
-    dy = Math.round(-(e.clientY - op.y) * mpp() * 1.1 * 20) / 20;
-  } else {
-    const p = planePt(e, op.wy);
-    if (!p || !op.p0) return;
-    dx = p[0] - op.p0[0];
-    dz = p[1] - op.p0[1];
-    if (op.lock === 'x') dz = 0;
-    if (op.lock === 'z') dx = 0;
-    op.snapPt = null;
-    if (!e.altKey) {
-      const r = Math.min(0.6, Math.max(0.12, 10 * mpp()));
-      let bd = r,
-        bp = null;
-      op.V.forEach((v) => {
-        const qx = v[0] + dx,
-          qz = v[1] + dz;
-        op.C.forEach((c) => {
-          const d = Math.hypot(c[0] - qx, c[1] - qz);
-          if (d < bd) {
-            bd = d;
-            bp = [c[0] - v[0], c[1] - v[1]];
-          }
+  let auto = null;
+  if (op && op.lock == null && !e.altKey && op.p0) {
+    const q = planePt(e, op.wy);
+    if (q) {
+      const dx = q[0] - op.p0[0],
+        dz = q[1] - op.p0[1],
+        L = Math.hypot(dx, dz);
+      if (L > 1) {
+        const ang = (Math.atan2(Math.abs(dz), Math.abs(dx)) * 180) / Math.PI;
+        if (ang < 3) auto = 'x';
+        else if (ang > 87) auto = 'z';
+      }
+    }
+  }
+  if (auto) {
+    op.lock = auto;
+    op.autoLock = 1;
+  }
+  (() => {
+    const op = SK.op;
+    let dx = 0,
+      dz = 0,
+      dy = 0,
+      sn = '';
+    if (op.lock === 'y') {
+      dy = Math.round(-(e.clientY - op.y) * mpp() * 1.1 * 20) / 20;
+    } else {
+      const p = planePt(e, op.wy);
+      if (!p || !op.p0) return;
+      dx = p[0] - op.p0[0];
+      dz = p[1] - op.p0[1];
+      if (op.lock === 'x') dz = 0;
+      if (op.lock === 'z') dx = 0;
+      op.snapPt = null;
+      if (!e.altKey) {
+        const r = Math.min(0.6, Math.max(0.12, 10 * mpp()));
+        let bd = r,
+          bp = null;
+        op.V.forEach((v) => {
+          const qx = v[0] + dx,
+            qz = v[1] + dz;
+          op.C.forEach((c) => {
+            const d = Math.hypot(c[0] - qx, c[1] - qz);
+            if (d < bd) {
+              bd = d;
+              bp = [c[0] - v[0], c[1] - v[1]];
+            }
+          });
         });
-      });
-      if (bp) {
-        if (op.lock === 'x') dx = bp[0];
-        else if (op.lock === 'z') dz = bp[1];
-        else {
-          dx = bp[0];
-          dz = bp[1];
+        if (bp) {
+          if (op.lock === 'x') dx = bp[0];
+          else if (op.lock === 'z') dz = bp[1];
+          else {
+            dx = bp[0];
+            dz = bp[1];
+          }
+          sn = ' · Fang: Ecke';
+          op.snapPt = [op.p0[0] + dx, op.p0[1] + dz];
+        } else {
+          dx = Math.round(dx * 20) / 20;
+          dz = Math.round(dz * 20) / 20;
         }
-        sn = ' · Fang: Ecke';
-        op.snapPt = [op.p0[0] + dx, op.p0[1] + dz];
       } else {
         dx = Math.round(dx * 20) / 20;
         dz = Math.round(dz * 20) / 20;
       }
-    } else {
-      dx = Math.round(dx * 20) / 20;
-      dz = Math.round(dz * 20) / 20;
     }
+    skMApply(op, dx, dz, dy);
+    const L = Math.hypot(dx, dz);
+    $('hud').textContent =
+      (op.copy ? 'Kopieren ' : 'Verschieben ') +
+      (op.lock === 'y'
+        ? 'senkrecht ' + (dy >= 0 ? '+' : '') + f1(dy, 2).replace('.', ',') + ' m'
+        : f1(L, 2).replace('.', ',') +
+          ' m (Ost ' +
+          f1(dx, 2).replace('.', ',') +
+          ' · Nord ' +
+          f1(-dz, 2).replace('.', ',') +
+          ')') +
+      sn +
+      (op.lock ? ' · Achse gesperrt (↓ = frei)' : ' · Pfeile = Achse sperren') +
+      ' · Zahl + Enter · Esc';
+  })();
+  try {
+    if (!SK.op) return;
+    const o = SK.op,
+      wy = o.wy,
+      x0 = o.p0 ? o.p0[0] : 0,
+      z0 = o.p0 ? o.p0[1] : 0,
+      R = 60,
+      segs = [];
+    if (o.lock === 'x') segs.push({ c: 0xe53935, p: [x0 - R, wy, z0, x0 + R, wy, z0] });
+    else if (o.lock === 'z') segs.push({ c: 0x43a047, p: [x0, wy, z0 - R, x0, wy, z0 + R] });
+    else if (o.lock === 'y') segs.push({ c: 0x1e88e5, p: [x0, wy - R, z0, x0, wy + R, z0] });
+    const sn = o.snapPt,
+      mk = skMkEl();
+    if (sn) {
+      const sp = skProj(sn[0], wy, sn[1]);
+      mk.style.display = 'block';
+      mk.style.left = sp[0] + 'px';
+      mk.style.top = sp[1] + 'px';
+    } else mk.style.display = 'none';
+    skIf(segs);
+    skTip(
+      o.lock
+        ? (o.lock === 'x'
+            ? 'Entlang Ost/West (rot)'
+            : o.lock === 'z'
+              ? 'Entlang Nord/Süd (grün)'
+              : 'Senkrecht (blau)') + (o.autoLock ? ' – automatisch' : '')
+        : sn
+          ? 'Ecke'
+          : '',
+      e,
+    );
+    if (o.autoLock && o.lock) {
+      /* Auto-Sperre nur, solange der Winkel passt */
+    }
+  } catch (e) {
+    logErr(e, 'skMMouse');
   }
-  skMApply(op, dx, dz, dy);
-  const L = Math.hypot(dx, dz);
-  $('hud').textContent =
-    (op.copy ? 'Kopieren ' : 'Verschieben ') +
-    (op.lock === 'y'
-      ? 'senkrecht ' + (dy >= 0 ? '+' : '') + f1(dy, 2).replace('.', ',') + ' m'
-      : f1(L, 2).replace('.', ',') +
-        ' m (Ost ' +
-        f1(dx, 2).replace('.', ',') +
-        ' · Nord ' +
-        f1(-dz, 2).replace('.', ',') +
-        ')') +
-    sn +
-    (op.lock ? ' · Achse gesperrt (↓ = frei)' : ' · Pfeile = Achse sperren') +
-    ' · Zahl + Enter · Esc';
+  if (op && op.autoLock) {
+    op.lock = null;
+    op.autoLock = 0;
+  }
 }
-function skMEnd(commit) {
+function skMEnd(c) {
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
+  skMEndBasis.apply(this, arguments);
+  try {
+    skIfOff();
+  } catch (e) {
+    logErr(e, 'skMEnd');
+  }
+}
+// skMEnd() ohne die Erweiterungen darüber – wird von skMEnd() gezielt aufgerufen
+function skMEndBasis(commit) {
   const op = SK.op;
   if (!op || op.kind !== 'm') return;
   const moved = Math.hypot(op.dx, op.dz, op.dy) > 1e-6;

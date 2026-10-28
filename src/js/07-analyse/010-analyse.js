@@ -168,102 +168,166 @@ function nav() {
         `<button class="tab ${S.tab == t ? 'on' : ''}" onclick="go('${t}')"><i>${IC[t]}</i>${t === 'Kontext' ? 'Datenebenen' : t === 'Analyse' ? 'Grundstück und Umgebung' : t}</button>`,
     ).join('') +
     '<button class="tab" id="bly" onclick="layOpen()" title="Seitenlayout mit Ansichten, Kennzahlen, Legende und Texten als PDF"><i>▤</i>Layout</button>';
+  // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js (danach)
+  thMap();
+
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/110-administrationsansicht.js (danach)
+  try {
+    if (admIs()) {
+      const t = $('tabs');
+      if (t && !$('badm'))
+        t.insertAdjacentHTML(
+          'beforeend',
+          '<button class="tab' +
+            ($('admp') && $('admp').style.display === 'block' ? ' on' : '') +
+            '" id="badm" onclick="admToggle()" title="Voreinstellungen für alle Anwender, Startansicht, Demokarte"><i>⚙</i>Admin</button>',
+        );
+    }
+  } catch (e) {
+    logErr(e, 'nav');
+  }
 }
 function go(t) {
+  // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js
+  // Reiter-/Seitenwechsel: Panel-Zustand und Symbolbeschriftungen nachführen
+  document.body.classList.remove('rpShut');
   S.tab = t;
   nav();
   rr();
+  // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js (danach)
+  thMap();
 }
 const kv = (a, b, c) => `<div class="kv"><span>${a}</span><b class="${c || ''}">${b}</b></div>`;
 function rr() {
-  if (S.hlk && S.tab !== 'Analyse' && !S.hlw) hlClear(1);
-  envBuild();
-  const R = $('pc'),
-    b = S.sel;
-  let h = '';
-  if (S.tab == 'Kontext') {
-    h =
-      `${ocHtml()}` +
-      (AL.length
-        ? ''
-        : '<h4>Parzelle</h4>' +
-          (S.par
-            ? kv('Flurstück', S.par.id) + kv('Fläche', f1(area(S.par.poly)) + ' m²')
-            : '<div style="color:var(--mu)">Grundstück anklicken</div>')) +
-      ctxInfo() +
-      treeInfo() +
-      (S.ex.length ? `<h4>Bestand</h4>` : '') +
-      S.ex
-        .map(
-          (x) =>
-            `<div class="card">${x.use} · ${x.levels.length} Geschosse<br>Höhe ${f1(x.levels.length * 3, 1)} m <span class="wa">(geschätzt)</span><br><span style="color:var(--mu)">Quelle: ${x.src}</span></div>`,
-        )
-        .join('');
-  } else if (S.tab == 'Planen') {
-    if (S.tool === 'f' && !S.closed) h = shapePanel();
-    else if (S.closed && S.dm === 'area') h = areaForm();
-    else if (S.closed)
-      h = `<h4>Neues Gebäude</h4><div class="card">${kv('Grundfläche', f1(area(S.draft)) + ' m²')}${S.refH != null ? kv('Bezugshöhe ±0', realH(S.refH)) : ''}Name<input id="nn" type="text" value="Gebäude ${S.n}">Nutzung<select id="nu" style="width:100%">${USES.map((u) => `<option>${u}</option>`).join('')}</select>Geschosse<input id="ng" type="number" min="1" max="30" value="4">Untergeschosse<input id="nug" type="number" min="0" max="5" value="0">Geschosshöhe (m)<input id="gh" type="number" step="0.1" value="3.0">Dach<select id="nd" style="width:100%" onchange="roofUi()">${RT.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select><div id="ndw" style="display:none">Neigung (°)<input id="na" type="number" min="1" max="75" value="35">Drempelhöhe (m)<input id="ndr" type="number" min="0" max="3" step="0.05" value="0"></div><button class="pri" onclick="mk()">Gebäude erzeugen</button><button class="sm" style="margin-top:6px" onclick="cancel();rr()">Verwerfen</button></div>`;
-    else if (b && !b.ex) {
-      const PXM = pxMet(b);
-      let z = -(b._ug || 0);
-      const sf = selOk(),
-        sk = sf && sf.b === b ? sf.k : -1;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/080-panel.js
+  const R = $('pc');
+  if (S.tab === 'Import') {
+    if (!R.dataset.imp || IMP.dirty) impRender();
+    return;
+  }
+  if (R && R.dataset.imp) delete R.dataset.imp;
+  return (() => {
+    if (S.hlk && S.tab !== 'Analyse' && !S.hlw) hlClear(1);
+    envBuild();
+    const R = $('pc'),
+      b = S.sel;
+    let h = '';
+    if (S.tab == 'Kontext') {
       h =
-        `<h4>Gebäude</h4>${refInp(b)}Name<input type="text" value="${esc(b.name || b.id)}" onchange="rn(this.value)"><h4>Auswertung</h4><div class="card">${kv('Grundfläche (EG)', f1(larea(b, b.levels[0]) + (PXM.lv[0] || 0)) + ' m²')}${kv('BGF', f1(bgfOf(b)) + ' m²')}${kv('Höhe (inkl. Dach)', f1(b._h + (b._roofH || 0), 2) + ' m')}${kv('Geschosse', b.levels.length)}</div>${ruleCard(b)}${roofCard(b)}${patchCard()}<h4>Nutzung</h4><div class="card" style="padding:8px 10px"><div style="color:var(--mu);font-size:11px;margin-bottom:4px">Für alle Geschosse und das Dach setzen (überschreibt einzelne Nutzungen)</div>${useSel(b)}</div><h4>Geschosse</h4>` +
-        roofRow(b) +
-        b.levels
-          .map((l, i) => {
-            const r = `<div class="lr${sk === i ? ' on' : ''}" data-k="${i}" onfocusin="selL(${i})" onclick="selL(${i})" style="display:grid;grid-template-columns:44px minmax(58px,1fr) 58px 24px 24px 24px;gap:4px;align-items:center;margin-bottom:4px;padding:2px 4px;border-radius:6px"><b><span title="${esc(l.use || b.use || 'Wohnen')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background:${S.uses[l.use || b.use || 'Wohnen']}"></span>${l.name}</b><input type="number" step="0.1" min="2" value="${l.h}" onchange="lh(${i},this.value)"><span style="color:var(--mu);font-size:11px;line-height:1.2">${z < 0 ? '' : '+'}${f1(z, 2)}<br>${f1(larea(b, l) + (PXM.lv[i] || 0))} m²</span>${l.fp ? `<button class="sm" title="Grundriss zurücksetzen" onclick="lr(${i})">↺</button>` : '<span></span>'}<button class="sm" title="${l.ug ? 'Geschoss nach unten kopieren' : 'Geschoss nach oben kopieren'}" aria-label="Geschoss kopieren" onclick="event.stopPropagation();lcp(${i})">${l.ug ? '⇣' : '⇡'}</button><button class="sm" title="Geschoss löschen" aria-label="Geschoss löschen" onclick="event.stopPropagation();lrm(${i})">✕</button><button class="pri lrx" style="grid-column:1/-1;margin:2px 0;${sk === i ? '' : 'display:none'}" onclick="event.stopPropagation();grOpenLv('${esc(b.id)}','${i}')">▦ Grundriss öffnen</button><label class="lrx" style="grid-column:1/-1;display:${sk === i ? 'flex' : 'none'};gap:6px;align-items:center;font-size:11px;color:var(--mu)">Nutzung<select style="flex:1" onchange="lUseSet(${i},this.value)">${USES.map((u) => `<option ${u == (l.use || b.use || 'Wohnen') ? 'selected' : ''}>${u}</option>`).join('')}</select></label></div>`;
-            z += l.h;
-            return r;
-          })
-          .reverse()
-          .join('') +
-        hSum(b) +
-        `<button class="sm" onclick="la(1)">+ Geschoss</button> <button class="sm" onclick="la(-1)">− Geschoss</button> <button class="sm" onclick="lu(1)">+ Untergeschoss</button> <button class="sm" onclick="lu(-1)">− UG</button><button class="pri" style="background:var(--wa)" onclick="del()">Gebäude löschen</button><div style="color:var(--mu);margin-top:6px">Geschoss in 3D überfahren: rote Kontur zeigt Geschoss bzw. Seitenfläche, weiße Kugel ziehen = Wand/Decke schieben (Shift = alle Geschosse). Kugel auf der Oberseite = Geschosszahl.</div>`;
+        `${ocHtml()}` +
+        (AL.length
+          ? ''
+          : '<h4>Parzelle</h4>' +
+            (S.par
+              ? kv('Flurstück', S.par.id) + kv('Fläche', f1(area(S.par.poly)) + ' m²')
+              : '<div style="color:var(--mu)">Grundstück anklicken</div>')) +
+        ctxInfo() +
+        treeInfo() +
+        (S.ex.length ? `<h4>Bestand</h4>` : '') +
+        S.ex
+          .map(
+            (x) =>
+              `<div class="card">${x.use} · ${x.levels.length} Geschosse<br>Höhe ${f1(x.levels.length * 3, 1)} m <span class="wa">(geschätzt)</span><br><span style="color:var(--mu)">Quelle: ${x.src}</span></div>`,
+          )
+          .join('');
+    } else if (S.tab == 'Planen') {
+      if (S.tool === 'f' && !S.closed) h = shapePanel();
+      else if (S.closed && S.dm === 'area') h = areaForm();
+      else if (S.closed)
+        h = `<h4>Neues Gebäude</h4><div class="card">${kv('Grundfläche', f1(area(S.draft)) + ' m²')}${S.refH != null ? kv('Bezugshöhe ±0', realH(S.refH)) : ''}Name<input id="nn" type="text" value="Gebäude ${S.n}">Nutzung<select id="nu" style="width:100%">${USES.map((u) => `<option>${u}</option>`).join('')}</select>Geschosse<input id="ng" type="number" min="1" max="30" value="4">Untergeschosse<input id="nug" type="number" min="0" max="5" value="0">Geschosshöhe (m)<input id="gh" type="number" step="0.1" value="3.0">Dach<select id="nd" style="width:100%" onchange="roofUi()">${RT.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select><div id="ndw" style="display:none">Neigung (°)<input id="na" type="number" min="1" max="75" value="35">Drempelhöhe (m)<input id="ndr" type="number" min="0" max="3" step="0.05" value="0"></div><button class="pri" onclick="mk()">Gebäude erzeugen</button><button class="sm" style="margin-top:6px" onclick="cancel();rr()">Verwerfen</button></div>`;
+      else if (b && !b.ex) {
+        const PXM = pxMet(b);
+        let z = -(b._ug || 0);
+        const sf = selOk(),
+          sk = sf && sf.b === b ? sf.k : -1;
+        h =
+          `<h4>Gebäude</h4>${refInp(b)}Name<input type="text" value="${esc(b.name || b.id)}" onchange="rn(this.value)"><h4>Auswertung</h4><div class="card">${kv('Grundfläche (EG)', f1(larea(b, b.levels[0]) + (PXM.lv[0] || 0)) + ' m²')}${kv('BGF', f1(bgfOf(b)) + ' m²')}${kv('Höhe (inkl. Dach)', f1(b._h + (b._roofH || 0), 2) + ' m')}${kv('Geschosse', b.levels.length)}</div>${ruleCard(b)}${roofCard(b)}${patchCard()}<h4>Nutzung</h4><div class="card" style="padding:8px 10px"><div style="color:var(--mu);font-size:11px;margin-bottom:4px">Für alle Geschosse und das Dach setzen (überschreibt einzelne Nutzungen)</div>${useSel(b)}</div><h4>Geschosse</h4>` +
+          roofRow(b) +
+          b.levels
+            .map((l, i) => {
+              const r = `<div class="lr${sk === i ? ' on' : ''}" data-k="${i}" onfocusin="selL(${i})" onclick="selL(${i})" style="display:grid;grid-template-columns:44px minmax(58px,1fr) 58px 24px 24px 24px;gap:4px;align-items:center;margin-bottom:4px;padding:2px 4px;border-radius:6px"><b><span title="${esc(l.use || b.use || 'Wohnen')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background:${S.uses[l.use || b.use || 'Wohnen']}"></span>${l.name}</b><input type="number" step="0.1" min="2" value="${l.h}" onchange="lh(${i},this.value)"><span style="color:var(--mu);font-size:11px;line-height:1.2">${z < 0 ? '' : '+'}${f1(z, 2)}<br>${f1(larea(b, l) + (PXM.lv[i] || 0))} m²</span>${l.fp ? `<button class="sm" title="Grundriss zurücksetzen" onclick="lr(${i})">↺</button>` : '<span></span>'}<button class="sm" title="${l.ug ? 'Geschoss nach unten kopieren' : 'Geschoss nach oben kopieren'}" aria-label="Geschoss kopieren" onclick="event.stopPropagation();lcp(${i})">${l.ug ? '⇣' : '⇡'}</button><button class="sm" title="Geschoss löschen" aria-label="Geschoss löschen" onclick="event.stopPropagation();lrm(${i})">✕</button><button class="pri lrx" style="grid-column:1/-1;margin:2px 0;${sk === i ? '' : 'display:none'}" onclick="event.stopPropagation();grOpenLv('${esc(b.id)}','${i}')">▦ Grundriss öffnen</button><label class="lrx" style="grid-column:1/-1;display:${sk === i ? 'flex' : 'none'};gap:6px;align-items:center;font-size:11px;color:var(--mu)">Nutzung<select style="flex:1" onchange="lUseSet(${i},this.value)">${USES.map((u) => `<option ${u == (l.use || b.use || 'Wohnen') ? 'selected' : ''}>${u}</option>`).join('')}</select></label></div>`;
+              z += l.h;
+              return r;
+            })
+            .reverse()
+            .join('') +
+          hSum(b) +
+          `<button class="sm" onclick="la(1)">+ Geschoss</button> <button class="sm" onclick="la(-1)">− Geschoss</button> <button class="sm" onclick="lu(1)">+ Untergeschoss</button> <button class="sm" onclick="lu(-1)">− UG</button><button class="pri" style="background:var(--wa)" onclick="del()">Gebäude löschen</button><div style="color:var(--mu);margin-top:6px">Geschoss in 3D überfahren: rote Kontur zeigt Geschoss bzw. Seitenfläche, weiße Kugel ziehen = Wand/Decke schieben (Shift = alle Geschosse). Kugel auf der Oberseite = Geschosszahl.</div>`;
+      } else
+        h =
+          geoPanel() +
+          plotInfo() +
+          `<h4>Planen</h4><div class="card">1. Grundstück anklicken<br>2. <b>Gebäude</b> (F) zeichnen<br>3. Enter → Geschosse eingeben<br>4. Freie <b>Flächen</b> (Grün, Platz, Wasser) ergänzen<br>5. In 3D betrachten, Variante speichern</div><button class="pri" onclick="plusBld()">+ Gebäude</button><button class="sm" style="margin-top:6px" onclick="setShape(S.shape,'area')">+ Fläche</button>` +
+          parHint();
+    } else if (S.tab == 'Analyse' && typeof anPanel === 'function') {
+      h = anPanel(b);
+    } else if (S.tab == 'Analyse') {
+      const k = b ? kw(b) : S.bld.length ? kw(S.bld.at(-1)) : null;
+      h =
+        abstCard() +
+        '<h4>Gebäude</h4>' +
+        (flHtml(b) || '<div style="color:var(--mu)">Noch kein Gebäude.</div>');
+      if (!k) h += '<div style="color:var(--mu)">Gebäude auf einem Grundstück erzeugen/auswählen.</div>';
+      else {
+        const w1 = k.grz > S.lim.grz,
+          w2 = k.gfz > S.lim.gfz;
+        h +=
+          '<h4>Grundstück</h4><div class="card">' +
+          kv('Grundstücksfläche', f1(k.A) + ' m²') +
+          kv('Überbaute Fläche', f1(k.fp) + ' m²') +
+          arKv(k) +
+          kv('GRZ', f1(k.grz, 2), w1 ? 'wa' : 'ok') +
+          kv('GFZ', f1(k.gfz, 2), w2 ? 'wa' : 'ok') +
+          '</div>' +
+          (w1 || w2
+            ? `<div class="card wa" style="margin-top:8px">⚠ Planungsrecht überschritten${w1 ? ' (GRZ &gt; ' + S.lim.grz + ')' : ''}${w2 ? ' (GFZ &gt; ' + S.lim.gfz + ')' : ''} – Hinweis, keine Sperre.</div>`
+            : '');
+      }
+      h += `<h4>Planungsrecht (Grenzwerte)</h4>GRZ max<input type="number" step="0.05" value="${S.lim.grz}" onchange="S.lim.grz=+this.value;rr()">GFZ max<input type="number" step="0.1" value="${S.lim.gfz}" onchange="S.lim.gfz=+this.value;rr()">`;
+    } else if (S.tab == 'Varianten') {
+      h =
+        `<h4>Varianten</h4><button class="pri" onclick="sv()">Aktuellen Stand speichern</button>` +
+          S.variants.map(vCard).join('') || '';
     } else
-      h =
-        geoPanel() +
-        plotInfo() +
-        `<h4>Planen</h4><div class="card">1. Grundstück anklicken<br>2. <b>Gebäude</b> (F) zeichnen<br>3. Enter → Geschosse eingeben<br>4. Freie <b>Flächen</b> (Grün, Platz, Wasser) ergänzen<br>5. In 3D betrachten, Variante speichern</div><button class="pri" onclick="plusBld()">+ Gebäude</button><button class="sm" style="margin-top:6px" onclick="setShape(S.shape,'area')">+ Fläche</button>` +
-        parHint();
-  } else if (S.tab == 'Analyse' && typeof anPanel === 'function') {
-    h = anPanel(b);
-  } else if (S.tab == 'Analyse') {
-    const k = b ? kw(b) : S.bld.length ? kw(S.bld.at(-1)) : null;
-    h =
-      abstCard() +
-      '<h4>Gebäude</h4>' +
-      (flHtml(b) || '<div style="color:var(--mu)">Noch kein Gebäude.</div>');
-    if (!k) h += '<div style="color:var(--mu)">Gebäude auf einem Grundstück erzeugen/auswählen.</div>';
-    else {
-      const w1 = k.grz > S.lim.grz,
-        w2 = k.gfz > S.lim.gfz;
-      h +=
-        '<h4>Grundstück</h4><div class="card">' +
-        kv('Grundstücksfläche', f1(k.A) + ' m²') +
-        kv('Überbaute Fläche', f1(k.fp) + ' m²') +
-        arKv(k) +
-        kv('GRZ', f1(k.grz, 2), w1 ? 'wa' : 'ok') +
-        kv('GFZ', f1(k.gfz, 2), w2 ? 'wa' : 'ok') +
-        '</div>' +
-        (w1 || w2
-          ? `<div class="card wa" style="margin-top:8px">⚠ Planungsrecht überschritten${w1 ? ' (GRZ &gt; ' + S.lim.grz + ')' : ''}${w2 ? ' (GFZ &gt; ' + S.lim.gfz + ')' : ''} – Hinweis, keine Sperre.</div>`
-          : '');
+      h = `<h4>Excel-Export</h4><div class="card">Analysedaten (Kennwerte, Geschosse, bemaßte Abwicklungen, Dach- und Terrassenflächen) als Excel – Spalten und Überschriften frei wählbar, je Gebäude oder gesamt.<button class="pri" style="margin-top:8px" onclick="xlOpen()">Analysedaten als Excel …</button></div><h4>IFC-Export</h4><div class="card">IFC4 mit Projektstruktur (Projekt › Standort › Grundstück › Gebäude › Geschoss), Klassen-Mapping je Bauteilkategorie (Gelände, Umgebungsgebäude, Bäume, Flächen, Grundstücke, Planungsgebäude), Georeferenz, Property-Sets, Mengen und Farben – unabhängig von den Sichtbarkeiten im Projekt.<button class="pri" style="margin-top:8px" onclick="ifcOpen()">IFC exportieren …</button></div><h4>GeoJSON-Export</h4><textarea readonly>${JSON.stringify({ type: 'FeatureCollection', project: (S.project && S.project.name) || 'maad Demo', features: S.bld.map((x) => ({ type: 'Feature', properties: { id: x.id, name: x.name, use: x.use, levels: x.levels, roof: x.roof }, geometry: { type: 'Polygon', coordinates: [x.fp.concat([x.fp[0]])] } })) }, null, 1)}</textarea><button class="pri" style="margin:8px 0" onclick="planSave()">Planung als Datei sichern (.lotplan)</button><div style="color:var(--mu)">Koordinaten lokal in Metern. PNG/PDF/DXF/GLB: Exportmodul vorgesehen.</div>`;
+    R.innerHTML = h;
+    lgUpd();
+    const lon = R.querySelector('.lr.on');
+    if (lon) lon.scrollIntoView({ block: 'nearest' });
+    updRM();
+    // ── Erweiterung aus 17-erweiterungen-v253-v280/070-datenquellen.js (danach)
+    try {
+      const m = document.getElementById('srcm');
+      if (
+        m &&
+        m.style.display === 'flex' &&
+        (S.srTab === 'um' || S.srTab === 'ri' || S.srTab === 'dv') &&
+        !rr.__in
+      ) {
+        rr.__in = 1;
+        try {
+          srcOpen();
+        } finally {
+          rr.__in = 0;
+        }
+      }
+    } catch (e) {
+      logErr(e, 'rr');
     }
-    h += `<h4>Planungsrecht (Grenzwerte)</h4>GRZ max<input type="number" step="0.05" value="${S.lim.grz}" onchange="S.lim.grz=+this.value;rr()">GFZ max<input type="number" step="0.1" value="${S.lim.gfz}" onchange="S.lim.gfz=+this.value;rr()">`;
-  } else if (S.tab == 'Varianten') {
-    h =
-      `<h4>Varianten</h4><button class="pri" onclick="sv()">Aktuellen Stand speichern</button>` +
-        S.variants.map(vCard).join('') || '';
-  } else
-    h = `<h4>Excel-Export</h4><div class="card">Analysedaten (Kennwerte, Geschosse, bemaßte Abwicklungen, Dach- und Terrassenflächen) als Excel – Spalten und Überschriften frei wählbar, je Gebäude oder gesamt.<button class="pri" style="margin-top:8px" onclick="xlOpen()">Analysedaten als Excel …</button></div><h4>IFC-Export</h4><div class="card">IFC4 mit Projektstruktur (Projekt › Standort › Grundstück › Gebäude › Geschoss), Klassen-Mapping je Bauteilkategorie (Gelände, Umgebungsgebäude, Bäume, Flächen, Grundstücke, Planungsgebäude), Georeferenz, Property-Sets, Mengen und Farben – unabhängig von den Sichtbarkeiten im Projekt.<button class="pri" style="margin-top:8px" onclick="ifcOpen()">IFC exportieren …</button></div><h4>GeoJSON-Export</h4><textarea readonly>${JSON.stringify({ type: 'FeatureCollection', project: (S.project && S.project.name) || 'maad Demo', features: S.bld.map((x) => ({ type: 'Feature', properties: { id: x.id, name: x.name, use: x.use, levels: x.levels, roof: x.roof }, geometry: { type: 'Polygon', coordinates: [x.fp.concat([x.fp[0]])] } })) }, null, 1)}</textarea><button class="pri" style="margin:8px 0" onclick="planSave()">Planung als Datei sichern (.lotplan)</button><div style="color:var(--mu)">Koordinaten lokal in Metern. PNG/PDF/DXF/GLB: Exportmodul vorgesehen.</div>`;
-  R.innerHTML = h;
-  lgUpd();
-  const lon = R.querySelector('.lr.on');
-  if (lon) lon.scrollIntoView({ block: 'nearest' });
-  updRM();
+
+    // ── Erweiterung aus 24-erweiterungen-v344-v436/120-kontur-bearbeiten.js (danach)
+    try {
+      const pc = $('pc');
+      if (pc && S.tab === 'Planen' && ktB() && !S.closed && !(S.tool === 'f' && S.draft.length)) {
+        const old = $('ktCard');
+        if (old) old.remove();
+        const hs = [...pc.querySelectorAll('h4')].find((x) => /Auswertung/.test(x.textContent));
+        if (hs) hs.insertAdjacentHTML('beforebegin', ktCard());
+      }
+    } catch (e) {
+      console.warn('ktCard', e);
+    }
+  })();
 }
 function selL(i) {
   const b = S.sel;
@@ -453,17 +517,7 @@ addEventListener('keydown', (e) => {
     S.fd ? fdEnter() : S.shape == 'free' ? close() : shapeOk();
   }
 });
-nav();
-setMode(1);
-$('b3').classList.add('on');
-H();
-tool('v');
-S.tab = 'Planen';
-rr();
-demoOff();
-P.length = 0;
-rr();
-homeOpen(1);
+// Startaufruf verschoben nach start() in 29-start/010-start-projekt-oeffnen.js
 
 // Hover-Info Flurstück (ohne Klick)
 (function () {

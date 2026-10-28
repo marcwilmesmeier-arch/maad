@@ -301,6 +301,19 @@ function homeSetup() {
     HOME.want = 0;
     homeZoom();
   }
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js (danach)
+  bootCur(0);
+  if (HOME.hmLate) {
+    HOME.hmLate = 0;
+    setTimeout(() => {
+      if (HOME.open && !HOME.hold)
+        try {
+          hmShow();
+        } catch (e) {
+          console.warn(e);
+        }
+    }, 1100);
+  }
 }
 function homeOpen(first) {
   if (S.project && S.project.id) projSave();
@@ -365,8 +378,20 @@ function homeOpen(first) {
       dur: 1800,
     };
   }
+  // ── Erweiterung aus 17-erweiterungen-v253-v280/130-startseite.js (danach)
+  try {
+    homePreset();
+  } catch (e) {
+    console.error(e);
+  }
 }
 function homeClose() {
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js
+  const shut = !HOME.resuming;
+  if (shut) {
+    RPG.until = Date.now() + 2000;
+    document.body.classList.add('rpShut', 'rpNoAnim');
+  }
   try {
     hmHide();
   } catch (e) {
@@ -384,17 +409,46 @@ function homeClose() {
   S.vanim = null;
   setMode(1, 1);
   $('b3').classList.add('on');
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js (danach)
+  if (!HOME.hold) bootCur(0);
+
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js (danach)
+  if (shut) {
+    try {
+      if (S.zo && S.zo.m !== 'b') zoMode('b');
+    } catch (e) {
+      console.warn(e);
+    }
+    document.body.classList.add('rpShut');
+    setTimeout(() => document.body.classList.remove('rpNoAnim'), 2100);
+  }
 }
 function homeResume() {
-  const s = HOME.saved;
-  homeClose();
-  if (s) {
-    Object.assign(V, { tx: s.tx, tz: s.tz, d: s.d, az: s.az, pol: s.pol, rot: s.rot, rotT: s.rot });
-    setMode(s.m3 ? 1 : 0, 1);
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js
+  HOME.resuming = 1;
+  try {
+    return (() => {
+      const s = HOME.saved;
+      homeClose();
+      if (s) {
+        Object.assign(V, { tx: s.tx, tz: s.tz, d: s.d, az: s.az, pol: s.pol, rot: s.rot, rotT: s.rot });
+        setMode(s.m3 ? 1 : 0, 1);
+      }
+      rr();
+    })();
+  } finally {
+    HOME.resuming = 0;
   }
-  rr();
 }
 function homePar() {
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js
+  /* Startmenü-Zoom: ist ein Grundstück gewählt, wird darauf gezoomt (statt auf das Grundstück nahe der Kartenmitte) */
+  try {
+    const p = S.par;
+    if (p && p.poly && p.poly.length > 2) return { a: p, c: cen(p.poly), ar: area(p.poly), poly: p.poly };
+  } catch (e) {
+    console.warn(e);
+  }
   let best = null,
     bd = 1e9;
   for (const a of AL) {

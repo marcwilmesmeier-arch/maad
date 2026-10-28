@@ -709,6 +709,24 @@ async function treeFileApply() {
 }
 
 function canopy(DG, DO, bl, skip, ex) {
+  // ── Erweiterung aus 20-geodaten-international/030-gebaeudemaske-fuer-das-kronenmodell-aus.js
+  if (DG && !DG.fail && DO && !DO.fail && DO.plan && DO.res <= 1.5 && DG.w === DO.w && DG.h === DO.h) {
+    try {
+      const r = atRoofClean(DG, DO);
+      if (r.n) {
+        DO = Object.assign({}, DO, { data: r.data });
+        const c = canopyBasis.call(this, DG, DO, bl, skip, ex);
+        c.msg = (c.msg || '') + ' Dachflächen aus dem Höhenmodell maskiert: ' + r.n + ' Gebäude.';
+        return c;
+      }
+    } catch (e) {
+      logErr(e, 'canopy');
+    }
+  }
+  return canopyBasis.apply(this, arguments);
+}
+// canopy() ohne die Erweiterungen darüber – wird von canopy() gezielt aufgerufen
+function canopyBasis(DG, DO, bl, skip, ex) {
   if (!DG || DG.fail || !DO || DO.fail || DG.w !== DO.w || DG.h !== DO.h)
     return {
       list: [],
@@ -962,94 +980,199 @@ function canopy(DG, DO, bl, skip, ex) {
   };
 }
 function treesBuild(list) {
-  clr(G.trees);
-  GEO.trees = list;
-  treeSel(null);
-  GEO.tmesh = null;
-  if (!list.length) return;
-  const crw = new T.InstancedMesh(new T.IcosahedronGeometry(1, 2), mat(new T.Color(S.lc.trees)), list.length),
-    M = new T.Matrix4();
-  list.forEach((t, i) => {
-    const y = gh(t.x, t.z),
-      h = Math.max(1.5, t.h),
-      cr = Math.max(1, t.r);
-    M.makeScale(cr, h / 2, cr).setPosition(t.x, y + h / 2, t.z);
-    crw.setMatrixAt(i, M);
-  });
-  crw.castShadow = crw.receiveShadow = true;
-  crw.userData.tr = 1;
-  GEO.tmesh = crw;
-  G.trees.add(crw);
-  {
-    const tc = shade(S.lc.trees, 0.66),
-      g2 = new T.Group(),
-      pts = [],
-      N = 64,
-      dm = new T.InstancedMesh(
-        new T.CircleGeometry(1, 14).rotateX(-Math.PI / 2),
-        new T.MeshBasicMaterial({ color: tc, side: T.DoubleSide }),
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/110-detailbaeume-im-nahbereich-der-kamera.js
+  NEAR.cls = {};
+  NEAR.orig = null;
+  NEAR.base = null;
+  NEAR.stem = null;
+  NEAR.sorig = null;
+  NEAR.c = null;
+  NEAR.dir = null;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
+  // Aufbau: eigene Bäume immer ergänzen, Krone nach oben schieben, Stamm einsetzen
+  const all = (list || []).filter((t) => !t.u).concat(UT);
+  const r = treesBuildStufe2.call(this, all);
+  try {
+    if (UT.length && GEO.tmesh) {
+      const tm = GEO.tmesh,
+        M = new T.Matrix4(),
+        Z = new T.Matrix4().makeScale(0, 0, 0),
+        idx = [];
+      GEO.trees.forEach((t, i) => {
+        if (!t.u) return;
+        idx.push(i);
+        const y = gh(t.x, t.z),
+          sh = Math.min(t.sh, t.h - 0.5),
+          ch = Math.max(0.5, t.h - sh),
+          cr = Math.max(0.5, t.r);
+        M.makeScale(cr, ch / 2, cr).setPosition(t.x, y + sh + ch / 2, t.z);
+        tm.setMatrixAt(i, M);
+      });
+      tm.instanceMatrix.needsUpdate = true;
+      tm.frustumCulled = false;
+      G.trees.children.forEach((c) => {
+        if (
+          c.isInstancedMesh &&
+          c !== tm &&
+          c.geometry &&
+          c.geometry.type === 'CylinderGeometry' &&
+          c.count === GEO.trees.length
+        ) {
+          idx.forEach((i) => c.setMatrixAt(i, Z));
+          c.instanceMatrix.needsUpdate = true;
+        }
+      });
+      const st = new T.InstancedMesh(
+        new T.CylinderGeometry(0.5, 0.62, 1, 10).translate(0, 0.5, 0),
+        new T.MeshLambertMaterial({ color: new T.Color(S.lc.stem || '#7a6742') }),
+        idx.length,
+      );
+      idx.forEach((i, k) => {
+        const t = GEO.trees[i],
+          y = gh(t.x, t.z);
+        M.makeScale(t.sd, Math.max(0.1, Math.min(t.sh, t.h - 0.5) + 0.45), t.sd).setPosition(
+          t.x,
+          y - 0.25,
+          t.z,
+        );
+        st.setMatrixAt(k, M);
+      });
+      st.instanceMatrix.needsUpdate = true;
+      st.castShadow = st.receiveShadow = true;
+      st.raycast = () => {};
+      st.frustumCulled = false;
+      G.trees.add(st);
+    }
+  } catch (x) {
+    console.warn('trees user', x);
+  }
+  return r;
+}
+// treesBuild() ohne die Erweiterungen darüber – wird von treesBuild() gezielt aufgerufen
+function treesBuildStufe2(list) {
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/010-gruen-wasser.js
+  const r = (() => {
+    clr(G.trees);
+    GEO.trees = list;
+    treeSel(null);
+    GEO.tmesh = null;
+    if (!list.length) return;
+    const crw = new T.InstancedMesh(
+        new T.IcosahedronGeometry(1, 2),
+        mat(new T.Color(S.lc.trees)),
         list.length,
       ),
-      M2 = new T.Matrix4();
-    const mr = Math.max(1, ...list.map((t) => Math.max(1, t.r))),
-      cs = mr * 2 + 1,
-      gk = (x, z) => Math.floor(x / cs) + ',' + Math.floor(z / cs),
-      grid = {};
+      M = new T.Matrix4();
     list.forEach((t, i) => {
-      (grid[gk(t.x, t.z)] = grid[gk(t.x, t.z)] || []).push(i);
-    });
-    const covered = (i, px, pz) => {
-      const cx = Math.floor(px / cs),
-        cz = Math.floor(pz / cs);
-      for (let a = -1; a <= 1; a++)
-        for (let b = -1; b <= 1; b++) {
-          const g = grid[cx + a + ',' + (cz + b)];
-          if (g)
-            for (const j of g) {
-              if (j === i) continue;
-              const o = list[j],
-                r = Math.max(1, o.r);
-              if ((px - o.x) ** 2 + (pz - o.z) ** 2 < r * r - 1e-4) return true;
-            }
-        }
-      return false;
-    };
-    list.forEach((t, i) => {
-      const y = gh(t.x, t.z) + Math.max(1.5, t.h) + 0.5,
+      const y = gh(t.x, t.z),
+        h = Math.max(1.5, t.h),
         cr = Math.max(1, t.r);
-      for (let q = 0; q < N; q++) {
-        const a = (q / N) * 2 * Math.PI,
-          c = ((q + 1) / N) * 2 * Math.PI,
-          mA = (a + c) / 2;
-        if (covered(i, t.x + cr * Math.cos(mA), t.z + cr * Math.sin(mA))) continue;
-        pts.push(
-          t.x + cr * Math.cos(a),
-          y,
-          t.z + cr * Math.sin(a),
-          t.x + cr * Math.cos(c),
-          y,
-          t.z + cr * Math.sin(c),
-        );
-      }
-      M2.makeScale(0.45, 1, 0.45).setPosition(t.x, y + 0.05, t.z);
-      dm.setMatrixAt(i, M2);
+      M.makeScale(cr, h / 2, cr).setPosition(t.x, y + h / 2, t.z);
+      crw.setMatrixAt(i, M);
     });
-    const lg = new T.BufferGeometry();
-    lg.setAttribute('position', new T.BufferAttribute(new Float32Array(pts), 3));
-    const ln = new T.LineSegments(lg, new T.LineBasicMaterial({ color: tc }));
-    ln.frustumCulled = false;
-    ln.raycast = () => {};
-    dm.raycast = () => {};
-    dm.frustumCulled = false;
-    g2.add(ln, dm);
-    g2.visible = !S.m3;
-    G.trees.add(g2);
-    GEO.t2d = g2;
-    GEO.t2m = [ln.material, dm.material];
+    crw.castShadow = crw.receiveShadow = true;
+    crw.userData.tr = 1;
+    GEO.tmesh = crw;
+    G.trees.add(crw);
+    {
+      const tc = shade(S.lc.trees, 0.66),
+        g2 = new T.Group(),
+        pts = [],
+        N = 64,
+        dm = new T.InstancedMesh(
+          new T.CircleGeometry(1, 14).rotateX(-Math.PI / 2),
+          new T.MeshBasicMaterial({ color: tc, side: T.DoubleSide }),
+          list.length,
+        ),
+        M2 = new T.Matrix4();
+      const mr = Math.max(1, ...list.map((t) => Math.max(1, t.r))),
+        cs = mr * 2 + 1,
+        gk = (x, z) => Math.floor(x / cs) + ',' + Math.floor(z / cs),
+        grid = {};
+      list.forEach((t, i) => {
+        (grid[gk(t.x, t.z)] = grid[gk(t.x, t.z)] || []).push(i);
+      });
+      const covered = (i, px, pz) => {
+        const cx = Math.floor(px / cs),
+          cz = Math.floor(pz / cs);
+        for (let a = -1; a <= 1; a++)
+          for (let b = -1; b <= 1; b++) {
+            const g = grid[cx + a + ',' + (cz + b)];
+            if (g)
+              for (const j of g) {
+                if (j === i) continue;
+                const o = list[j],
+                  r = Math.max(1, o.r);
+                if ((px - o.x) ** 2 + (pz - o.z) ** 2 < r * r - 1e-4) return true;
+              }
+          }
+        return false;
+      };
+      list.forEach((t, i) => {
+        const y = gh(t.x, t.z) + Math.max(1.5, t.h) + 0.5,
+          cr = Math.max(1, t.r);
+        for (let q = 0; q < N; q++) {
+          const a = (q / N) * 2 * Math.PI,
+            c = ((q + 1) / N) * 2 * Math.PI,
+            mA = (a + c) / 2;
+          if (covered(i, t.x + cr * Math.cos(mA), t.z + cr * Math.sin(mA))) continue;
+          pts.push(
+            t.x + cr * Math.cos(a),
+            y,
+            t.z + cr * Math.sin(a),
+            t.x + cr * Math.cos(c),
+            y,
+            t.z + cr * Math.sin(c),
+          );
+        }
+        M2.makeScale(0.45, 1, 0.45).setPosition(t.x, y + 0.05, t.z);
+        dm.setMatrixAt(i, M2);
+      });
+      const lg = new T.BufferGeometry();
+      lg.setAttribute('position', new T.BufferAttribute(new Float32Array(pts), 3));
+      const ln = new T.LineSegments(lg, new T.LineBasicMaterial({ color: tc }));
+      ln.frustumCulled = false;
+      ln.raycast = () => {};
+      dm.raycast = () => {};
+      dm.frustumCulled = false;
+      g2.add(ln, dm);
+      g2.visible = !S.m3;
+      G.trees.add(g2);
+      GEO.t2d = g2;
+      GEO.t2m = [ln.material, dm.material];
+    }
+    const L = LY.find((l) => l[1] === 'trees');
+    G.trees.visible = !L || !!L[2];
+    if (L && L[3] < 1) op('trees', L[3]);
+  })();
+  FX.tr = false;
+  try {
+    if (fxOn('trees') && GEO.tmesh && GEO.trees && GEO.trees.length) {
+      fxTrees();
+      fxTreeFx();
+      FX.tr = true;
+      FX.tv = fxTv();
+      FX.tc = S.lc.trees;
+      if (!FX.opT) {
+        const L = LY.find((l) => l[1] === 'trees');
+        if (L && L[3] !== 1) {
+          L[3] = 1;
+          try {
+            if ($('lyp').style.display === 'block') lyRender();
+          } catch (e) {
+            logErr(e, 'treesBuild');
+          }
+        }
+      }
+      fxTreeOp();
+    }
+  } catch (e) {
+    console.error(e);
   }
-  const L = LY.find((l) => l[1] === 'trees');
-  G.trees.visible = !L || !!L[2];
-  if (L && L[3] < 1) op('trees', L[3]);
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/120-tannen.js (danach)
+  WLD.mod = false;
+  WLD.sig = '';
+  return r;
 }
 function dgmAt(D, x, z) {
   const [E, N] = ll2utm(GEO.lon + x / GEO.kx, GEO.lat - z / 110574, D.zone || 32),
@@ -1125,9 +1248,20 @@ function ctxBuild(list) {
   }
   const L = LY.find((l) => l[1] === 'buildings');
   if (L && L[3] < 1) op('buildings', L[3]);
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/100-eigenschaften.js (danach)
+  try {
+    if (HNR.data && hnrOn()) hnrBuild();
+  } catch (e) {
+    logErr(e, 'ctxBuild');
+  }
 }
 function geoPick() {
-  return GEO.mesh ? rc.intersectObject(GEO.mesh, false)[0] : null;
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/010-fokus.js
+  return ISO3.on
+    ? null
+    : (() => {
+        return GEO.mesh ? rc.intersectObject(GEO.mesh, false)[0] : null;
+      })();
 }
 function ctxSelect(hit) {
   if (GEO.selG) {

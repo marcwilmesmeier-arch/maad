@@ -40,29 +40,10 @@ function brPatch() {
     logErr(e, 'brPatch');
   }
 }
-{
-  const _l = liUp;
-  liUp = function () {
-    const r = _l.apply(this, arguments);
-    if (S.dar === 'real') {
-      const k = brK();
-      hemi.intensity = 0.5 * k;
-      S.sunK = 0.7 * k;
-      sunUp();
-    }
-    brPatch();
-    return r;
-  };
-}
-{
-  const _t = drTick;
-  let n = 0;
-  drTick = function (cm) {
-    const r = _t.apply(this, arguments);
-    if (S.dar === 'real' && ++n % 20 === 0) brPatch();
-    return r;
-  };
-}
+// liUp(): Erweiterung zusammengeführt, siehe 06-darstellung/010-darstellung.js
+// Bildzähler für brPatch() in der Darstellung „Realistisch“
+let brTickN = 0;
+// drTick(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 function brSet(v) {
   S.rb = Math.max(50, Math.min(150, Math.round(+v || 100)));
   brUi();
@@ -74,14 +55,7 @@ function brUi() {
   if (r) r.value = String(S.rb);
   if (t) t.textContent = S.rb + ' %';
 }
-{
-  const _u = drUi;
-  drUi = function () {
-    const r = _u.apply(this, arguments);
-    brUi();
-    return r;
-  };
-}
+// drUi(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 (function () {
   const p = $('darReal');
   if (!p || $('brR')) return;
@@ -300,30 +274,7 @@ function fdDepthFx(g, b, V, ox, o) {
     g.restore();
   }
 }
-{
-  const _d = fdDrawView;
-  fdDrawView = function (g, b, V, ox, o) {
-    const r = _d.apply(this, arguments);
-    try {
-      fdDepthFx(g, b, V, ox, o);
-      g.save();
-      g.lineWidth = 2.8;
-      g.lineJoin = 'round';
-      g.lineCap = 'round';
-      g.strokeStyle = '#1F2A33';
-      g.beginPath();
-      V.bs.forEach((s) => {
-        g.moveTo(fdSX(s[0] + ox), fdSY(s[1]));
-        g.lineTo(fdSX(s[2] + ox), fdSY(s[3]));
-      });
-      g.stroke();
-      g.restore();
-    } catch (e) {
-      console.warn('FD-Tiefe', e);
-    }
-    return r;
-  };
-}
+// fdDrawView(): Erweiterung zusammengeführt, siehe 19-fassadendesigner/040-fang.js
 
 // ======================================================================
 // Gebäude nach Flächennutzung (CORINE): Umgebungsgebäude (Kontextmodell) übernehmen die CLC-Farbe der Fläche, auf der sie stehen – für die Übersicht.
@@ -358,18 +309,7 @@ function bclCode(x, z) {
   }
   return hit;
 }
-{
-  const _r = rfUp;
-  rfUp = function () {
-    const r = _r.apply(this, arguments);
-    try {
-      bclPaint();
-    } catch (e) {
-      console.warn(e);
-    }
-    return r;
-  };
-}
+// rfUp(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/120-dachfarben.js
 function bclPaint() {
   if (!bclOn()) return;
   const m = GEO.mesh;
@@ -418,38 +358,8 @@ function bclPaint() {
   }
   col.needsUpdate = true;
 }
-// Daten laden, sobald der Layer eingeschaltet wird
-{
-  const _lv = lvis;
-  lvis = function (i, v) {
-    const r = _lv.apply(this, arguments);
-    try {
-      if (LY[i][1] === 'bclc') {
-        if (v) {
-          if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
-          if (!OVD.clc) ovLoad('clc');
-        }
-        RFC.sig = '';
-        BCL.sig = '';
-      }
-    } catch (e) {
-      logErr(e, 'lvis');
-    }
-    return r;
-  };
-}
-{
-  const _os = ovSync;
-  ovSync = function () {
-    const r = _os.apply(this, arguments);
-    try {
-      if (S.geo && bclOn() && !OVD.clc) ovLoad('clc');
-    } catch (e) {
-      logErr(e, 'ovSync');
-    }
-    return r;
-  };
-}
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// ovSync(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/080-karten.js
 setInterval(() => {
   try {
     const m = GEO.mesh,

@@ -628,37 +628,7 @@ function fxSync() {
   } else fxWaterClear();
   fxVis();
 }
-{
-  const _tb = treesBuild;
-  treesBuild = function (list) {
-    const r = _tb.apply(this, arguments);
-    FX.tr = false;
-    try {
-      if (fxOn('trees') && GEO.tmesh && GEO.trees && GEO.trees.length) {
-        fxTrees();
-        fxTreeFx();
-        FX.tr = true;
-        FX.tv = fxTv();
-        FX.tc = S.lc.trees;
-        if (!FX.opT) {
-          const L = LY.find((l) => l[1] === 'trees');
-          if (L && L[3] !== 1) {
-            L[3] = 1;
-            try {
-              if ($('lyp').style.display === 'block') lyRender();
-            } catch (e) {
-              logErr(e, 'treesBuild');
-            }
-          }
-        }
-        fxTreeOp();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
+// treesBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
 /* Transparenz: gleicher Regler (Layer „Bäume“ → Transparenz) wie bei den bisherigen Bäumen; bis zur ersten Bedienung bleiben die Effekt-Bäume deckend */
 function fxTreeOp() {
   const L = LY.find((l) => l[1] === 'trees');
@@ -673,87 +643,10 @@ function fxTreeOp() {
     m.needsUpdate = true;
   });
 }
-{
-  const _op = op;
-  op = function (k, v) {
-    if (k === 'trees' && FX.tr) {
-      fxTreeOp();
-      return;
-    }
-    return _op.apply(this, arguments);
-  };
-}
-{
-  const _lop = lop;
-  lop = function (i, v) {
-    if (LY[i] && LY[i][1] === 'trees') FX.opT = 1;
-    return _lop.apply(this, arguments);
-  };
-}
-{
-  const _cp = ctxPaint;
-  ctxPaint = function (acc) {
-    const r = _cp.apply(this, arguments);
-    try {
-      clearTimeout(FX.T);
-      FX.T = setTimeout(() => {
-        try {
-          fxGrassClear();
-          fxWaterClear();
-          fxSync();
-        } catch (e) {
-          console.error(e);
-        }
-      }, 500);
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _ds = drSet;
-  drSet = function (m) {
-    const r = _ds.apply(this, arguments);
-    try {
-      fxUi();
-      fxSync();
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-/* Optionen im Panel „Darstellung“ */
-function fxUi() {
-  const lc = document.getElementById('lc');
-  if (!lc) return;
-  let e = document.getElementById('fxo');
-  if (!e) {
-    e = document.createElement('div');
-    e.id = 'fxo';
-    lc.appendChild(e);
-  }
-  const m = S.dar;
-  if (m === 'wm') {
-    e.style.display = 'none';
-    return;
-  }
-  e.style.display = 'block';
-  const o = S.fx[m] || {},
-    cb = (k, l) =>
-      `<label>${l} <input type="checkbox" ${o[k] ? 'checked' : ''} onchange="fxSet('${k}',this.checked)"></label>`;
-  e.innerHTML =
-    '<b style="display:block;margin-top:8px">Grafikeffekte</b>' +
-    cb('trees', 'Bäume: Laubschalen') +
-    (o.trees
-      ? `<label>Baumvariante <select onchange="fxSet('tv',+this.value)"><option value="8" ${o.tv !== 7 ? 'selected' : ''}>8 · Laubschalen</option><option value="7" ${o.tv === 7 ? 'selected' : ''}>7 · Laubschalen fein</option></select></label>`
-      : '') +
-    (m === 'real' ? cb('water', 'Wasser: Shader mit Spiegelung') : '') +
-    '<div class="dmu">Wirken in dieser Darstellung (' +
-    (m === 'real' ? 'Realistisch' : 'Schattiert') +
-    '); im Weißmodell immer aus. Wasser nur in 3D sichtbar.</div>';
-}
+// op(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// lop(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// ctxPaint(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
+// drSet(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 /* Farbvorlagen für „Rasen“ (Realistisch): dunkel · hell · Variation · Maßstab – nach Referenzfotos */
 const FXPRE = [
   ['Standard (Startwerte)', '#1f3817', '#526b30', 8, 8],

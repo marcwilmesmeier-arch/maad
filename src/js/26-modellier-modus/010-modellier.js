@@ -71,11 +71,24 @@ const SKT = [
   ['l', 'Teilen', 'L'],
 ];
 function skAct() {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/070-import.js
   return (
-    SK.on &&
-    (S.tool === 'v' || S.tool === 'b') &&
-    !(typeof HOME !== 'undefined' && HOME.open) &&
-    (S.bld.length > 0 || SK.used || (typeof SKS !== 'undefined' && SKS.e.length > 0))
+    !IMP.mode &&
+    (() => {
+      // ── Erweiterung aus 28-erweiterungen-v486-v519/050-zusammengefasster-menuepunkt.js
+      // v498: Baum-Modus: der Skizzen-/Modellier-Klick darf den ersten Klick nicht schlucken
+      return (
+        !TRE.on &&
+        (() => {
+          return (
+            SK.on &&
+            (S.tool === 'v' || S.tool === 'b') &&
+            !(typeof HOME !== 'undefined' && HOME.open) &&
+            (S.bld.length > 0 || SK.used || (typeof SKS !== 'undefined' && SKS.e.length > 0))
+          );
+        })()
+      );
+    })()
   );
 }
 function skLs(b) {
@@ -87,9 +100,26 @@ function skZ(b, j) {
   return z;
 }
 function skKey(e) {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  if (e.face != null) return e.b.id + '|' + e.j + '|f' + e.face;
+  if (e.vd != null) return e.b.id + '|v' + e.vd + '|' + (e.floor ? 'b' : e.i);
+  return skKeyBasis(e);
+}
+// skKey() ohne die Erweiterungen darüber – wird von skKey() gezielt aufgerufen
+function skKeyBasis(e) {
   return e.b.id + '|' + e.j + '|' + (e.top ? 't' : e.i);
 }
 function skValid(e) {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  // ---- Einbindung in die Auswahl
+  if (szSp(e)) {
+    const b = e.b;
+    return !!b && !b.ex && S.bld.includes(b) && !!szObj(e) && (e.i == null || e.i < szObj(e).poly.length);
+  }
+  return skValidBasis(e);
+}
+// skValid() ohne die Erweiterungen darüber – wird von skValid() gezielt aufgerufen
+function skValidBasis(e) {
   const b = e.b;
   if (!b || b.ex || !S.bld.includes(b) || !b.levels[e.j]) return false;
   if (e.top) return true;
@@ -113,6 +143,38 @@ function skN(b, j, i) {
   return A > 0 ? [dz / L, -dx / L] : [-dz / L, dx / L];
 }
 function skHit(e) {
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  if (!S.m3) {
+    const q = sk2Hit(e);
+    if (q) return q;
+  }
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  ray(e);
+  const h = mdlHit();
+  if (h) {
+    const o = h.object,
+      b = o.userData.b,
+      k = o.userData.k;
+    if (b && !b.ex && S.bld.includes(b)) {
+      if (o.userData.face != null) return { b, j: k, face: o.userData.face };
+      const vs = b.voids || [],
+        p = [h.point.x, h.point.z],
+        ny = h.face.normal.y;
+      if (k != null && Math.abs(ny) < 0.3) {
+        for (let i = 0; i < vs.length; i++) {
+          const v = vs[i];
+          if (k >= v.j0 && k <= v.j1 && szDist(p, v.poly) < 0.15)
+            return { b, j: v.j1, vd: i, i: szNearEdge(p, v.poly) };
+        }
+      }
+      if (k != null && ny > 0.7) {
+        for (let i = 0; i < vs.length; i++) {
+          const v = vs[i];
+          if (v.j0 > 0 && k === v.j0 - 1 && znInP(p, v.poly)) return { b, j: k, vd: i, floor: 1 };
+        }
+      }
+    }
+  }
   ray(e);
   const hit = mdlHit();
   if (!hit) return null;
@@ -129,7 +191,12 @@ function skHit(e) {
   if (k != null && ny > 0.7) return { b, j: k, top: 1 };
   return null;
 }
-function skGroup(en) {
+function skGroup(e) {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  return szSp(e) ? [e] : skGroupBasis(e);
+}
+// skGroup() ohne die Erweiterungen darüber – wird von skGroup() gezielt aufgerufen
+function skGroupBasis(en) {
   if (en.top) return [en];
   const b = en.b,
     f0 = lf(b, b.levels[en.j]),
@@ -207,6 +274,42 @@ function skMode(e) {
   return e.shiftKey && e.ctrlKey ? 'rem' : e.ctrlKey ? 'add' : e.shiftKey ? 'tog' : 'rep';
 }
 function skInfo() {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  const sp = SK.sel.filter(szSp);
+  if (!sp.length) return skInfoBasis();
+  const all = SK.sel;
+  SK.sel = all.filter((x) => !szSp(x));
+  const base = SK.sel.length ? skInfoBasis() + ' · ' : '';
+  SK.sel = all;
+  const fa = sp.filter((e) => e.face != null),
+    vd = sp.filter((e) => e.vd != null);
+  let t = [];
+  if (fa.length)
+    t.push(
+      fa.length +
+        ' Dachfläche' +
+        (fa.length === 1 ? '' : 'n') +
+        ' (gezeichnet) · ' +
+        fa
+          .reduce((s, e) => s + (szObj(e) ? szA(szObj(e).poly) : 0), 0)
+          .toFixed(1)
+          .replace('.', ',') +
+        ' m²',
+    );
+  if (vd.length) {
+    const v = szObj(vd[0]);
+    t.push(
+      'Innenhof' +
+        (vd.length > 1 ? ' (' + vd.length + ' Flächen)' : '') +
+        (v
+          ? ' · ' + szA(v.poly).toFixed(1).replace('.', ',') + ' m² · Ebene ' + (v.j0 + 1) + '–' + (v.j1 + 1)
+          : ''),
+    );
+  }
+  return base + t.join(' · ') + ' · Entf = löschen';
+}
+// skInfo() ohne die Erweiterungen darüber – wird von skInfo() gezielt aufgerufen
+function skInfoBasis() {
   const n = SK.sel.length;
   if (!n) return 'Nichts gewählt';
   const bs = new Set(SK.sel.map((e) => e.b));

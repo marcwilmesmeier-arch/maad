@@ -393,6 +393,27 @@ function rebuildTerrain() {
   S.terr.material.dispose();
   S.terr.material = new T.MeshLambertMaterial({ map: GEO.tex });
   skirtBuild();
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js (danach)
+  try {
+    sunUp();
+  } catch (e) {
+    logErr(e, 'rebuildTerrain');
+  }
+
+  // ── Erweiterung aus 21-gelaendeplanum/020-gelaendenetz.js (danach)
+  try {
+    PLM.gk = '';
+    plmTick(1);
+  } catch (e) {
+    logErr(e, 'rebuildTerrain');
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/080-panel.js (danach)
+  try {
+    IMP.sh.forEach(impMesh);
+  } catch (e) {
+    logErr(e, 'rebuildTerrain');
+  }
 }
 // Vektorkacheln laden und in lokale Meter umrechnen
 async function vecLoad() {

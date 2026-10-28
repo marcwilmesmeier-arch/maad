@@ -230,14 +230,7 @@ addEventListener(
     return _e();
   };
 }
-{
-  const _t = skTool;
-  skTool = function (t) {
-    ofReset();
-    OFS.re = null;
-    return _t.apply(this, arguments);
-  };
-}
+// skTool(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
 {
   const _k = SK.keys;
   SK.keys = function (e) {

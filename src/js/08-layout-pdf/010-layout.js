@@ -165,9 +165,61 @@ function layLegend() {
 // Zeichenelemente eines Layout-Elements in mm: t = Text, r = Rechtecke, h = Höhe
 const layFo = (e) => e.font || LAY.font || 'helv';
 function layItems(e, noAn) {
-  const R = layItems0(e, noAn),
-    fo = layFo(e);
-  R.t.forEach((q) => (q.f = fo));
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/090-layouter.js
+  let R;
+  if (e.type === 'box') R = { t: [], r: [], h: e.h || 20 };
+  else if (e.type === 'board') {
+    R = layBoard(e);
+    const fo = layFo(e);
+    R.t.forEach((q) => (q.f = fo));
+  } else
+    R = (() => {
+      const R = layItems0(e, noAn),
+        fo = layFo(e);
+      R.t.forEach((q) => (q.f = fo));
+      return R;
+    })();
+  const sc = e.bc || '#1d1d1b',
+    sw = +e.bw || 0.25;
+  if (e.type === 'pic' || e.type === 'view')
+    R.r.forEach((q) => {
+      if (q.nf && q.s === '#1d1d1b') {
+        q.s = sc;
+        q.sw = sw;
+      }
+    });
+  if (e.type === 'box')
+    R.r.push({
+      x: e.x,
+      y: e.y,
+      w: e.w,
+      h: e.h,
+      f: e.fc || '#E9EDEF',
+      nf: e.fc === 'none',
+      fa: e.fa == null ? 1 : +e.fa,
+      s: +e.bw > 0 ? sc : null,
+      sw: +e.bw || 0,
+      rx: +e.rx || 0,
+    });
+  else if (e.type !== 'pic' && e.type !== 'view' && (e.bg || e.bo)) {
+    const pd = +e.pad || 0;
+    R.r.unshift({
+      x: e.x - pd,
+      y: e.y - pd,
+      w: e.w + 2 * pd,
+      h: R.h + 2 * pd,
+      f: e.bg || '#ffffff',
+      nf: !e.bg,
+      fa: e.fa == null ? 1 : +e.fa,
+      s: e.bo ? sc : null,
+      sw: sw,
+      rx: +e.rx || 0,
+    });
+  }
+  if (e.tc)
+    R.t.forEach((q) => {
+      if (!q.c) q.c = e.tc;
+    });
   return R;
 }
 function layItems0(e, noAn) {

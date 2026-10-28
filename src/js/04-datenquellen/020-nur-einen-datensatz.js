@@ -630,132 +630,182 @@ function srcDetail(tab, k) {
     live = `<div class="stn">${rp ? 'Keine Prüfung für dieses Bundesland – das aktuelle Projekt liegt in ' + esc(rp.name || '?') + '.' : 'Kein Ladeprotokoll (Demo-Daten oder noch kein Projekt geladen).'}</div>`;
   if (R && SRPN[tab] && S.geo && GEO.snap)
     live += `<button class="sm" style="margin-top:6px"${TB.busy || GEO.busy ? ' disabled' : ''} onclick="srReload('${tab}')" title="Lädt nur diesen Datensatz neu, die übrigen bleiben unverändert">Nur „${SRPN[tab]}“ neu laden</button>`;
-  return (
+  const h =
     `<div class="dgrid"><div><div class="dh">Datensatz</div>${s}</div><div><div class="dh">Ladeergebnis im aktuellen Projekt</div>${live}</div></div>` +
-    srTools(tab, k)
+    srTools(tab, k);
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js (danach)
+  if (tab !== 'gb') return h;
+  const m = S.gbMode || 'auto',
+    can = S.geo && GEO.snap && !TB.busy && !GEO.busy;
+  return (
+    `<div class="opt" style="margin:0 0 8px;padding:6px 8px"><b>Gebäudemodell im Projekt</b><div style="margin:4px 0"><select onchange="gbModeSet(this.value)" style="max-width:100%">${GBM.map(([v, n]) => `<option value="${v}"${v === m ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select> <button class="sm"${can ? '' : ' disabled'} onclick="srReload('gb')" title="Lädt nur die Gebäude mit der gewählten Quelle neu, geplante Gebäude bleiben erhalten">Gebäudemodell jetzt neu laden</button></div><div class="stn" style="margin:0">Ist das geladene Modell nicht aktuell genug, z. B. LoD2 aus einem älteren Kachelstand, hier auf LoD1 oder OSM umstellen und neu laden. Die Wahl wird mit dem Projekt gespeichert${can ? '' : ' (Neu laden: erst ein Projekt mit Umgebung öffnen)'}.</div></div>` +
+    h
   );
 }
 function srcData() {
-  const ks = Object.keys(BLN),
-    rp = GEO.rep,
-    cur = rp ? rp.key : ks.find((k) => BLN[k] === GEO.alkBL) || '',
-    L3 = LOD3S.map((s) => s.name).join(', ');
-  const tb = (tab, head, rows) => {
-    const R = rp && rp[tab];
-    return `<table class="stb"><tr>${head.map((x) => `<th>${x}</th>`).join('')}</tr>${rows
-      .map((r, i) => {
-        const k = ks[i],
-          isC = k === cur,
-          sel = S.srSel === tab + ':' + k,
-          T = GEO.tests[tab + ':' + k],
-          use =
-            T && !(isC && R && R.st && (rp.t || 0) > T.t)
-              ? { st: T.st, lab: T.lab }
-              : isC && R
-                ? { st: R.st, lab: SRB[R.st] }
-                : null,
-          bd =
-            (use ? `<br><span class="bdg ${use.st}">${esc(use.lab)}</span>` : '') +
-            (OVR[tab][k] ? ' <span class="bdg fb">angepasst</span>' : '');
-        return `<tr class="${isC ? 'cur ' + (R ? R.st : '') : ''}${sel ? ' sel' : ''}" onclick="srcPick('${tab}','${k}')">${r.map((c, j) => `<td>${j ? c : '<b>' + esc(c) + '</b>' + bd}</td>`).join('')}</tr>${sel ? `<tr class="dt"><td colspan="${head.length}">${srcDetail(tab, k)}</td></tr>` : ''}`;
-      })
-      .join(
-        '',
-      )}</table><div class="stn">Zeile anklicken: Datensatz-Informationen, Ladeergebnis, Testen und Quelle ändern. Rot/orange/grün hinterlegt ist das Bundesland des aktuellen Projekts.</div>`;
-  };
-  const fmt = (c) => c.sz + ' km-Kacheln, ' + (c.zip ? 'ZIP' : 'GML');
-  const gb = ks.map((k) => {
-    const c = CG[k],
-      n = BLN[k];
-    return c
-      ? [
-          n,
-          'LoD2-CityGML (' + fmt(c) + ') – ' + esc(c.src),
-          'LoD2 mit echten Dachformen',
-          c.g ? 'Adresse ungeprüft' : SRN.gb[k] || 'eingebunden',
-          'Esri/IOER, dann MapTiler/OSM',
-        ]
-      : [
-          n,
-          'Esri/IOER „LoD2-DE“ (bundesweit, ArcGIS-Dienst)',
-          'Grundriss + Höhe, keine Dachform',
-          'kein Landes-Kachelzugang hinterlegt',
-          'MapTiler/OSM (extrudiert, Höhe geschätzt)',
+  // ── Erweiterung aus 20-geodaten-international/030-gebaeudemaske-fuer-das-kronenmodell-aus.js
+  const keys = Object.keys(BLN),
+    saved = Object.assign({}, BLN),
+    rp = GEO.rep;
+  let sel =
+    S.srDe && saved[S.srDe]
+      ? S.srDe
+      : rp && saved[rp.key]
+        ? rp.key
+        : keys.find((k) => saved[k] === GEO.alkBL) || 'nrw';
+  keys.forEach((k) => {
+    if (k !== sel) delete BLN[k];
+  });
+  let D;
+  try {
+    D = (() => {
+      const ks = Object.keys(BLN),
+        rp = GEO.rep,
+        cur = rp ? rp.key : ks.find((k) => BLN[k] === GEO.alkBL) || '',
+        L3 = LOD3S.map((s) => s.name).join(', ');
+      const tb = (tab, head, rows) => {
+        const R = rp && rp[tab];
+        return `<table class="stb"><tr>${head.map((x) => `<th>${x}</th>`).join('')}</tr>${rows
+          .map((r, i) => {
+            const k = ks[i],
+              isC = k === cur,
+              sel = S.srSel === tab + ':' + k,
+              T = GEO.tests[tab + ':' + k],
+              use =
+                T && !(isC && R && R.st && (rp.t || 0) > T.t)
+                  ? { st: T.st, lab: T.lab }
+                  : isC && R
+                    ? { st: R.st, lab: SRB[R.st] }
+                    : null,
+              bd =
+                (use ? `<br><span class="bdg ${use.st}">${esc(use.lab)}</span>` : '') +
+                (OVR[tab][k] ? ' <span class="bdg fb">angepasst</span>' : '');
+            return `<tr class="${isC ? 'cur ' + (R ? R.st : '') : ''}${sel ? ' sel' : ''}" onclick="srcPick('${tab}','${k}')">${r.map((c, j) => `<td>${j ? c : '<b>' + esc(c) + '</b>' + bd}</td>`).join('')}</tr>${sel ? `<tr class="dt"><td colspan="${head.length}">${srcDetail(tab, k)}</td></tr>` : ''}`;
+          })
+          .join(
+            '',
+          )}</table><div class="stn">Zeile anklicken: Datensatz-Informationen, Ladeergebnis, Testen und Quelle ändern. Rot/orange/grün hinterlegt ist das Bundesland des aktuellen Projekts.</div>`;
+      };
+      const fmt = (c) => c.sz + ' km-Kacheln, ' + (c.zip ? 'ZIP' : 'GML');
+      const gb = ks.map((k) => {
+        const c = CG[k],
+          n = BLN[k];
+        return c
+          ? [
+              n,
+              'LoD2-CityGML (' + fmt(c) + ') – ' + esc(c.src),
+              'LoD2 mit echten Dachformen',
+              c.g ? 'Adresse ungeprüft' : SRN.gb[k] || 'eingebunden',
+              'Esri/IOER, dann MapTiler/OSM',
+            ]
+          : [
+              n,
+              'Esri/IOER „LoD2-DE“ (bundesweit, ArcGIS-Dienst)',
+              'Grundriss + Höhe, keine Dachform',
+              'kein Landes-Kachelzugang hinterlegt',
+              'MapTiler/OSM (extrudiert, Höhe geschätzt)',
+            ];
+      });
+      gb.forEach((r, i) => {
+        const k = ks[i];
+        if (SRN.gb[k] && CG[k]) r[3] = SRN.gb[k];
+        const l3 = LOD3S.filter((x) => x.bl === k);
+        if (l3.length) {
+          r[1] =
+            '<b>LoD3</b> (zuerst, nur im Quellgebiet): ' +
+            l3.map((x) => esc(x.name) + ' – ' + esc(x.src)).join('; ') +
+            '<br>' +
+            r[1];
+          r[2] = 'LoD3 im Quellgebiet, sonst ' + r[2];
+        }
+      });
+      const gbH =
+        tb('gb', ['Bundesland', 'Quelle', 'Modell', 'Status', 'Fallback'], gb) +
+        `<div class="stn">LoD3 (zuerst versucht, nur in diesen Gebieten): ${esc(L3)}. Eigene Kachel-URL ersetzt die Landesquelle (unter Einstellungen). ${esc(SRN.fb)}</div>`;
+      const tr = ks.map((k) => {
+        const t = TKAT[k],
+          tt = TERR[k],
+          kr = tt && tt.dgm && tt.dom;
+        const ex = [];
+        if (t) ex.push('Baumkataster ' + esc(t.name) + ' (WFS, Einzelbäume mit Höhe/Krone/Art)');
+        if (k === 'ni') ex.push('Baumdatei Braunschweig (lokale .gpkg, LiDAR 2019)');
+        if (k === 'by') ex.push('Baumdatei Einzelbäume (lokale .gpkg, Bäume 3D)');
+        if (kr) ex.push('Kronenmodell aus DOM1 − DGM1');
+        return [
+          BLN[k],
+          ex.length ? ex.join('<br>') : '–',
+          t ? 'Einzelbaum mit Höhe, Krone, Art' : kr ? 'Baumkronen aus Höhenmodellen (ohne Art)' : '–',
+          'OSM-Bäume (Overpass): Punkte, Höhe/Krone aus Tags oder geschätzt',
         ];
-  });
-  gb.forEach((r, i) => {
-    const k = ks[i];
-    if (SRN.gb[k] && CG[k]) r[3] = SRN.gb[k];
-    const l3 = LOD3S.filter((x) => x.bl === k);
-    if (l3.length) {
-      r[1] =
-        '<b>LoD3</b> (zuerst, nur im Quellgebiet): ' +
-        l3.map((x) => esc(x.name) + ' – ' + esc(x.src)).join('; ') +
-        '<br>' +
-        r[1];
-      r[2] = 'LoD3 im Quellgebiet, sonst ' + r[2];
-    }
-  });
-  const gbH =
-    tb('gb', ['Bundesland', 'Quelle', 'Modell', 'Status', 'Fallback'], gb) +
-    `<div class="stn">LoD3 (zuerst versucht, nur in diesen Gebieten): ${esc(L3)}. Eigene Kachel-URL ersetzt die Landesquelle (unter Einstellungen). ${esc(SRN.fb)}</div>`;
-  const tr = ks.map((k) => {
-    const t = TKAT[k],
-      tt = TERR[k],
-      kr = tt && tt.dgm && tt.dom;
-    const ex = [];
-    if (t) ex.push('Baumkataster ' + esc(t.name) + ' (WFS, Einzelbäume mit Höhe/Krone/Art)');
-    if (k === 'ni') ex.push('Baumdatei Braunschweig (lokale .gpkg, LiDAR 2019)');
-    if (k === 'by') ex.push('Baumdatei Einzelbäume (lokale .gpkg, Bäume 3D)');
-    if (kr) ex.push('Kronenmodell aus DOM1 − DGM1');
-    return [
-      BLN[k],
-      ex.length ? ex.join('<br>') : '–',
-      t ? 'Einzelbaum mit Höhe, Krone, Art' : kr ? 'Baumkronen aus Höhenmodellen (ohne Art)' : '–',
-      'OSM-Bäume (Overpass): Punkte, Höhe/Krone aus Tags oder geschätzt',
-    ];
-  });
-  const trH =
-    tb('tr', ['Bundesland', 'Quelle', 'Modell', 'Fallback'], tr) +
-    `<div class="stn">Für jedes Bundesland kann zusätzlich eine eigene GeoPackage-Baumdatei gewählt werden (Einstellungen → Baumdatei). Sie hat Vorrang vor Kataster und OSM.</div>`;
-  const fl = ks.map((k) => {
-    const a = ALS[k],
-      h = a && a[0] ? (a[0].u.match(/\/\/([^\/]+)/) || [])[1] : '';
-    return [
-      BLN[k],
-      a
-        ? 'WFS ALKIS: ' + esc(h) + (a.some((x) => x.g) ? ' <i>(Adresse ungeprüft)</i>' : '')
-        : WMSK[k]
-          ? 'Kartenbild (WMS): ' + esc(WMSK[k].name)
-          : '–',
-      a ? esc(ALQ[k] || '') : '–',
-      a ? 'Flurstücke mit Nummer, Fläche' : esc(BLX[k] || 'kein freier Dienst hinterlegt'),
-      'Kartenhintergrund MapTiler, ohne Flurstücke',
-    ];
-  });
-  const flH =
-    tb('fl', ['Bundesland', 'Quelle', 'Lizenz', 'Modell / Hinweis', 'Fallback'], fl) +
-    '<div class="stn">Eigener Flurstücks-Dienst: Einstellungen → Flurstücks-Dienst.</div>';
-  const ge = ks.map((k) => {
-    const t = TERR[k];
-    return [
-      BLN[k],
-      t
-        ? (t.dgm
-            ? (t.dgm.u === 'tile' ? 'DGM1-Kacheln (ZIP/XYZ oder GeoTIFF)' : 'DGM1 per WCS') +
-              (t.dom ? (t.dom.u === 'tile' ? ', DOM-Kacheln (20 cm, GeoTIFF)' : ', DOM1 per WCS') : '')
-            : t.dom && t.dom.u === 'tile'
-              ? 'nur DOM1 (Gesamtarchiv, Import über Download-Manager)'
-              : '–') + (t.dgm && t.dgm.g ? ' <i>(Adresse ungeprüft)</i>' : '')
-        : '–',
-      t ? esc(t.src) : '–',
-      'MapTiler Terrain-RGB (grob, ca. 10 m)',
-    ];
-  });
-  const geH =
-    tb('ge', ['Bundesland', 'Quelle', 'Lizenz', 'Fallback'], ge) +
-    '<div class="stn">Eigene WCS-Adressen: Einstellungen → Höhenmodell-Dienste.</div>';
-  return { gb: gbH, tr: trH, fl: flH, ge: geH, bp: '', cur, rep: rp };
+      });
+      const trH =
+        tb('tr', ['Bundesland', 'Quelle', 'Modell', 'Fallback'], tr) +
+        `<div class="stn">Für jedes Bundesland kann zusätzlich eine eigene GeoPackage-Baumdatei gewählt werden (Einstellungen → Baumdatei). Sie hat Vorrang vor Kataster und OSM.</div>`;
+      const fl = ks.map((k) => {
+        const a = ALS[k],
+          h = a && a[0] ? (a[0].u.match(/\/\/([^\/]+)/) || [])[1] : '';
+        return [
+          BLN[k],
+          a
+            ? 'WFS ALKIS: ' + esc(h) + (a.some((x) => x.g) ? ' <i>(Adresse ungeprüft)</i>' : '')
+            : WMSK[k]
+              ? 'Kartenbild (WMS): ' + esc(WMSK[k].name)
+              : '–',
+          a ? esc(ALQ[k] || '') : '–',
+          a ? 'Flurstücke mit Nummer, Fläche' : esc(BLX[k] || 'kein freier Dienst hinterlegt'),
+          'Kartenhintergrund MapTiler, ohne Flurstücke',
+        ];
+      });
+      const flH =
+        tb('fl', ['Bundesland', 'Quelle', 'Lizenz', 'Modell / Hinweis', 'Fallback'], fl) +
+        '<div class="stn">Eigener Flurstücks-Dienst: Einstellungen → Flurstücks-Dienst.</div>';
+      const ge = ks.map((k) => {
+        const t = TERR[k];
+        return [
+          BLN[k],
+          t
+            ? (t.dgm
+                ? (t.dgm.u === 'tile' ? 'DGM1-Kacheln (ZIP/XYZ oder GeoTIFF)' : 'DGM1 per WCS') +
+                  (t.dom ? (t.dom.u === 'tile' ? ', DOM-Kacheln (20 cm, GeoTIFF)' : ', DOM1 per WCS') : '')
+                : t.dom && t.dom.u === 'tile'
+                  ? 'nur DOM1 (Gesamtarchiv, Import über Download-Manager)'
+                  : '–') + (t.dgm && t.dgm.g ? ' <i>(Adresse ungeprüft)</i>' : '')
+            : '–',
+          t ? esc(t.src) : '–',
+          'MapTiler Terrain-RGB (grob, ca. 10 m)',
+        ];
+      });
+      const geH =
+        tb('ge', ['Bundesland', 'Quelle', 'Lizenz', 'Fallback'], ge) +
+        '<div class="stn">Eigene WCS-Adressen: Einstellungen → Höhenmodell-Dienste.</div>';
+      const D = { gb: gbH, tr: trH, fl: flH, ge: geH, bp: '', cur, rep: rp };
+      // ── Erweiterung aus 17-erweiterungen-v253-v280/070-datenquellen.js (danach)
+      try {
+        D.um = '<div class="ax">' + axDqEnv() + '</div>';
+        D.ri = '<div class="ax">' + axRi() + '</div>';
+        D.dv = '<div class="ax">' + axDqUsed() + '</div>';
+      } catch (e) {
+        D.um = D.dv = '<div class="stn">' + esc(e.message || e) + '</div>';
+      }
+      return D;
+    })();
+  } finally {
+    delete BLN[sel];
+    keys.forEach((k) => {
+      BLN[k] = saved[k];
+    });
+  }
+  const bar = `<div class="tbar" style="margin:0 0 6px"><label class="stn" style="margin:0"><b>Deutschland</b> – Bundesland <select onchange="S.srDe=this.value;S.srSel='';srcOpen()">${keys.map((k) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(saved[k])}</option>`).join('')}</select></label><button class="sm" onclick="ctyProbeAll()" title="Alle hinterlegten Prüfadressen der Länder abfragen">Erreichbarkeit der weiteren Länder prüfen</button></div>`;
+  for (const t of ['gb', 'tr', 'fl', 'ge']) {
+    let h = D[t];
+    if (!h) continue;
+    h = h
+      .replace('<th>Bundesland</th>', '<th>Land</th>')
+      .replace('<td><b>', '<td><b>Deutschland · ')
+      .replace('</table>', ctyRows(t) + '</table>');
+    D[t] = bar + h;
+  }
+  return D;
 }
 function srOpts(tab) {
   const dis = GEO.busy ? ' disabled' : '';
@@ -799,6 +849,8 @@ const SRT = [
   ['bp', 'Bebauungspläne'],
 ];
 function srcPick(t, k) {
+  // ── Erweiterung aus 20-geodaten-international/030-gebaeudemaske-fuer-das-kronenmodell-aus.js
+  S.ctySel = '';
   S.srSel = S.srSel === t + ':' + k ? '' : t + ':' + k;
   srcOpen();
 }

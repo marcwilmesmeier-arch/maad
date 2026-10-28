@@ -18,6 +18,15 @@ function skyPre() {
     KONsky.c = c;
     ren.setClearColor(new T.Color(c));
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/060-darstellung.js (danach)
+  try {
+    if (S.dar === 'sw' && KONsky.c !== '#ffffff') {
+      KONsky.c = '#ffffff';
+      ren.setClearColor(new T.Color('#ffffff'));
+    }
+  } catch (e) {
+    logErr(e, 'skyPre');
+  }
 }
 const KONsky = { c: null, r: null };
 function skyUi() {
@@ -45,11 +54,5 @@ function skyUi() {
     });
   }
 }
-{
-  const u0 = drUi;
-  drUi = function () {
-    u0.apply(this, arguments);
-    skyUi();
-  };
-}
+// drUi(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 skyUi();

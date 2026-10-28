@@ -215,16 +215,4 @@ function plmLoad(x) {
   PLM.ag = '';
   if (PLM.open) plmUi();
 }
-{
-  const _np = newProjectReset;
-  newProjectReset = function () {
-    const r = _np.apply(this, arguments);
-    try {
-      plmLoad(null);
-      plmTick(1);
-    } catch (e) {
-      logErr(e, 'newProjectReset');
-    }
-    return r;
-  };
-}
+// newProjectReset(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js

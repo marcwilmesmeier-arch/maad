@@ -117,22 +117,7 @@ addEventListener(
   },
   true,
 );
-{
-  const _e = skOpEnd;
-  skOpEnd = function () {
-    const r = _e.apply(this, arguments);
-    if (SKX.back && !SK.op) {
-      SKX.back = 0;
-      SK.tool = 's';
-      try {
-        skBar();
-      } catch (e) {
-        logErr(e, 'skOpEnd');
-      }
-    }
-    return r;
-  };
-}
+// skOpEnd(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
 // Doppelklick im Modellier-Modus waehlt nur die Flaeche – der Grundriss oeffnet sich nicht mehr von selbst (Knopf "Grundriss öffnen" im Planen-Panel bleibt)
 addEventListener(
   'dblclick',
@@ -157,26 +142,4 @@ function mnStorey() {
     return false;
   }
 }
-{
-  const _b = baDo;
-  baDo = function (k) {
-    if (k === 'grl') {
-      try {
-        cmHide();
-      } catch (e) {
-        logErr(e, 'baDo');
-      }
-      if (mnStorey()) {
-        const s = SK.sel[0];
-        if (!grOpenLv(s.b.id, String(s.j)))
-          try {
-            $('hud').textContent = 'Grundriss konnte nicht geöffnet werden';
-          } catch (e) {
-            logErr(e, 'baDo');
-          }
-      }
-      return;
-    }
-    return _b.apply(this, arguments);
-  };
-}
+// baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js

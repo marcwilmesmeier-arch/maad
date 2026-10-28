@@ -414,62 +414,108 @@ const CUR =
   ) +
   '") 22 13, ew-resize';
 function hover(e) {
-  hover0(e);
-  const sf = selOk();
-  if (S.m3 && (S.tool === 'v' || S.tool === 'b') && S.sel && S.bld.includes(S.sel)) {
-    if (sf && sf.b === S.sel) {
-      S.hb = null;
-      const onK = S.hov && hc.visible && S.hov.b === sf.b && S.hov.k === sf.k && rc.intersectObject(hc)[0],
-        w = S.hov && S.hov.t === 'wall' && S.hov.b === sf.b && S.hov.k === sf.k ? S.hov : null;
-      if (onK) {
-        // Zeiger auf dem Knopf: bewusst nichts ändern
-      } else if (sf.i < 0) {
-        let nt = false;
-        try {
-          const fi = fInfo({ b: sf.b, k: sf.k, t: 'top' }),
-            v = fi.pos.clone().project(act()),
-            r = cv.getBoundingClientRect();
-          nt =
-            Math.hypot(
-              r.left + ((v.x + 1) / 2) * r.width - e.clientX,
-              r.top + ((1 - v.y) / 2) * r.height - e.clientY,
-            ) < 28;
-        } catch (e) {
-          logErr(e, 'hover');
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
+  // Hover einbinden (alle Werkzeuge ausser Teilen)
+  const r = (() => {
+    // ── Erweiterung aus 26-modellier-modus/020-darstellung.js
+    // ---- alte Hover-Logik (Kugeln) im Modellier-Modus abschalten
+    if (!skAct()) {
+      SK.hv = null;
+      return (() => {
+        hover0(e);
+        const sf = selOk();
+        if (S.m3 && (S.tool === 'v' || S.tool === 'b') && S.sel && S.bld.includes(S.sel)) {
+          if (sf && sf.b === S.sel) {
+            S.hb = null;
+            const onK =
+                S.hov && hc.visible && S.hov.b === sf.b && S.hov.k === sf.k && rc.intersectObject(hc)[0],
+              w = S.hov && S.hov.t === 'wall' && S.hov.b === sf.b && S.hov.k === sf.k ? S.hov : null;
+            if (onK) {
+              // Zeiger auf dem Knopf: bewusst nichts ändern
+            } else if (sf.i < 0) {
+              let nt = false;
+              try {
+                const fi = fInfo({ b: sf.b, k: sf.k, t: 'top' }),
+                  v = fi.pos.clone().project(act()),
+                  r = cv.getBoundingClientRect();
+                nt =
+                  Math.hypot(
+                    r.left + ((v.x + 1) / 2) * r.width - e.clientX,
+                    r.top + ((1 - v.y) / 2) * r.height - e.clientY,
+                  ) < 28;
+              } catch (e) {
+                logErr(e, 'hover');
+              }
+              if (w && !nt) {
+                S.hov = { b: sf.b, k: sf.k, t: 'wall', i: w.i };
+                S.hv = { b: sf.b, k: sf.k, i: w.i };
+              } else S.hov = { b: sf.b, k: sf.k, t: 'top' };
+            } else
+              S.hov = w ? { b: sf.b, k: sf.k, t: 'wall', i: w.i } : { b: sf.b, k: sf.k, t: 'wall', i: sf.i };
+          } else if (!sf) {
+            const gl = S.roofSel === S.sel ? roofGables(S.sel) : [];
+            if (gl.length) {
+              S.hb = null;
+              const onK = S.hov && S.hov.g && hc.visible && rc.intersectObject(hc)[0];
+              if (!onK && !(S.hov && S.hov.g && S.hov.b === S.sel)) {
+                const b = S.sel,
+                  L = roofTopK(b),
+                  f = lf(b, b.levels[L]),
+                  cx = pc.position.x,
+                  cz = pc.position.z;
+                let bi = gl[0],
+                  bs = -1e9;
+                gl.forEach((i) => {
+                  const p = f[i],
+                    q = f[(i + 1) % f.length],
+                    e = edgeInfo(b, L, i),
+                    sc2 = (cx - (p[0] + q[0]) / 2) * e.n[0] + (cz - (p[1] + q[1]) / 2) * e.n[1];
+                  if (sc2 > bs) {
+                    bs = sc2;
+                    bi = i;
+                  }
+                });
+                S.hov = { b, k: L, t: 'wall', i: bi, g: 1 };
+              }
+            } else S.hb = S.sel;
+          }
         }
-        if (w && !nt) {
-          S.hov = { b: sf.b, k: sf.k, t: 'wall', i: w.i };
-          S.hv = { b: sf.b, k: sf.k, i: w.i };
-        } else S.hov = { b: sf.b, k: sf.k, t: 'top' };
-      } else S.hov = w ? { b: sf.b, k: sf.k, t: 'wall', i: w.i } : { b: sf.b, k: sf.k, t: 'wall', i: sf.i };
-    } else if (!sf) {
-      const gl = S.roofSel === S.sel ? roofGables(S.sel) : [];
-      if (gl.length) {
-        S.hb = null;
-        const onK = S.hov && S.hov.g && hc.visible && rc.intersectObject(hc)[0];
-        if (!onK && !(S.hov && S.hov.g && S.hov.b === S.sel)) {
-          const b = S.sel,
-            L = roofTopK(b),
-            f = lf(b, b.levels[L]),
-            cx = pc.position.x,
-            cz = pc.position.z;
-          let bi = gl[0],
-            bs = -1e9;
-          gl.forEach((i) => {
-            const p = f[i],
-              q = f[(i + 1) % f.length],
-              e = edgeInfo(b, L, i),
-              sc2 = (cx - (p[0] + q[0]) / 2) * e.n[0] + (cz - (p[1] + q[1]) / 2) * e.n[1];
-            if (sc2 > bs) {
-              bs = sc2;
-              bi = i;
-            }
-          });
-          S.hov = { b, k: L, t: 'wall', i: bi, g: 1 };
-        }
-      } else S.hb = S.sel;
+      })();
     }
+    if (dr && (dr.m || dr.f || dr.h || dr.p)) return;
+    S.hov = null;
+    S.hb = null;
+    S.hv = null;
+    S.hvB = null;
+    S.hvR = null;
+    cv.style.cursor = '';
+    if (SK.win || SK.op) {
+      return;
+    }
+    try {
+      SK.hv = skHit(e);
+      if (SK.tool === 'l') {
+        SK.lh = skSplitPos(e, e.altKey);
+        skLnDraw();
+      } else if (SKLN.visible) {
+        SK.lh = null;
+        skLnDraw();
+      }
+    } catch (_) {
+      SK.hv = null;
+    }
+  })();
+  try {
+    if (skAct() && SK.tool !== 'l' && !SK.op && !SK.win) skInferHover(e);
+    else if (!skAct() || SK.tool === 'l') {
+      skMkEl().style.display = 'none';
+      if (SK.tool === 'l' && SK.lh) skTip(SK.lh.lab ? 'Fang: ' + SK.lh.lab : '', e);
+      else skTip('', null);
+    }
+  } catch (x) {
+    console.warn('skI', x);
   }
+  return r;
 }
 function hover0(e) {
   ray(e);
@@ -600,6 +646,236 @@ function vhit(g, A) {
 }
 // Fang: Punkte > Winkel (rechter Winkel/fortgesetzte Kante) > Grundstücksgrenze; Shift = frei
 function snap(p, e, i, A) {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/020-linien.js
+  // Fang: Ergebnis merken, getippte Werte uebersteuern
+  let r = (() => {
+    // ── Erweiterung aus 27-skizze/060-fang-auf-fusspunkt-im-rechten.js
+    // ---- v483: Fang auf Fusspunkt im rechten Winkel zu einem Endpunkt (bei paralleler/achsparalleler Linie), mit Hilfslinie
+    let r = (() => {
+      // ── Erweiterung aus 27-skizze/040-skizzenmodus.js
+      let r = (() => {
+        // ── Erweiterung aus 27-skizze/030-zeichnen.js
+        // ---- Fang auf bestehende Linien
+        if (!SKS.e.length || !(S.tool === 'f' || SK.tool === 'm' || SK.tool === 'l'))
+          return snapStufe1.apply(this, arguments);
+        const N = [];
+        SKS.e.forEach((s) => {
+          N.push(s.a, s.b, [(s.a[0] + s.b[0]) / 2, (s.a[1] + s.b[1]) / 2]);
+        });
+        const o = S.ctxPts;
+        S.ctxPts = (o || []).concat(N);
+        let r;
+        try {
+          r = snapStufe1.apply(this, arguments);
+        } finally {
+          S.ctxPts = o;
+        }
+        if (r && r.t !== 'pt' && !(e && e.shiftKey)) {
+          let bd = 7 * mpp(),
+            bq = null;
+          SKS.e.forEach((s) => {
+            const dx = s.b[0] - s.a[0],
+              dz = s.b[1] - s.a[1],
+              L2 = dx * dx + dz * dz;
+            let t = L2 ? ((p[0] - s.a[0]) * dx + (p[1] - s.a[1]) * dz) / L2 : 0;
+            t = Math.max(0, Math.min(1, t));
+            const q = [s.a[0] + dx * t, s.a[1] + dz * t],
+              d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+            if (d < bd) {
+              bd = d;
+              bq = q;
+            }
+          });
+          if (bq) {
+            r = Object.assign({}, r, {
+              p: bq,
+              t: 'edge',
+              lab: (r.lab || '').replace(/ · fluchtet$/, '') + ' · auf Linie',
+              sn: null,
+            });
+          }
+        }
+        return r;
+      })();
+      if (!r) return r;
+      try {
+        if (
+          r.t === 'pt' &&
+          siteCorner(r.p) &&
+          !SKS.e.some((s) => [s.a, s.b].some((c) => Math.hypot(c[0] - r.p[0], c[1] - r.p[1]) < 0.05))
+        ) {
+          r = Object.assign({}, r, {
+            sn: null,
+            lab: (r.lab || '').replace(/ · Punkt$/, '') + ' · Grundstück',
+          });
+        }
+        if (
+          (SNX.ref ||
+            (S.tool === 'f' && S.dm === 'bld' && S.shape === 'free' && A === S.draft && S.draft.length)) &&
+          r.t !== 'pt' &&
+          !(e && e.shiftKey)
+        ) {
+          const ref = SNX.ref || S.draft.at(-1),
+            vx = p[0] - ref[0],
+            vz = p[1] - ref[1],
+            L = Math.hypot(vx, vz);
+          if (L > 0.5) {
+            let best = null,
+              ba = 1;
+            parDirs().forEach((d) => {
+              const tl = d.sk ? PAR.tolSk : PAR.tol;
+              [
+                [d[0], d[1], 0],
+                [-d[1], d[0], 1],
+              ].forEach(([x, z, pp]) => {
+                const dot = vx * x + vz * z,
+                  cr = Math.abs(vx * z - vz * x),
+                  ang = Math.atan2(cr, Math.abs(dot)),
+                  w = (ang / tl) * (d.sk ? 0.6 : 1);
+                if (ang < tl && w < ba) {
+                  ba = w;
+                  best = { x, z, dot, pp, ang };
+                }
+              });
+            });
+            if (best) {
+              let ob = 1e9;
+              if (r.t === 'ang') {
+                const rx = r.p[0] - ref[0],
+                  rz = r.p[1] - ref[1];
+                ob = Math.abs(Math.atan2(vx * rz - vz * rx, vx * rx + vz * rz));
+              }
+              if (r.t !== 'ang' || best.ang <= ob || ba < 0.6) {
+                const q = [ref[0] + best.x * best.dot, ref[1] + best.z * best.dot];
+                r = {
+                  p: q,
+                  t: 'par',
+                  lab: f1(Math.abs(best.dot), 2) + ' m · ' + (best.pp ? 'rechtwinklig' : 'parallel'),
+                  sn: null,
+                };
+              }
+            }
+          }
+        }
+      } catch (x) {
+        console.warn('par', x);
+      }
+      return r;
+    })();
+    if (!r) return r;
+    try {
+      if (
+        (SNX.ref ||
+          (S.tool === 'f' && S.dm === 'bld' && S.shape === 'free' && A === S.draft && S.draft.length)) &&
+        (r.t === 'par' || r.t === 'ang') &&
+        !(e && e.shiftKey)
+      ) {
+        const ref = SNX.ref || S.draft.at(-1),
+          vx = r.p[0] - ref[0],
+          vz = r.p[1] - ref[1],
+          L = Math.hypot(vx, vz);
+        if (L > 0.5) {
+          const dx = vx / L,
+            dz = vz / L,
+            tol = 10 * mpp();
+          const C = [];
+          SKS.e.forEach((s) => {
+            C.push(s.a, s.b);
+          });
+          P.forEach((a) => a.site && a.poly.forEach((c) => C.push(c)));
+          S.bld.forEach((b) => {
+            const f = b.levels ? cfp(b) : b.fp;
+            f.forEach((c) => C.push(c));
+          });
+          if (!SNX.ref)
+            S.draft.forEach((c, j) => {
+              if (j < S.draft.length - 1) C.push(c);
+            });
+          let best = null,
+            bd = tol;
+          C.forEach((c) => {
+            const cx = c[0] - ref[0],
+              cz = c[1] - ref[1],
+              s = cx * dx + cz * dz,
+              off = Math.abs(cx * dz - cz * dx);
+            if (off < 0.3 || s < 0.5) return;
+            const ex = ref[0] + dx * s,
+              ez = ref[1] + dz * s,
+              d = Math.hypot(ex - r.p[0], ez - r.p[1]);
+            if (d < bd) {
+              bd = d;
+              best = { c, E: [ex, ez], s };
+            }
+          });
+          if (best) {
+            r = Object.assign({}, r, {
+              p: best.E,
+              t: 'perp',
+              sn: [best.c],
+              lab: f1(best.s, 2) + ' m · rechtwinklig zu Punkt',
+            });
+            const a = (Math.atan2(dx, -dz) + Math.PI) % Math.PI; // Richtung senkrecht zur Zeichenrichtung
+            S.fg = {
+              gd: ((S.fg && S.fg.gd) || []).concat([
+                { k: 'perp', a, ox: best.c[0], oz: best.c[1], lab: 'rechtwinklig' },
+              ]),
+              fa: (S.fg && S.fg.fa) || [],
+              arc: null,
+              t: 'perp',
+              p: best.E.slice(),
+            };
+          }
+        }
+      }
+    } catch (x) {
+      console.warn('perpPt', x);
+    }
+    return r;
+  })();
+  try {
+    if (
+      A === S.draft &&
+      S.tool === 'f' &&
+      S.dm === 'bld' &&
+      S.shape === 'free' &&
+      S.draft.length &&
+      r &&
+      r.p
+    ) {
+      LN.raw = r.p.slice();
+      LN.touch = r.t === 'pt' ? r.p.slice() : null;
+      if (S.fg) S.fg.arc = null;
+      if (LN.ovr) {
+        const q = lnPoint();
+        if (q) {
+          r = Object.assign({}, r, { p: q, t: 'ln', sn: null, lab: 'Eingabe' });
+          LN.touch = null;
+        }
+      }
+      LN.last = r.p.slice();
+    }
+  } catch (x) {
+    console.warn('lnSnap', x);
+  }
+  return r;
+}
+// snap() ohne die Erweiterungen darüber – wird von snap() gezielt aufgerufen
+function snapStufe1(p, e, i, A) {
+  // ── Erweiterung aus 16-darstellung-erweitert/040-zeichenfang.js
+  let r;
+  try {
+    r = fgSnap(p, e, i, A);
+  } catch (err) {
+    console.warn('fgSnap', err);
+    r = snapBasis(p, e, i, A);
+    r.gd = [];
+    r.fa = [];
+  }
+  S.fg = { gd: r.gd || [], fa: r.fa || [], arc: r.arc || null, t: r.t, p: r.p.slice() };
+  return r;
+}
+// snap() ohne die Erweiterungen darüber – wird von snap() gezielt aufgerufen
+function snapBasis(p, e, i, A) {
   const r = 10 * mpp(),
     n = A.length,
     open = A === S.draft && !S.closed;
@@ -1191,24 +1467,42 @@ cv.addEventListener(
   { passive: false },
 );
 function close() {
-  if (S.dm === 'street') {
-    streetFinish();
+  // ── Erweiterung aus 27-skizze/030-zeichnen.js
+  if (sksOn() && S.shape === 'free') {
+    const D = S.draft;
+    if (D.length >= 3) {
+      const a = D.at(-1),
+        b = D[0];
+      const d = sksAdd([{ a, b }], 0);
+      szMsg(d > 0 ? 'Fläche geschlossen · P = Ziehen & Schieben zum Gebäude' : 'Linienzug beendet');
+    }
+    sksEnd();
     return;
   }
-  S.draft = S.draft.filter((q, i, a) => !i || Math.hypot(q[0] - a[i - 1][0], q[1] - a[i - 1][1]) > 0.3);
-  if (S.draft.length > 2 && area(S.draft) > 1) {
-    S.closed = true;
-    S.dk = 'free';
-    S.info = '';
-    S.snp = null;
-    S.tab = 'Planen';
-    drawOv();
-    nav();
-    rr();
-  }
+  (() => {
+    if (S.dm === 'street') {
+      streetFinish();
+      return;
+    }
+    S.draft = S.draft.filter((q, i, a) => !i || Math.hypot(q[0] - a[i - 1][0], q[1] - a[i - 1][1]) > 0.3);
+    if (S.draft.length > 2 && area(S.draft) > 1) {
+      S.closed = true;
+      S.dk = 'free';
+      S.info = '';
+      S.snp = null;
+      S.tab = 'Planen';
+      drawOv();
+      nav();
+      rr();
+    }
+  })();
 }
 // Modell
 function hist() {
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js
+  // ---- Verlauf (Rückgängig) und Speichern
+  const L0 = S.hist.length;
+  SKS.h.length = Math.min(SKS.h.length, L0);
   S.hist.push(
     JSON.stringify(
       S.bld.map((b) => ({
@@ -1230,6 +1524,11 @@ function hist() {
     ),
   );
   if (S.hist.length > 50) S.hist.shift();
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js (danach)
+  if (L0 >= 50) SKS.h.shift();
+  SKS.h.push(JSON.stringify({ e: SKS.e, hide: SKS.hide }));
+  while (SKS.h.length > S.hist.length) SKS.h.shift();
+  while (SKS.h.length < S.hist.length) SKS.h.unshift(null);
 }
 function load(arr) {
   S.bld.forEach((b) => b._g && b._g.parent && b._g.parent.remove(b._g));
@@ -1243,10 +1542,29 @@ function load(arr) {
   rr();
 }
 function undo() {
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js
+  const n = S.hist.length;
+  SKS.h.length = Math.min(SKS.h.length, n);
+  const snap = SKS.h[n - 1];
   const h = S.hist.pop();
   if (h) load(JSON.parse(h));
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js (danach)
+  if (n > 0) {
+    if (snap != null) {
+      const q = JSON.parse(snap);
+      SKS.e = q.e || q;
+      SKS.hide = q.hide || [];
+      SKS.sel = [];
+      SKS.fc = null;
+      sksChanged();
+    }
+    SKS.h.length = Math.max(0, n - 1);
+  }
 }
 function mk() {
+  // ── Erweiterung aus 27-skizze/050-skizzenmodus.js
+  const F = SKS.pend;
+  SKS.pend = null;
   const n = +$('ng').value || 4,
     hh = +$('gh').value || 3;
   hist();
@@ -1279,8 +1597,12 @@ function mk() {
   setMode(1);
   drawOv();
   rr();
+  // ── Erweiterung aus 27-skizze/050-skizzenmodus.js (danach)
+  if (F) sksConsume(F);
 }
 function cancel() {
+  // ── Erweiterung aus 27-skizze/050-skizzenmodus.js
+  SKS.pend = null;
   S.refH = null;
   S.draft = [];
   S.closed = false;
@@ -1298,6 +1620,88 @@ function cancel() {
   drawOv();
 }
 function tool(t) {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/070-import.js
+  if (IMP.mode && t !== 'v') {
+    IMP.mode = null;
+    IMP.m = [];
+    impMk();
+    IMP.dirty = true;
+  }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
+  if (TRE.on && t !== 'v' && !TRE._s) {
+    TRE.on = false;
+    trPanel().style.display = 'none';
+    const b = $('mT');
+    if (b) b.classList.remove('on');
+    trGhost(true);
+  }
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  if (!SK._u) SK.used = false;
+  const r = (() => {
+    // ── Erweiterung aus 11-bearbeiten/020-bearbeiten.js
+    if (t === 't' && S.sel && !S.sel.ex && !S.m3) {
+      try {
+        setMode(1);
+      } catch (e) {
+        logErr(e, 'tool');
+      }
+    }
+    if (t === 't' && !(S.sel && !S.sel.ex && S.bld.includes(S.sel))) {
+      tool0('v');
+      try {
+        $('hud').textContent = 'Schneiden: zuerst ein Gebäude auswählen';
+      } catch (e) {
+        logErr(e, 'tool');
+      }
+      return;
+    }
+    if (t === 'L') {
+      S.hov = S.hb = S.hv = S.hvB = S.hvR = null;
+      S.selP = null;
+      S.vi = null;
+      try {
+        handle.visible = false;
+        hc.visible = false;
+      } catch (e) {
+        logErr(e, 'tool');
+      }
+    }
+    tool0(t);
+    try {
+      if (t === 'L')
+        $('hud').textContent =
+          'Beschriften: Klick setzt einen Punkt auf Gebäude, Dach oder Gelände – Auswahl und Bearbeiten sind gesperrt · Esc beendet';
+    } catch (e) {
+      logErr(e, 'tool');
+    }
+    try {
+      if (t === 't') {
+        const sf = selOk();
+        $('hud').textContent =
+          sf && sf.b === S.sel
+            ? 'Schneiden: Wand des gewählten Geschosses anklicken – nur dieses Geschoss wird getrennt'
+            : 'Schneiden: Wand anklicken – die ganze Fassadenseite (alle Geschosse) wird getrennt · Geschoss wählen = nur ein Geschoss';
+      }
+      if (t === 'mv' || t === 'ro') {
+        $('hud').textContent =
+          t === 'mv'
+            ? 'Verschieben: Gebäude ziehen · Shift = nur eine Achse'
+            : 'Drehen: Maus um das Gebäude ziehen · Shift = 15°-Raster';
+        cv.style.cursor = t === 'mv' ? 'move' : 'alias';
+      } else cv.style.cursor = '';
+    } catch (e) {
+      logErr(e, 'tool');
+    }
+  })();
+  try {
+    skBaSync();
+  } catch (e) {
+    logErr(e, 'tool');
+  }
+  return r;
+}
+// tool() ohne die Erweiterungen darüber – wird von tool() gezielt aufgerufen
+function tool0(t) {
   if (t !== 'f' && S.fd) {
     S.fd = null;
     fdDraw();
@@ -1326,28 +1730,152 @@ function setMode(m, k) {
   $('b2').classList.toggle('on', !m);
   $('b3').classList.toggle('on', !!m);
   if (!k) V.d = m ? 380 : 420;
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js (danach)
+  try {
+    SK.hv = null;
+    SK.ver++;
+    skBar();
+    skDraw();
+  } catch (e) {
+    logErr(e, 'setMode');
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/060-darstellung.js (danach)
+  try {
+    if (m && swOnly(S.dar)) drSet(SW.prev && SW.prev !== 'sw' ? SW.prev : 'sch');
+    else drUi();
+  } catch (e) {
+    console.warn('sw', e);
+  }
 }
 S.sunC = '#ffffff';
 S.sunK = 0.2;
 function tgLight() {
-  const c = $('lc'),
-    o = c.style.display !== 'flex';
-  c.style.display = o ? 'flex' : 'none';
-  $('bl').classList.toggle('on', o);
-  if (o) {
-    lyClose();
-    vwClose();
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/030-layer.js
+  const r = (() => {
+    const c = $('lc'),
+      o = c.style.display !== 'flex';
+    c.style.display = o ? 'flex' : 'none';
+    $('bl').classList.toggle('on', o);
+    if (o) {
+      lyClose();
+      vwClose();
+    }
+  })();
+  if ($('lc').style.display === 'none') lyDOpen(false);
+  else {
+    const b = $('lyBtn');
+    if (b) b.classList.remove('on');
   }
+  return r;
 }
 function lyClose() {
   $('lyp').style.display = 'none';
   $('bg').classList.remove('on');
 }
 function lyRender() {
-  $('lyp').innerHTML =
-    layersHtml() +
-    usesHtml() +
-    `<div class="ly"><input type="checkbox" id="wirck" ${S.wire ? 'checked' : ''} onchange="tgl('wire')"><label>Gelände-Gitter</label></div>`;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js
+  const r = (() => {
+    // ── Erweiterung aus 18-erweiterungen-v280-v325/030-layer.js
+    (() => {
+      // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js
+      (() => {
+        // ── Erweiterung aus 16-darstellung-erweitert/020-einheitliche.js
+        (() => {
+          $('lyp').innerHTML =
+            layersHtml() +
+            usesHtml() +
+            `<div class="ly"><input type="checkbox" id="wirck" ${S.wire ? 'checked' : ''} onchange="tgl('wire')"><label>Gelände-Gitter</label></div>`;
+          // ── Erweiterung aus 16-darstellung-erweitert/010-starke-schwarze-aussenkontur.js (danach)
+          const el = document.getElementById('lyp');
+          if (!el) return;
+          const gb = [...el.querySelectorAll('.ly label')].find((x) => x.textContent.trim() === 'Gebäude'),
+            gr = gb && gb.closest('.ly');
+          (gr || el).insertAdjacentHTML(
+            gr ? 'afterend' : 'beforeend',
+            '<div id="konrow" style="margin:2px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 6px"><input type="checkbox" id="konck2" style="width:16px;height:16px;margin:0;flex:none"><b style="font-weight:600">Gebäudekontur</b><small id="konnm" style="color:var(--mu)"></small></label><div style="display:grid;grid-template-columns:48px 1fr 44px;align-items:center;gap:8px;margin:4px 0"><span>Stärke</span><input type="range" id="konw2" min="1" max="6" step=".25" style="width:100%;margin:0"><span id="konv2" style="text-align:right"></span></div><div style="display:grid;grid-template-columns:48px 34px auto;align-items:center;gap:8px;margin:4px 0"><span>Farbe</span><input type="color" id="konc2" style="width:34px;height:24px;padding:0;border:1px solid var(--ln);border-radius:4px;background:none;cursor:pointer"><button type="button" id="konrs" style="justify-self:start;font-size:11px;border:1px solid var(--ln);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer">Schwarz</button></div></div>',
+          );
+          konUi();
+        })();
+        const el = document.getElementById('lyp');
+        if (!el || document.getElementById('hlrow')) return;
+        const kr = document.getElementById('konrow'),
+          gb = [...el.querySelectorAll('.ly label')].find((x) => x.textContent.trim() === 'Gebäude'),
+          gr = gb && gb.closest('.ly');
+        const cs =
+            'width:34px;height:24px;padding:0;border:1px solid var(--ln);border-radius:4px;background:none;cursor:pointer',
+          ck = 'width:16px;height:16px;margin:0;flex:none';
+        const html =
+          '<div id="hlrow" style="margin:2px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><b style="font-weight:600;display:block;margin-bottom:6px">Auswahl &amp; Hover</b>' +
+          '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><span>Konturfarbe (Gebäude: Auswahl &amp; Hover)</span><input type="color" id="occ" style="' +
+          cs +
+          '"></div>' +
+          '<b style="font-weight:600;display:block;margin:8px 0 4px">Analyse-Auswahl</b>' +
+          '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input type="checkbox" id="hlck" style="' +
+          ck +
+          '">Flächen anzeigen</label><input type="color" id="hlcf" style="' +
+          cs +
+          '"></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input type="checkbox" id="hlok" style="' +
+          ck +
+          '">Konturen anzeigen</label><input type="color" id="hlco" style="' +
+          cs +
+          '"></div>' +
+          '<button type="button" id="hlrs" style="font-size:11px;border:1px solid var(--ln);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer;margin-top:4px">Standardfarben</button></div>';
+        (kr || gr || el).insertAdjacentHTML(kr || gr ? 'afterend' : 'beforeend', html);
+        hlcUi();
+      })();
+      const el = document.getElementById('lyp');
+      if (!el || document.getElementById('fgrow')) return;
+      const lb = [...el.querySelectorAll('label')].find((x) => /Rechtwinkel/.test(x.textContent)),
+        cs = 'width:16px;height:16px;margin:0;flex:none',
+        row = (id, t, ti) =>
+          '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0" title="' +
+          ti +
+          '"><input type="checkbox" id="' +
+          id +
+          '" style="' +
+          cs +
+          '">' +
+          t +
+          '</label>';
+      const html =
+        '<div id="fgrow" style="margin:6px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><b style="font-weight:600;display:block;margin-bottom:4px">Zeichenfang</b>' +
+        row(
+          'fgal',
+          'Hauptachse nach Grundriss-Ausrichtung',
+          'Waagerecht/senkrecht des Fangs richtet sich nach der längsten Seite des Grundrisses (wie Nordpfeil im Grundriss) – gilt auch in 3D',
+        ) +
+        '<small id="fgnt" style="color:var(--mu);display:block;margin:0 0 4px 24px"></small>' +
+        row('fgg', 'Hilfslinien anzeigen', 'Waagerechte/senkrechte und 45°-Fanglinien ab der letzten Ecke') +
+        row('fgd', '45°-Fang', 'zusätzlich zu 90° auch 45° zur Hauptachse und zur Kante') +
+        row('fgm', 'Kantenmitte fangen', 'Mittelpunkt von Kanten als Fangpunkt') +
+        '</div>';
+      (lb || el).insertAdjacentHTML(lb ? 'afterend' : 'beforeend', html);
+      fgUi();
+    })();
+    try {
+      lyDGroup();
+    } catch (e) {
+      console.error(e);
+    }
+  })();
+  try {
+    const el = $('lyp');
+    if (!el) return r;
+    const rows = [...el.querySelectorAll('.lyr')],
+      kr = (k) =>
+        rows.find((x) => {
+          const b = x.querySelector('button[data-k]');
+          return b && b.dataset.k === k;
+        });
+    const bk = kr('bkont'),
+      bd = kr('buildings');
+    if (bk && bd && bd.nextSibling !== bk) bd.parentNode.insertBefore(bk, bd.nextSibling);
+  } catch (e) {
+    console.warn('bk', e);
+  }
+  return r;
 }
 function tgLayer() {
   const c = $('lyp'),

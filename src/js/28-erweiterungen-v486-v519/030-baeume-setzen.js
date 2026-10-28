@@ -111,45 +111,56 @@ function trToggle(on) {
   rr();
 }
 function trGhost(off) {
-  if (TRE.ghost) {
-    sc.remove(TRE.ghost);
-    TRE.ghost.traverse((o) => {
-      o.geometry && o.geometry.dispose();
-      o.material && o.material.dispose && o.material.dispose();
-    });
-    TRE.ghost = null;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
+  const sg = [TRE.h, TRE.kd, TRE.sh, TRE.sd, S.lc.trees].join('|');
+  if (!off && TRE.on && TRE.at && TRE.ghost && TRE.gsig === sg) {
+    const y = gh(TRE.at[0], TRE.at[1]);
+    TRE.ghost.position.set(TRE.at[0], y, TRE.at[1]);
+    return;
   }
-  if (off || !TRE.on || !TRE.at) return;
-  const g = new T.Group(),
-    ch = Math.max(0.5, TRE.h - TRE.sh),
-    y = gh(TRE.at[0], TRE.at[1]);
-  const cr = new T.Mesh(
-    new T.SphereGeometry(1, 24, 16),
-    new T.MeshLambertMaterial({
-      color: new T.Color(S.lc.trees || '#6fae45'),
-      transparent: true,
-      opacity: 0.82,
-    }),
-  );
-  cr.scale.set(TRE.kd / 2, ch / 2, TRE.kd / 2);
-  cr.position.set(0, TRE.sh + ch / 2, 0);
-  const st = new T.Mesh(
-    new T.CylinderGeometry(0.5, 0.62, 1, 10),
-    new T.MeshLambertMaterial({
-      color: new T.Color(S.lc.stem || '#7a6742'),
-      transparent: true,
-      opacity: 0.9,
-    }),
-  );
-  st.scale.set(TRE.sd, Math.max(0.1, TRE.sh + 0.45), TRE.sd);
-  st.position.set(0, (TRE.sh + 0.45) / 2 - 0.25, 0);
-  g.add(cr, st);
-  g.position.set(TRE.at[0], y, TRE.at[1]);
-  g.traverse((o) => {
-    o.raycast = () => {};
-  });
-  sc.add(g);
-  TRE.ghost = g;
+  const r = (() => {
+    if (TRE.ghost) {
+      sc.remove(TRE.ghost);
+      TRE.ghost.traverse((o) => {
+        o.geometry && o.geometry.dispose();
+        o.material && o.material.dispose && o.material.dispose();
+      });
+      TRE.ghost = null;
+    }
+    if (off || !TRE.on || !TRE.at) return;
+    const g = new T.Group(),
+      ch = Math.max(0.5, TRE.h - TRE.sh),
+      y = gh(TRE.at[0], TRE.at[1]);
+    const cr = new T.Mesh(
+      new T.SphereGeometry(1, 24, 16),
+      new T.MeshLambertMaterial({
+        color: new T.Color(S.lc.trees || '#6fae45'),
+        transparent: true,
+        opacity: 0.82,
+      }),
+    );
+    cr.scale.set(TRE.kd / 2, ch / 2, TRE.kd / 2);
+    cr.position.set(0, TRE.sh + ch / 2, 0);
+    const st = new T.Mesh(
+      new T.CylinderGeometry(0.5, 0.62, 1, 10),
+      new T.MeshLambertMaterial({
+        color: new T.Color(S.lc.stem || '#7a6742'),
+        transparent: true,
+        opacity: 0.9,
+      }),
+    );
+    st.scale.set(TRE.sd, Math.max(0.1, TRE.sh + 0.45), TRE.sd);
+    st.position.set(0, (TRE.sh + 0.45) / 2 - 0.25, 0);
+    g.add(cr, st);
+    g.position.set(TRE.at[0], y, TRE.at[1]);
+    g.traverse((o) => {
+      o.raycast = () => {};
+    });
+    sc.add(g);
+    TRE.ghost = g;
+  })();
+  TRE.gsig = TRE.ghost ? sg : null;
+  return r;
 }
 function trPlace(p) {
   try {
@@ -184,97 +195,9 @@ function trPlace(p) {
 function trRebuild() {
   treesBuild((GEO.trees || []).filter((t) => !t.u));
 }
-// Aufbau: eigene Bäume immer ergänzen, Krone nach oben schieben, Stamm einsetzen
-{
-  const _tb = treesBuild;
-  treesBuild = function (list) {
-    const all = (list || []).filter((t) => !t.u).concat(UT);
-    const r = _tb.call(this, all);
-    try {
-      if (UT.length && GEO.tmesh) {
-        const tm = GEO.tmesh,
-          M = new T.Matrix4(),
-          Z = new T.Matrix4().makeScale(0, 0, 0),
-          idx = [];
-        GEO.trees.forEach((t, i) => {
-          if (!t.u) return;
-          idx.push(i);
-          const y = gh(t.x, t.z),
-            sh = Math.min(t.sh, t.h - 0.5),
-            ch = Math.max(0.5, t.h - sh),
-            cr = Math.max(0.5, t.r);
-          M.makeScale(cr, ch / 2, cr).setPosition(t.x, y + sh + ch / 2, t.z);
-          tm.setMatrixAt(i, M);
-        });
-        tm.instanceMatrix.needsUpdate = true;
-        tm.frustumCulled = false;
-        G.trees.children.forEach((c) => {
-          if (
-            c.isInstancedMesh &&
-            c !== tm &&
-            c.geometry &&
-            c.geometry.type === 'CylinderGeometry' &&
-            c.count === GEO.trees.length
-          ) {
-            idx.forEach((i) => c.setMatrixAt(i, Z));
-            c.instanceMatrix.needsUpdate = true;
-          }
-        });
-        const st = new T.InstancedMesh(
-          new T.CylinderGeometry(0.5, 0.62, 1, 10).translate(0, 0.5, 0),
-          new T.MeshLambertMaterial({ color: new T.Color(S.lc.stem || '#7a6742') }),
-          idx.length,
-        );
-        idx.forEach((i, k) => {
-          const t = GEO.trees[i],
-            y = gh(t.x, t.z);
-          M.makeScale(t.sd, Math.max(0.1, Math.min(t.sh, t.h - 0.5) + 0.45), t.sd).setPosition(
-            t.x,
-            y - 0.25,
-            t.z,
-          );
-          st.setMatrixAt(k, M);
-        });
-        st.instanceMatrix.needsUpdate = true;
-        st.castShadow = st.receiveShadow = true;
-        st.raycast = () => {};
-        st.frustumCulled = false;
-        G.trees.add(st);
-      }
-    } catch (x) {
-      console.warn('trees user', x);
-    }
-    return r;
-  };
-}
-{
-  const _td = treeDel;
-  treeDel = function () {
-    const t = GEO.tsel;
-    if (t && t.u) {
-      const i = UT.indexOf(t);
-      if (i >= 0) UT.splice(i, 1);
-    }
-    return _td.apply(this, arguments);
-  };
-}
-{
-  const _ti = treeInfo;
-  treeInfo = function () {
-    let h = _ti.apply(this, arguments);
-    const t = GEO.tsel;
-    if (t && t.u) {
-      h = h.replace(/Kronenmodell DOM1−DGM1/, 'Eigener Baum');
-      h = h.replace(
-        '<button class="sm"',
-        kv('Stammhöhe', f1(t.sh, 1) + ' m') +
-          kv('Stammdurchmesser', f1(t.sd, 2) + ' m') +
-          '<button class="sm"',
-      );
-    }
-    return h;
-  };
-}
+// treesBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
+// treeDel(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// treeInfo(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // Platzieren per Klick
 addEventListener(
   'pointerdown',
@@ -332,20 +255,7 @@ addEventListener(
   },
   true,
 );
-{
-  const _g = trGhost;
-  trGhost = function (off) {
-    const sg = [TRE.h, TRE.kd, TRE.sh, TRE.sd, S.lc.trees].join('|');
-    if (!off && TRE.on && TRE.at && TRE.ghost && TRE.gsig === sg) {
-      const y = gh(TRE.at[0], TRE.at[1]);
-      TRE.ghost.position.set(TRE.at[0], y, TRE.at[1]);
-      return;
-    }
-    const r = _g.apply(this, arguments);
-    TRE.gsig = TRE.ghost ? sg : null;
-    return r;
-  };
-}
+// trGhost(): Erweiterung zusammengeführt, siehe 28-erweiterungen-v486-v519/030-baeume-setzen.js
 addEventListener(
   'keydown',
   (e) => {
@@ -358,19 +268,7 @@ addEventListener(
   },
   true,
 );
-{
-  const _t = tool;
-  tool = function (t) {
-    if (TRE.on && t !== 'v' && !TRE._s) {
-      TRE.on = false;
-      trPanel().style.display = 'none';
-      const b = $('mT');
-      if (b) b.classList.remove('on');
-      trGhost(true);
-    }
-    return _t.apply(this, arguments);
-  };
-}
+// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 // Menüknopf
 (function () {
   const s = $('mS');
@@ -380,53 +278,9 @@ addEventListener(
     '<div class="tg"><button class="tb tmain" id="mT" onclick="trToggle()" title="Bäume setzen – Höhe, Kronendurchmesser, Stammhöhe und Stammdurchmesser einstellbar"><i><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M12 15v6M9 21h6"/></svg></i>Bäume</button></div>',
   );
 })();
-// Speichern / Laden
-{
-  const _x = projExtra;
-  projExtra = function () {
-    const x = _x.apply(this, arguments);
-    try {
-      if (UT.length) x.utr = UT.map((t) => ({ x: t.x, z: t.z, h: t.h, r: t.r, sh: t.sh, sd: t.sd }));
-    } catch (e) {
-      logErr(e, 'projExtra');
-    }
-    return x;
-  };
-}
-{
-  const _a = projApplyPre;
-  projApplyPre = function (x) {
-    const r = _a.apply(this, arguments);
-    try {
-      const had = UT.length;
-      UT.length = 0;
-      ((x && x.utr) || []).forEach((t) =>
-        UT.push({
-          x: t.x,
-          z: t.z,
-          h: t.h,
-          r: t.r,
-          sp: 'Eigener Baum',
-          src: 'user',
-          u: 1,
-          sh: t.sh,
-          sd: t.sd,
-        }),
-      );
-      if (had || UT.length) trRebuild();
-    } catch (e) {
-      logErr(e, 'projApplyPre');
-    }
-    return r;
-  };
-}
-{
-  const _b = baDo;
-  baDo = function (k) {
-    if (TRE.on) trToggle(false);
-    return _b.apply(this, arguments);
-  };
-}
+// projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// projApplyPre(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
 // Gebäude kopieren/verschieben/ändern löscht keine Bäume mehr (kein Abgleich zwischen den Geometrien)
 function treePruneB() {}
 // Eigene Flächen: Klick in die Fläche oder auf den Rand wählt sie (neueste, kleinste zuerst)

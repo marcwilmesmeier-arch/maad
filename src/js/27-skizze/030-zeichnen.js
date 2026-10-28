@@ -58,23 +58,7 @@ function sksEnd() {
   drawOv();
   rr();
 }
-{
-  const _c = close;
-  close = function () {
-    if (sksOn() && S.shape === 'free') {
-      const D = S.draft;
-      if (D.length >= 3) {
-        const a = D.at(-1),
-          b = D[0];
-        const d = sksAdd([{ a, b }], 0);
-        szMsg(d > 0 ? 'Fläche geschlossen · P = Ziehen & Schieben zum Gebäude' : 'Linienzug beendet');
-      }
-      sksEnd();
-      return;
-    }
-    _c.apply(this, arguments);
-  };
-}
+// close(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 cv.addEventListener(
   'dblclick',
   (e) => {
@@ -85,52 +69,7 @@ cv.addEventListener(
   },
   true,
 );
-// ---- Fang auf bestehende Linien
-{
-  const _s = snap;
-  snap = function (p, e, i, A) {
-    if (!SKS.e.length || !(S.tool === 'f' || SK.tool === 'm' || SK.tool === 'l'))
-      return _s.apply(this, arguments);
-    const N = [];
-    SKS.e.forEach((s) => {
-      N.push(s.a, s.b, [(s.a[0] + s.b[0]) / 2, (s.a[1] + s.b[1]) / 2]);
-    });
-    const o = S.ctxPts;
-    S.ctxPts = (o || []).concat(N);
-    let r;
-    try {
-      r = _s.apply(this, arguments);
-    } finally {
-      S.ctxPts = o;
-    }
-    if (r && r.t !== 'pt' && !(e && e.shiftKey)) {
-      let bd = 7 * mpp(),
-        bq = null;
-      SKS.e.forEach((s) => {
-        const dx = s.b[0] - s.a[0],
-          dz = s.b[1] - s.a[1],
-          L2 = dx * dx + dz * dz;
-        let t = L2 ? ((p[0] - s.a[0]) * dx + (p[1] - s.a[1]) * dz) / L2 : 0;
-        t = Math.max(0, Math.min(1, t));
-        const q = [s.a[0] + dx * t, s.a[1] + dz * t],
-          d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-        if (d < bd) {
-          bd = d;
-          bq = q;
-        }
-      });
-      if (bq) {
-        r = Object.assign({}, r, {
-          p: bq,
-          t: 'edge',
-          lab: (r.lab || '').replace(/ · fluchtet$/, '') + ' · auf Linie',
-          sn: null,
-        });
-      }
-    }
-    return r;
-  };
-}
+// snap(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 // ---- Auswahl, Teilen, Löschen, Ziehen & Schieben auf der Skizze
 function sksEntAt(e) {
   try {
@@ -241,15 +180,7 @@ function sksSplitAt(h, e) {
     return _d(e);
   };
 }
-{
-  const _g = gdExCommit;
-  gdExCommit = function (n) {
-    const F = SKS.pend;
-    SKS.pend = null;
-    _g(n);
-    if (F) sksConsume(F);
-  };
-}
+// gdExCommit(): Erweiterung zusammengeführt, siehe 27-skizze/010-grundflaechen-zeichnen-nach-dem-vorbild.js
 function sksConsume(F) {
   const b = S.bld.at(-1);
   if (!b) return;
@@ -336,62 +267,4 @@ addEventListener(
   },
   true,
 );
-// Vor dem Ausschalten der Ebene: Skizze zeigen, solange man im Bearbeiten-Modus ist
-{
-  const _u = skUse;
-  skUse = function (t, cp) {
-    if ('rzco'.includes(t) && !cp && !S.bld.length) {
-      SK._u = 1;
-      try {
-        SK.on = true;
-        gdEnter(t);
-        SK.tool = t;
-      } catch (x) {
-        console.warn(x);
-      }
-      SK._u = 0;
-      SK.used = true;
-      try {
-        skBaSync();
-      } catch (e) {
-        logErr(e, 'skUse');
-      }
-      szMsg(
-        {
-          r: 'Rechteck · zwei Ecken klicken, Länge;Breite tippen',
-          z: 'Linie · Punkte klicken · bleibt als Kante stehen, geschlossener Zug = Fläche',
-          c: 'Kreis · Mittelpunkt klicken, Radius ziehen oder tippen',
-          o: 'Polygon · Mittelpunkt klicken, Radius ziehen · Seitenzahl tippen, z. B. 8s',
-        }[t],
-      );
-      return;
-    }
-    if (!S.bld.length && 'splf'.includes(t)) {
-      SK._u = 1;
-      try {
-        SK.on = true;
-        if (S.tool !== 'v' && S.tool !== 'b') tool('v');
-        skTool(t);
-        SK.cp = false;
-      } catch (x) {
-        console.warn(x);
-      }
-      SK._u = 0;
-      SK.used = true;
-      try {
-        skBaSync();
-      } catch (e) {
-        logErr(e, 'skUse');
-      }
-      szMsg(
-        t === 'p'
-          ? 'Ziehen & Schieben · Fläche anklicken, nach oben ziehen = Geschosse'
-          : t === 's'
-            ? 'Auswahl · Kante oder Fläche anklicken · Entf = löschen'
-            : 'Teilen · Kante anklicken',
-      );
-      return;
-    }
-    return _u.apply(this, arguments);
-  };
-}
+// skUse(): Erweiterung zusammengeführt, siehe 26-modellier-modus/120-modellier.js

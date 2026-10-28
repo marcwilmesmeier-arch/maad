@@ -63,54 +63,10 @@ function exSpread() {
     });
   });
 }
-{
-  const _e = exApply;
-  exApply = function () {
-    _e.apply(this, arguments);
-    try {
-      exSpread();
-    } catch (e) {
-      console.warn('Einheiten auseinander', e);
-    }
-  };
-}
-{
-  const _m = zoMode;
-  zoMode = function (k) {
-    _m.apply(this, arguments);
-    try {
-      exApply();
-    } catch (e) {
-      logErr(e, 'zoMode');
-    }
-  };
-}
-{
-  const _g = exGap;
-  exGap = function (v) {
-    _g.apply(this, arguments);
-    try {
-      const e = $('exv');
-      if (e && S.zo.m === 'u' && exSpreadKRaw(v) > EXS.a) e.textContent += ' · Einheiten auseinander';
-    } catch (e) {
-      logErr(e, 'exGap');
-    }
-  };
-}
+// exApply(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js
+// zoMode(): Erweiterung zusammengeführt, siehe 15-grundriss/050-isolieren.js
+// exGap(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js
 function exSpreadKRaw(v) {
   return Math.max(0, Math.min(1, (v - 1) / 14));
 }
-{
-  const _t = tgExp;
-  tgExp = function () {
-    _t.apply(this, arguments);
-    try {
-      const r = document.querySelector('#exp input[type=range]');
-      if (r)
-        r.title =
-          'Bei Einheiten (Gebäudemetriken): die letzten 20 % ziehen die Einheiten seitlich auseinander';
-    } catch (e) {
-      logErr(e, 'tgExp');
-    }
-  };
-}
+// tgExp(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js

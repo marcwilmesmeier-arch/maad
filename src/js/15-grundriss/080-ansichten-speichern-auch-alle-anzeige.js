@@ -38,165 +38,212 @@ function vwDs() {
   return d;
 }
 function vwApplyDs(d, quiet) {
-  if (!d) return;
-  const cl = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
-  if (d.kon) {
-    S.kon = cl(d.kon);
-    if (typeof konUi === 'function') konUi();
-  }
-  if (d.hlc) {
-    S.hlc = cl(d.hlc);
-    if (typeof hlcApply === 'function') hlcApply();
-  }
-  if (d.sky) {
-    S.sky = Object.assign({}, S.sky, cl(d.sky));
-    if (typeof skyUi === 'function') skyUi();
-  }
-  if (ZI.sp || S.hlk) {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+  // Layer-Nachlauf nach jeder Stelle, die gespeicherte Layer-Zustände anwendet
+  const r = (() => {
+    // ── Erweiterung aus 18-erweiterungen-v280-v325/030-layer.js
+    LYD.skip = 1;
     try {
-      zoIsoClear(true);
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-    if (S.hlk) {
-      S.hlk = null;
-      S.hlb = null;
-      S.hlw = 0;
-      hlClear();
-    }
-  }
-  if (d.lc) {
-    const ch = Object.keys(d.lc).filter((k) => S.lc[k] !== d.lc[k]);
-    Object.assign(S.lc, lcMig(d.lc));
-    if (ch.length) lcApplyAll(ch);
-  }
-  if (d.oc && d.oc !== S.oc) {
-    S.oc = d.oc;
-    ocApply();
-  }
-  if (d.edgeC) S.edgeC = d.edgeC;
-  if (d.fac)
-    S.fa.forEach((f) => {
-      if (d.fac[f.k]) f.c = d.fac[f.k];
-    });
-  if (d.din) Object.assign(S.din, cl(d.din));
-  if (d.uses && Object.keys(d.uses).some((k) => S.uses[k] !== d.uses[k])) {
-    Object.assign(S.uses, cl(d.uses));
-    S.bld.forEach(mesh);
-    H();
-    hpos();
-  }
-  ['mkOn', 'mkA', 'showSN', 'showFN', 'sd', 'sa'].forEach((k) => {
-    if (d[k] != null) S[k] = d[k];
-  });
-  if (d.ly) {
-    d.ly.forEach(([k, v, o]) => {
-      if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
-      const i = LY.findIndex((l) => l[1] === k);
-      if (i < 0) return;
-      LY[i][2] = v;
-      LY[i][3] = o;
-      if (!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') {
-        if (G[k]) {
-          gVis(k, !!v);
-          op(k, o);
+      return (() => {
+        if (!d) return;
+        const cl = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
+        if (d.kon) {
+          S.kon = cl(d.kon);
+          if (typeof konUi === 'function') konUi();
         }
-      }
-    });
-    labVis();
-    if (S.geo) recomp();
-  }
-  if (d.lt)
-    S.lt = {
-      wm: Object.assign({ b: 0.85, k: 0.2 }, d.lt.wm),
-      sch: Object.assign({ b: 0.85, k: 0.2 }, d.lt.sch),
-    };
-  if (d.hr != null) $('hr').value = d.hr;
-  if (d.dt) $('dt').value = d.dt;
-  if (d.sun != null) {
-    S.sun = !!d.sun;
-    $('sunck').checked = S.sun;
-    $('bl').classList.toggle('sunon', S.sun);
-    $('sunc').style.display = S.sun ? 'block' : 'none';
-  }
-  if (d.aa != null) S.aa = +d.aa;
-  if (d.rb != null) S.rb = +d.rb;
-  if (d.dar) drSet(d.dar);
-  if (d.noK != null) {
-    S.noK = !!d.noK;
-    kontUp();
-  }
-  if (d.wire != null) {
-    S.wire = !!d.wire;
-    S.wf.visible = S.wire;
-    const e = $('wirck');
-    if (e) e.checked = S.wire;
-  }
-  if (d.zo) {
-    if (['b', 'f', 'u'].includes(d.zo.m) && S.zo.m !== d.zo.m) {
-      try {
-        zoMode(d.zo.m);
-      } catch (e) {
-        logErr(e, 'vwApplyDs');
-      }
+        if (d.hlc) {
+          S.hlc = cl(d.hlc);
+          if (typeof hlcApply === 'function') hlcApply();
+        }
+        if (d.sky) {
+          S.sky = Object.assign({}, S.sky, cl(d.sky));
+          if (typeof skyUi === 'function') skyUi();
+        }
+        if (ZI.sp || S.hlk) {
+          try {
+            zoIsoClear(true);
+          } catch (e) {
+            logErr(e, 'vwApplyDs');
+          }
+          if (S.hlk) {
+            S.hlk = null;
+            S.hlb = null;
+            S.hlw = 0;
+            hlClear();
+          }
+        }
+        if (d.lc) {
+          const ch = Object.keys(d.lc).filter((k) => S.lc[k] !== d.lc[k]);
+          Object.assign(S.lc, lcMig(d.lc));
+          if (ch.length) lcApplyAll(ch);
+        }
+        if (d.oc && d.oc !== S.oc) {
+          S.oc = d.oc;
+          ocApply();
+        }
+        if (d.edgeC) S.edgeC = d.edgeC;
+        if (d.fac)
+          S.fa.forEach((f) => {
+            if (d.fac[f.k]) f.c = d.fac[f.k];
+          });
+        if (d.din) Object.assign(S.din, cl(d.din));
+        if (d.uses && Object.keys(d.uses).some((k) => S.uses[k] !== d.uses[k])) {
+          Object.assign(S.uses, cl(d.uses));
+          S.bld.forEach(mesh);
+          H();
+          hpos();
+        }
+        ['mkOn', 'mkA', 'showSN', 'showFN', 'sd', 'sa'].forEach((k) => {
+          if (d[k] != null) S[k] = d[k];
+        });
+        if (d.ly) {
+          d.ly.forEach(([k, v, o]) => {
+            if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
+            const i = LY.findIndex((l) => l[1] === k);
+            if (i < 0) return;
+            LY[i][2] = v;
+            LY[i][3] = o;
+            if (!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') {
+              if (G[k]) {
+                gVis(k, !!v);
+                op(k, o);
+              }
+            }
+          });
+          labVis();
+          if (S.geo) recomp();
+        }
+        if (d.lt)
+          S.lt = {
+            wm: Object.assign({ b: 0.85, k: 0.2 }, d.lt.wm),
+            sch: Object.assign({ b: 0.85, k: 0.2 }, d.lt.sch),
+          };
+        if (d.hr != null) $('hr').value = d.hr;
+        if (d.dt) $('dt').value = d.dt;
+        if (d.sun != null) {
+          S.sun = !!d.sun;
+          $('sunck').checked = S.sun;
+          $('bl').classList.toggle('sunon', S.sun);
+          $('sunc').style.display = S.sun ? 'block' : 'none';
+        }
+        if (d.aa != null) S.aa = +d.aa;
+        if (d.rb != null) S.rb = +d.rb;
+        if (d.dar) drSet(d.dar);
+        if (d.noK != null) {
+          S.noK = !!d.noK;
+          kontUp();
+        }
+        if (d.wire != null) {
+          S.wire = !!d.wire;
+          S.wf.visible = S.wire;
+          const e = $('wirck');
+          if (e) e.checked = S.wire;
+        }
+        if (d.zo) {
+          if (['b', 'f', 'u'].includes(d.zo.m) && S.zo.m !== d.zo.m) {
+            try {
+              zoMode(d.zo.m);
+            } catch (e) {
+              logErr(e, 'vwApplyDs');
+            }
+          }
+          S.zo.bc = d.zo.bc || S.zo.bc;
+          S.zo.pi = cl(d.zo.pi) || {};
+          try {
+            zoApply();
+          } catch (e) {
+            logErr(e, 'vwApplyDs');
+          }
+        }
+        if (d.iso) {
+          ZI.sp = cl(d.iso);
+          ZI.key = JSON.stringify(d.iso);
+          if (ZI.sp.k) {
+            S.hlk = ZI.sp.k;
+            S.hlb = ZI.sp.bid;
+            S.hlw = 1;
+            try {
+              hlApply();
+            } catch (e) {
+              logErr(e, 'vwApplyDs');
+            }
+          }
+          try {
+            zoIsoApply();
+          } catch (e) {
+            logErr(e, 'vwApplyDs');
+          }
+        } else if (d.hl && d.hl.k) {
+          S.hlk = d.hl.k;
+          S.hlb = d.hl.b;
+          S.hlw = 0;
+          try {
+            hlApply();
+          } catch (e) {
+            logErr(e, 'vwApplyDs');
+          }
+        }
+        if (d.expl) {
+          S.expl.on = d.expl.on ? 1 : 0;
+          S.expl.gap = d.expl.gap;
+          S.expl.cur = S.expl.on ? S.expl.gap : 0;
+          try {
+            exApply();
+          } catch (e) {
+            logErr(e, 'vwApplyDs');
+          }
+        }
+        try {
+          liUp();
+        } catch (e) {
+          logErr(e, 'vwApplyDs');
+        }
+        try {
+          sunUp();
+        } catch (e) {
+          logErr(e, 'vwApplyDs');
+        }
+        if (!quiet) vwDsUi();
+      })();
+    } finally {
+      LYD.skip = 0;
     }
-    S.zo.bc = d.zo.bc || S.zo.bc;
-    S.zo.pi = cl(d.zo.pi) || {};
-    try {
-      zoApply();
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-  }
-  if (d.iso) {
-    ZI.sp = cl(d.iso);
-    ZI.key = JSON.stringify(d.iso);
-    if (ZI.sp.k) {
-      S.hlk = ZI.sp.k;
-      S.hlb = ZI.sp.bid;
-      S.hlw = 1;
-      try {
-        hlApply();
-      } catch (e) {
-        logErr(e, 'vwApplyDs');
-      }
-    }
-    try {
-      zoIsoApply();
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-  } else if (d.hl && d.hl.k) {
-    S.hlk = d.hl.k;
-    S.hlb = d.hl.b;
-    S.hlw = 0;
-    try {
-      hlApply();
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-  }
-  if (d.expl) {
-    S.expl.on = d.expl.on ? 1 : 0;
-    S.expl.gap = d.expl.gap;
-    S.expl.cur = S.expl.on ? S.expl.gap : 0;
-    try {
-      exApply();
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-  }
+  })();
   try {
-    liUp();
+    lyAfterRun();
   } catch (e) {
     logErr(e, 'vwApplyDs');
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js (danach)
   try {
-    sunUp();
+    if (d && d.ly) {
+      ['rail', 'ugr', 'ugk'].forEach((k) => {
+        const s = d.ly.find((x) => x[0] === k),
+          L = LY.find((l) => l[1] === k);
+        if (s && L) {
+          L[2] = s[1];
+          L[3] = s[2];
+        }
+      });
+    }
+    if (d && d.lc) {
+      ['ugr', 'ugk', 'rail', 'trees'].forEach((k) => {
+        if (d.lc[k]) S.lc[k] = d.lc[k];
+      });
+    }
+    recomp();
+    rr();
+    if ($('lyp') && $('lyp').style.display === 'block') lyRender();
   } catch (e) {
     logErr(e, 'vwApplyDs');
   }
-  if (!quiet) vwDsUi();
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js (danach)
+  try {
+    bkApply(true);
+  } catch (e) {
+    logErr(e, 'vwApplyDs');
+  }
+  return r;
 }
 function vwDsUi() {
   try {

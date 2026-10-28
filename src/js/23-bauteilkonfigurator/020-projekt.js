@@ -18,17 +18,7 @@ function l2Reg(b) {
     }
   }
 }
-{
-  const _g = l2Geo;
-  l2Geo = function (b) {
-    try {
-      l2Reg(b);
-    } catch (e) {
-      logErr(e, 'l2Geo');
-    }
-    return _g.apply(this, arguments);
-  };
-}
+// l2Geo(): Erweiterung zusammengeführt, siehe 22-lod200-waende/020-ableitung-der-bauteile-aus-flaechen.js
 function l2cUsed(b) {
   const u = new Set(Object.values(S.l2.defs));
   Object.values((b.l2 && b.l2.rw) || {}).forEach((x) => u.add(x));
@@ -201,6 +191,14 @@ const l2cOpt = (vals, cur) => {
     .join('');
 };
 function l2cCol(n) {
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
+  const ft = l2mLink(n);
+  if (ft) return ft.c;
+  const o = S.mat && S.mat.o && S.mat.o[n];
+  return o && o.c ? o.c : l2mBase(n);
+}
+// l2cCol() ohne die Erweiterungen darüber – wird von l2cCol() gezielt aufgerufen
+function l2mBase(n) {
   return /klinker/i.test(n)
     ? '#b5533c'
     : /naturwerkstein/i.test(n)
@@ -303,6 +301,11 @@ function l2cLay(c, T) {
 <div class="ft" style="margin-top:6px"><button onclick="L2CF.lay('a')">＋ Schicht hinzufügen</button><span style="margin-left:auto">Gesamt ${l2n1(tot * 100)} cm</span></div><div class="ft" style="margin-top:4px">Kostengruppe und Leistungsbereich folgen automatisch dem gewählten Material. Jede Änderung legt einen eigenen Typ an, andere Bauteile bleiben unberührt (siehe „Gilt für“).</div></div>`;
 }
 function l2cHtml(c) {
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
+  return l23() ? l2cHtmlBasis(c) : l2cHtmlC(c);
+}
+// l2cHtml() ohne die Erweiterungen darüber – wird von l2cHtml() gezielt aufgerufen
+function l2cHtmlBasis(c) {
   const { b, e, G } = c,
     T_ = e.T,
     W = L2C.W,

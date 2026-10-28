@@ -429,6 +429,12 @@ function mkRoof() {
     : { type: t, angle: +$('na').value || RD[t].angle, dremp: Math.max(0, +$('ndr').value || 0), dir: null };
 }
 function mesh(b) {
+  // ── Erweiterung aus 26-modellier-modus/070-pruefungen.js
+  try {
+    if (b && b.levels && b.levels.some((l) => l.faces && l.faces.length)) szFix(b);
+  } catch (x) {
+    console.warn('szFix', x);
+  }
   if (b._g) b._g.parent.remove(b._g);
   const g = new T.Group(),
     sh0 = new T.Shape(b.fp.map((q) => new T.Vector2(q[0], -q[1]))),
@@ -519,4 +525,13 @@ function mesh(b) {
     } catch (e) {
       logErr(e, 'mesh');
     }
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/070-gelaendeplanum.js (danach)
+  try {
+    if (typeof PLM !== 'undefined' && typeof plmTick === 'function') {
+      clearTimeout(PLM._ft);
+      PLM._ft = setTimeout(() => plmTick(), 30);
+    }
+  } catch (e) {
+    logErr(e, 'mesh');
+  }
 }

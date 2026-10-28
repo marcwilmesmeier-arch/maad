@@ -3,6 +3,19 @@ const SKG = new T.Group();
 SKG.renderOrder = 7;
 sc.add(SKG);
 function skQuads(ents, col, op, line) {
+  // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
+  const o = skQuadsBasis(
+      ents.filter((e) => !szSp(e)),
+      col,
+      op,
+      line,
+    ),
+    sp = ents.filter(szSp);
+  if (sp.length) szQuads(sp, col, op, line).forEach((x) => o.push(x));
+  return o;
+}
+// skQuads() ohne die Erweiterungen darüber – wird von skQuads() gezielt aufgerufen
+function skQuadsBasis(ents, col, op, line) {
   const pos = [],
     lp = [],
     tp = [];
@@ -135,49 +148,8 @@ function skDraw() {
 function skGroupHv(en) {
   return SK.tool === 'p' && !SK.sel.length && !en.top ? skGroup(en) : [en];
 }
-{
-  const _p = placeHc;
-  placeHc = function () {
-    _p.apply(this, arguments);
-    try {
-      skDraw();
-    } catch (x) {
-      console.warn('sk', x);
-    }
-  };
-}
-// ---- alte Hover-Logik (Kugeln) im Modellier-Modus abschalten
-{
-  const _h = hover;
-  hover = function (e) {
-    if (!skAct()) {
-      SK.hv = null;
-      return _h.apply(this, arguments);
-    }
-    if (dr && (dr.m || dr.f || dr.h || dr.p)) return;
-    S.hov = null;
-    S.hb = null;
-    S.hv = null;
-    S.hvB = null;
-    S.hvR = null;
-    cv.style.cursor = '';
-    if (SK.win || SK.op) {
-      return;
-    }
-    try {
-      SK.hv = skHit(e);
-      if (SK.tool === 'l') {
-        SK.lh = skSplitPos(e, e.altKey);
-        skLnDraw();
-      } else if (SKLN.visible) {
-        SK.lh = null;
-        skLnDraw();
-      }
-    } catch (_) {
-      SK.hv = null;
-    }
-  };
-}
+// placeHc(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
+// hover(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 // ---- Maus
 function skProj(x, y, z) {
   const v = new T.Vector3(x, y, z).project(act()),

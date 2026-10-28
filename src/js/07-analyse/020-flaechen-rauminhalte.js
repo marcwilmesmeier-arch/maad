@@ -274,146 +274,159 @@ function hlSet(k, bid) {
 }
 const hlBs = () => (S.hlb ? S.bld.filter((x) => x.id === S.hlb) : scopeB(S.sel));
 function hlApply() {
-  hlClear();
-  const k = S.hlk;
-  if (!k) return;
-  const g = new T.Group(),
-    mtu = new T.MeshBasicMaterial({
-      color: S.hlw ? 0xffffff : 0x5e7f92,
-      transparent: true,
-      opacity: S.hlw ? 0.52 : 0.6,
-      side: T.DoubleSide,
-      depthTest: false,
-      depthWrite: false,
-    }),
-    mt = new T.MeshBasicMaterial({
-      color: S.hlw ? 0xffffff : 0x5e7f92,
-      transparent: true,
-      opacity: S.hlw ? 0.74 : 0.82,
-      side: T.DoubleSide,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -4,
-      polygonOffsetUnits: -4,
-    }),
-    oi = k === 'bgfoi' || k === 'brioi' || k === 'bgf' || k === 'bri',
-    ui = k === 'bgfui' || k === 'briui' || k === 'bgf' || k === 'bri';
-  const gm = (pos) => {
-    const ge = new T.BufferGeometry();
-    ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
-    ge.computeVertexNormals();
-    return ge;
-  };
-  for (const b of hlBs()) {
-    const u = ugN(b),
-      n0 = g.children.length;
-    let z = b._y;
-    b.levels.forEach((l, i) => {
-      const z0 = z,
-        z1 = z + l.h;
-      z = z1;
-      const f = lf(b, l),
-        ug = i < u;
-      if ((oi && !ug) || (ui && ug)) {
-        const ge = new T.ExtrudeGeometry(new T.Shape(f.map((q) => new T.Vector2(q[0], -q[1]))), {
-          depth: l.h,
-          bevelEnabled: false,
+  // ── Erweiterung aus 19-fassadendesigner/060-kopf.js
+  if (S.hlk === 'fdt') {
+    fdHlApply();
+    return;
+  }
+  // ── Erweiterung aus 16-darstellung-erweitert/020-einheitliche.js
+  (() => {
+    hlClear();
+    const k = S.hlk;
+    if (!k) return;
+    const g = new T.Group(),
+      mtu = new T.MeshBasicMaterial({
+        color: S.hlw ? 0xffffff : 0x5e7f92,
+        transparent: true,
+        opacity: S.hlw ? 0.52 : 0.6,
+        side: T.DoubleSide,
+        depthTest: false,
+        depthWrite: false,
+      }),
+      mt = new T.MeshBasicMaterial({
+        color: S.hlw ? 0xffffff : 0x5e7f92,
+        transparent: true,
+        opacity: S.hlw ? 0.74 : 0.82,
+        side: T.DoubleSide,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4,
+      }),
+      oi = k === 'bgfoi' || k === 'brioi' || k === 'bgf' || k === 'bri',
+      ui = k === 'bgfui' || k === 'briui' || k === 'bgf' || k === 'bri';
+    const gm = (pos) => {
+      const ge = new T.BufferGeometry();
+      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+      ge.computeVertexNormals();
+      return ge;
+    };
+    for (const b of hlBs()) {
+      const u = ugN(b),
+        n0 = g.children.length;
+      let z = b._y;
+      b.levels.forEach((l, i) => {
+        const z0 = z,
+          z1 = z + l.h;
+        z = z1;
+        const f = lf(b, l),
+          ug = i < u;
+        if ((oi && !ug) || (ui && ug)) {
+          const ge = new T.ExtrudeGeometry(new T.Shape(f.map((q) => new T.Vector2(q[0], -q[1]))), {
+            depth: l.h,
+            bevelEnabled: false,
+          });
+          ge.rotateX(-Math.PI / 2);
+          const m = new T.Mesh(ge, ug ? mtu : mt);
+          m.position.y = z0;
+          m.renderOrder = ug ? 12 : 9;
+          g.add(m);
+        }
+        if (k === 'fas' && !ug) {
+          const pos = [];
+          f.forEach((a, q) => {
+            const c = f[(q + 1) % f.length];
+            pos.push(
+              a[0],
+              z0,
+              a[1],
+              c[0],
+              z0,
+              c[1],
+              c[0],
+              z1,
+              c[1],
+              a[0],
+              z0,
+              a[1],
+              c[0],
+              z1,
+              c[1],
+              a[0],
+              z1,
+              a[1],
+            );
+          });
+          const fm = new T.Mesh(gm(pos), mt);
+          fm.userData.k = i;
+          fm.userData.ol = zoFasOl(f, z0, z1);
+          g.add(fm);
+        }
+      });
+      if (k === 'terr')
+        terrOf(b).lv.forEach((L) => {
+          const o = zoTerrGeo(b, L);
+          if (o.pos.length) {
+            const tm = new T.Mesh(gm(o.pos), mt);
+            tm.userData.k = L.i;
+            tm.userData.ol = o.ol;
+            g.add(tm);
+          }
         });
+      if (k === 'fas' || k === 'terr')
+        pxPolys(b).forEach((o) => {
+          const d = +o.p.d || 0;
+          if (Math.abs(d) < 0.01) return;
+          if (k === 'fas') {
+            const out = [];
+            pxPrism(o, out);
+            if (out.length) g.add(new T.Mesh(gm(out), mt));
+          } else if (o.F.top) {
+            const tr = T.ShapeUtils.triangulateShape(
+                o.poly.map((q) => new T.Vector2(q[0], q[1])),
+                [],
+              ),
+              pa = [];
+            for (const [a, c, e] of tr)
+              pa.push(
+                ...pxW(o.F, o.poly[a][0], o.poly[a][1], d + 0.04),
+                ...pxW(o.F, o.poly[c][0], o.poly[c][1], d + 0.04),
+                ...pxW(o.F, o.poly[e][0], o.poly[e][1], d + 0.04),
+              );
+            if (pa.length) g.add(new T.Mesh(gm(pa), mt));
+          }
+        });
+      const rp = b._rp;
+      if (rp) {
+        if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
+        if (k === 'fas' && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
+        if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
+      } else if (k === 'dach' && b.levels.length) {
+        const L = b.levels.at(-1),
+          ge = new T.ExtrudeGeometry(new T.Shape(lf(b, L).map((q) => new T.Vector2(q[0], -q[1]))), {
+            depth: 0.08,
+            bevelEnabled: false,
+          });
         ge.rotateX(-Math.PI / 2);
-        const m = new T.Mesh(ge, ug ? mtu : mt);
-        m.position.y = z0;
-        m.renderOrder = ug ? 12 : 9;
+        const m = new T.Mesh(ge, mt);
+        m.position.y = b._y + b._h;
         g.add(m);
       }
-      if (k === 'fas' && !ug) {
-        const pos = [];
-        f.forEach((a, q) => {
-          const c = f[(q + 1) % f.length];
-          pos.push(
-            a[0],
-            z0,
-            a[1],
-            c[0],
-            z0,
-            c[1],
-            c[0],
-            z1,
-            c[1],
-            a[0],
-            z0,
-            a[1],
-            c[0],
-            z1,
-            c[1],
-            a[0],
-            z1,
-            a[1],
-          );
-        });
-        const fm = new T.Mesh(gm(pos), mt);
-        fm.userData.k = i;
-        fm.userData.ol = zoFasOl(f, z0, z1);
-        g.add(fm);
-      }
-    });
-    if (k === 'terr')
-      terrOf(b).lv.forEach((L) => {
-        const o = zoTerrGeo(b, L);
-        if (o.pos.length) {
-          const tm = new T.Mesh(gm(o.pos), mt);
-          tm.userData.k = L.i;
-          tm.userData.ol = o.ol;
-          g.add(tm);
-        }
-      });
-    if (k === 'fas' || k === 'terr')
-      pxPolys(b).forEach((o) => {
-        const d = +o.p.d || 0;
-        if (Math.abs(d) < 0.01) return;
-        if (k === 'fas') {
-          const out = [];
-          pxPrism(o, out);
-          if (out.length) g.add(new T.Mesh(gm(out), mt));
-        } else if (o.F.top) {
-          const tr = T.ShapeUtils.triangulateShape(
-              o.poly.map((q) => new T.Vector2(q[0], q[1])),
-              [],
-            ),
-            pa = [];
-          for (const [a, c, e] of tr)
-            pa.push(
-              ...pxW(o.F, o.poly[a][0], o.poly[a][1], d + 0.04),
-              ...pxW(o.F, o.poly[c][0], o.poly[c][1], d + 0.04),
-              ...pxW(o.F, o.poly[e][0], o.poly[e][1], d + 0.04),
-            );
-          if (pa.length) g.add(new T.Mesh(gm(pa), mt));
-        }
-      });
-    const rp = b._rp;
-    if (rp) {
-      if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
-      if (k === 'fas' && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
-      if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
-    } else if (k === 'dach' && b.levels.length) {
-      const L = b.levels.at(-1),
-        ge = new T.ExtrudeGeometry(new T.Shape(lf(b, L).map((q) => new T.Vector2(q[0], -q[1]))), {
-          depth: 0.08,
-          bevelEnabled: false,
-        });
-      ge.rotateX(-Math.PI / 2);
-      const m = new T.Mesh(ge, mt);
-      m.position.y = b._y + b._h;
-      g.add(m);
+      zoHlTag(g, b, n0);
     }
-    zoHlTag(g, b, n0);
-  }
-  g.renderOrder = 9;
-  g.visible = !(S.zo && S.zo.m === 'u');
-  sc.add(g);
-  S.hlG = g;
+    g.renderOrder = 9;
+    g.visible = !(S.zo && S.zo.m === 'u');
+    sc.add(g);
+    S.hlG = g;
+    try {
+      exApply();
+    } catch (e) {
+      logErr(e, 'hlApply');
+    }
+  })();
   try {
-    exApply();
+    selStyle();
   } catch (e) {
-    logErr(e, 'hlApply');
+    console.warn('selStyle', e);
   }
 }

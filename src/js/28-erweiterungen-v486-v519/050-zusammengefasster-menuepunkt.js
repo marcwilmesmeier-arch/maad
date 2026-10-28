@@ -22,13 +22,7 @@
   });
 })();
 
-// v498: Baum-Modus: der Skizzen-/Modellier-Klick darf den ersten Klick nicht schlucken
-{
-  const _a = skAct;
-  skAct = function () {
-    return !TRE.on && _a.apply(this, arguments);
-  };
-}
+// skAct(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
 
 // v498: Untermenues gruppieren: "Skizze Gebäude" (Gebäude) und "Skizze Fläche" (Umgebung)
 (function () {

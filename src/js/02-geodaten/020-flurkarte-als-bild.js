@@ -514,33 +514,48 @@ function parWmsDel() {
   rr();
 }
 async function wmsRun(lon, lat, size, snap, nPar) {
-  if (!(snap && GEO.partRun)) {
-    GEO.wmsImg = null;
-    GEO.wmsMsg = '';
-    GEO.wmsMask = null;
-  }
-  const L = LY.find((l) => l[1] === 'wms');
-  if (snap || !S.wmsOn) {
-    return;
-  }
-  let st = null;
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/020-luftbild.js
+  const r = await (async () => {
+    if (!(snap && GEO.partRun)) {
+      GEO.wmsImg = null;
+      GEO.wmsMsg = '';
+      GEO.wmsMask = null;
+    }
+    const L = LY.find((l) => l[1] === 'wms');
+    if (snap || !S.wmsOn) {
+      return;
+    }
+    let st = null;
+    try {
+      st = await bundeslandC(lon, lat);
+    } catch (e) {
+      logErr(e, 'wmsRun');
+    }
+    if (!st || !WMSK[st.key]) return;
+    try {
+      const r = await wmsLoad(st.key, lon, lat, size);
+      GEO.wmsImg = r.img;
+      GEO.wmsMask = r.img && r.img._m ? { m: r.img._m, px: r.px, size } : null;
+      GEO.wmsMsg = 'Flurkarte als Bild: ' + WMSK[st.key].name + ', ' + r.px + ' px.';
+      if (L && !nPar) {
+        L[2] = 1;
+      }
+    } catch (e) {
+      GEO.wmsMsg = 'Flurkarte (Bild) nicht geladen: ' + (e && e.message ? e.message : e);
+    }
+  })();
   try {
-    st = await bundeslandC(lon, lat);
+    if (!snap) {
+      GEO.airLL = [lon, lat, size];
+      GEO.air = null;
+      GEO.airMsg = '';
+      GEO.airBusy = 0;
+      GEO.airTok = (GEO.airTok || 0) + 1;
+    }
   } catch (e) {
     logErr(e, 'wmsRun');
   }
-  if (!st || !WMSK[st.key]) return;
-  try {
-    const r = await wmsLoad(st.key, lon, lat, size);
-    GEO.wmsImg = r.img;
-    GEO.wmsMask = r.img && r.img._m ? { m: r.img._m, px: r.px, size } : null;
-    GEO.wmsMsg = 'Flurkarte als Bild: ' + WMSK[st.key].name + ', ' + r.px + ' px.';
-    if (L && !nPar) {
-      L[2] = 1;
-    }
-  } catch (e) {
-    GEO.wmsMsg = 'Flurkarte (Bild) nicht geladen: ' + (e && e.message ? e.message : e);
-  }
+  return r;
 }
 function ctxPaint(acc) {
   const K = PW / GEO.size,
@@ -630,78 +645,158 @@ function ctxPaint(acc) {
   } catch (e) {
     logErr(e, 'ctxPaint');
   }
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/010-gruen-wasser.js (danach)
+  try {
+    clearTimeout(FX.T);
+    FX.T = setTimeout(() => {
+      try {
+        fxGrassClear();
+        fxWaterClear();
+        fxSync();
+      } catch (e) {
+        console.error(e);
+      }
+    }, 500);
+  } catch (e) {
+    console.error(e);
+  }
 }
 function recomp() {
-  const c = GEO.comp,
-    x = c.getContext('2d');
-  x.globalAlpha = 1;
-  x.fillStyle = S.lc.terrain;
-  x.fillRect(0, 0, PW, PW);
-  if (false) {
-    x.fillStyle = '#ececea';
-    x.fillRect(0, 0, PW, PW);
-    if (S.wmPc !== false)
-      try {
-        const K = PW / GEO.size;
-        uAreas(x, K, (v) => (v + GEO.size / 2) * K);
-        uRoads(x, K, (v) => (v + GEO.size / 2) * K);
-      } catch (e) {
-        console.warn(e);
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
+  try {
+    if (clgOn()) {
+      const n = clgPaint();
+      const sg = n + ':' + (typeof OVI !== 'undefined' && OVI.clc ? OVI.clc.length : 0);
+      if (sg !== clgSig) {
+        clgSig = sg;
+        if (typeof FX !== 'undefined' && FX.grass && FX.flat)
+          setTimeout(() => {
+            try {
+              fxGrass();
+            } catch (e) {
+              logErr(e, 'recomp>anonym');
+            }
+          }, 0);
       }
-    if (GEO.tex) GEO.tex.needsUpdate = true;
-    return;
-  }
-  // Grundstück: im Gelände weiß, Straßen/Wege/Grün/Wasser/Radwege werden dort ausgespart (rote Überlagerung bleibt)
-  const K = PW / GEO.size,
-    X = (v) => (v + GEO.size / 2) * K,
-    sites = (typeof P !== 'undefined' ? P : []).filter((q) => q.site && q.poly && q.poly.length > 2);
-  const sp = () => {
-    for (const q of sites) {
-      q.poly.forEach(([a, b], i) => (i ? x.lineTo(X(a), X(b)) : x.moveTo(X(a), X(b))));
-      x.closePath();
+    } else if (clgSig) {
+      clgSig = '';
+      PL.clg.getContext('2d').clearRect(0, 0, PW, PW);
     }
-  };
-  if (sites.length) {
-    x.fillStyle = '#fff';
-    x.beginPath();
-    sp();
-    x.fill();
+  } catch (e) {
+    console.error(e);
   }
-  const GR = ['green', 'clg', 'water', 'paths', 'cycle', 'rail', 'roads'];
-  for (const k of [
-    'green',
-    'clg',
-    'water',
-    'paths',
-    'cycle',
-    'rail',
-    'bplan',
-    'parcels',
-    'wms',
-    'roads',
-    'abst',
-  ]) {
-    if (k === 'bplan') 0;
-    if (k === 'abst') {
-      uAreas(x, K, X);
-      uRoads(x, K, X);
-      continue;
+  // ── Erweiterung aus 17-erweiterungen-v253-v280/080-karten.js
+  try {
+    ovSync();
+  } catch (e) {
+    logErr(e, 'recomp');
+  }
+  const r = (() => {
+    const c = GEO.comp,
+      x = c.getContext('2d');
+    x.globalAlpha = 1;
+    x.fillStyle = S.lc.terrain;
+    x.fillRect(0, 0, PW, PW);
+    if (false) {
+      x.fillStyle = '#ececea';
+      x.fillRect(0, 0, PW, PW);
+      if (S.wmPc !== false)
+        try {
+          const K = PW / GEO.size;
+          uAreas(x, K, (v) => (v + GEO.size / 2) * K);
+          uRoads(x, K, (v) => (v + GEO.size / 2) * K);
+        } catch (e) {
+          console.warn(e);
+        }
+      if (GEO.tex) GEO.tex.needsUpdate = true;
+      return;
     }
-    const L = LY.find((l) => l[1] === k);
-    if (!L || !L[2]) continue;
-    x.globalAlpha = L[3];
-    if (sites.length && GR.includes(k)) {
-      x.save();
+    // Grundstück: im Gelände weiß, Straßen/Wege/Grün/Wasser/Radwege werden dort ausgespart (rote Überlagerung bleibt)
+    const K = PW / GEO.size,
+      X = (v) => (v + GEO.size / 2) * K,
+      sites = (typeof P !== 'undefined' ? P : []).filter((q) => q.site && q.poly && q.poly.length > 2);
+    const sp = () => {
+      for (const q of sites) {
+        q.poly.forEach(([a, b], i) => (i ? x.lineTo(X(a), X(b)) : x.moveTo(X(a), X(b))));
+        x.closePath();
+      }
+    };
+    if (sites.length) {
+      x.fillStyle = '#fff';
       x.beginPath();
-      x.rect(0, 0, PW, PW);
       sp();
-      x.clip('evenodd');
-      x.drawImage(PL[k], 0, 0);
-      x.restore();
-    } else x.drawImage(PL[k], 0, 0);
+      x.fill();
+    }
+    const GR = ['green', 'clg', 'water', 'paths', 'cycle', 'rail', 'roads'];
+    for (const k of [
+      'green',
+      'clg',
+      'water',
+      'paths',
+      'cycle',
+      'rail',
+      'bplan',
+      'parcels',
+      'wms',
+      'roads',
+      'abst',
+    ]) {
+      if (k === 'bplan') 0;
+      if (k === 'abst') {
+        uAreas(x, K, X);
+        uRoads(x, K, X);
+        continue;
+      }
+      const L = LY.find((l) => l[1] === k);
+      if (!L || !L[2]) continue;
+      x.globalAlpha = L[3];
+      if (sites.length && GR.includes(k)) {
+        x.save();
+        x.beginPath();
+        x.rect(0, 0, PW, PW);
+        sp();
+        x.clip('evenodd');
+        x.drawImage(PL[k], 0, 0);
+        x.restore();
+      } else x.drawImage(PL[k], 0, 0);
+    }
+    x.globalAlpha = 1;
+    if (GEO.tex) GEO.tex.needsUpdate = true;
+  })();
+  try {
+    ovRepaint();
+    if (OVC.width === ovW() && OVC.width > 1 && GEO.comp) {
+      const x = GEO.comp.getContext('2d');
+      x.globalAlpha = 1;
+      x.drawImage(OVC, 0, 0, PW, PW);
+      if (GEO.tex) GEO.tex.needsUpdate = true;
+    }
+  } catch (e) {
+    console.error(e);
   }
-  x.globalAlpha = 1;
-  if (GEO.tex) GEO.tex.needsUpdate = true;
+  // ── Erweiterung aus 21-gelaendeplanum/010-gelaendeplanum.js (danach)
+  try {
+    if (PLM.a.some((a) => a.on !== false)) {
+      GEO.comp.getContext('2d').drawImage(PL.plm, 0, 0);
+      if (GEO.tex) GEO.tex.needsUpdate = true;
+    }
+  } catch (e) {
+    logErr(e, 'recomp');
+  }
+  // ── Erweiterung aus 29-start/010-start-projekt-oeffnen.js (danach)
+  try {
+    const LA = LY.find((l) => l[1] === 'abst');
+    if (LA && LA[2] && GEO.comp) {
+      const cx = GEO.comp.getContext('2d');
+      cx.globalAlpha = LA[3];
+      cx.drawImage(PL.abst, 0, 0);
+      cx.globalAlpha = 1;
+      if (GEO.tex) GEO.tex.needsUpdate = true;
+    }
+  } catch (e) {
+    logErr(e, 'recomp');
+  }
+  return r;
 }
 // Gebäude: ein zusammengefasstes Netz (schnell), Auswahl über Dreiecks-Bereiche
 function bExtrude(b) {

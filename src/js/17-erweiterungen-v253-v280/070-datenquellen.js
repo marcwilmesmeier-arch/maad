@@ -3,42 +3,9 @@
   if (typeof SRT !== 'undefined' && !SRT.some((t) => t[0] === 'um')) {
     SRT.push(['um', 'Umwelt & Schutz'], ['ri', 'Risikogebiete'], ['dv', 'Datenstand']);
   }
-  const _sd = srcData;
-  srcData = function () {
-    const D = _sd.apply(this, arguments);
-    try {
-      D.um = '<div class="ax">' + axDqEnv() + '</div>';
-      D.ri = '<div class="ax">' + axRi() + '</div>';
-      D.dv = '<div class="ax">' + axDqUsed() + '</div>';
-    } catch (e) {
-      D.um = D.dv = '<div class="stn">' + esc(e.message || e) + '</div>';
-    }
-    return D;
-  };
-  const _rr = rr;
-  rr = function () {
-    const r = _rr.apply(this, arguments);
-    try {
-      const m = document.getElementById('srcm');
-      if (
-        m &&
-        m.style.display === 'flex' &&
-        (S.srTab === 'um' || S.srTab === 'ri' || S.srTab === 'dv') &&
-        !rr.__in
-      ) {
-        rr.__in = 1;
-        try {
-          srcOpen();
-        } finally {
-          rr.__in = 0;
-        }
-      }
-    } catch (e) {
-      logErr(e, 'rr');
-    }
-    return r;
-  };
 }
+// srcData(): Erweiterung zusammengeführt, siehe 04-datenquellen/020-nur-einen-datensatz.js
+// rr(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 const ANI = {
   ue: '<rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="4" width="7" height="7" rx="1.2"/><rect x="4" y="13" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/>',
   re: '<path d="M12 3l8 3v6c0 4.500-3.200 7.800-8 9-4.800-1.200-8-4.500-8-9V6z"/><path d="M12 8v5M12 16v.5"/>',

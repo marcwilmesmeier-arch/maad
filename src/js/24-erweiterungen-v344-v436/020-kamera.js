@@ -26,19 +26,7 @@ function camxApply(c, v, a, X) {
   }
   c.updateMatrixWorld(true);
 }
-{
-  const _c = cam;
-  cam = function () {
-    _c();
-    if (S.m3 && CAMX.on) {
-      try {
-        camxApply(pc, V, mid.clientWidth / mid.clientHeight);
-      } catch (e) {
-        logErr(e, 'cam');
-      }
-    }
-  };
-}
+// cam(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 const camxPolMax = () => (CAMX.on ? 3.0 : 1.5),
   camxMin = () => (CAMX.on ? 3 : window.camxSk && camxSk() ? 1.2 : 40);
 function camxSave() {
@@ -309,71 +297,7 @@ function shSig() {
   });
   return h;
 }
-{
-  const _mr = mkRender;
-  mkRender = function (scn, cm) {
-    let st = null;
-    try {
-      if (scn === sc && sunL.castShadow) {
-        const sh = sunL.shadow,
-          c = sh.camera,
-          tp = sunL.target.position,
-          f = S.m3 ? shFit(cm, sh) : null;
-        if (f) {
-          st = {
-            p: sunL.position.clone(),
-            t: tp.clone(),
-            l: c.left,
-            r: c.right,
-            tp: c.top,
-            b: c.bottom,
-            n: c.near,
-            f: c.far,
-            bi: sh.bias,
-            nb: sh.normalBias,
-          };
-          tp.copy(f.F);
-          sunL.position.copy(f.F).addScaledVector(f.dir, f.Dd);
-          sunL.target.updateMatrixWorld();
-          sunL.updateMatrixWorld();
-          Object.assign(c, { left: -f.R, right: f.R, top: f.R, bottom: -f.R, near: f.near, far: f.far });
-          c.updateProjectionMatrix();
-          sh.bias = -0.0002;
-          sh.normalBias = Math.max(0.02, f.q * 1.6);
-        }
-        if (SHC.on) {
-          ren.shadowMap.autoUpdate = false;
-          const now = performance.now(),
-            g = shSig();
-          if (!sh.map || g !== SHC.sig || now - SHC.t > 1500) {
-            SHC.sig = g;
-            SHC.t = now;
-            ren.shadowMap.needsUpdate = true;
-            SHC.n++;
-          } else SHC.skip++;
-        } else ren.shadowMap.autoUpdate = true;
-      }
-    } catch (e) {
-      console.warn(e);
-    }
-    try {
-      return _mr.apply(this, arguments);
-    } finally {
-      if (st) {
-        const c = sunL.shadow.camera,
-          sh = sunL.shadow;
-        sunL.position.copy(st.p);
-        sunL.target.position.copy(st.t);
-        sunL.target.updateMatrixWorld();
-        sunL.updateMatrixWorld();
-        Object.assign(c, { left: st.l, right: st.r, top: st.tp, bottom: st.b, near: st.n, far: st.f });
-        c.updateProjectionMatrix();
-        sh.bias = st.bi;
-        sh.normalBias = st.nb;
-      }
-    }
-  };
-}
+// mkRender(): Erweiterung zusammengeführt, siehe 09-umgebung-und-flaechen/020-maske.js
 function camxCompass(b) {
   const n = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
   return n[Math.round(b / 45) % 8];

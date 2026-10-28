@@ -15,24 +15,7 @@ const AIRK = {
     src: '© Bayerische Vermessungsverwaltung, CC BY 4.0',
   },
 };
-{
-  const _w = wmsRun;
-  wmsRun = async function (lon, lat, size, snap) {
-    const r = await _w.apply(this, arguments);
-    try {
-      if (!snap) {
-        GEO.airLL = [lon, lat, size];
-        GEO.air = null;
-        GEO.airMsg = '';
-        GEO.airBusy = 0;
-        GEO.airTok = (GEO.airTok || 0) + 1;
-      }
-    } catch (e) {
-      logErr(e, 'wmsRun');
-    }
-    return r;
-  };
-}
+// wmsRun(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 function airEnsure() {
   try {
     if (GEO.air || GEO.airBusy || !GEO.airLL || (S.fx[S.dar] || {}).air === 0) return;

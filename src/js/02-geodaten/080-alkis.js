@@ -414,6 +414,12 @@ function labVis() {
   };
   G.flab.visible = v('parcels') && S.showFN;
   G.rnam.visible = v('roads') && S.showSN;
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/100-eigenschaften.js (danach)
+  try {
+    G.hnr.visible = hnrOn();
+  } catch (e) {
+    logErr(e, 'labVis');
+  }
 }
 function rnLabel(txt) {
   const c = document.createElement('canvas');
@@ -638,153 +644,163 @@ function clipParcels(list, H) {
   return res;
 }
 function parLines() {
-  [G.parcels, G.flab].forEach((g) =>
-    g.traverse((o) => {
-      if (o.material && o.material.map) o.material.map.dispose();
-    }),
-  );
-  clr(G.parcels);
-  clr(G.flab);
-  if (!AL.length && !P.some((q) => q.site)) return;
-  const key = (q) => Math.round(q[0] * 20) + ',' + Math.round(q[1] * 20),
-    ed = new Map();
-  AL.forEach((a, i) =>
-    a.rings.forEach((r) => {
-      for (let k = 0; k < r.length; k++) {
-        const p = r[k],
-          q = r[(k + 1) % r.length],
-          a1 = key(p),
-          b1 = key(q),
-          kk = a1 < b1 ? a1 + '|' + b1 : b1 + '|' + a1,
-          e = ed.get(kk);
-        if (e) e.n++;
-        else ed.set(kk, { p, q, n: 1 });
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/060-grundstuecksgrenze.js
+  const r = (() => {
+    [G.parcels, G.flab].forEach((g) =>
+      g.traverse((o) => {
+        if (o.material && o.material.map) o.material.map.dispose();
+      }),
+    );
+    clr(G.parcels);
+    clr(G.flab);
+    if (!AL.length && !P.some((q) => q.site)) return;
+    const key = (q) => Math.round(q[0] * 20) + ',' + Math.round(q[1] * 20),
+      ed = new Map();
+    AL.forEach((a, i) =>
+      a.rings.forEach((r) => {
+        for (let k = 0; k < r.length; k++) {
+          const p = r[k],
+            q = r[(k + 1) % r.length],
+            a1 = key(p),
+            b1 = key(q),
+            kk = a1 < b1 ? a1 + '|' + b1 : b1 + '|' + a1,
+            e = ed.get(kk);
+          if (e) e.n++;
+          else ed.set(kk, { p, q, n: 1 });
+        }
+      }),
+    );
+    const sub = (p, q, y, fn) => {
+      const L = Math.hypot(q[0] - p[0], q[1] - p[1]),
+        n = Math.max(1, Math.ceil(L / 2));
+      for (let j = 0; j < n; j++) {
+        const x0 = p[0] + ((q[0] - p[0]) * j) / n,
+          z0 = p[1] + ((q[1] - p[1]) * j) / n,
+          x1 = p[0] + ((q[0] - p[0]) * (j + 1)) / n,
+          z1 = p[1] + ((q[1] - p[1]) * (j + 1)) / n;
+        fn(x0, gh(x0, z0) + y, z0, x1, gh(x1, z1) + y, z1);
       }
-    }),
-  );
-  const sub = (p, q, y, fn) => {
-    const L = Math.hypot(q[0] - p[0], q[1] - p[1]),
-      n = Math.max(1, Math.ceil(L / 2));
-    for (let j = 0; j < n; j++) {
-      const x0 = p[0] + ((q[0] - p[0]) * j) / n,
-        z0 = p[1] + ((q[1] - p[1]) * j) / n,
-        x1 = p[0] + ((q[0] - p[0]) * (j + 1)) / n,
-        z1 = p[1] + ((q[1] - p[1]) * (j + 1)) / n;
-      fn(x0, gh(x0, z0) + y, z0, x1, gh(x1, z1) + y, z1);
+    };
+    const sol = [],
+      dsh = [];
+    ed.forEach((e) => sub(e.p, e.q, 0.45, (...v) => (e.n > 1 ? dsh : sol).push(...v)));
+    const mk = (arr, mat, ro) => {
+      if (!arr.length) return null;
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
+      const l = new T.LineSegments(g, mat);
+      if (mat.isLineDashedMaterial) l.computeLineDistances();
+      l.renderOrder = ro;
+      G.parcels.add(l);
+      return l;
+    };
+    mk(sol, new T.LineBasicMaterial({ color: S.lc.parcels, transparent: true }), 3);
+    mk(
+      dsh,
+      new T.LineDashedMaterial({ color: S.lc.parcels, dashSize: 0.9, gapSize: 0.6, transparent: true }),
+      3,
+    );
+    // Bänder (scharfe, im Raum feste Breite) für Grundstücke und gewählte Flurstücke
+    const ribbon = (rings, col, w, y, ro) => {
+      const pa = [];
+      rings.forEach((r) => {
+        for (let k = 0; k < r.length; k++) {
+          const p = r[k],
+            q = r[(k + 1) % r.length],
+            L = Math.hypot(q[0] - p[0], q[1] - p[1]);
+          if (L < 1e-3) continue;
+          const nx = ((-(q[1] - p[1]) / L) * w) / 2,
+            nz = (((q[0] - p[0]) / L) * w) / 2;
+          sub(p, q, y, (x0, y0, z0, x1, y1, z1) =>
+            pa.push(
+              x0 + nx,
+              y0,
+              z0 + nz,
+              x0 - nx,
+              y0,
+              z0 - nz,
+              x1 + nx,
+              y1,
+              z1 + nz,
+              x0 - nx,
+              y0,
+              z0 - nz,
+              x1 - nx,
+              y1,
+              z1 - nz,
+              x1 + nx,
+              y1,
+              z1 + nz,
+            ),
+          );
+        }
+      });
+      if (!pa.length) return;
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(new Float32Array(pa), 3));
+      const m = new T.Mesh(
+        g,
+        new T.MeshBasicMaterial({
+          color: col,
+          side: T.DoubleSide,
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2,
+        }),
+      );
+      m.renderOrder = ro;
+      G.parcels.add(m);
+    };
+    const sr = [];
+    S.parSel.forEach((i) => AL[i] && sr.push(...AL[i].rings));
+    ribbon(sr, 0x5e7f92, 0.7, 0.7, 5);
+    PBR.polys = P.filter((q) => q.site).map((q) => q.poly);
+    // Flurstücksnummern, flach auf dem Gelände
+    let nl = 0;
+    const sorted = AL.map((a, i) => a).sort((a, b) => b.area - a.area);
+    for (const a of sorted) {
+      if (nl > 900 || a.area < 25 || a.cut) continue;
+      let c = cen(a.poly);
+      const xs = a.poly.map((q) => q[0]),
+        zs = a.poly.map((q) => q[1]),
+        bw = Math.max(...xs) - Math.min(...xs),
+        bh = Math.max(...zs) - Math.min(...zs);
+      if (!inP(c, a.poly))
+        c = [(Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...zs) + Math.min(...zs)) / 2];
+      const hgt = Math.min(3, Math.max(1.4, Math.sqrt(a.area) / 8)),
+        lb = parLabel(a.id),
+        w = hgt * lb.asp;
+      if (w > bw * 1.05 && hgt * 2 > bh) continue;
+      const m = new T.Mesh(
+        new T.PlaneGeometry(hgt * 4, hgt),
+        new T.MeshBasicMaterial({
+          map: lb.t,
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -3,
+          polygonOffsetUnits: -3,
+        }),
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(c[0], gh(c[0], c[1]) + 0.6, c[1]);
+      m.renderOrder = 7;
+      G.flab.add(m);
+      nl++;
     }
-  };
-  const sol = [],
-    dsh = [];
-  ed.forEach((e) => sub(e.p, e.q, 0.45, (...v) => (e.n > 1 ? dsh : sol).push(...v)));
-  const mk = (arr, mat, ro) => {
-    if (!arr.length) return null;
-    const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
-    const l = new T.LineSegments(g, mat);
-    if (mat.isLineDashedMaterial) l.computeLineDistances();
-    l.renderOrder = ro;
-    G.parcels.add(l);
-    return l;
-  };
-  mk(sol, new T.LineBasicMaterial({ color: S.lc.parcels, transparent: true }), 3);
-  mk(
-    dsh,
-    new T.LineDashedMaterial({ color: S.lc.parcels, dashSize: 0.9, gapSize: 0.6, transparent: true }),
-    3,
-  );
-  // Bänder (scharfe, im Raum feste Breite) für Grundstücke und gewählte Flurstücke
-  const ribbon = (rings, col, w, y, ro) => {
-    const pa = [];
-    rings.forEach((r) => {
-      for (let k = 0; k < r.length; k++) {
-        const p = r[k],
-          q = r[(k + 1) % r.length],
-          L = Math.hypot(q[0] - p[0], q[1] - p[1]);
-        if (L < 1e-3) continue;
-        const nx = ((-(q[1] - p[1]) / L) * w) / 2,
-          nz = (((q[0] - p[0]) / L) * w) / 2;
-        sub(p, q, y, (x0, y0, z0, x1, y1, z1) =>
-          pa.push(
-            x0 + nx,
-            y0,
-            z0 + nz,
-            x0 - nx,
-            y0,
-            z0 - nz,
-            x1 + nx,
-            y1,
-            z1 + nz,
-            x0 - nx,
-            y0,
-            z0 - nz,
-            x1 - nx,
-            y1,
-            z1 - nz,
-            x1 + nx,
-            y1,
-            z1 + nz,
-          ),
-        );
-      }
-    });
-    if (!pa.length) return;
-    const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.BufferAttribute(new Float32Array(pa), 3));
-    const m = new T.Mesh(
-      g,
-      new T.MeshBasicMaterial({
-        color: col,
-        side: T.DoubleSide,
-        transparent: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      }),
-    );
-    m.renderOrder = ro;
-    G.parcels.add(m);
-  };
-  const sr = [];
-  S.parSel.forEach((i) => AL[i] && sr.push(...AL[i].rings));
-  ribbon(sr, 0x5e7f92, 0.7, 0.7, 5);
-  PBR.polys = P.filter((q) => q.site).map((q) => q.poly);
-  // Flurstücksnummern, flach auf dem Gelände
-  let nl = 0;
-  const sorted = AL.map((a, i) => a).sort((a, b) => b.area - a.area);
-  for (const a of sorted) {
-    if (nl > 900 || a.area < 25 || a.cut) continue;
-    let c = cen(a.poly);
-    const xs = a.poly.map((q) => q[0]),
-      zs = a.poly.map((q) => q[1]),
-      bw = Math.max(...xs) - Math.min(...xs),
-      bh = Math.max(...zs) - Math.min(...zs);
-    if (!inP(c, a.poly))
-      c = [(Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...zs) + Math.min(...zs)) / 2];
-    const hgt = Math.min(3, Math.max(1.4, Math.sqrt(a.area) / 8)),
-      lb = parLabel(a.id),
-      w = hgt * lb.asp;
-    if (w > bw * 1.05 && hgt * 2 > bh) continue;
-    const m = new T.Mesh(
-      new T.PlaneGeometry(hgt * 4, hgt),
-      new T.MeshBasicMaterial({
-        map: lb.t,
-        transparent: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -3,
-        polygonOffsetUnits: -3,
-      }),
-    );
-    m.rotation.x = -Math.PI / 2;
-    m.position.set(c[0], gh(c[0], c[1]) + 0.6, c[1]);
-    m.renderOrder = 7;
-    G.flab.add(m);
-    nl++;
+    const L = LY.find((l) => l[1] === 'parcels');
+    if (L && L[3] < 1) op('parcels', L[3]);
+    labVis();
+  })();
+  PBR.m = null;
+  try {
+    pbBuild(true);
+  } catch (e) {
+    logErr(e, 'parLines');
   }
-  const L = LY.find((l) => l[1] === 'parcels');
-  if (L && L[3] < 1) op('parcels', L[3]);
-  labVis();
+  return r;
 }
 function parPaint() {
   const K = PW / GEO.size,
@@ -829,15 +845,20 @@ function parRefresh() {
   parBar();
 }
 function pickPar(g) {
-  let bi = -1,
-    ba = 1e18;
-  AL.forEach((a, i) => {
-    if (!a.cut && a.area < ba && a.rings.some((r) => inP(g, r))) {
-      bi = i;
-      ba = a.area;
-    }
-  });
-  return bi;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+  return inSite(g)
+    ? -1
+    : (() => {
+        let bi = -1,
+          ba = 1e18;
+        AL.forEach((a, i) => {
+          if (!a.cut && a.area < ba && a.rings.some((r) => inP(g, r))) {
+            bi = i;
+            ba = a.area;
+          }
+        });
+        return bi;
+      })();
 }
 const hasSite = () => P.some((q) => q.site);
 function parClick(g, sh) {

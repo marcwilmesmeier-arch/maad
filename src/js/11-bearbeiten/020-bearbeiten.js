@@ -77,62 +77,7 @@ function btEnd(d) {
   rr();
   return true;
 }
-const tool0 = tool;
-tool = function (t) {
-  if (t === 't' && S.sel && !S.sel.ex && !S.m3) {
-    try {
-      setMode(1);
-    } catch (e) {
-      logErr(e, 'tool');
-    }
-  }
-  if (t === 't' && !(S.sel && !S.sel.ex && S.bld.includes(S.sel))) {
-    tool0('v');
-    try {
-      $('hud').textContent = 'Schneiden: zuerst ein Gebäude auswählen';
-    } catch (e) {
-      logErr(e, 'tool');
-    }
-    return;
-  }
-  if (t === 'L') {
-    S.hov = S.hb = S.hv = S.hvB = S.hvR = null;
-    S.selP = null;
-    S.vi = null;
-    try {
-      handle.visible = false;
-      hc.visible = false;
-    } catch (e) {
-      logErr(e, 'tool');
-    }
-  }
-  tool0(t);
-  try {
-    if (t === 'L')
-      $('hud').textContent =
-        'Beschriften: Klick setzt einen Punkt auf Gebäude, Dach oder Gelände – Auswahl und Bearbeiten sind gesperrt · Esc beendet';
-  } catch (e) {
-    logErr(e, 'tool');
-  }
-  try {
-    if (t === 't') {
-      const sf = selOk();
-      $('hud').textContent =
-        sf && sf.b === S.sel
-          ? 'Schneiden: Wand des gewählten Geschosses anklicken – nur dieses Geschoss wird getrennt'
-          : 'Schneiden: Wand anklicken – die ganze Fassadenseite (alle Geschosse) wird getrennt · Geschoss wählen = nur ein Geschoss';
-    }
-    if (t === 'mv' || t === 'ro') {
-      $('hud').textContent =
-        t === 'mv'
-          ? 'Verschieben: Gebäude ziehen · Shift = nur eine Achse'
-          : 'Drehen: Maus um das Gebäude ziehen · Shift = 15°-Raster';
-      cv.style.cursor = t === 'mv' ? 'move' : 'alias';
-    } else cv.style.cursor = '';
-  } catch (e) {
-    logErr(e, 'tool');
-  }
-};
+// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 
 // ---- Rechtsklick-Menü am Gebäude
 const cmEl = document.createElement('div');
@@ -161,6 +106,49 @@ function baBuild() {
 baBuild();
 // eine Aktion für beide Menüs
 function baDo(k) {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
+  if (TRE.on) trToggle(false);
+  // ── Erweiterung aus 27-skizze/080-auswahl.js
+  if (k === 'grl') {
+    try {
+      cmHide();
+    } catch (e) {
+      logErr(e, 'baDo');
+    }
+    if (mnStorey()) {
+      const s = SK.sel[0];
+      if (!grOpenLv(s.b.id, String(s.j)))
+        try {
+          $('hud').textContent = 'Grundriss konnte nicht geöffnet werden';
+        } catch (e) {
+          logErr(e, 'baDo');
+        }
+    }
+    return;
+  }
+  // ── Erweiterung aus 27-skizze/040-skizzenmodus.js
+  if (k === 'del' && SKS.sel.length && !S.sel) {
+    cmHide();
+    sksDelete();
+    return;
+  }
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  if (SKBA[k]) {
+    try {
+      cmHide();
+    } catch (e) {
+      logErr(e, 'baDo');
+    }
+    skUse(SKBA[k], k === 'skc');
+    return;
+  }
+  // ── Erweiterung aus 19-fassadendesigner/060-kopf.js
+  // ---- Einstiege: Ansichtsleiste/Kontextmenü, Reiter „Planen“, Gebäudemetrik (Fassadenfläche)
+  if (k === 'fd') {
+    cmHide();
+    fdOpen();
+    return;
+  }
   cmHide();
   if (k === 'del') {
     del();

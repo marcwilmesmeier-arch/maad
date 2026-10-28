@@ -119,14 +119,7 @@ addEventListener(
   true,
 );
 
-// v487: keine Abstandsflaechen-Vorschau, solange das Gebaeude noch nicht erzeugt ist
-{
-  const _t = abstTarget;
-  abstTarget = function () {
-    if (S.tool === 'f' && S.dm !== 'area' && S.draft && S.draft.length > 2 && S.closed) return null;
-    return _t.apply(this, arguments);
-  };
-}
+// abstTarget(): Erweiterung zusammengeführt, siehe 11-bearbeiten/010-werkzeug.js
 
 // v488: Enter erzeugt das Gebaeude aus der geschlossenen Kontur (wie "Gebaeude erzeugen" im Planen-Panel)
 addEventListener(

@@ -248,6 +248,11 @@ function grEdit(fn) {
 }
 const grGid = (cuts) => 1 + cuts.reduce((m, c) => Math.max(m, c[4] || 0), 0);
 function grAddCuts(segs) {
+  // ── Erweiterung aus 22-lod200-waende/060-stutzen-dehnen.js
+  return grAddCutsBasis.call(this, l2Fix(segs));
+}
+// grAddCuts() ohne die Erweiterungen darüber – wird von grAddCuts() gezielt aufgerufen
+function grAddCutsBasis(segs) {
   grEdit((b) => {
     const lv = grLv(b),
       cuts = (lv.obj.cuts || []).map((c) => c.slice()),
@@ -335,6 +340,11 @@ function grAddArea(P) {
 }
 // Neue Linie: bestehende Linien werden an den Kreuzungen getrennt, jedes Teilstück ist danach eigenständig wählbar/löschbar
 function grAddLine(segs) {
+  // ── Erweiterung aus 22-lod200-waende/060-stutzen-dehnen.js
+  return grAddLineBasis.call(this, l2Fix(segs));
+}
+// grAddLine() ohne die Erweiterungen darüber – wird von grAddLine() gezielt aufgerufen
+function grAddLineBasis(segs) {
   grEdit((b) => {
     const lv = grLv(b),
       old = (lv.obj.cuts || []).map((c) => c.slice());

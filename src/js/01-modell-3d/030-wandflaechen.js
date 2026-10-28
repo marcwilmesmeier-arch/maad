@@ -1217,68 +1217,82 @@ function fInfo(h) {
   };
 }
 function placeHc() {
-  vg.children.forEach((m) =>
-    m.scale.setScalar(
-      S.m3
-        ? ((pc.position.distanceTo(m.position) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4
-        : 4 * mpp(),
-    ),
-  );
-  const hv = S.hv,
-    okv =
-      hv &&
-      S.m3 &&
-      S.bld.includes(hv.b) &&
-      hv.b.levels[hv.k] &&
-      (S.tool === 'v' || S.tool === 'b' || S.tool === 't');
-  hl.visible = !!okv;
-  if (okv) {
-    const b = hv.b,
-      L = b.levels,
-      f = lf(b, L[hv.k]);
-    let z0 = b._y;
-    for (let j = 0; j < hv.k; j++) z0 += L[j].h;
-    const z1 = z0 + L[hv.k].h,
-      key = [b.id, hv.k, hv.i, z0, z1, f.map((q) => q[0] + ',' + q[1]).join(';')].join('|');
-    if (hl.userData.key != key) {
-      hl.userData.key = key;
-      const pts = [],
-        v3 = (q, z) => new T.Vector3(q[0], z, q[1]),
-        n = f.length;
-      (hv.i >= 0 ? [hv.i] : f.map((_, i) => i)).forEach((i) => {
-        const a = f[i],
-          c = f[(i + 1) % n];
-        pts.push(v3(a, z0), v3(c, z0), v3(a, z1), v3(c, z1), v3(a, z0), v3(a, z1));
-        if (hv.i >= 0) pts.push(v3(c, z0), v3(c, z1));
-      });
-      hl.geometry.dispose();
-      hl.geometry = new T.BufferGeometry().setFromPoints(pts);
-    }
-  }
-  const hb = S.hb,
-    okb = hb && S.m3 && S.bld.includes(hb) && (S.tool === 'v' || S.tool === 'b');
-  handle.visible = !!okb;
-  if (okb) {
-    const fi = fInfo({ b: hb, k: hb.levels.length - 1, t: 'top' });
-    handle.position.copy(fi.pos).y += 1.3;
-    handle.scale.setScalar(
-      ((pc.position.distanceTo(fi.pos) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4,
+  // ── Erweiterung aus 26-modellier-modus/020-darstellung.js
+  (() => {
+    vg.children.forEach((m) =>
+      m.scale.setScalar(
+        S.m3
+          ? ((pc.position.distanceTo(m.position) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4
+          : 4 * mpp(),
+      ),
     );
+    const hv = S.hv,
+      okv =
+        hv &&
+        S.m3 &&
+        S.bld.includes(hv.b) &&
+        hv.b.levels[hv.k] &&
+        (S.tool === 'v' || S.tool === 'b' || S.tool === 't');
+    hl.visible = !!okv;
+    if (okv) {
+      const b = hv.b,
+        L = b.levels,
+        f = lf(b, L[hv.k]);
+      let z0 = b._y;
+      for (let j = 0; j < hv.k; j++) z0 += L[j].h;
+      const z1 = z0 + L[hv.k].h,
+        key = [b.id, hv.k, hv.i, z0, z1, f.map((q) => q[0] + ',' + q[1]).join(';')].join('|');
+      if (hl.userData.key != key) {
+        hl.userData.key = key;
+        const pts = [],
+          v3 = (q, z) => new T.Vector3(q[0], z, q[1]),
+          n = f.length;
+        (hv.i >= 0 ? [hv.i] : f.map((_, i) => i)).forEach((i) => {
+          const a = f[i],
+            c = f[(i + 1) % n];
+          pts.push(v3(a, z0), v3(c, z0), v3(a, z1), v3(c, z1), v3(a, z0), v3(a, z1));
+          if (hv.i >= 0) pts.push(v3(c, z0), v3(c, z1));
+        });
+        hl.geometry.dispose();
+        hl.geometry = new T.BufferGeometry().setFromPoints(pts);
+      }
+    }
+    const hb = S.hb,
+      okb = hb && S.m3 && S.bld.includes(hb) && (S.tool === 'v' || S.tool === 'b');
+    handle.visible = !!okb;
+    if (okb) {
+      const fi = fInfo({ b: hb, k: hb.levels.length - 1, t: 'top' });
+      handle.position.copy(fi.pos).y += 1.3;
+      handle.scale.setScalar(
+        ((pc.position.distanceTo(fi.pos) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4,
+      );
+    }
+    const h = S.hov,
+      ok = h && S.m3 && S.bld.includes(h.b) && h.b.levels[h.k] && (S.tool === 'v' || S.tool === 'b');
+    hc.visible = !!ok;
+    if (patchKnob()) return;
+    if (!ok) return;
+    const fi = fInfo(h);
+    if (h.t == 'wall') {
+      const sf = selOk();
+      if (h.g) fi.pos.y = h.b._y + h.b._h + (h.b._roofH || 0) * 0.35;
+      else if (!(sf && sf.b === h.b)) fi.pos.y = h.b._y + (h.b._ug || 0) + (h.b._h - (h.b._ug || 0)) / 2;
+    }
+    hc.position.copy(fi.pos);
+    hc.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), fi.n);
+    hc.scale.setScalar(((pc.position.distanceTo(fi.pos) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4);
+  })();
+  try {
+    skDraw();
+  } catch (x) {
+    console.warn('sk', x);
   }
-  const h = S.hov,
-    ok = h && S.m3 && S.bld.includes(h.b) && h.b.levels[h.k] && (S.tool === 'v' || S.tool === 'b');
-  hc.visible = !!ok;
-  if (patchKnob()) return;
-  if (!ok) return;
-  const fi = fInfo(h);
-  if (h.t == 'wall') {
-    const sf = selOk();
-    if (h.g) fi.pos.y = h.b._y + h.b._h + (h.b._roofH || 0) * 0.35;
-    else if (!(sf && sf.b === h.b)) fi.pos.y = h.b._y + (h.b._ug || 0) + (h.b._h - (h.b._ug || 0)) / 2;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/020-linien.js (danach)
+  try {
+    lnScale();
+  } catch (e) {
+    logErr(e, 'placeHc');
   }
-  hc.position.copy(fi.pos);
-  hc.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), fi.n);
-  hc.scale.setScalar(((pc.position.distanceTo(fi.pos) * 2 * Math.tan(Math.PI / 8)) / mid.clientHeight) * 4);
 }
 const handle = new T.Mesh(
   new T.SphereGeometry(1, 16, 12),
@@ -1366,6 +1380,15 @@ function drawOv(cur) {
     $('hud').textContent = S.cut
       ? 'Trennlinie (immer lotrecht): Maus nach oben/unten erweitert sie über weitere Geschosse, zweiter Klick trennt · Esc bricht ab'
       : 'Trennen: Seitenfläche eines Geschosses anklicken – gestrichelte Linien zeigen die Trennposition';
+  // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js (danach)
+  try {
+    fgUpdate();
+  } catch (err) {
+    console.warn('fgUpdate', err);
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/020-linien.js (danach)
+  lnDraw();
 }
 function drawOv0(cur) {
   const A = ed() || [],
@@ -1510,36 +1533,68 @@ let lcT = 0;
 const setCol = (g, v) =>
   g && g.traverse((o) => o.material && o.material.color && !o.isLine && o.material.color.set(v));
 function lcol(k, v) {
-  S.lc[k] = v;
-  clearTimeout(lcT);
-  lcT = setTimeout(() => {
-    if (k === 'un') {
-      // Nutzungsfarben ('un') werden hier bewusst nicht angewendet
-    } else if (k === 'buildings') setCol(G.ex, v);
-    else if (k === 'terrain') {
-      if (S.skirt) S.skirt.material.color.set(shade(v, 0.82));
-      if (S.geo) recomp();
-      else if (S.terr) S.terr.material.color.set(v);
-    } else if (k === 'parcels') {
-      if (AL.length) parRefresh();
-      else setCol(G.parcels, v);
-    } else if (k === 'rnames') rnBuild();
-    else if (k === 'trees') {
-      setCol(G[k], v);
-      if (GEO.t2m) GEO.t2m.forEach((m) => m.color.set(shade(v, 0.66)));
-    } else if (k === 'bplan') {
-      bpLines();
-      if (S.geo) {
-        bpPaint();
-        recomp();
-      }
-    } else if (PK[k]) {
-      if (S.geo && GEO.acc) {
-        ctxPaint(GEO.acc);
-        recomp();
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js
+  const r = (() => {
+    // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+    if (k === 'stem') {
+      S.lc.stem = v;
+      clearTimeout(window._stT);
+      window._stT = setTimeout(() => stemApply(), 80);
+      return;
+    }
+    if (k === 'ugr' || k === 'ugk') {
+      S.lc[k] = v;
+      clearTimeout(window._ugT);
+      window._ugT = setTimeout(() => {
+        try {
+          recomp();
+          rr();
+        } catch (e) {
+          logErr(e, 'lcol>anonym');
+        }
+      }, 100);
+      return;
+    }
+    S.lc[k] = v;
+    clearTimeout(lcT);
+    lcT = setTimeout(() => {
+      if (k === 'un') {
+        // Nutzungsfarben ('un') werden hier bewusst nicht angewendet
+      } else if (k === 'buildings') setCol(G.ex, v);
+      else if (k === 'terrain') {
+        if (S.skirt) S.skirt.material.color.set(shade(v, 0.82));
+        if (S.geo) recomp();
+        else if (S.terr) S.terr.material.color.set(v);
+      } else if (k === 'parcels') {
+        if (AL.length) parRefresh();
+        else setCol(G.parcels, v);
+      } else if (k === 'rnames') rnBuild();
+      else if (k === 'trees') {
+        setCol(G[k], v);
+        if (GEO.t2m) GEO.t2m.forEach((m) => m.color.set(shade(v, 0.66)));
+      } else if (k === 'bplan') {
+        bpLines();
+        if (S.geo) {
+          bpPaint();
+          recomp();
+        }
+      } else if (PK[k]) {
+        if (S.geo && GEO.acc) {
+          ctxPaint(GEO.acc);
+          recomp();
+        } else setCol(G[k], v);
       } else setCol(G[k], v);
-    } else setCol(G[k], v);
-  }, 100);
+    }, 100);
+  })();
+  if (k === 'bkont') {
+    S.lc.bkont = v;
+    try {
+      bkApply(true);
+    } catch (e) {
+      logErr(e, 'lcol');
+    }
+  }
+  return r;
 }
 const ocHtml = () => (typeof datHtml === 'function' ? datHtml() : '');
 let layersHtml = () =>

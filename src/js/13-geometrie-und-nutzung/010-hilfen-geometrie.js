@@ -1960,43 +1960,92 @@ function cmHide() {
   cmEl.classList.remove('on');
 }
 function cmShow(e) {
+  // ── Erweiterung aus 27-skizze/050-skizzenmodus.js
   cmHide();
-  if (S.tool === 'f' || S.tool === 'm' || S.tool === 'L') return;
-  ray(e);
-  const hb = rc
-    .intersectObjects(
-      G.buildings.children.flatMap((x) => x.children),
-      true,
-    )
-    .find((h) => h.object.userData.b && !h.object.userData.b.ex);
-  if (!hb) return;
-  const b = hb.object.userData.b;
-  if (S.sel !== b) {
-    S.sel = b;
-    S.selF = null;
-    S.selP = null;
-    S.selA = null;
-    S.multi = [];
-    S.multiA = [];
-    S.par = null;
-    try {
-      ctxSelect(null);
-      treeSel(null);
-    } catch (e) {
-      logErr(e, 'cmShow');
+  if (_cmBase == null) _cmBase = cmEl.innerHTML;
+  cmEl.innerHTML = _cmBase;
+  _skm = null;
+  skMenuSync();
+  try {
+    if (SKS.e.length && !sksEntAt(e)) {
+      const h = sksHit(e);
+      if (h) {
+        SKS.sel = [{ k: h.k, i: h.i, f: h.f }];
+        sksRedraw();
+        const it = (k, t, d) => '<button onclick="skCm(\'' + k + '\')" title="' + d + '">' + t + '</button>';
+        cmEl.innerHTML =
+          h.k === 'f'
+            ? it('make', 'Gebäude erzeugen', 'Fläche nach oben ziehen: Geschosse wählen, Klick = Gebäude') +
+              it('ofs', 'Versatz', 'F – parallele Kopie der Außenkanten') +
+              '<hr>' +
+              it('del', 'Löschen', 'Entf – Fläche mit ihren Kanten löschen')
+            : it('split', 'Teilen', 'T – Kante an einem Punkt teilen') +
+              it('ofs', 'Versatz', 'F – Versatz') +
+              '<hr>' +
+              it('del', 'Löschen', 'Entf – Kante löschen');
+        cmEl.classList.add('on');
+        const w = cmEl.offsetWidth,
+          hh = cmEl.offsetHeight;
+        cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
+        cmEl.style.top = Math.min(e.clientY, innerHeight - hh - 8) + 'px';
+        return;
+      }
     }
-    S.tab = 'Planen';
-    H();
-    hpos();
-    drawOv();
-    nav();
-    rr();
+  } catch (x) {
+    console.warn('cmsk', x);
   }
-  cmEl.classList.add('on');
-  const w = cmEl.offsetWidth,
-    h = cmEl.offsetHeight;
-  cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
-  cmEl.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px';
+  // ── Erweiterung aus 27-skizze/040-skizzenmodus.js
+  // ---- Rechtsklick im Skizzenmodus
+  (() => {
+    cmHide();
+    if (S.tool === 'f' || S.tool === 'm' || S.tool === 'L') return;
+    ray(e);
+    const hb = rc
+      .intersectObjects(
+        G.buildings.children.flatMap((x) => x.children),
+        true,
+      )
+      .find((h) => h.object.userData.b && !h.object.userData.b.ex);
+    if (!hb) return;
+    const b = hb.object.userData.b;
+    if (S.sel !== b) {
+      S.sel = b;
+      S.selF = null;
+      S.selP = null;
+      S.selA = null;
+      S.multi = [];
+      S.multiA = [];
+      S.par = null;
+      try {
+        ctxSelect(null);
+        treeSel(null);
+      } catch (e) {
+        logErr(e, 'cmShow');
+      }
+      S.tab = 'Planen';
+      H();
+      hpos();
+      drawOv();
+      nav();
+      rr();
+    }
+    cmEl.classList.add('on');
+    const w = cmEl.offsetWidth,
+      h = cmEl.offsetHeight;
+    cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
+    cmEl.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px';
+  })();
+  try {
+    if (cmEl.classList.contains('on')) return;
+    if (!((S.tool === 'f' && S.dm === 'bld') || ((SK.used || SKS.e.length) && S.tool === 'v'))) return;
+    const w = cmEl.offsetWidth,
+      h = cmEl.offsetHeight;
+    cmEl.classList.add('on');
+    cmEl.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px';
+    cmEl.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px';
+  } catch (x) {
+    console.warn('cm', x);
+  }
 }
 addEventListener(
   'pointerdown',

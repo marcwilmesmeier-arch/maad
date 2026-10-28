@@ -225,56 +225,40 @@ async function ovLoad(k) {
   }
 }
 function ovSync() {
-  if (!S.geo) return;
-  const key = ovKey();
-  for (const k in OVL) {
-    const d = OVD[k];
-    if (d && d.key !== key && d.key !== 'demo') {
-      ovClear(k);
-      delete OVD[k];
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
+  const r = (() => {
+    if (!S.geo) return;
+    const key = ovKey();
+    for (const k in OVL) {
+      const d = OVD[k];
+      if (d && d.key !== key && d.key !== 'demo') {
+        ovClear(k);
+        delete OVD[k];
+      }
+      if (!OVD[k] && ovVis(k)) ovLoad(k);
     }
-    if (!OVD[k] && ovVis(k)) ovLoad(k);
+  })();
+  try {
+    if (S.geo && clgOn() && !OVD.clc) ovLoad('clc');
+  } catch (e) {
+    logErr(e, 'ovSync');
   }
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/120-tannen.js (danach)
+  try {
+    if (S.geo && wldOn() && !OVD.clc) ovLoad('clc');
+  } catch (e) {
+    logErr(e, 'ovSync');
+  }
+  // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
+  try {
+    if (S.geo && bclOn() && !OVD.clc) ovLoad('clc');
+  } catch (e) {
+    logErr(e, 'ovSync');
+  }
+  return r;
 }
-{
-  const _lv = lvis;
-  lvis = function (i, v) {
-    const r = _lv.apply(this, arguments);
-    try {
-      const k = LY[i][1];
-      if (v && OVL[k]) {
-        if (OVD[k] && OVD[k].st === 'err') delete OVD[k];
-        ovLoad(k);
-      }
-    } catch (e) {
-      logErr(e, 'lvis');
-    }
-    return r;
-  };
-}
-{
-  const _rc = recomp;
-  recomp = function () {
-    try {
-      ovSync();
-    } catch (e) {
-      logErr(e, 'recomp');
-    }
-    const r = _rc.apply(this, arguments);
-    try {
-      ovRepaint();
-      if (OVC.width === ovW() && OVC.width > 1 && GEO.comp) {
-        const x = GEO.comp.getContext('2d');
-        x.globalAlpha = 1;
-        x.drawImage(OVC, 0, 0, PW, PW);
-        if (GEO.tex) GEO.tex.needsUpdate = true;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 window.ovInfo = function (k) {
   const d = OVD[k],
     c = envCfg(k) || {},

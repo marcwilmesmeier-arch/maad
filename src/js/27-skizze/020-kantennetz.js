@@ -274,6 +274,54 @@ function sksFaceGeo(F) {
   return g;
 }
 function sksRedraw() {
+  // ── Erweiterung aus 27-skizze/070-skizze.js
+  _sksRedraw2.apply(this, arguments);
+  try {
+    const fs = sksFacesNow(),
+      ids = new Set();
+    SKS.sel.forEach((s) => {
+      if (s.k === 'e') ids.add(s.i);
+      else if (s.k === 'f' && fs[s.f]) fs[s.f].es.forEach((k) => ids.add(k));
+    });
+    if (SKS.hv) {
+      if (SKS.hv.k === 'e') ids.add(SKS.hv.i);
+      else if (SKS.hv.k === 'f' && fs[SKS.hv.f]) fs[SKS.hv.f].es.forEach((k) => ids.add(k));
+    }
+    const seen = new Set(),
+      pos = [];
+    ids.forEach((i) => {
+      const s = SKS.e[i];
+      if (!s) return;
+      [s.a, s.b].forEach((q) => {
+        const k = Math.round(q[0] * 500) + ',' + Math.round(q[1] * 500);
+        if (seen.has(k)) return;
+        seen.add(k);
+        pos.push(q[0], sksY(q) + 0.15, q[1]);
+      });
+    });
+    if (pos.length) {
+      SKSG.add(sknPts(pos, sknDM));
+    }
+    rr();
+  } catch (e) {
+    logErr(e, 'sksRedraw');
+  }
+}
+// sksRedraw() ohne die Erweiterungen darüber – wird von sksRedraw() gezielt aufgerufen
+function _sksRedraw2() {
+  // ── Erweiterung aus 27-skizze/070-skizze.js
+  _sksRedrawOld.apply(this, arguments);
+  try {
+    [SKN.hv && [SKN.hv, sknHM], SKN.sel && [SKN.sel, sknSM]].forEach((x) => {
+      if (x) SKSG.add(sknPts([x[0][0], sksY(x[0]) + 0.2, x[0][1]], x[1]));
+    });
+    rr();
+  } catch (e) {
+    logErr(e, 'sksRedraw');
+  }
+}
+// sksRedraw() ohne die Erweiterungen darüber – wird von sksRedraw() gezielt aufgerufen
+function _sksRedrawOld() {
   while (SKSG.children.length) {
     const o = SKSG.children.pop();
     o.geometry && o.geometry.dispose();
@@ -368,64 +416,7 @@ function sksHit(e) {
   if (bf >= 0) return { k: 'f', f: bf, p };
   return null;
 }
-// ---- Verlauf (Rückgängig) und Speichern
-{
-  const _h = hist;
-  hist = function () {
-    const L0 = S.hist.length;
-    SKS.h.length = Math.min(SKS.h.length, L0);
-    _h.apply(this, arguments);
-    if (L0 >= 50) SKS.h.shift();
-    SKS.h.push(JSON.stringify({ e: SKS.e, hide: SKS.hide }));
-    while (SKS.h.length > S.hist.length) SKS.h.shift();
-    while (SKS.h.length < S.hist.length) SKS.h.unshift(null);
-  };
-}
-{
-  const _u = undo;
-  undo = function () {
-    const n = S.hist.length;
-    SKS.h.length = Math.min(SKS.h.length, n);
-    const snap = SKS.h[n - 1];
-    _u.apply(this, arguments);
-    if (n > 0) {
-      if (snap != null) {
-        const q = JSON.parse(snap);
-        SKS.e = q.e || q;
-        SKS.hide = q.hide || [];
-        SKS.sel = [];
-        SKS.fc = null;
-        sksChanged();
-      }
-      SKS.h.length = Math.max(0, n - 1);
-    }
-  };
-}
-{
-  const _x = projExtra;
-  projExtra = function () {
-    const x = _x.apply(this, arguments);
-    try {
-      if (SKS.e.length) x.sk = { e: SKS.e, cv: SKS.cv, hide: SKS.hide };
-    } catch (e) {
-      logErr(e, 'projExtra');
-    }
-    return x;
-  };
-}
-{
-  const _a = projApplyPre;
-  projApplyPre = function (x) {
-    const r = _a.apply(this, arguments);
-    try {
-      SKS.e = x && x.sk && x.sk.e ? JSON.parse(JSON.stringify(x.sk.e)) : [];
-      SKS.cv = (x && x.sk && x.sk.cv) || 0;
-      SKS.hide = x && x.sk && x.sk.hide ? x.sk.hide.slice() : [];
-      SKS.sel = [];
-      sksChanged();
-    } catch (e) {
-      logErr(e, 'projApplyPre');
-    }
-    return r;
-  };
-}
+// hist(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// undo(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// projApplyPre(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js

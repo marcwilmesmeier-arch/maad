@@ -10,33 +10,63 @@ const lyMSnap = () => ({
   wv: S.dar === 'wm' && S.wmPalDone ? 2 : 0,
 });
 function lyMApply(st) {
-  if (!st || !st.ly) return;
-  const ch = Object.keys(st.lc || {}).filter((k) => S.lc[k] !== st.lc[k]);
-  Object.assign(S.lc, lcMig(st.lc || {}));
-  if (ch.length) lcApplyAll(ch);
-  st.ly.forEach(([k, v, o]) => {
-    if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
-    const i = LY.findIndex((l) => l[1] === k);
-    if (i < 0) return;
-    LY[i][2] = v;
-    LY[i][3] = o;
-    if (!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') {
-      if (G[k]) {
-        gVis(k, !!v);
-        op(k, o);
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+  const r = (() => {
+    if (!st || !st.ly) return;
+    const ch = Object.keys(st.lc || {}).filter((k) => S.lc[k] !== st.lc[k]);
+    Object.assign(S.lc, lcMig(st.lc || {}));
+    if (ch.length) lcApplyAll(ch);
+    st.ly.forEach(([k, v, o]) => {
+      if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
+      const i = LY.findIndex((l) => l[1] === k);
+      if (i < 0) return;
+      LY[i][2] = v;
+      LY[i][3] = o;
+      if (!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') {
+        if (G[k]) {
+          gVis(k, !!v);
+          op(k, o);
+        }
       }
+    });
+    S.showSN = !!st.sn;
+    S.showFN = !!st.fn;
+    if (st.pc != null && (st.pc !== false) !== (S.wmPc !== false)) wmPcSet(st.pc);
+    labVis();
+    if (S.geo) recomp();
+    try {
+      if ($('lyp').style.display === 'block') lyRender();
+    } catch (e) {
+      logErr(e, 'lyMApply');
     }
-  });
-  S.showSN = !!st.sn;
-  S.showFN = !!st.fn;
-  if (st.pc != null && (st.pc !== false) !== (S.wmPc !== false)) wmPcSet(st.pc);
-  labVis();
-  if (S.geo) recomp();
+  })();
   try {
-    if ($('lyp').style.display === 'block') lyRender();
+    lyAfterRun();
   } catch (e) {
     logErr(e, 'lyMApply');
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/060-darstellung.js (danach)
+  try {
+    if (S.dar === 'sw' && st && st.ly) {
+      LY.forEach((l) => {
+        if (l[1] !== 'buildings' && !st.ly.some((x) => x[0] === l[1]) && l[2]) {
+          l[2] = 0;
+          if (G[l[1]]) gVis(l[1], false);
+        }
+      });
+      labVis();
+      if (S.geo) recomp();
+    }
+  } catch (e) {
+    logErr(e, 'lyMApply');
+  }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js (danach)
+  try {
+    bkApply(true);
+  } catch (e) {
+    logErr(e, 'lyMApply');
+  }
+  return r;
 }
 function lyMSave() {
   S.lyM[S.dar] = lyMSnap();
@@ -45,47 +75,11 @@ function lyMSave() {
 function lyMLoad(o) {
   S.lyM = o && typeof o === 'object' ? JSON.parse(JSON.stringify(o)) : {};
   LYD.skip = 1;
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/130-weissmodell.js (danach)
+  S.wmPalDone = !!(S.lyM.wm && S.lyM.wm.wv === 2);
 }
-{
-  const _ds = drSet;
-  drSet = function (m) {
-    const was = S.dar,
-      ok = DAR.some((d) => d[0] === m),
-      nm = ok ? m : 'sch';
-    if (LYD.skip) {
-      LYD.skip = 0;
-      const r = _ds.apply(this, arguments);
-      S.lyM[S.dar] = lyMSnap();
-      return r;
-    }
-    if (nm === was) return _ds.apply(this, arguments);
-    S.lyM[was] = lyMSnap();
-    const r = _ds.apply(this, arguments);
-    try {
-      if (S.lyM[S.dar]) lyMApply(S.lyM[S.dar]);
-      else S.lyM[S.dar] = lyMSnap();
-    } catch (e) {
-      console.error(e);
-    }
-    try {
-      lyDUi();
-    } catch (e) {
-      logErr(e, 'drSet');
-    }
-    return r;
-  };
-}
-{
-  const _v = vwApplyDs;
-  vwApplyDs = function () {
-    LYD.skip = 1;
-    try {
-      return _v.apply(this, arguments);
-    } finally {
-      LYD.skip = 0;
-    }
-  };
-}
+// drSet(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
+// vwApplyDs(): Erweiterung zusammengeführt, siehe 15-grundriss/080-ansichten-speichern-auch-alle-anzeige.js
 /* Button „Layer“ im Darstellungs-Panel (statt in der unteren Leiste) */
 function lyDOpen(open) {
   const p = $('lyp'),
@@ -118,18 +112,7 @@ function lyDUi() {
   const bg = $('bg');
   if (bg) bg.style.display = 'none';
 }
-{
-  const o = tgLight;
-  tgLight = function () {
-    const r = o.apply(this, arguments);
-    if ($('lc').style.display === 'none') lyDOpen(false);
-    else {
-      const b = $('lyBtn');
-      if (b) b.classList.remove('on');
-    }
-    return r;
-  };
-}
+// tgLight(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 
 /* ---- Panel: Gruppen, Klick-Symbole, Grafikeffekte; Nutzungen entfallen ---- */
 function usesHtml() {
@@ -281,17 +264,7 @@ function lyDGroup() {
     }
   });
 }
-{
-  const l0 = lyRender;
-  lyRender = function () {
-    l0.apply(this, arguments);
-    try {
-      lyDGroup();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-}
+// lyRender(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 {
   const lp = $('lyp');
   if (lp)
@@ -338,15 +311,34 @@ function lyDGroup() {
       LYD.col[t] = g.classList.contains('col');
     });
 }
-fxUi = function () {
+// Grafikeffekt-Optionen stehen im Layer-Panel (früher eigener Block im Panel „Darstellung“)
+function fxUi() {
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/120-tannen.js
+  /* Grafikeffekt „Bäume · Nadelschalen“ im Panel „Darstellung“ (neben Laubschalen) */
+  const r = (() => {
+    try {
+      const e = document.getElementById('fxo');
+      if (e) e.remove();
+      if ($('lyp').style.display === 'block') lyRender();
+    } catch (e) {
+      logErr(e, 'fxUi');
+    }
+  })();
   try {
     const e = document.getElementById('fxo');
-    if (e) e.remove();
-    if ($('lyp').style.display === 'block') lyRender();
-  } catch (e) {
-    logErr(e, 'fxUi');
+    if (!e || S.dar === 'wm' || e.querySelector('[data-nd]')) return r;
+    const o = S.fx[S.dar] || {},
+      ix = e.innerHTML.indexOf('<div class="dmu">');
+    if (ix < 0) return r;
+    e.innerHTML =
+      e.innerHTML.slice(0, ix) +
+      `<label data-nd="1">Bäume: Nadelschalen <input type="checkbox" ${o.nadel ? 'checked' : ''} onchange="fxSet('nadel',this.checked)"></label>` +
+      e.innerHTML.slice(ix);
+  } catch (e2) {
+    console.error(e2);
   }
-};
+  return r;
+}
 {
   const c = document.createElement('style');
   c.textContent = `#lyp .lyg{margin:0 0 6px}#lyp{position:fixed!important;left:0!important;right:0!important;top:0!important;bottom:0!important;margin:auto!important;width:350px!important;height:fit-content!important;max-height:calc(100vh - 110px)!important;z-index:90!important;box-shadow:0 18px 60px #0004!important}#lyp .lyx{position:sticky;top:-14px;float:right;z-index:2;width:28px;height:28px;border:1px solid var(--ln);border-radius:9px;background:var(--pn,#fff);cursor:pointer;font-size:14px;line-height:1;margin:-4px -4px 0 0}#lyp .lyg.col>:not(h4){display:none}#lyp .lyg>h4{cursor:pointer;display:flex;justify-content:space-between;margin:12px 0 6px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--mu,#777)}

@@ -305,15 +305,4 @@ function lpGet(e, k) {
   }
   return e._img;
 }
-{
-  const _lo = layOpen;
-  layOpen = function () {
-    const r = _lo.apply(this, arguments);
-    try {
-      lpOpts();
-    } catch (e) {
-      logErr(e, 'layOpen');
-    }
-    return r;
-  };
-}
+// layOpen(): Erweiterung zusammengeführt, siehe 08-layout-pdf/020-rendern-einer-gespeicherten-ansicht-in.js

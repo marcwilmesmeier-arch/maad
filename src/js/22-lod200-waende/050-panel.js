@@ -1,14 +1,6 @@
 // ---- Panel (Reiter Wände und Mengen) und Werkzeugleiste
 GRTABS.push(['w', 'Wände'], ['m', 'Mengen']);
-{
-  const _p = grPanel;
-  grPanel = function (b) {
-    const t = GRS.tab;
-    if (t === 'w') return l2PanelW(b);
-    if (t === 'm') return l2PanelM(b);
-    return _p.apply(this, arguments);
-  };
-}
+// grPanel(): Erweiterung zusammengeführt, siehe 15-grundriss/100-kopf.js
 function l2Opts(grp, cur) {
   return L2T.filter((t) => t.grp === grp)
     .map((t) => `<option value="${t.id}" ${t.id === cur ? 'selected' : ''}>${esc(t.dl)}</option>`)
@@ -136,70 +128,7 @@ function l2PanelM(b) {
   h += `<div class="mu" style="margin:8px 0">Brutto ohne Öffnungen; Zuordnung KG und Leistungsbereich (LB) als Entwurf, vor Verwendung prüfen. IFC-Abbildung je Typ: IfcWall / IfcSlab mit PredefinedType.</div>`;
   return h;
 }
-{
-  const _c = grChrome;
-  grChrome = function (b) {
-    const r = _c.apply(this, arguments);
-    try {
-      const d = GRS.doc;
-      if (d) {
-        const on = l2on(),
-          ln = gD('grT_line'),
-          rc = gD('grT_rect');
-        if (ln) ln.textContent = on ? 'Wand' : 'Linie';
-        if (rc) rc.textContent = on ? 'Raum' : 'Rechteck';
-        if (rc && !gD('grT_trim')) {
-          const tbn = d.createElement('button');
-          tbn.id = 'grT_trim';
-          tbn.textContent = 'Stutzen';
-          tbn.title = 'Stutzen / Dehnen wie in AutoCAD (Wand anklicken)';
-          tbn.onclick = () => GR.tool('trim');
-          rc.parentNode.insertBefore(tbn, rc.nextSibling);
-        }
-        {
-          const tb2 = gD('grT_trim');
-          if (tb2) tb2.style.display = on ? '' : 'none';
-        }
-        let sw = d.getElementById('grL2');
-        const tb = ln && ln.parentNode;
-        if (!sw && tb) {
-          l2Doc();
-          sw = d.createElement('button');
-          sw.id = 'grL2';
-          sw.className = 'l2sw';
-          sw.onclick = () => {
-            lodSet(S.lod === 200 ? 100 : 200);
-          };
-          const gw = tb.querySelector('.grow');
-          gw ? tb.insertBefore(sw, gw) : tb.appendChild(sw);
-        }
-        let s3 = d.getElementById('grL3');
-        if (!s3 && tb) {
-          s3 = d.createElement('button');
-          s3.id = 'grL3';
-          s3.className = 'l2sw';
-          s3.onclick = () => {
-            lodSet(S.lod === 300 ? 100 : 300);
-          };
-          sw.parentNode.insertBefore(s3, sw.nextSibling);
-        }
-        if (s3) {
-          s3.className = 'l2sw' + (S.lod === 300 ? ' on' : '');
-          s3.textContent = S.lod === 300 ? 'LOD 300 ●' : 'LOD 300';
-          s3.title = 'Wandaufbau mit Schichten und Eckanschlüssen im Grundriss';
-        }
-        if (sw) {
-          sw.className = 'l2sw' + (S.lod === 200 ? ' on' : '');
-          sw.textContent = S.lod === 200 ? 'LOD 200 ●' : 'LOD 200';
-          sw.title = 'Wände und Decken ein-/ausblenden (LOD-Leiste im Hauptfenster)';
-        }
-      }
-    } catch (e) {
-      console.warn(e);
-    }
-    return r;
-  };
-}
+// grChrome(): Erweiterung zusammengeführt, siehe 15-grundriss/100-kopf.js
 GR.l2 = {
   cnm: (m) => {
     grEdit((b) => {
@@ -421,58 +350,7 @@ async function l2Demo() {
 S.l2.dn = 0;
 GR.l2.demo = l2Demo;
 
-// ---- Fangpunkte in LOD 200: an beiden Außenkanten der Wände (Ecken und Kanten statt Mittellinien)
-{
-  const _e = grEdges;
-  grEdges = function (lv) {
-    const on = l2on();
-    if (lv._ed && lv._l2s !== on) {
-      lv._ed = null;
-      lv._vt = null;
-    }
-    const had = !!lv._ed,
-      r = _e.call(this, lv);
-    if (!had) {
-      lv._l2s = on;
-      if (on && !lv.dg) {
-        try {
-          const b = grB();
-          if (b && b._y != null) {
-            const w = l2Els(b).els.filter((e) => e.li === lv.i && e.quads);
-            if (w.length) {
-              const ed = [],
-                vt = [],
-                seen = new Set();
-              w.forEach((e) =>
-                e.quads.forEach((q) =>
-                  q.forEach((p, i) => {
-                    const n = q[(i + 1) % q.length];
-                    ed.push([p[0], p[1], n[0], n[1]]);
-                    const k = l2k(p);
-                    if (!seen.has(k)) {
-                      seen.add(k);
-                      vt.push([p[0], p[1]]);
-                    }
-                  }),
-                ),
-              );
-              const vs2 = r.length ? lv._vt : [];
-              const sv = new Set(lv._vt.map(l2k));
-              vt.forEach((v) => {
-                if (!sv.has(l2k(v))) lv._vt.push(v);
-              });
-              lv._ed = r.concat(ed);
-              return lv._ed;
-            }
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      }
-    }
-    return r;
-  };
-}
+// grEdges(): Erweiterung zusammengeführt, siehe 15-grundriss/110-ausrichtung.js
 GR.l2.wc = (v) => {
   S.l2.wc = v;
   GRS.dirty = 1;

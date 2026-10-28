@@ -680,21 +680,5 @@ addEventListener(
   },
   true,
 );
-{
-  const _a = skAct;
-  skAct = function () {
-    return !IMP.mode && _a.apply(this, arguments);
-  };
-}
-{
-  const _t = tool;
-  tool = function (t) {
-    if (IMP.mode && t !== 'v') {
-      IMP.mode = null;
-      IMP.m = [];
-      impMk();
-      IMP.dirty = true;
-    }
-    return _t.apply(this, arguments);
-  };
-}
+// skAct(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js

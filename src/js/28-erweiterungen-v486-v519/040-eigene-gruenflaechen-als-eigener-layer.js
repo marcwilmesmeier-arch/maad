@@ -46,47 +46,8 @@ function uAreas(x, K, X) {
   }
   x.globalAlpha = 1;
 }
-{
-  const _l = lcol;
-  lcol = function (k, v) {
-    if (k === 'stem') {
-      S.lc.stem = v;
-      clearTimeout(window._stT);
-      window._stT = setTimeout(() => stemApply(), 80);
-      return;
-    }
-    if (k === 'ugr' || k === 'ugk') {
-      S.lc[k] = v;
-      clearTimeout(window._ugT);
-      window._ugT = setTimeout(() => {
-        try {
-          recomp();
-          rr();
-        } catch (e) {
-          logErr(e, 'lcol>anonym');
-        }
-      }, 100);
-      return;
-    }
-    return _l.apply(this, arguments);
-  };
-}
-{
-  const _v = lvis;
-  lvis = function (i, v) {
-    const r = _v.apply(this, arguments);
-    try {
-      const k = LY[i] && LY[i][1];
-      if (k === 'ugr' || k === 'ugk') {
-        recomp();
-        rr();
-      }
-    } catch (e) {
-      logErr(e, 'lvis');
-    }
-    return r;
-  };
-}
+// lcol(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 
 /* v512: Layer-Nachlauf – jede Stelle, die gespeicherte Layer-Zustände anwendet (Projekt, Ansicht, Darstellung, Admin-Standard), ruft danach alle Eintraege in LYAFTER auf.
    Regel für neue Layer: LY.push([...]) + S.lc.<key> als Standardfarbe + (falls nicht in G[key]) Anzeige-Funktion in LYAFTER eintragen. Gespeichert wird dann automatisch (vwDs, lyMSnap, projExtra lesen LY und S.lc generisch). */
@@ -100,22 +61,10 @@ function lyAfterRun() {
     }
   }
 }
-{
-  const after = (f) =>
-    function () {
-      const r = f.apply(this, arguments);
-      try {
-        lyAfterRun();
-      } catch (e) {
-        logErr(e, 'after>anonym');
-      }
-      return r;
-    };
-  vwApplyDs = after(vwApplyDs);
-  lyMApply = after(lyMApply);
-  projApplySet = after(projApplySet);
-  admApply = after(admApply);
-}
+// vwApplyDs(): Erweiterung zusammengeführt, siehe 15-grundriss/080-ansichten-speichern-auch-alle-anzeige.js
+// lyMApply(): Erweiterung zusammengeführt, siehe 18-erweiterungen-v280-v325/030-layer.js
+// projApplySet(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// admApply(): Erweiterung zusammengeführt, siehe 18-erweiterungen-v280-v325/110-administrationsansicht.js
 LYAFTER.push(() => {
   recomp();
   rr();
@@ -173,36 +122,7 @@ LYAFTER.push(() => stemApply());
     return h;
   };
 }
-/* v501: gespeicherte Darstellungen stellen auch Bahngleise, eigene Gruenflaechen (Flaeche/Kontur) samt Farben wieder her */
-{
-  const _a = vwApplyDs;
-  vwApplyDs = function (d) {
-    const r = _a.apply(this, arguments);
-    try {
-      if (d && d.ly) {
-        ['rail', 'ugr', 'ugk'].forEach((k) => {
-          const s = d.ly.find((x) => x[0] === k),
-            L = LY.find((l) => l[1] === k);
-          if (s && L) {
-            L[2] = s[1];
-            L[3] = s[2];
-          }
-        });
-      }
-      if (d && d.lc) {
-        ['ugr', 'ugk', 'rail', 'trees'].forEach((k) => {
-          if (d.lc[k]) S.lc[k] = d.lc[k];
-        });
-      }
-      recomp();
-      rr();
-      if ($('lyp') && $('lyp').style.display === 'block') lyRender();
-    } catch (e) {
-      logErr(e, 'vwApplyDs');
-    }
-    return r;
-  };
-}
+// vwApplyDs(): Erweiterung zusammengeführt, siehe 15-grundriss/080-ansichten-speichern-auch-alle-anzeige.js
 
 /* v502: Baeume (Kontextdaten) mittig auf Bahngleisen sind meist Zuege -> beim Laden entfernen */
 function railTrees() {
@@ -229,24 +149,7 @@ function railTrees() {
     return false;
   });
 }
-{
-  const _p = treePrune;
-  treePrune = function () {
-    let n = _p.apply(this, arguments);
-    try {
-      const rm = railTrees();
-      if (rm.length) {
-        GEO.tdel = (GEO.tdel || []).concat(rm);
-        treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
-        n += rm.length;
-        GEO.railDel = rm.length;
-      }
-    } catch (e) {
-      console.warn('railTrees', e);
-    }
-    return n;
-  };
-}
+// treePrune(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 
 /* v481: nativen Browser-Kontextmenue global unterdruecken (ausser in Eingabefeldern) */
 document.addEventListener(
@@ -260,20 +163,12 @@ document.addEventListener(
 );
 
 /* v482: keine Hover-Info (Flurstueck/Gebaeude) innerhalb des Grundstuecks */
-{
-  const _pp = pickPar,
-    _hx = hvExtra;
-  const inSite = (g) => {
-    try {
-      return P.some((q) => q.site && q.poly && q.poly.length > 2 && inP(g, q.poly));
-    } catch (_) {
-      return false;
-    }
-  };
-  pickPar = function (g) {
-    return inSite(g) ? -1 : _pp.apply(this, arguments);
-  };
-  hvExtra = function (g) {
-    return inSite(g) ? '' : _hx.apply(this, arguments);
-  };
+function inSite(g) {
+  try {
+    return P.some((q) => q.site && q.poly && q.poly.length > 2 && inP(g, q.poly));
+  } catch (_) {
+    return false;
+  }
 }
+// pickPar(): Erweiterung zusammengeführt, siehe 02-geodaten/080-alkis.js
+// hvExtra(): Erweiterung zusammengeführt, siehe 24-erweiterungen-v344-v436/100-eigenschaften.js

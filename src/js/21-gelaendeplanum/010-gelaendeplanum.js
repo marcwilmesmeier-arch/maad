@@ -315,64 +315,59 @@ function plmHatch(a) {
   return { segs, toe };
 }
 function plmPaint() {
-  const c = PL.plm.getContext('2d');
-  c.clearRect(0, 0, PW, PW);
-  if (!GEO.size) return;
-  const K = PW / GEO.size,
-    X = (v) => (v + GEO.size / 2) * K,
-    lw = Math.max(1.1, 0.13 * K);
-  for (const a of PLM.a) {
-    if (a.on === false) continue;
-    const sel = a.id === PLM.sel;
-    c.beginPath();
-    a.poly.forEach(([x, z], i) => (i ? c.lineTo(X(x), X(z)) : c.moveTo(X(x), X(z))));
-    c.closePath();
-    c.fillStyle = 'rgba(236,232,220,.6)';
-    c.fill();
-    if (PLM.hatch) {
-      const H = plmHatch(a);
-      c.lineCap = 'butt';
-      c.lineWidth = lw;
-      c.strokeStyle = PLM.cf;
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/070-gelaendeplanum.js
+  const r = (() => {
+    const c = PL.plm.getContext('2d');
+    c.clearRect(0, 0, PW, PW);
+    if (!GEO.size) return;
+    const K = PW / GEO.size,
+      X = (v) => (v + GEO.size / 2) * K,
+      lw = Math.max(1.1, 0.13 * K);
+    for (const a of PLM.a) {
+      if (a.on === false) continue;
+      const sel = a.id === PLM.sel;
       c.beginPath();
-      for (const g of H.segs) {
-        c.moveTo(X(g[0]), X(g[1]));
-        c.lineTo(X(g[2]), X(g[3]));
-      }
-      c.stroke();
-      c.strokeStyle = PLM.cf;
-      c.lineWidth = lw * 0.9;
-      c.beginPath();
-      let pen = false;
-      for (const q of H.toe) {
-        if (!q) {
-          pen = false;
-          continue;
+      a.poly.forEach(([x, z], i) => (i ? c.lineTo(X(x), X(z)) : c.moveTo(X(x), X(z))));
+      c.closePath();
+      c.fillStyle = 'rgba(236,232,220,.6)';
+      c.fill();
+      if (PLM.hatch) {
+        const H = plmHatch(a);
+        c.lineCap = 'butt';
+        c.lineWidth = lw;
+        c.strokeStyle = PLM.cf;
+        c.beginPath();
+        for (const g of H.segs) {
+          c.moveTo(X(g[0]), X(g[1]));
+          c.lineTo(X(g[2]), X(g[3]));
         }
-        pen ? c.lineTo(X(q[0]), X(q[1])) : c.moveTo(X(q[0]), X(q[1]));
-        pen = true;
+        c.stroke();
+        c.strokeStyle = PLM.cf;
+        c.lineWidth = lw * 0.9;
+        c.beginPath();
+        let pen = false;
+        for (const q of H.toe) {
+          if (!q) {
+            pen = false;
+            continue;
+          }
+          pen ? c.lineTo(X(q[0]), X(q[1])) : c.moveTo(X(q[0]), X(q[1]));
+          pen = true;
+        }
+        c.stroke();
       }
-      c.stroke();
     }
-  }
-  try {
-    recomp();
-  } catch (e) {
-    console.error(e);
-  }
-}
-{
-  const _rc = recomp;
-  recomp = function () {
-    const r = _rc.apply(this, arguments);
     try {
-      if (PLM.a.some((a) => a.on !== false)) {
-        GEO.comp.getContext('2d').drawImage(PL.plm, 0, 0);
-        if (GEO.tex) GEO.tex.needsUpdate = true;
-      }
+      recomp();
     } catch (e) {
-      logErr(e, 'recomp');
+      console.error(e);
     }
-    return r;
-  };
+  })();
+  try {
+    plvBuild();
+  } catch (e) {
+    logErr(e, 'plmPaint');
+  }
+  return r;
 }
+// recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js

@@ -448,20 +448,4 @@ async function atDgm(lon, lat, size, kind, lab) {
     return fail(String(e.message || e).slice(0, 160));
   }
 }
-{
-  const _g2 = dgmLoad;
-  dgmLoad = async function (lon, lat, size, cov, lab) {
-    const kind = /dom/i.test(cov || '') ? 'DSM' : 'DTM';
-    if (atIn(lon, lat)) {
-      let st = null;
-      try {
-        st = await bundeslandC(lon, lat);
-      } catch (e) {
-        logErr(e, 'dgmLoad');
-      }
-      if (!(st && st.key) && !((kind === 'DSM' ? GEO.wcsDom : GEO.wcsDgm) || '').trim())
-        return atDgm(lon, lat, size, kind, lab || (kind === 'DSM' ? 'DOM' : 'DGM'));
-    }
-    return _g2.apply(this, arguments);
-  };
-}
+// dgmLoad(): Erweiterung zusammengeführt, siehe 02-geodaten/060-hamburg.js

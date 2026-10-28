@@ -15,7 +15,7 @@ const GR = {
       grTick(true);
     }
   },
-  tool: grTool,
+  tool: (t) => grTool(t), // immer die vollständige Fassung (inkl. Stutzen/Dehnen aus 22-lod200-waende)
   step: grStep,
   fit: grFit,
   lv: (k) => {

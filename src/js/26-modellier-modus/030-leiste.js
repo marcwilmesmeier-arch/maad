@@ -1,5 +1,15 @@
 // ---- Leiste
 function skTool(t) {
+  // ── Erweiterung aus 27-skizze/040-skizzenmodus.js
+  sofReset();
+  SOF.re = null;
+  // ── Erweiterung aus 26-modellier-modus/130-versatz.js
+  ofReset();
+  OFS.re = null;
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  SK.cp = false;
+  // ── Erweiterung aus 26-modellier-modus/100-verschieben-kopieren-von-gezeichneten-flaechen.js
+  szReset();
   SK.tool = t;
   if (typeof SKLN !== 'undefined') SKLN.visible = false;
   SK.lh = null;
@@ -7,6 +17,19 @@ function skTool(t) {
   skBar();
   try {
     $('hud').textContent = '' + (SKT.find((x) => x[0] === t) || ['', '', ''])[1];
+  } catch (e) {
+    logErr(e, 'skTool');
+  }
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js (danach)
+  try {
+    skIfOff();
+  } catch (e) {
+    logErr(e, 'skTool');
+  }
+
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js (danach)
+  try {
+    skBaSync();
   } catch (e) {
     logErr(e, 'skTool');
   }
@@ -254,46 +277,115 @@ function skOpRaw(op, e) {
   return (p[0] - op.p0[0]) * op.n[0] + (p[1] - op.p0[1]) * op.n[1];
 }
 function skOpMouse(e) {
-  const op = SK.op,
-    raw = skOpRaw(op, e);
-  if (raw == null) return;
-  let d,
-    sn = 0;
-  if (op.top) d = Math.round(raw * 20) / 20;
-  else {
-    const r =
-      e.altKey && 0
-        ? [Math.round(raw * 20) / 20, 0]
-        : pullH(raw, op.cand, Math.min(0.6, Math.max(0.12, 9 * mpp())));
-    d = r[0];
-    sn = r[1];
-  }
-  op.sn = sn;
-  if (skOpApply(op, d)) {
-    op.last = d;
-  }
-  if (op.top && op.storeys) {
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
+  // Ziehen & Schieben: Fang auf parallele Wand/Ausgangsposition
+  (() => {
+    const op = SK.op,
+      raw = skOpRaw(op, e);
+    if (raw == null) return;
+    let d,
+      sn = 0;
+    if (op.top) d = Math.round(raw * 20) / 20;
+    else {
+      const r =
+        e.altKey && 0
+          ? [Math.round(raw * 20) / 20, 0]
+          : pullH(raw, op.cand, Math.min(0.6, Math.max(0.12, 9 * mpp())));
+      d = r[0];
+      sn = r[1];
+    }
+    op.sn = sn;
+    if (skOpApply(op, d)) {
+      op.last = d;
+    }
+    if (op.top && op.storeys) {
+      $('hud').textContent =
+        (op.n >= 0 ? '+' : '') +
+        op.n +
+        ' Geschoss' +
+        (Math.abs(op.n) === 1 ? '' : 'e') +
+        ' (' +
+        (op.n >= 0 ? '+' : '') +
+        f1(op.n * op.hT, 2).replace('.', ',') +
+        ' m) · oberstes Geschoss wird kopiert · Alt = stufenlose Höhe · Zahl + Enter = Meter, Zahl + g = Geschosse · Esc';
+      return;
+    }
     $('hud').textContent =
-      (op.n >= 0 ? '+' : '') +
-      op.n +
-      ' Geschoss' +
-      (Math.abs(op.n) === 1 ? '' : 'e') +
-      ' (' +
-      (op.n >= 0 ? '+' : '') +
-      f1(op.n * op.hT, 2).replace('.', ',') +
-      ' m) · oberstes Geschoss wird kopiert · Alt = stufenlose Höhe · Zahl + Enter = Meter, Zahl + g = Geschosse · Esc';
-    return;
+      'Ziehen & Schieben ' +
+      (op.d >= 0 ? '+' : '') +
+      f1(op.d, 2).replace('.', ',') +
+      ' m' +
+      (sn ? (sn === 2 ? ' · Fang: Ausgangsposition' : ' · Fang: parallele Wand/Grenze') : '') +
+      (op.top ? ' · Geschosshöhe' : op.tg.length > 1 ? ' · ' + op.tg.length + ' Geschossflächen' : '') +
+      ' · Zahl + Enter = exakt · Esc = abbrechen';
+  })();
+  try {
+    const op = SK.op;
+    if (!op) {
+      return;
+    }
+    if (op.top || !op.sn) {
+      skIf([]);
+      skTip('', null);
+      return;
+    }
+    const p = [];
+    op.tg.forEach((g) => {
+      if (g.i == null || g.top) return;
+      const l = op.b.levels[g.j],
+        f = lf(op.b, l),
+        a = f[g.i],
+        c = f[(g.i + 1) % f.length],
+        z0 = skZ(op.b, g.j),
+        z1 = z0 + l.h;
+      p.push(a[0], z0, a[1], c[0], z0, c[1], a[0], z1, a[1], c[0], z1, c[1]);
+    });
+    skIf([{ c: 0xd63ad6, p }]);
+    skTip(op.sn === 2 ? 'Ausgangsposition' : 'Parallel zu Wand/Grenze', e);
+  } catch (e) {
+    logErr(e, 'skOpMouse');
   }
-  $('hud').textContent =
-    'Ziehen & Schieben ' +
-    (op.d >= 0 ? '+' : '') +
-    f1(op.d, 2).replace('.', ',') +
-    ' m' +
-    (sn ? (sn === 2 ? ' · Fang: Ausgangsposition' : ' · Fang: parallele Wand/Grenze') : '') +
-    (op.top ? ' · Geschosshöhe' : op.tg.length > 1 ? ' · ' + op.tg.length + ' Geschossflächen' : '') +
-    ' · Zahl + Enter = exakt · Esc = abbrechen';
 }
-function skOpEnd(commit) {
+function skOpEnd(ok) {
+  // ── Erweiterung aus 26-modellier-modus/120-modellier.js
+  const op = SK.op;
+  const r = skOpEndStufe1.apply(this, arguments);
+  try {
+    if (ok && op && op.b && !op.top && !op.kind && znCleanFp(op.b)) {
+      op.b._gr = null;
+      mesh(op.b);
+      H();
+      hpos();
+      rr();
+    }
+  } catch (e) {
+    console.warn('Grundriss bereinigen', e);
+  }
+  // ── Erweiterung aus 27-skizze/080-auswahl.js (danach)
+  if (SKX.back && !SK.op) {
+    SKX.back = 0;
+    SK.tool = 's';
+    try {
+      skBar();
+    } catch (e) {
+      logErr(e, 'skOpEnd');
+    }
+  }
+  return r;
+}
+// skOpEnd() ohne die Erweiterungen darüber – wird von skOpEnd() gezielt aufgerufen
+function skOpEndStufe1(c) {
+  // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
+  // Aufraeumen
+  skOpEndBasis.apply(this, arguments);
+  try {
+    skIfOff();
+  } catch (e) {
+    logErr(e, 'skOpEnd');
+  }
+}
+// skOpEnd() ohne die Erweiterungen darüber – wird von skOpEnd() gezielt aufgerufen
+function skOpEndBasis(commit) {
   const op = SK.op;
   if (!op) return;
   if (!commit) {

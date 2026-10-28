@@ -145,24 +145,7 @@ function ktCard() {
       '<div style="color:var(--mu);font-size:11px;margin-top:6px">Punkt anklicken: Länge der Linie eingeben. Kante anklicken = Länge eingeben, Kante ziehen = Wand parallel verschieben, Doppelklick = Punkt einfügen.</div>';
   return h + '</div>';
 }
-{
-  const _rr = rr;
-  rr = function () {
-    const r = _rr.apply(this, arguments);
-    try {
-      const pc = $('pc');
-      if (pc && S.tab === 'Planen' && ktB() && !S.closed && !(S.tool === 'f' && S.draft.length)) {
-        const old = $('ktCard');
-        if (old) old.remove();
-        const hs = [...pc.querySelectorAll('h4')].find((x) => /Auswertung/.test(x.textContent));
-        if (hs) hs.insertAdjacentHTML('beforebegin', ktCard());
-      }
-    } catch (e) {
-      console.warn('ktCard', e);
-    }
-    return r;
-  };
-}
+// rr(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 // Punkt wählen: Panel aktualisieren
 cv.addEventListener('pointerdown', () => {
   if (S.tool === 'ed') {

@@ -77,12 +77,7 @@ function l2cHtmlC(c) {
 <div class="s sc"><h5>Gilt für</h5>${wall ? `<label><input type="radio" name="l2sc" ${sc === 'one' ? 'checked' : ''} onchange="L2CF.csc('one')"> Nur ${e.gid ? 'diese Wand' : 'dieses Wandstück'}</label><label><input type="radio" name="l2sc" ${sc === 'kind' ? 'checked' : ''} onchange="L2CF.csc('kind')"> Alle ${L2K[k].n}-Teile (${nK})</label>` : `<div class="ft">${k === 'RD' ? 'Das Dach dieses Gebäudes.' : 'Alle ' + L2K[k].n + 'n (gebäudeweit einheitlich).'}</div>`}</div>
 <div class="s"><div class="ft">Aufbau, Schichten, Eigenschaften, Fassade und Kostengruppen je Schicht werden in LOD 300 festgelegt.</div><div class="ft"><button onclick="lodSet(300)">LOD 300 öffnen</button><button onclick="undo()" style="margin-left:auto">↶ Rückgängig</button></div></div>`;
 }
-{
-  const _h = l2cHtml;
-  l2cHtml = function (c) {
-    return l23() ? _h(c) : l2cHtmlC(c);
-  };
-}
+// l2cHtml(): Erweiterung zusammengeführt, siehe 23-bauteilkonfigurator/020-projekt.js
 L2CF.cm = (v) => {
   const c = l2cEl();
   if (!c) return;
@@ -144,24 +139,7 @@ function l2View(b, r, lv) {
     return '';
   }
 }
-{
-  const _g = l2Geo;
-  l2Geo = function (b) {
-    let r = _g.apply(this, arguments);
-    if (!l23() || !r || !r.probe) return r;
-    const m = {};
-    r.probe.forEach((p) => {
-      if (!p.vk) return;
-      m[p.vk] = m[p.vk] == null ? p.t : Math.min(m[p.vk], p.t);
-    });
-    if (JSON.stringify(m) !== JSON.stringify(b._l2ref || {})) {
-      b._l2ref = m;
-      b._l2 = null;
-      r = _g.apply(this, arguments);
-    }
-    return r;
-  };
-}
+// l2Geo(): Erweiterung zusammengeführt, siehe 22-lod200-waende/020-ableitung-der-bauteile-aus-flaechen.js
 
 // ---- v351: Giebel und Drempel wie Geschosswände (Fassade, Einzeltyp, Flucht)
 function l2Gc(g) {
@@ -271,7 +249,6 @@ const L2HS = [
     ['panel', 'Platten / Kassetten'],
     ['grid', 'Raster (Pfosten-Riegel)'],
   ];
-const l2mBase = l2cCol;
 function l2mDef(n) {
   const c = l2mBase(n);
   return {
@@ -337,51 +314,10 @@ function l2mSw(n) {
     lk = l2mLink(n);
   return `<input type="color" value="${g.c}" class="l2sw" title="${lk ? 'Farbe – gleiche Quelle wie im Fassadendesigner (' + esc(lk.n) + ')' : 'Farbe im 3D-Modell'}" onclick="event.stopPropagation()" onchange="L2MF.set(${JSON.stringify(n).replace(/"/g, '&quot;')},'c',this.value)" style="width:16px;height:16px;padding:0;border:1px solid rgba(0,0,0,.25);border-radius:3px;vertical-align:-3px;margin-right:4px;background:none">`;
 }
-l2cCol = function (n) {
-  const ft = l2mLink(n);
-  if (ft) return ft.c;
-  const o = S.mat && S.mat.o && S.mat.o[n];
-  return o && o.c ? o.c : l2mBase(n);
-};
-// ---- Persistenz
-{
-  const _p = projExtra;
-  projExtra = function () {
-    const x = _p.apply(this, arguments);
-    try {
-      x.mat = JSON.parse(JSON.stringify(S.mat));
-    } catch (e) {
-      logErr(e, 'projExtra');
-    }
-    return x;
-  };
-}
-{
-  const _a = projApplySet;
-  projApplySet = function (x) {
-    try {
-      if (x && x.mat) {
-        S.mat = { o: x.mat.o || {}, nf: x.mat.nf || [] };
-        l2mReg();
-      }
-    } catch (e) {
-      logErr(e, 'projApplySet');
-    }
-    return _a.apply(this, arguments);
-  };
-}
-{
-  const _n = newProjectReset;
-  newProjectReset = function () {
-    try {
-      S.mat = { o: {}, nf: [] };
-      l2mReg();
-    } catch (e) {
-      logErr(e, 'newProjectReset');
-    }
-    return _n.apply(this, arguments);
-  };
-}
+// l2cCol(): Erweiterung zusammengeführt, siehe 23-bauteilkonfigurator/020-projekt.js
+// projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// projApplySet(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// newProjectReset(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // ---- eigene Fassadenmaterialien als Fassadentyp (Fassadendesigner) mit Aufbau (Unterkonstruktion + Material) registrieren
 function l2mReg() {
   try {

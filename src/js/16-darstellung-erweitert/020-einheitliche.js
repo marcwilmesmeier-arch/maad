@@ -60,17 +60,7 @@ function selStyle() {
   });
   add.forEach((l) => g.add(l));
 }
-{
-  const h0 = hlApply;
-  hlApply = function () {
-    h0.apply(this, arguments);
-    try {
-      selStyle();
-    } catch (e) {
-      console.warn('selStyle', e);
-    }
-  };
-}
+// hlApply(): Erweiterung zusammengeführt, siehe 07-analyse/020-flaechen-rauminhalte.js
 function hlcUi() {
   hlcFix();
   const q = (id) => document.getElementById(id),
@@ -98,39 +88,7 @@ function hlcApply() {
     logErr(e, 'hlcApply');
   }
 }
-{
-  const l0 = lyRender;
-  lyRender = function () {
-    l0.apply(this, arguments);
-    const el = document.getElementById('lyp');
-    if (!el || document.getElementById('hlrow')) return;
-    const kr = document.getElementById('konrow'),
-      gb = [...el.querySelectorAll('.ly label')].find((x) => x.textContent.trim() === 'Gebäude'),
-      gr = gb && gb.closest('.ly');
-    const cs =
-        'width:34px;height:24px;padding:0;border:1px solid var(--ln);border-radius:4px;background:none;cursor:pointer',
-      ck = 'width:16px;height:16px;margin:0;flex:none';
-    const html =
-      '<div id="hlrow" style="margin:2px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><b style="font-weight:600;display:block;margin-bottom:6px">Auswahl &amp; Hover</b>' +
-      '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><span>Konturfarbe (Gebäude: Auswahl &amp; Hover)</span><input type="color" id="occ" style="' +
-      cs +
-      '"></div>' +
-      '<b style="font-weight:600;display:block;margin:8px 0 4px">Analyse-Auswahl</b>' +
-      '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input type="checkbox" id="hlck" style="' +
-      ck +
-      '">Flächen anzeigen</label><input type="color" id="hlcf" style="' +
-      cs +
-      '"></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 34px;align-items:center;gap:8px;margin:4px 0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input type="checkbox" id="hlok" style="' +
-      ck +
-      '">Konturen anzeigen</label><input type="color" id="hlco" style="' +
-      cs +
-      '"></div>' +
-      '<button type="button" id="hlrs" style="font-size:11px;border:1px solid var(--ln);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer;margin-top:4px">Standardfarben</button></div>';
-    (kr || gr || el).insertAdjacentHTML(kr || gr ? 'afterend' : 'beforeend', html);
-    hlcUi();
-  };
-}
+// lyRender(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 {
   const lp = document.getElementById('lyp');
   lp.addEventListener('change', (e) => {

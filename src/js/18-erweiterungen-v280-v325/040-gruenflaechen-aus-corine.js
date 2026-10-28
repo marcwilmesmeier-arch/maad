@@ -55,34 +55,7 @@ function clgPaint() {
   }
   return n;
 }
-{
-  const _rc = recomp;
-  recomp = function () {
-    try {
-      if (clgOn()) {
-        const n = clgPaint();
-        const sg = n + ':' + (typeof OVI !== 'undefined' && OVI.clc ? OVI.clc.length : 0);
-        if (sg !== clgSig) {
-          clgSig = sg;
-          if (typeof FX !== 'undefined' && FX.grass && FX.flat)
-            setTimeout(() => {
-              try {
-                fxGrass();
-              } catch (e) {
-                logErr(e, 'recomp>anonym');
-              }
-            }, 0);
-        }
-      } else if (clgSig) {
-        clgSig = '';
-        PL.clg.getContext('2d').clearRect(0, 0, PW, PW);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return _rc.apply(this, arguments);
-  };
-}
+// recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 /* Rasen-Maske (fxFlat): CORINE-Flächen aussparen, wenn die Ebene sichtbar ist */
 window.clgMask = function (x, W) {
   try {
@@ -93,54 +66,9 @@ window.clgMask = function (x, W) {
     console.error(e);
   }
 };
-{
-  const _lv = lvis;
-  lvis = function (i, v) {
-    const r = _lv.apply(this, arguments);
-    try {
-      if (LY[i][1] === 'clg') {
-        if (v) {
-          if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
-          ovLoad('clc');
-        }
-        clgSig = '';
-        if (S.geo) recomp();
-        if (typeof FX !== 'undefined' && FX.grass && FX.flat) fxGrass();
-        try {
-          lyRender();
-        } catch (e) {
-          logErr(e, 'lvis');
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _lo = lop;
-  lop = function (i, v) {
-    if (LY[i][1] === 'clg') {
-      LY[i][3] = v;
-      if (S.geo) recomp();
-      return;
-    }
-    return _lo.apply(this, arguments);
-  };
-}
-{
-  const _os = ovSync;
-  ovSync = function () {
-    const r = _os.apply(this, arguments);
-    try {
-      if (S.geo && clgOn() && !OVD.clc) ovLoad('clc');
-    } catch (e) {
-      logErr(e, 'ovSync');
-    }
-    return r;
-  };
-}
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// lop(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// ovSync(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/080-karten.js
 let clgT = 0;
 window.clgSet = function (id, v) {
   S.clgc[id] = v;
@@ -241,37 +169,7 @@ function sunFit() {
     console.error(e);
   }
 }
-{
-  const _su = sunUp;
-  sunUp = function () {
-    const r = _su.apply(this, arguments);
-    if (sunL.castShadow) sunFit();
-    return r;
-  };
-}
-{
-  const _rt = rebuildTerrain;
-  rebuildTerrain = function () {
-    const r = _rt.apply(this, arguments);
-    try {
-      sunUp();
-    } catch (e) {
-      logErr(e, 'rebuildTerrain');
-    }
-    return r;
-  };
-}
+// sunUp(): Erweiterung zusammengeführt, siehe 06-darstellung/010-darstellung.js
+// rebuildTerrain(): Erweiterung zusammengeführt, siehe 02-geodaten/010-kontextdaten.js
 
-/* neue Projekte: Standard zuerst, danach überschreiben gespeicherte Projektwerte */
-{
-  const _np = newProjectReset;
-  newProjectReset = function () {
-    const r = _np.apply(this, arguments);
-    try {
-      if (gfxDefGet()) gfxDefApply(true);
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
+// newProjectReset(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js

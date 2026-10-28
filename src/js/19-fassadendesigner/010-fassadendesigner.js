@@ -44,42 +44,9 @@ const FDS = {
   open: false,
   hover: null,
 };
-// Projekt: Fassadentypen mitspeichern, bei neuem Projekt zurücksetzen
-{
-  const _p = projExtra;
-  projExtra = function () {
-    const x = _p.apply(this, arguments);
-    try {
-      x.ft = JSON.parse(JSON.stringify(S.ft));
-    } catch (e) {
-      logErr(e, 'projExtra');
-    }
-    return x;
-  };
-}
-{
-  const _a = projApplySet;
-  projApplySet = function (x) {
-    try {
-      if (x && x.ft && x.ft.length) S.ft = JSON.parse(JSON.stringify(x.ft));
-    } catch (e) {
-      logErr(e, 'projApplySet');
-    }
-    return _a.apply(this, arguments);
-  };
-}
-{
-  const _n = newProjectReset;
-  newProjectReset = function () {
-    try {
-      S.ft = JSON.parse(JSON.stringify(FT0));
-      if (FDS.open) fdClose();
-    } catch (e) {
-      logErr(e, 'newProjectReset');
-    }
-    return _n.apply(this, arguments);
-  };
-}
+// projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// projApplySet(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// newProjectReset(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 
 // ---- Geometrie: Außenwände oberirdisch → Ansichten (Gruppen gleicher Blickrichtung)
 const fdAng = (nx, nz) => ((Math.atan2(nx, -nz) * 180) / Math.PI + 360) % 360;

@@ -118,23 +118,7 @@ async function frDgm(lon, lat, size, kind, lab) {
     msg: `Gelände: ${lab} Frankreich (IGN LiDAR HD, ${f1(res, 1)} m Raster).`,
   };
 }
-{
-  const _g = dgmLoad;
-  dgmLoad = async function (lon, lat, size, cov, lab) {
-    const kind = /dom/i.test(cov || '') ? 'dom' : 'dgm';
-    if (frIn(lon, lat)) {
-      let st = null;
-      try {
-        st = await bundeslandC(lon, lat);
-      } catch (e) {
-        logErr(e, 'dgmLoad');
-      }
-      if (!(st && st.key) && !((kind === 'dom' ? GEO.wcsDom : GEO.wcsDgm) || '').trim())
-        return frDgm(lon, lat, size, kind, lab || (kind === 'dom' ? 'DOM' : 'DGM'));
-    }
-    return _g.apply(this, arguments);
-  };
-}
+// dgmLoad(): Erweiterung zusammengeführt, siehe 02-geodaten/060-hamburg.js
 
 // Prüffunktion Österreich (BEV ALS-Höhenraster 1 m, COG-Kacheln 50 km, EPSG:3035). Testort Wien, Stephansplatz.
 const ATT = { lat: 48.2086, lon: 16.3731, busy: 0 };

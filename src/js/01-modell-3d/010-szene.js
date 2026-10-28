@@ -121,35 +121,7 @@ for (let j = 0; j < 2; j++)
     );
     G.parcels.add(ln);
   }
-// Bestand
-[
-  [0, 3, 'Wohnen'],
-  [2, 2, 'Wohnen'],
-  [4, 3, 'Gewerbe'],
-  [5, 2, 'Wohnen'],
-  [7, 4, 'Wohnen'],
-].forEach(([pi, n, use]) => {
-  const q = P[pi].poly,
-    x = q[0][0],
-    z = q[0][1];
-  const fp = [
-    [x + 12, z + 12],
-    [x + 43, z + 12],
-    [x + 43, z + 38],
-    [x + 12, z + 38],
-  ];
-  const b = {
-    id: 'bestand_' + pi,
-    ex: true,
-    use,
-    fp,
-    levels: Array.from({ length: n }, (_, i) => ({ name: i ? i + '.OG' : 'EG', h: 3 })),
-    est: true,
-    src: 'Demo',
-  };
-  S.ex.push(b);
-  mesh(b);
-});
+// Bestand (Platzhalter-Gebäude): angelegt in start(), 29-start/010-start-projekt-oeffnen.js
 // Bäume
 {
   let s = 7;

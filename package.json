@@ -10,7 +10,8 @@
     "format:check": "prettier --check \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\"",
     "lint": "node tools/build.mjs && node tools/lint.mjs",
     "test": "node tools/build.mjs && node tests/smoke.test.mjs",
-    "check": "npm run format:check && npm run lint && npm test"
+    "check": "npm run format:check && npm run lint && npm test",
+    "vergleich": "node tools/build.mjs && node tools/vergleich.mjs"
   },
   "devDependencies": {
     "eslint": "9.39.5",

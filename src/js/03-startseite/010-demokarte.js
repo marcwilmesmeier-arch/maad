@@ -144,29 +144,38 @@ async function demoSave() {
   }
 }
 async function demoLoad(u8, bg) {
-  gst('Öffne Demokarte …');
-  const s = await snapUnpack(u8);
-  const r = await geoRun(s.lon, s.lat, s.size, s.label, s);
-  if (r.ok) {
-    if (!bg) {
-      newProjectReset();
-      S.project = {
-        id: projId(),
-        name: 'Demokarte ' + (s.label || '').split(',')[0],
-        label: s.label,
-        size: s.size,
-        lon: s.lon,
-        lat: s.lat,
-      };
-      updPj();
+  // ── Erweiterung aus 17-erweiterungen-v253-v280/130-startseite.js
+  const r = await (async () => {
+    gst('Öffne Demokarte …');
+    const s = await snapUnpack(u8);
+    const r = await geoRun(s.lon, s.lat, s.size, s.label, s);
+    if (r.ok) {
+      if (!bg) {
+        newProjectReset();
+        S.project = {
+          id: projId(),
+          name: 'Demokarte ' + (s.label || '').split(',')[0],
+          label: s.label,
+          size: s.size,
+          lon: s.lon,
+          lat: s.lat,
+        };
+        updPj();
+      }
+      wzClose();
+      S.tab = 'Planen';
+      nav();
+      rr();
+    } else {
+      alert(r.msg);
     }
-    wzClose();
-    S.tab = 'Planen';
-    nav();
-    rr();
-  } else {
-    alert(r.msg);
+  })();
+  try {
+    if (HOME.open) homePreset();
+  } catch (e) {
+    console.error(e);
   }
+  return r;
 }
 async function demoOpen() {
   try {

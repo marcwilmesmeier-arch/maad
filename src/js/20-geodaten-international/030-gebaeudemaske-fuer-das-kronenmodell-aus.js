@@ -149,25 +149,7 @@ function atRoofClean(DG, DO) {
     }
   return { data: o, n: cnt, px };
 }
-{
-  const _c = canopy;
-  canopy = function (DG, DO, bl, skip, ex) {
-    if (DG && !DG.fail && DO && !DO.fail && DO.plan && DO.res <= 1.5 && DG.w === DO.w && DG.h === DO.h) {
-      try {
-        const r = atRoofClean(DG, DO);
-        if (r.n) {
-          DO = Object.assign({}, DO, { data: r.data });
-          const c = _c.call(this, DG, DO, bl, skip, ex);
-          c.msg = (c.msg || '') + ' Dachflächen aus dem Höhenmodell maskiert: ' + r.n + ' Gebäude.';
-          return c;
-        }
-      } catch (e) {
-        logErr(e, 'canopy');
-      }
-    }
-    return _c.apply(this, arguments);
-  };
-}
+// canopy(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
 
 // ---- Datenquellen & Einstellungen: nach Ländern gegliedert (Deutschland mit Bundesland-Auswahl, weitere Länder als Zeilen)
 const CTT = {},
@@ -357,47 +339,5 @@ async function ctyProbe(k) {
 async function ctyProbeAll() {
   for (const c of CTY) if (c.probe) await ctyProbe(c.k);
 }
-{
-  const _p = srcPick;
-  srcPick = function (t, k) {
-    S.ctySel = '';
-    return _p.apply(this, arguments);
-  };
-}
-{
-  const _s = srcData;
-  srcData = function () {
-    const keys = Object.keys(BLN),
-      saved = Object.assign({}, BLN),
-      rp = GEO.rep;
-    let sel =
-      S.srDe && saved[S.srDe]
-        ? S.srDe
-        : rp && saved[rp.key]
-          ? rp.key
-          : keys.find((k) => saved[k] === GEO.alkBL) || 'nrw';
-    keys.forEach((k) => {
-      if (k !== sel) delete BLN[k];
-    });
-    let D;
-    try {
-      D = _s.apply(this, arguments);
-    } finally {
-      delete BLN[sel];
-      keys.forEach((k) => {
-        BLN[k] = saved[k];
-      });
-    }
-    const bar = `<div class="tbar" style="margin:0 0 6px"><label class="stn" style="margin:0"><b>Deutschland</b> – Bundesland <select onchange="S.srDe=this.value;S.srSel='';srcOpen()">${keys.map((k) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(saved[k])}</option>`).join('')}</select></label><button class="sm" onclick="ctyProbeAll()" title="Alle hinterlegten Prüfadressen der Länder abfragen">Erreichbarkeit der weiteren Länder prüfen</button></div>`;
-    for (const t of ['gb', 'tr', 'fl', 'ge']) {
-      let h = D[t];
-      if (!h) continue;
-      h = h
-        .replace('<th>Bundesland</th>', '<th>Land</th>')
-        .replace('<td><b>', '<td><b>Deutschland · ')
-        .replace('</table>', ctyRows(t) + '</table>');
-      D[t] = bar + h;
-    }
-    return D;
-  };
-}
+// srcPick(): Erweiterung zusammengeführt, siehe 04-datenquellen/020-nur-einen-datensatz.js
+// srcData(): Erweiterung zusammengeführt, siehe 04-datenquellen/020-nur-einen-datensatz.js

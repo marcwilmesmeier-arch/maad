@@ -411,38 +411,68 @@ async function bldLoad(lon, lat, size) {
   return bldLoad2(lon, lat, size);
 }
 async function bldLoad2(lon, lat, size) {
-  const st = await bundeslandC(lon, lat);
-  let prov = st && CG[st.key];
-  let pre = '';
-  const tp = (GEO.lod2Tpl || '').trim();
-  if (tp)
-    prov = {
-      key: 'custom',
-      name: (st && st.name) || 'eigener Dienst',
-      src: 'eigene Vorlage',
-      sz: +GEO.lod2Sz || 2,
-      zone: +GEO.lod2Zone || 32,
-      zip: /\.zip/i.test(tp),
-      tile: (E, N) => [
-        tp
-          .replace(/\{E\}/g, E)
-          .replace(/\{N\}/g, N)
-          .replace(/\{Z\}/g, +GEO.lod2Zone || 32),
-      ],
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js
+  const m = S.gbMode || 'auto';
+  if (m === 'osm')
+    return {
+      list: [],
+      msg: 'Gebäudemodell: OSM-Gebäude gewählt (Datenquellen & Einstellungen).',
+      via: 'osm',
+      prov: '',
     };
-  if (st) pre = 'Bundesland: ' + st.name + '. ';
-  if (S.lod2On && prov) {
-    const r = await cityGmlLoad(prov, lon, lat, size);
-    if (r.list.length) return { list: r.list, msg: pre + r.msg, via: 'cg', prov: prov.name };
-    pre += r.msg + ' Fallback: ';
-  } else if (st)
-    pre +=
-      'Für ' +
-      st.name +
-      ' ist kein LoD2-Kachelzugang hinterlegt (unter „Projekt → LoD2-Kachel-URL“ eintragbar) – ';
-  const r2 = await lod2Load(lon, lat, size);
-  r2.msg = pre + r2.msg;
-  r2.via = r2.list.length ? 'esri' : 'osm';
-  r2.prov = prov ? prov.name : '';
-  return r2;
+  if (m === 'lod1') {
+    const o = S.lod2On;
+    S.lod2On = true;
+    let r;
+    try {
+      r = await lod2Load(lon, lat, size);
+    } finally {
+      S.lod2On = o;
+    }
+    r.msg = 'Gebäudemodell: LoD1 gewählt (Grundriss + gemessene Höhe). ' + r.msg;
+    r.via = r.list.length ? 'esri' : 'osm';
+    r.prov = '';
+    return r;
+  }
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/070-usa.js
+  if (!inUSA(lon, lat))
+    return (async () => {
+      const st = await bundeslandC(lon, lat);
+      let prov = st && CG[st.key];
+      let pre = '';
+      const tp = (GEO.lod2Tpl || '').trim();
+      if (tp)
+        prov = {
+          key: 'custom',
+          name: (st && st.name) || 'eigener Dienst',
+          src: 'eigene Vorlage',
+          sz: +GEO.lod2Sz || 2,
+          zone: +GEO.lod2Zone || 32,
+          zip: /\.zip/i.test(tp),
+          tile: (E, N) => [
+            tp
+              .replace(/\{E\}/g, E)
+              .replace(/\{N\}/g, N)
+              .replace(/\{Z\}/g, +GEO.lod2Zone || 32),
+          ],
+        };
+      if (st) pre = 'Bundesland: ' + st.name + '. ';
+      if (S.lod2On && prov) {
+        const r = await cityGmlLoad(prov, lon, lat, size);
+        if (r.list.length) return { list: r.list, msg: pre + r.msg, via: 'cg', prov: prov.name };
+        pre += r.msg + ' Fallback: ';
+      } else if (st)
+        pre +=
+          'Für ' +
+          st.name +
+          ' ist kein LoD2-Kachelzugang hinterlegt (unter „Projekt → LoD2-Kachel-URL“ eintragbar) – ';
+      const r2 = await lod2Load(lon, lat, size);
+      r2.msg = pre + r2.msg;
+      r2.via = r2.list.length ? 'esri' : 'osm';
+      r2.prov = prov ? prov.name : '';
+      return r2;
+    })();
+  const r = await bldUSA(lon, lat, size);
+  if (r.list.length) return { list: r.list, msg: r.msg, via: 'usa', prov: r.name };
+  return { list: [], msg: r.msg + ' MapTiler/OSM-Gebäude werden verwendet.', via: 'osm', prov: '' };
 }

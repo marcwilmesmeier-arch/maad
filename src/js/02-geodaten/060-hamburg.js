@@ -234,7 +234,43 @@ async function tileDgm(pv, zone, minx, miny, maxx, maxy, W, Hh, res, lab, errs) 
     msg: `Gelände: ${lab} ${pv.name} (${pv.src}, ${f1(res, 1)} m Raster${miss ? ', ' + miss + ' Kachel(n) fehlen' : ''}).`,
   };
 }
-async function dgmLoad(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
+async function dgmLoad(lon, lat, size, cov, lab) {
+  // ── Erweiterung aus 20-geodaten-international/020-oesterreich.js
+  const kind = /dom/i.test(cov || '') ? 'DSM' : 'DTM';
+  if (atIn(lon, lat)) {
+    let st = null;
+    try {
+      st = await bundeslandC(lon, lat);
+    } catch (e) {
+      logErr(e, 'dgmLoad');
+    }
+    if (!(st && st.key) && !((kind === 'DSM' ? GEO.wcsDom : GEO.wcsDgm) || '').trim())
+      return atDgm(lon, lat, size, kind, lab || (kind === 'DSM' ? 'DOM' : 'DGM'));
+  }
+  return (async () => {
+    // ── Erweiterung aus 20-geodaten-international/010-frankreich.js
+    const kind = /dom/i.test(cov || '') ? 'dom' : 'dgm';
+    if (frIn(lon, lat)) {
+      let st = null;
+      try {
+        st = await bundeslandC(lon, lat);
+      } catch (e) {
+        logErr(e, 'dgmLoad');
+      }
+      if (!(st && st.key) && !((kind === 'dom' ? GEO.wcsDom : GEO.wcsDgm) || '').trim())
+        return frDgm(lon, lat, size, kind, lab || (kind === 'dom' ? 'DOM' : 'DGM'));
+    }
+    // ── Erweiterung aus 18-erweiterungen-v280-v325/070-usa.js
+    if (inUSA(lon, lat) && !((GEO.wcsDgm || '').trim() || (GEO.wcsDom || '').trim())) {
+      const dom = /dom/i.test(cov || '');
+      if (dom) return domUSA(lon, lat, size, lab || 'DOM1');
+      return dgmUSA(lon, lat, size, lab || 'DGM1');
+    }
+    return dgmLoadBasis.apply(this, arguments);
+  })();
+}
+// dgmLoad() ohne die Erweiterungen darüber – wird von dgmLoad() gezielt aufgerufen
+async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
   const kind = /dom/i.test(cov) ? 'dom' : 'dgm',
     st = await bundeslandC(lon, lat),
     cu = ((kind === 'dom' ? GEO.wcsDom : GEO.wcsDgm) || '').trim();

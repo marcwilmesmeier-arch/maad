@@ -145,6 +145,9 @@ function abstRule() {
   };
 }
 function abstTarget() {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/010-menue-in-gruppen-und-ebenen.js
+  // v487: keine Abstandsflaechen-Vorschau, solange das Gebaeude noch nicht erzeugt ist
+  if (S.tool === 'f' && S.dm !== 'area' && S.draft && S.draft.length > 2 && S.closed) return null;
   if (!S.geo && !GEO.size) return null;
   if (S.tool === 'f' && S.closed && S.dm !== 'area' && S.draft.length > 2) {
     const t = ($('nd') || {}).value || 'flat',
@@ -552,6 +555,14 @@ function abstCalc() {
   };
 }
 function abstPaint() {
+  // ── Erweiterung aus 15-grundriss/070-saubere-umrisse.js
+  // ---- Abstandsflächen werden ausgeblendet, solange die Explosionsansicht aktiv ist (auch bei angewähltem Gebäude)
+  if (S.expl && S.expl.on) {
+    const c = PL.abst.getContext('2d');
+    c.clearRect(0, 0, PW, PW);
+    S._abst = null;
+    return;
+  }
   const c = PL.abst.getContext('2d');
   c.clearRect(0, 0, PW, PW);
   const L = LY.find((l) => l[1] === 'abst');

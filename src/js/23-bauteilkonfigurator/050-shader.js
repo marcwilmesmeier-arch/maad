@@ -86,38 +86,7 @@ function l2BackMesh(geo, fm, y) {
     return null;
   }
 }
-// Schnitt-Zustand auf Rückseiten-Meshes übertragen (nur bei aktivem Schnitt sichtbar; Vorderseiten dann einseitig)
-{
-  const _c = l2CutApply;
-  l2CutApply = function () {
-    const r = _c.apply(this, arguments);
-    try {
-      const on = l23() && L2CUT.m !== 'off';
-      L2CU.c.value = L2CLIP.constant;
-      L2CU.ax.value = L2CUT.m === 'x' ? 0 : L2CUT.m === 'z' ? 2 : 1;
-      for (const it of L2I.values())
-        it.g.traverse((o) => {
-          if (o.userData && o.userData.cutB) o.visible = on;
-          else if (
-            o.isMesh &&
-            o.material &&
-            o.userData.ly != null &&
-            o.material.userData &&
-            o.material.userData.ln != null
-          ) {
-            const sd = on ? T.FrontSide : T.DoubleSide;
-            if (o.material.side !== sd) {
-              o.material.side = sd;
-              o.material.needsUpdate = true;
-            }
-          }
-        });
-    } catch (e) {
-      logErr(e, 'l2CutApply');
-    }
-    return r;
-  };
-}
+// l2CutApply(): Erweiterung zusammengeführt, siehe 23-bauteilkonfigurator/030-3d.js
 // ---- Fenster
 const L2MW = { ps: '', dirty: 0, all: 0, open: 0 };
 function l2mCss() {

@@ -443,22 +443,7 @@ document.getElementById('konck').addEventListener('change', (e) => {
   S.kon[konMode()].on = e.target.checked;
   konUi();
 });
-// ---- Bedienung im Menü "Layer": Gebäudekontur (an/aus, Stärke, Farbe) – getrennt für Weißmodell und Schattiert
-{
-  const l0 = lyRender;
-  lyRender = function () {
-    l0.apply(this, arguments);
-    const el = document.getElementById('lyp');
-    if (!el) return;
-    const gb = [...el.querySelectorAll('.ly label')].find((x) => x.textContent.trim() === 'Gebäude'),
-      gr = gb && gb.closest('.ly');
-    (gr || el).insertAdjacentHTML(
-      gr ? 'afterend' : 'beforeend',
-      '<div id="konrow" style="margin:2px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 6px"><input type="checkbox" id="konck2" style="width:16px;height:16px;margin:0;flex:none"><b style="font-weight:600">Gebäudekontur</b><small id="konnm" style="color:var(--mu)"></small></label><div style="display:grid;grid-template-columns:48px 1fr 44px;align-items:center;gap:8px;margin:4px 0"><span>Stärke</span><input type="range" id="konw2" min="1" max="6" step=".25" style="width:100%;margin:0"><span id="konv2" style="text-align:right"></span></div><div style="display:grid;grid-template-columns:48px 34px auto;align-items:center;gap:8px;margin:4px 0"><span>Farbe</span><input type="color" id="konc2" style="width:34px;height:24px;padding:0;border:1px solid var(--ln);border-radius:4px;background:none;cursor:pointer"><button type="button" id="konrs" style="justify-self:start;font-size:11px;border:1px solid var(--ln);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer">Schwarz</button></div></div>',
-    );
-    konUi();
-  };
-}
+// lyRender(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 {
   const lp = document.getElementById('lyp');
   lp.addEventListener('change', (e) => {
@@ -483,11 +468,5 @@ document.getElementById('konck').addEventListener('change', (e) => {
     }
   });
 }
-{
-  const u0 = drUi;
-  drUi = function () {
-    u0.apply(this, arguments);
-    konUi();
-  };
-}
+// drUi(): Erweiterung zusammengeführt, siehe 06-darstellung/020-umschalten.js
 konUi();

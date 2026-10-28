@@ -132,51 +132,113 @@ function mkKeep() {
   }
 }
 function mkRender(scn, cm) {
-  if (scn === sc)
-    try {
-      drTick(cm);
-    } catch (e) {
-      logErr(e, 'mkRender');
-    }
-  if (!S.mkOn || !(S.mkA > 0) || scn !== sc) {
-    ren.render(scn, cm);
-    return;
-  }
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/020-kamera.js
+  let st = null;
   try {
-    mkInit();
-    mkKeep();
-    for (const b of S.bld) {
-      if (b.ex || !b._g) continue;
-      b._g.traverse((o) => {
-        if (!o.userData._mk) {
-          o.layers.enable(2);
-          o.userData._mk = 1;
-        }
-      });
+    if (scn === sc && sunL.castShadow) {
+      const sh = sunL.shadow,
+        c = sh.camera,
+        tp = sunL.target.position,
+        f = S.m3 ? shFit(cm, sh) : null;
+      if (f) {
+        st = {
+          p: sunL.position.clone(),
+          t: tp.clone(),
+          l: c.left,
+          r: c.right,
+          tp: c.top,
+          b: c.bottom,
+          n: c.near,
+          f: c.far,
+          bi: sh.bias,
+          nb: sh.normalBias,
+        };
+        tp.copy(f.F);
+        sunL.position.copy(f.F).addScaledVector(f.dir, f.Dd);
+        sunL.target.updateMatrixWorld();
+        sunL.updateMatrixWorld();
+        Object.assign(c, { left: -f.R, right: f.R, top: f.R, bottom: -f.R, near: f.near, far: f.far });
+        c.updateProjectionMatrix();
+        sh.bias = -0.0002;
+        sh.normalBias = Math.max(0.02, f.q * 1.6);
+      }
+      if (SHC.on) {
+        ren.shadowMap.autoUpdate = false;
+        const now = performance.now(),
+          g = shSig();
+        if (!sh.map || g !== SHC.sig || now - SHC.t > 1500) {
+          SHC.sig = g;
+          SHC.t = now;
+          ren.shadowMap.needsUpdate = true;
+          SHC.n++;
+        } else SHC.skip++;
+      } else ren.shadowMap.autoUpdate = true;
     }
   } catch (e) {
-    ren.render(scn, cm);
-    return;
+    console.warn(e);
   }
-  ren.render(scn, cm);
-  const ac = ren.autoClear,
-    lm = cm.layers.mask,
-    om = scn.overrideMaterial,
-    bg = scn.background;
   try {
-    ren.autoClear = false;
-    scn.overrideMaterial = MK.sm;
-    scn.background = null;
-    cm.layers.set(2);
-    ren.render(scn, cm);
+    return (() => {
+      if (scn === sc)
+        try {
+          drTick(cm);
+        } catch (e) {
+          logErr(e, 'mkRender');
+        }
+      if (!S.mkOn || !(S.mkA > 0) || scn !== sc) {
+        ren.render(scn, cm);
+        return;
+      }
+      try {
+        mkInit();
+        mkKeep();
+        for (const b of S.bld) {
+          if (b.ex || !b._g) continue;
+          b._g.traverse((o) => {
+            if (!o.userData._mk) {
+              o.layers.enable(2);
+              o.userData._mk = 1;
+            }
+          });
+        }
+      } catch (e) {
+        ren.render(scn, cm);
+        return;
+      }
+      ren.render(scn, cm);
+      const ac = ren.autoClear,
+        lm = cm.layers.mask,
+        om = scn.overrideMaterial,
+        bg = scn.background;
+      try {
+        ren.autoClear = false;
+        scn.overrideMaterial = MK.sm;
+        scn.background = null;
+        cm.layers.set(2);
+        ren.render(scn, cm);
+      } finally {
+        cm.layers.mask = lm;
+        scn.overrideMaterial = om;
+        scn.background = bg;
+      }
+      MK.vm.material.opacity = S.mkA;
+      ren.render(MK.vs, MK.vc);
+      ren.autoClear = ac;
+    })();
   } finally {
-    cm.layers.mask = lm;
-    scn.overrideMaterial = om;
-    scn.background = bg;
+    if (st) {
+      const c = sunL.shadow.camera,
+        sh = sunL.shadow;
+      sunL.position.copy(st.p);
+      sunL.target.position.copy(st.t);
+      sunL.target.updateMatrixWorld();
+      sunL.updateMatrixWorld();
+      Object.assign(c, { left: st.l, right: st.r, top: st.tp, bottom: st.b, near: st.n, far: st.f });
+      c.updateProjectionMatrix();
+      sh.bias = st.bi;
+      sh.normalBias = st.nb;
+    }
   }
-  MK.vm.material.opacity = S.mkA;
-  ren.render(MK.vs, MK.vc);
-  ren.autoClear = ac;
 }
 function mkSet(k, v) {
   if (k === 'on') S.mkOn = !!v;

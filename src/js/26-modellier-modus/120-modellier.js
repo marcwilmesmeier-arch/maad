@@ -45,37 +45,72 @@ function sk2Hit(e) {
   });
   return best;
 }
-{
-  const _h = skHit;
-  skHit = function (e) {
-    if (!S.m3) {
-      const q = sk2Hit(e);
-      if (q) return q;
-    }
-    return _h.apply(this, arguments);
-  };
-}
-{
-  const _s = setMode;
-  setMode = function () {
-    const r = _s.apply(this, arguments);
-    try {
-      SK.hv = null;
-      SK.ver++;
-      skBar();
-      skDraw();
-    } catch (e) {
-      logErr(e, 'setMode');
-    }
-    return r;
-  };
-}
+// skHit(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// setMode(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 
 // ---- Menü (oberes Menü „Bearbeiten“ und Rechtsklick-Menü): Werkzeuge aus der einen Registry BA
 const SKBA = { sks: 's', skp: 'p', mv: 'm', skc: 'm', skl: 'l', skf: 'f', skr: 'r', skz: 'z' };
 SK.cp = false;
 SK.used = false;
 function skUse(t, cp) {
+  // ── Erweiterung aus 27-skizze/030-zeichnen.js
+  // Vor dem Ausschalten der Ebene: Skizze zeigen, solange man im Bearbeiten-Modus ist
+  if ('rzco'.includes(t) && !cp && !S.bld.length) {
+    SK.skUseBasis = 1;
+    try {
+      SK.on = true;
+      gdEnter(t);
+      SK.tool = t;
+    } catch (x) {
+      console.warn(x);
+    }
+    SK.skUseBasis = 0;
+    SK.used = true;
+    try {
+      skBaSync();
+    } catch (e) {
+      logErr(e, 'skUse');
+    }
+    szMsg(
+      {
+        r: 'Rechteck · zwei Ecken klicken, Länge;Breite tippen',
+        z: 'Linie · Punkte klicken · bleibt als Kante stehen, geschlossener Zug = Fläche',
+        c: 'Kreis · Mittelpunkt klicken, Radius ziehen oder tippen',
+        o: 'Polygon · Mittelpunkt klicken, Radius ziehen · Seitenzahl tippen, z. B. 8s',
+      }[t],
+    );
+    return;
+  }
+  if (!S.bld.length && 'splf'.includes(t)) {
+    SK.skUseBasis = 1;
+    try {
+      SK.on = true;
+      if (S.tool !== 'v' && S.tool !== 'b') tool('v');
+      skTool(t);
+      SK.cp = false;
+    } catch (x) {
+      console.warn(x);
+    }
+    SK.skUseBasis = 0;
+    SK.used = true;
+    try {
+      skBaSync();
+    } catch (e) {
+      logErr(e, 'skUse');
+    }
+    szMsg(
+      t === 'p'
+        ? 'Ziehen & Schieben · Fläche anklicken, nach oben ziehen = Geschosse'
+        : t === 's'
+          ? 'Auswahl · Kante oder Fläche anklicken · Entf = löschen'
+          : 'Teilen · Kante anklicken',
+    );
+    return;
+  }
+  return skUseBasis.apply(this, arguments);
+}
+// skUse() ohne die Erweiterungen darüber – wird von skUse() gezielt aufgerufen
+function skUseBasis(t, cp) {
   SK._u = 1;
   try {
     if (!S.bld.length) {
@@ -101,68 +136,31 @@ function skUse(t, cp) {
   }
 }
 function skBaSync() {
+  // ── Erweiterung aus 27-skizze/010-grundflaechen-zeichnen-nach-dem-vorbild.js
+  skBaSyncBasis();
+  try {
+    if (S.tool === 'f' && S.dm === 'bld') {
+      const m = { free: 'skz', rect: 'skr', circ: 'skk', poly: 'sko' }[S.shape];
+      document.querySelectorAll('[data-ba]').forEach((b) => {
+        if (b.dataset.ba === m) b.classList.add('on');
+      });
+    }
+  } catch (e) {
+    logErr(e, 'skBaSync');
+  }
+}
+// skBaSync() ohne die Erweiterungen darüber – wird von skBaSync() gezielt aufgerufen
+function skBaSyncBasis() {
   document.querySelectorAll('[data-ba]').forEach((b) => {
     const m = SKBA[b.dataset.ba];
     if (m)
       b.classList.toggle('on', !!skAct() && SK.used && SK.tool === m && (b.dataset.ba === 'skc') === !!SK.cp);
   });
 }
-{
-  const _b = baDo;
-  baDo = function (k) {
-    if (SKBA[k]) {
-      try {
-        cmHide();
-      } catch (e) {
-        logErr(e, 'baDo');
-      }
-      skUse(SKBA[k], k === 'skc');
-      return;
-    }
-    return _b.apply(this, arguments);
-  };
-}
-{
-  const _t = tool;
-  tool = function () {
-    if (!SK._u) SK.used = false;
-    const r = _t.apply(this, arguments);
-    try {
-      skBaSync();
-    } catch (e) {
-      logErr(e, 'tool');
-    }
-    return r;
-  };
-}
-{
-  const _k = skTool;
-  skTool = function () {
-    SK.cp = false;
-    const r = _k.apply(this, arguments);
-    try {
-      skBaSync();
-    } catch (e) {
-      logErr(e, 'skTool');
-    }
-    return r;
-  };
-}
-{
-  const _m = skMStart;
-  skMStart = function (e, ent) {
-    if (SK.cp)
-      e = {
-        clientX: e.clientX,
-        clientY: e.clientY,
-        altKey: !!e.altKey,
-        shiftKey: !!e.shiftKey,
-        ctrlKey: true,
-        button: e.button || 0,
-      };
-    return _m.call(this, e, ent);
-  };
-}
+// baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
+// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
+// skTool(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js
+// skMStart(): Erweiterung zusammengeführt, siehe 26-modellier-modus/040-stufe-3.js
 // Bearbeitungsmodus: keine Hover-Infos zu Flurstücken, Straßen, Gebäuden – nur die Werkzeug-Infos
 function skEditing() {
   return !!(SK.used || SK.op || (typeof SZ !== 'undefined' && (SZ.d || SZ.op)) || S.tool !== 'v');
@@ -192,22 +190,4 @@ addEventListener('keydown', (e) => {
     }
   }
 });
-{
-  const _e = skOpEnd;
-  skOpEnd = function (ok) {
-    const op = SK.op;
-    const r = _e.apply(this, arguments);
-    try {
-      if (ok && op && op.b && !op.top && !op.kind && znCleanFp(op.b)) {
-        op.b._gr = null;
-        mesh(op.b);
-        H();
-        hpos();
-        rr();
-      }
-    } catch (e) {
-      console.warn('Grundriss bereinigen', e);
-    }
-    return r;
-  };
-}
+// skOpEnd(): Erweiterung zusammengeführt, siehe 26-modellier-modus/030-leiste.js

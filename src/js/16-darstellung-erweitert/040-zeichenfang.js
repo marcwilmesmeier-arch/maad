@@ -477,19 +477,4 @@ function fgSnap(p, e, i, A) {
   res.sn = sn;
   return res;
 }
-{
-  const s0 = snap;
-  snap = function (p, e, i, A) {
-    let r;
-    try {
-      r = fgSnap(p, e, i, A);
-    } catch (err) {
-      console.warn('fgSnap', err);
-      r = s0(p, e, i, A);
-      r.gd = [];
-      r.fa = [];
-    }
-    S.fg = { gd: r.gd || [], fa: r.fa || [], arc: r.arc || null, t: r.t, p: r.p.slice() };
-    return r;
-  };
-}
+// snap(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js

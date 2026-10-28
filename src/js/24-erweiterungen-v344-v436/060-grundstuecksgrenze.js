@@ -101,19 +101,7 @@ function pbBuild(force) {
     console.warn('Grenze', e);
   }
 }
-{
-  const _p = parLines;
-  parLines = function () {
-    const r = _p.apply(this, arguments);
-    PBR.m = null;
-    try {
-      pbBuild(true);
-    } catch (e) {
-      logErr(e, 'parLines');
-    }
-    return r;
-  };
-}
+// parLines(): Erweiterung zusammengeführt, siehe 02-geodaten/080-alkis.js
 setInterval(() => {
   try {
     if (!PBR.polys.length || !PBR.m) return;

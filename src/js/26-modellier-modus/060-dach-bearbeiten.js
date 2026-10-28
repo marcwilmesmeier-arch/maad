@@ -84,120 +84,12 @@ function szNin(poly, i) {
     L = Math.hypot(dx, dz) || 1;
   return A > 0 ? [-dz / L, dx / L] : [dz / L, -dx / L];
 }
-// ---- Einbindung in die Auswahl
-{
-  const _v = skValid;
-  skValid = function (e) {
-    if (szSp(e)) {
-      const b = e.b;
-      return !!b && !b.ex && S.bld.includes(b) && !!szObj(e) && (e.i == null || e.i < szObj(e).poly.length);
-    }
-    return _v(e);
-  };
-}
-{
-  const _k = skKey;
-  skKey = function (e) {
-    if (e.face != null) return e.b.id + '|' + e.j + '|f' + e.face;
-    if (e.vd != null) return e.b.id + '|v' + e.vd + '|' + (e.floor ? 'b' : e.i);
-    return _k(e);
-  };
-}
-{
-  const _g = skGroup;
-  skGroup = function (e) {
-    return szSp(e) ? [e] : _g(e);
-  };
-}
-{
-  const _i = skInferHover;
-  skInferHover = function (e) {
-    if (SK.hv && szSp(SK.hv)) {
-      try {
-        skMkEl().style.display = 'none';
-        skTip('', null);
-      } catch (e) {
-        logErr(e, 'skInferHover');
-      }
-      return;
-    }
-    return _i.apply(this, arguments);
-  };
-}
-{
-  const _s = skInfo;
-  skInfo = function () {
-    const sp = SK.sel.filter(szSp);
-    if (!sp.length) return _s();
-    const all = SK.sel;
-    SK.sel = all.filter((x) => !szSp(x));
-    const base = SK.sel.length ? _s() + ' · ' : '';
-    SK.sel = all;
-    const fa = sp.filter((e) => e.face != null),
-      vd = sp.filter((e) => e.vd != null);
-    let t = [];
-    if (fa.length)
-      t.push(
-        fa.length +
-          ' Dachfläche' +
-          (fa.length === 1 ? '' : 'n') +
-          ' (gezeichnet) · ' +
-          fa
-            .reduce((s, e) => s + (szObj(e) ? szA(szObj(e).poly) : 0), 0)
-            .toFixed(1)
-            .replace('.', ',') +
-          ' m²',
-      );
-    if (vd.length) {
-      const v = szObj(vd[0]);
-      t.push(
-        'Innenhof' +
-          (vd.length > 1 ? ' (' + vd.length + ' Flächen)' : '') +
-          (v
-            ? ' · ' +
-              szA(v.poly).toFixed(1).replace('.', ',') +
-              ' m² · Ebene ' +
-              (v.j0 + 1) +
-              '–' +
-              (v.j1 + 1)
-            : ''),
-      );
-    }
-    return base + t.join(' · ') + ' · Entf = löschen';
-  };
-}
-{
-  const _h = skHit;
-  skHit = function (e) {
-    ray(e);
-    const h = mdlHit();
-    if (h) {
-      const o = h.object,
-        b = o.userData.b,
-        k = o.userData.k;
-      if (b && !b.ex && S.bld.includes(b)) {
-        if (o.userData.face != null) return { b, j: k, face: o.userData.face };
-        const vs = b.voids || [],
-          p = [h.point.x, h.point.z],
-          ny = h.face.normal.y;
-        if (k != null && Math.abs(ny) < 0.3) {
-          for (let i = 0; i < vs.length; i++) {
-            const v = vs[i];
-            if (k >= v.j0 && k <= v.j1 && szDist(p, v.poly) < 0.15)
-              return { b, j: v.j1, vd: i, i: szNearEdge(p, v.poly) };
-          }
-        }
-        if (k != null && ny > 0.7) {
-          for (let i = 0; i < vs.length; i++) {
-            const v = vs[i];
-            if (v.j0 > 0 && k === v.j0 - 1 && znInP(p, v.poly)) return { b, j: k, vd: i, floor: 1 };
-          }
-        }
-      }
-    }
-    return _h.apply(this, arguments);
-  };
-}
+// skValid(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// skKey(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// skGroup(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// skInferHover(): Erweiterung zusammengeführt, siehe 26-modellier-modus/050-stufe-4.js
+// skInfo(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
+// skHit(): Erweiterung zusammengeführt, siehe 26-modellier-modus/010-modellier.js
 function szQuads(ents, col, op, line) {
   const pos = [],
     lp = [];
@@ -298,17 +190,4 @@ function szQuads(ents, col, op, line) {
   }
   return out;
 }
-{
-  const _q = skQuads;
-  skQuads = function (ents, col, op, line) {
-    const o = _q(
-        ents.filter((e) => !szSp(e)),
-        col,
-        op,
-        line,
-      ),
-      sp = ents.filter(szSp);
-    if (sp.length) szQuads(sp, col, op, line).forEach((x) => o.push(x));
-    return o;
-  };
-}
+// skQuads(): Erweiterung zusammengeführt, siehe 26-modellier-modus/020-darstellung.js

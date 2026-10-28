@@ -214,26 +214,55 @@ function l2CutBox() {
   return any ? bx : null;
 }
 function l2CutApply() {
-  const P = L2CLIP;
-  if (!l23() || L2CUT.m === 'off') {
-    P.normal.set(0, -1, 0);
-    P.constant = 1e5;
-    return;
+  // ── Erweiterung aus 23-bauteilkonfigurator/050-shader.js
+  // Schnitt-Zustand auf Rückseiten-Meshes übertragen (nur bei aktivem Schnitt sichtbar; Vorderseiten dann einseitig)
+  const r = (() => {
+    const P = L2CLIP;
+    if (!l23() || L2CUT.m === 'off') {
+      P.normal.set(0, -1, 0);
+      P.constant = 1e5;
+      return;
+    }
+    const bx = l2CutBox();
+    if (!bx) {
+      P.normal.set(0, -1, 0);
+      P.constant = 1e5;
+      return;
+    }
+    const ax = L2CUT.m === 'x' ? 0 : L2CUT.m === 'z' ? 2 : 1,
+      mn = bx.min.getComponent(ax),
+      mx = bx.max.getComponent(ax),
+      val = mn + (mx - mn) * L2CUT.v,
+      n = [0, 0, 0];
+    n[ax] = -L2CUT.f;
+    P.normal.set(n[0], n[1], n[2]);
+    P.constant = L2CUT.f * val;
+  })();
+  try {
+    const on = l23() && L2CUT.m !== 'off';
+    L2CU.c.value = L2CLIP.constant;
+    L2CU.ax.value = L2CUT.m === 'x' ? 0 : L2CUT.m === 'z' ? 2 : 1;
+    for (const it of L2I.values())
+      it.g.traverse((o) => {
+        if (o.userData && o.userData.cutB) o.visible = on;
+        else if (
+          o.isMesh &&
+          o.material &&
+          o.userData.ly != null &&
+          o.material.userData &&
+          o.material.userData.ln != null
+        ) {
+          const sd = on ? T.FrontSide : T.DoubleSide;
+          if (o.material.side !== sd) {
+            o.material.side = sd;
+            o.material.needsUpdate = true;
+          }
+        }
+      });
+  } catch (e) {
+    logErr(e, 'l2CutApply');
   }
-  const bx = l2CutBox();
-  if (!bx) {
-    P.normal.set(0, -1, 0);
-    P.constant = 1e5;
-    return;
-  }
-  const ax = L2CUT.m === 'x' ? 0 : L2CUT.m === 'z' ? 2 : 1,
-    mn = bx.min.getComponent(ax),
-    mx = bx.max.getComponent(ax),
-    val = mn + (mx - mn) * L2CUT.v,
-    n = [0, 0, 0];
-  n[ax] = -L2CUT.f;
-  P.normal.set(n[0], n[1], n[2]);
-  P.constant = L2CUT.f * val;
+  return r;
 }
 function l2CutUi() {
   let d = document.getElementById('l2cut'),

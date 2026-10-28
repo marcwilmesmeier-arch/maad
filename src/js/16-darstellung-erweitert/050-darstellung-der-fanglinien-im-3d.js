@@ -25,6 +25,22 @@ function fgClear() {
   FG.g.visible = false;
 }
 function fgUpdate() {
+  // ── Erweiterung aus 27-skizze/060-fang-auf-fusspunkt-im-rechten.js
+  // Fanglinien auch beim Ziehen von Skizzenpunkten anzeigen
+  if (!SNX.on) return fgUpdateBasis.apply(this, arguments);
+  const t = S.tool,
+    c = S.closed;
+  S.tool = 'f';
+  S.closed = false;
+  try {
+    fgUpdateBasis.apply(this, arguments);
+  } finally {
+    S.tool = t;
+    S.closed = c;
+  }
+}
+// fgUpdate() ohne die Erweiterungen darüber – wird von fgUpdate() gezielt aufgerufen
+function fgUpdateBasis() {
   const f = S.fg,
     live =
       (S.tool === 'f' && !S.closed) || (typeof dr !== 'undefined' && dr && dr.v != null && S.tool === 'ed');
@@ -159,17 +175,7 @@ function fgUpdate() {
   }
   FG.g.visible = FG.g.children.length > 0;
 }
-{
-  const d0 = drawOv;
-  drawOv = function (cur) {
-    d0.apply(this, arguments);
-    try {
-      fgUpdate();
-    } catch (err) {
-      console.warn('fgUpdate', err);
-    }
-  };
-}
+// drawOv(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
 // ---- Einstellungen im Menü Layer
 function fgSetAl(v) {
   S.gro.al = v ? 1 : 0;
@@ -202,40 +208,7 @@ function fgUi() {
           : 'keine Seite gefunden'
         : 'Achse: Ansicht (2D) / Norden (3D)';
 }
-{
-  const l0 = lyRender;
-  lyRender = function () {
-    l0.apply(this, arguments);
-    const el = document.getElementById('lyp');
-    if (!el || document.getElementById('fgrow')) return;
-    const lb = [...el.querySelectorAll('label')].find((x) => /Rechtwinkel/.test(x.textContent)),
-      cs = 'width:16px;height:16px;margin:0;flex:none',
-      row = (id, t, ti) =>
-        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0" title="' +
-        ti +
-        '"><input type="checkbox" id="' +
-        id +
-        '" style="' +
-        cs +
-        '">' +
-        t +
-        '</label>';
-    const html =
-      '<div id="fgrow" style="margin:6px 0 8px 18px;padding:6px 10px;border-left:2px solid var(--ln);font-size:12px"><b style="font-weight:600;display:block;margin-bottom:4px">Zeichenfang</b>' +
-      row(
-        'fgal',
-        'Hauptachse nach Grundriss-Ausrichtung',
-        'Waagerecht/senkrecht des Fangs richtet sich nach der längsten Seite des Grundrisses (wie Nordpfeil im Grundriss) – gilt auch in 3D',
-      ) +
-      '<small id="fgnt" style="color:var(--mu);display:block;margin:0 0 4px 24px"></small>' +
-      row('fgg', 'Hilfslinien anzeigen', 'Waagerechte/senkrechte und 45°-Fanglinien ab der letzten Ecke') +
-      row('fgd', '45°-Fang', 'zusätzlich zu 90° auch 45° zur Hauptachse und zur Kante') +
-      row('fgm', 'Kantenmitte fangen', 'Mittelpunkt von Kanten als Fangpunkt') +
-      '</div>';
-    (lb || el).insertAdjacentHTML(lb ? 'afterend' : 'beforeend', html);
-    fgUi();
-  };
-}
+// lyRender(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 {
   const lp = document.getElementById('lyp');
   lp.addEventListener('change', (e) => {
@@ -642,21 +615,8 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
         },
         true,
       );
-    if (typeof go === 'function') {
-      const g0 = go;
-      go = function (t) {
-        document.body.classList.remove('rpShut');
-        g0(t);
-        thMap();
-      };
-    }
-    if (typeof nav === 'function') {
-      const n0 = nav;
-      nav = function () {
-        n0();
-        thMap();
-      };
-    }
+    // thMap wird auch von go() und nav() aufgerufen (Erweiterungen unterhalb dieses Moduls)
+    window.thMap = thMap;
     const mo = new MutationObserver(() => thMap());
     ['tbar', 'tabs', 'anbar', 'vc'].forEach((id) => {
       const el = document.getElementById(id);
@@ -699,6 +659,8 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
     window.addEventListener('resize', () => Object.keys(fly).forEach(place));
   })();
 })();
+// go(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
+// nav(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 
 (function () {
   /* v251: Datenebenen im Reiter Kontext – geordnete Liste aller geladenen Daten (Name, 2D/3D, Quelle, Lizenz, Anzahl, Ladedatum, Sichtbarkeit).
@@ -1495,22 +1457,5 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
       logErr(e, 'datVis');
     }
   };
-  /* Haken in der Liste folgen dem Layer-Menü */
-  {
-    const _lv = window.lvis || lvis;
-    lvis = function (i, v) {
-      const r = _lv.apply(this, arguments);
-      try {
-        document.querySelectorAll('.zdtg[data-i="' + i + '"]').forEach((c) => {
-          c.classList.toggle('on', !!v);
-          c.setAttribute('aria-pressed', v ? 'true' : 'false');
-          c.title = v ? 'Ebene ausblenden' : 'Ebene einblenden';
-        });
-        datCnt();
-      } catch (e) {
-        logErr(e, 'lvis');
-      }
-      return r;
-    };
-  }
 })();
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js

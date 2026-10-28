@@ -357,13 +357,4 @@ function layExport() {
   }, 60);
 }
 
-try {
-  op('trees', LY.find((l) => l[1] === 'trees')[3]);
-} catch (e) {
-  logErr(e, 'init');
-}
-try {
-  tgl('sun');
-} catch (e) {
-  console.warn(e);
-}
+// Startaufruf verschoben nach start() in 29-start/010-start-projekt-oeffnen.js

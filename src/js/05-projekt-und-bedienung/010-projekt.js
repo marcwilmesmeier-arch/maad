@@ -29,6 +29,20 @@ const sqData = () => ({
     : [],
 });
 function newProjectReset() {
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
+  try {
+    S.mat = { o: {}, nf: [] };
+    l2mReg();
+  } catch (e) {
+    logErr(e, 'newProjectReset');
+  }
+  // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js
+  try {
+    S.ft = JSON.parse(JSON.stringify(FT0));
+    if (FDS.open) fdClose();
+  } catch (e) {
+    logErr(e, 'newProjectReset');
+  }
   S.areas = [];
   S.selA = null;
   S.multi = [];
@@ -70,6 +84,20 @@ function newProjectReset() {
   }
   H();
   hpos();
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js (danach)
+  try {
+    if (gfxDefGet()) gfxDefApply(true);
+  } catch (e) {
+    console.error(e);
+  }
+
+  // ── Erweiterung aus 21-gelaendeplanum/040-kantenbeschriftung-mit-boeschungs.js (danach)
+  try {
+    plmLoad(null);
+    plmTick(1);
+  } catch (e) {
+    logErr(e, 'newProjectReset');
+  }
 }
 function wzOpen(ask) {
   if (
@@ -684,6 +712,8 @@ function wzNext() {
 
 // LoD3 ist optional: Rückfrage nach der Flächenwahl, wenn für den Standort ein LoD3-Modell vorliegt
 function lod3Ask(lon, lat) {
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js
+  if ((S.gbMode || 'auto') !== 'auto') return Promise.resolve(false);
   const src = LOD3S.find((x) => lon >= x.bb[0] && lon <= x.bb[2] && lat >= x.bb[1] && lat <= x.bb[3]);
   if (!src) return Promise.resolve(false);
   if (S.lod3On === true || GEO.lod3File) return Promise.resolve(true);
@@ -802,17 +832,37 @@ function treeInRings(t, rings, tol) {
   return false;
 }
 function treePrune(rings) {
-  if (!GEO.trees || !GEO.trees.length || !rings.length) return 0;
-  const rm = GEO.trees.filter((t) => treeInRings(t, rings, 0.6));
-  if (!rm.length) return 0;
-  GEO.tdel = (GEO.tdel || []).concat(rm);
-  treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
-  return rm.length;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+  let n = (() => {
+    if (!GEO.trees || !GEO.trees.length || !rings.length) return 0;
+    const rm = GEO.trees.filter((t) => treeInRings(t, rings, 0.6));
+    if (!rm.length) return 0;
+    GEO.tdel = (GEO.tdel || []).concat(rm);
+    treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
+    return rm.length;
+  })();
+  try {
+    const rm = railTrees();
+    if (rm.length) {
+      GEO.tdel = (GEO.tdel || []).concat(rm);
+      treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
+      n += rm.length;
+      GEO.railDel = rm.length;
+    }
+  } catch (e) {
+    console.warn('railTrees', e);
+  }
+  return n;
 }
 function treePick() {
-  if (!GEO.tmesh || !G.trees.visible) return null;
-  const h = rc.intersectObject(GEO.tmesh, false)[0];
-  return h && h.instanceId != null ? h : null;
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/010-fokus.js
+  return ISO3.on
+    ? null
+    : (() => {
+        if (!GEO.tmesh || !G.trees.visible) return null;
+        const h = rc.intersectObject(GEO.tmesh, false)[0];
+        return h && h.instanceId != null ? h : null;
+      })();
 }
 function treeSel(i) {
   if (GEO.tselG) {
@@ -843,12 +893,20 @@ function treeSel(i) {
   GEO.tselG = m;
 }
 function treeDel() {
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
   const t = GEO.tsel;
-  if (!t || !GEO.trees) return;
-  GEO.tdel = (GEO.tdel || []).concat([t]);
-  treesBuild(GEO.trees.filter((x) => x !== t));
-  H();
-  rr();
+  if (t && t.u) {
+    const i = UT.indexOf(t);
+    if (i >= 0) UT.splice(i, 1);
+  }
+  return (() => {
+    const t = GEO.tsel;
+    if (!t || !GEO.trees) return;
+    GEO.tdel = (GEO.tdel || []).concat([t]);
+    treesBuild(GEO.trees.filter((x) => x !== t));
+    H();
+    rr();
+  })();
 }
 function treeDelOn() {
   const p = S.par;
@@ -869,13 +927,25 @@ function treeRestore() {
   rr();
 }
 function treeInfo() {
-  const t = GEO.tsel,
-    nd = GEO.tdel ? GEO.tdel.length : 0;
-  let h = '';
-  if (t)
-    h += `<h4>Baum</h4><div class="card">${kv('Höhe', f1(t.h, 1) + ' m')}${kv('Kronendurchmesser', f1(t.r * 2, 1) + ' m')}${kv('Quelle', t.src === 'osm' ? 'OpenStreetMap' : t.src === 'kataster' ? 'Baumkataster' : t.src === 'gpkg' ? 'Baumdatei (GeoPackage)' : 'Kronenmodell DOM1−DGM1')}${t.sp ? kv('Art', esc(t.sp)) : ''}<button class="sm" style="margin-top:6px" onclick="treeDel()">Baum entfernen (Entf)</button></div>`;
-  if (nd)
-    h += `<div style="margin-top:6px;color:var(--mu)">${nd} Bäume entfernt <button class="sm" onclick="treeRestore()">Alle wiederherstellen</button></div>`;
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
+  let h = (() => {
+    const t = GEO.tsel,
+      nd = GEO.tdel ? GEO.tdel.length : 0;
+    let h = '';
+    if (t)
+      h += `<h4>Baum</h4><div class="card">${kv('Höhe', f1(t.h, 1) + ' m')}${kv('Kronendurchmesser', f1(t.r * 2, 1) + ' m')}${kv('Quelle', t.src === 'osm' ? 'OpenStreetMap' : t.src === 'kataster' ? 'Baumkataster' : t.src === 'gpkg' ? 'Baumdatei (GeoPackage)' : 'Kronenmodell DOM1−DGM1')}${t.sp ? kv('Art', esc(t.sp)) : ''}<button class="sm" style="margin-top:6px" onclick="treeDel()">Baum entfernen (Entf)</button></div>`;
+    if (nd)
+      h += `<div style="margin-top:6px;color:var(--mu)">${nd} Bäume entfernt <button class="sm" onclick="treeRestore()">Alle wiederherstellen</button></div>`;
+    return h;
+  })();
+  const t = GEO.tsel;
+  if (t && t.u) {
+    h = h.replace(/Kronenmodell DOM1−DGM1/, 'Eigener Baum');
+    h = h.replace(
+      '<button class="sm"',
+      kv('Stammhöhe', f1(t.sh, 1) + ' m') + kv('Stammdurchmesser', f1(t.sd, 2) + ' m') + '<button class="sm"',
+    );
+  }
   return h;
 }
 function ctxDel() {
@@ -936,13 +1006,132 @@ function lvis(i, v) {
   if (S.geo && PK[k]) recomp();
   if ((!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') && G[k]) gVis(k, v);
   labVis();
+  // ── Erweiterung aus 16-darstellung-erweitert/050-darstellung-der-fanglinien-im-3d.js (danach)
+  try {
+    document.querySelectorAll('.zdtg[data-i="' + i + '"]').forEach((c) => {
+      c.classList.toggle('on', !!v);
+      c.setAttribute('aria-pressed', v ? 'true' : 'false');
+      c.title = v ? 'Ebene ausblenden' : 'Ebene einblenden';
+    });
+    datCnt();
+  } catch (e) {
+    logErr(e, 'lvis');
+  }
+
+  // ── Erweiterung aus 17-erweiterungen-v253-v280/080-karten.js (danach)
+  try {
+    const k = LY[i][1];
+    if (v && OVL[k]) {
+      if (OVD[k] && OVD[k].st === 'err') delete OVD[k];
+      ovLoad(k);
+    }
+  } catch (e) {
+    logErr(e, 'lvis');
+  }
+
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js (danach)
+  try {
+    if (LY[i][1] === 'clg') {
+      if (v) {
+        if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
+        ovLoad('clc');
+      }
+      clgSig = '';
+      if (S.geo) recomp();
+      if (typeof FX !== 'undefined' && FX.grass && FX.flat) fxGrass();
+      try {
+        lyRender();
+      } catch (e) {
+        logErr(e, 'lvis');
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/120-tannen.js (danach)
+  try {
+    if (LY[i][1] === 'wld') {
+      if (v) {
+        if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
+        if (!OVD.clc) ovLoad('clc');
+      }
+      WLD.sig = '';
+      try {
+        lyRender();
+      } catch (e) {
+        logErr(e, 'lvis');
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
+  try {
+    if (LY[i][1] === 'bclc') {
+      if (v) {
+        if (OVD.clc && OVD.clc.st === 'err') delete OVD.clc;
+        if (!OVD.clc) ovLoad('clc');
+      }
+      RFC.sig = '';
+      BCL.sig = '';
+    }
+  } catch (e) {
+    logErr(e, 'lvis');
+  }
+
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/100-eigenschaften.js (danach)
+  try {
+    if (LY[i][1] === 'hnr') {
+      G.hnr.visible = !!v;
+      if (v) hnrLoad();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js (danach)
+  try {
+    const k = LY[i] && LY[i][1];
+    if (k === 'ugr' || k === 'ugk') {
+      recomp();
+      rr();
+    }
+  } catch (e) {
+    logErr(e, 'lvis');
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js (danach)
+  try {
+    if (LY[i] && LY[i][1] === 'bkont') bkApply(true);
+  } catch (e) {
+    logErr(e, 'lvis');
+  }
 }
 function lop(i, v) {
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
+  if (LY[i][1] === 'clg') {
+    LY[i][3] = v;
+    if (S.geo) recomp();
+    return;
+  }
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/010-gruen-wasser.js
+  if (LY[i] && LY[i][1] === 'trees') FX.opT = 1;
+  return lopBasis.apply(this, arguments);
+}
+// lop() ohne die Erweiterungen darüber – wird von lop() gezielt aufgerufen
+function lopBasis(i, v) {
   v = Math.max(0.05, Math.min(1, +v));
   LY[i][3] = v;
   op(LY[i][1], v);
 }
 function op(k, v) {
+  // ── Erweiterung aus 18-erweiterungen-v280-v325/010-gruen-wasser.js
+  if (k === 'trees' && FX.tr) {
+    fxTreeOp();
+    return;
+  }
   G[k].traverse((o) => {
     if (o.material) {
       o.material.transparent = true;
@@ -952,6 +1141,18 @@ function op(k, v) {
 }
 // Kamera
 function cam() {
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/020-kamera.js
+  camBasis();
+  if (S.m3 && CAMX.on) {
+    try {
+      camxApply(pc, V, mid.clientWidth / mid.clientHeight);
+    } catch (e) {
+      logErr(e, 'cam');
+    }
+  }
+}
+// cam() ohne die Erweiterungen darüber – wird von cam() gezielt aufgerufen
+function camBasis() {
   const w = mid.clientWidth,
     h = mid.clientHeight,
     a = w / h;

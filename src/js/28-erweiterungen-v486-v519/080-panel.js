@@ -36,66 +36,7 @@ function impRender() {
   R.dataset.imp = '1';
   IMP.dirty = false;
 }
-{
-  const _r = rr;
-  rr = function () {
-    const R = $('pc');
-    if (S.tab === 'Import') {
-      if (!R.dataset.imp || IMP.dirty) impRender();
-      return;
-    }
-    if (R && R.dataset.imp) delete R.dataset.imp;
-    return _r.apply(this, arguments);
-  };
-}
-{
-  const _t = rebuildTerrain;
-  rebuildTerrain = function () {
-    const r = _t.apply(this, arguments);
-    try {
-      IMP.sh.forEach(impMesh);
-    } catch (e) {
-      logErr(e, 'rebuildTerrain');
-    }
-    return r;
-  };
-}
-/* ---------- Projekt ---------- */
-{
-  const _x = projExtra;
-  projExtra = function () {
-    const x = _x.apply(this, arguments);
-    try {
-      if (IMP.sh.length)
-        x.imp = IMP.sh.map((s) => ({
-          name: s.name,
-          url: s.url,
-          pw: s.pw,
-          ph: s.ph,
-          w: s.w,
-          h: s.h,
-          x: s.x,
-          z: s.z,
-          rot: s.rot,
-          op: s.op,
-          vis: s.vis,
-          lock: s.lock,
-        }));
-    } catch (e) {
-      logErr(e, 'projExtra');
-    }
-    return x;
-  };
-}
-{
-  const _a = projApplyPre;
-  projApplyPre = function (x) {
-    const r = _a.apply(this, arguments);
-    try {
-      if (x && x.imp && x.imp.length && !IMP.sh.length) x.imp.forEach((o) => impAdd(o));
-    } catch (e) {
-      console.warn('imp load', e);
-    }
-    return r;
-  };
-}
+// rr(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
+// rebuildTerrain(): Erweiterung zusammengeführt, siehe 02-geodaten/010-kontextdaten.js
+// projExtra(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js
+// projApplyPre(): Erweiterung zusammengeführt, siehe 14-projekt-speicherstand/010-projekt.js

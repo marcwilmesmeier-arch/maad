@@ -35,53 +35,10 @@ function bootKeep(x) {
     V.rot = V.rotT = 0;
   }
 }
-{
-  const _s = homeSetup;
-  homeSetup = function () {
-    _s.apply(this, arguments);
-    bootCur(0);
-    if (HOME.hmLate) {
-      HOME.hmLate = 0;
-      setTimeout(() => {
-        if (HOME.open && !HOME.hold)
-          try {
-            hmShow();
-          } catch (e) {
-            console.warn(e);
-          }
-      }, 1100);
-    }
-  };
-}
-{
-  const _c = homeClose;
-  homeClose = function () {
-    const r = _c.apply(this, arguments);
-    if (!HOME.hold) bootCur(0);
-    return r;
-  };
-}
+// homeSetup(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
+// homeClose(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
 
-// Abstandsflächen immer ganz oben auf der Geländetextur (über Planum, Schutzgebiets-/CLC-Überlagerungen)
-{
-  const _r = recomp;
-  recomp = function () {
-    const r = _r.apply(this, arguments);
-    try {
-      const LA = LY.find((l) => l[1] === 'abst');
-      if (LA && LA[2] && GEO.comp) {
-        const cx = GEO.comp.getContext('2d');
-        cx.globalAlpha = LA[3];
-        cx.drawImage(PL.abst, 0, 0);
-        cx.globalAlpha = 1;
-        if (GEO.tex) GEO.tex.needsUpdate = true;
-      }
-    } catch (e) {
-      logErr(e, 'recomp');
-    }
-    return r;
-  };
-}
+// recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 /* Planen-Menü nach Start / Projekt öffnen / neues Projekt eingeklappt */
 /* Planen-Panel: nach Start/Öffnen/Neu eingeklappt, ohne Animation; automatische Aufklapp-Versuche (go/nav) werden 2 s lang zurückgenommen, ein Klick des Nutzers beendet das */
 document.body.classList.add('rpShut');
@@ -103,48 +60,66 @@ document.addEventListener(
   },
   true,
 );
-{
-  const _hc = homeClose;
-  homeClose = function () {
-    const shut = !HOME.resuming;
-    if (shut) {
-      RPG.until = Date.now() + 2000;
-      document.body.classList.add('rpShut', 'rpNoAnim');
-    }
-    const r = _hc.apply(this, arguments);
-    if (shut) {
-      try {
-        if (S.zo && S.zo.m !== 'b') zoMode('b');
-      } catch (e) {
-        console.warn(e);
-      }
-      document.body.classList.add('rpShut');
-      setTimeout(() => document.body.classList.remove('rpNoAnim'), 2100);
-    }
-    return r;
-  };
+// homeClose(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
+// homeResume(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
+// homePar(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
+
+// ---- Programmstart
+// Läuft erst, wenn alle Dateien geladen sind. Vorher standen diese Aufrufe verteilt in
+// 01-modell-3d, 06-darstellung, 07-analyse und 08-layout-pdf und liefen, bevor spätere
+// Dateien ihre Daten angelegt hatten.
+function start() {
+  // Platzhalter-Bestand (wird von demoOff() unten wieder entfernt)
+  [
+    [0, 3, 'Wohnen'],
+    [2, 2, 'Wohnen'],
+    [4, 3, 'Gewerbe'],
+    [5, 2, 'Wohnen'],
+    [7, 4, 'Wohnen'],
+  ].forEach(([pi, n, use]) => {
+    const q = P[pi].poly,
+      x = q[0][0],
+      z = q[0][1];
+    const fp = [
+      [x + 12, z + 12],
+      [x + 43, z + 12],
+      [x + 43, z + 38],
+      [x + 12, z + 38],
+    ];
+    const b = {
+      id: 'bestand_' + pi,
+      ex: true,
+      use,
+      fp,
+      levels: Array.from({ length: n }, (_, i) => ({ name: i ? i + '.OG' : 'EG', h: 3 })),
+      est: true,
+      src: 'Demo',
+    };
+    S.ex.push(b);
+    mesh(b);
+  });
+  drInit();
+  nav();
+  setMode(1);
+  $('b3').classList.add('on');
+  H();
+  tool('v');
+  S.tab = 'Planen';
+  rr();
+  demoOff();
+  P.length = 0;
+  rr();
+  homeOpen(1);
+  try {
+    op('trees', LY.find((l) => l[1] === 'trees')[3]);
+  } catch (e) {
+    logErr(e, 'start');
+  }
+  try {
+    tgl('sun');
+  } catch (e) {
+    console.warn(e);
+  }
+  sunDefault();
 }
-{
-  const _hr = homeResume;
-  homeResume = function () {
-    HOME.resuming = 1;
-    try {
-      return _hr.apply(this, arguments);
-    } finally {
-      HOME.resuming = 0;
-    }
-  };
-}
-/* Startmenü-Zoom: ist ein Grundstück gewählt, wird darauf gezoomt (statt auf das Grundstück nahe der Kartenmitte) */
-{
-  const _hp = homePar;
-  homePar = function () {
-    try {
-      const p = S.par;
-      if (p && p.poly && p.poly.length > 2) return { a: p, c: cen(p.poly), ar: area(p.poly), poly: p.poly };
-    } catch (e) {
-      console.warn(e);
-    }
-    return _hp.apply(this, arguments);
-  };
-}
+start();

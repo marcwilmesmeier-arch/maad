@@ -97,78 +97,9 @@ function l2TrimDo(b, lv, w, P) {
   l2Cap(msg);
   setTimeout(() => l2Cap(''), 1200);
 }
-{
-  const _t = grTool;
-  grTool = function (t) {
-    const r = _t.apply(this, arguments);
-    try {
-      S.l2.cut = null;
-      const e = gD('grT_trim');
-      if (e) e.classList.toggle('on', t === 'trim');
-      const cv = gD('grCv');
-      if (cv) cv.style.cursor = t === 'trim' ? 'crosshair' : '';
-      if (t === 'trim')
-        l2Cap('Stutzen/Dehnen: Wand anklicken · Umschalt+Klick = einzelne Schneidkante · Esc beendet');
-    } catch (e) {
-      logErr(e, 'grTool');
-    }
-    return r;
-  };
-}
-{
-  const _g = grDown;
-  grDown = function (e) {
-    if (l2on() && GRS.tool === 'trim') {
-      if (e.button === 2) {
-        S.l2.cut = null;
-        l2Cap('Schneidkanten: alle Wände');
-      } else if (e.button === 0) {
-        const b = grB();
-        if (b && b._y != null) {
-          const lv = grLv(b),
-            p = grPt(e),
-            w = lv.dg ? null : l2Hit(b, lv, p.x, p.z) || l2HitCut(lv, p);
-          if (w) {
-            if (e.shiftKey) {
-              S.l2.cut = w.id;
-              GRS.dirty = 1;
-              l2Cap('Schneidkante gewählt – jetzt Wand zum Stutzen/Dehnen anklicken');
-            } else l2TrimDo(b, lv, w, p);
-          } else if (S.l2.cut) {
-            S.l2.cut = null;
-            GRS.dirty = 1;
-            l2Cap('Schneidkanten: alle Wände');
-          }
-        }
-        return;
-      }
-    }
-    return _g.apply(this, arguments);
-  };
-}
-{
-  const _k = grKey;
-  grKey = function (e) {
-    if (l2on() && GRS.tool === 'trim' && e.key === 'Escape') {
-      grTool('sel');
-      l2Cap('');
-      return;
-    }
-    if (e.key === 'Escape' && !(GRS.ed || GRS.pts.length || GRS.rect)) {
-      S.l2.sel = null;
-      S.l2.pick = 0;
-      S.l2.pt = null;
-      S.l2.bsig = '';
-      try {
-        L2CF.close();
-        L2C.ref = null;
-      } catch (e) {
-        logErr(e, 'grKey');
-      }
-    }
-    return _k.apply(this, arguments);
-  };
-}
+// grTool(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js
+// grDown(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js
+// grKey(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js
 GR.tool = grTool;
 
 GR.l2.ptExt = () => {
@@ -202,80 +133,7 @@ GR.l2.ptExt = () => {
   S.l2.bsig = '';
 };
 
-// ---- Explosionsansicht auch für LOD 200: Wände und Decken wandern mit ihrem Geschoss
-{
-  const _x = exApply;
-  exApply = function () {
-    const r = _x.apply(this, arguments);
-    try {
-      for (const it of L2I.values()) {
-        const b = S.bld.find((z) => z.id === it.el.bid);
-        if (b)
-          it.g.position.y =
-            it.el.y0 +
-            exOff(b, it.el.kind === 'DE' ? it.el.li + 1 : it.el.li) +
-            (it.el.kind === 'RD' ? S.expl.cur * exP().v : 0);
-        /* LOD300: letzte 30 % der Explosion – Außenwände (und Giebel) rücken nach außen von der Geschossdecke weg */
-        let ox = 0,
-          oz = 0;
-        const hh = exP().h;
-        if (hh > 0 && it.el.kind === 'AW' && l23()) {
-          const e = it.el;
-          let n = null,
-            pt = null;
-          if (e.gb) {
-            n = [e.gb.nx, e.gb.nz];
-            pt = e.gb.t && e.gb.t[0] && [e.gb.t[0][0][0], e.gb.t[0][0][2]];
-          } else if (e.es && e.es[0].n) {
-            n = [-e.es[0].n[0], -e.es[0].n[1]];
-            pt = e.p;
-          }
-          if (n && pt) {
-            const GE = l2Els(b),
-              cc =
-                GE._exC ||
-                (GE._exC = (() => {
-                  let sx = 0,
-                    sz = 0,
-                    c = 0;
-                  GE.els.forEach((q) => {
-                    if (q.kind === 'AW' && q.p) {
-                      sx += q.p[0];
-                      sz += q.p[1];
-                      c++;
-                    }
-                  });
-                  return c ? [sx / c, sz / c] : [0, 0];
-                })());
-            if (n[0] * (pt[0] - cc[0]) + n[1] * (pt[1] - cc[1]) < 0) {
-              n = [-n[0], -n[1]];
-            }
-            const nl = it.el.T.layers.length,
-              u = hh * Math.max(0.5, S.expl.gap * 0.12);
-            it.g.children.forEach((ch) => {
-              const ly = ch.userData.ly;
-              if (ly == null || ly < 0) return;
-              const d = u * (ly + 1) * (nl > 1 ? 1 : 1);
-              ch.position.x = n[0] * d;
-              ch.position.z = n[1] * d;
-            });
-            ox = null;
-          }
-        }
-        if (ox === 0)
-          it.g.children.forEach((ch) => {
-            if (ch.userData.ly != null) {
-              ch.position.x = 0;
-              ch.position.z = 0;
-            }
-          });
-      }
-    } catch (e) {
-      logErr(e, 'exApply');
-    }
-    return r;
-  };
-}
+// exApply(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js
 // ---- Wände schneiden Räume wie die Trennlinien in LOD 100: Enden, die an der Innenseite einer Außenwand oder an der Wandkante einer anderen Wand gefangen wurden, werden entlang der Linie bis zur Mittellinie bzw. zum Umriss verlängert
 function l2Fix(segs) {
   if (l2on()) {
@@ -385,18 +243,8 @@ function l2Fix(segs) {
   }
   return segs;
 }
-{
-  const _a = grAddCuts;
-  grAddCuts = function (segs) {
-    return _a.call(this, l2Fix(segs));
-  };
-}
-{
-  const _a = grAddLine;
-  grAddLine = function (segs) {
-    return _a.call(this, l2Fix(segs));
-  };
-}
+// grAddCuts(): Erweiterung zusammengeführt, siehe 15-grundriss/020-flaechenarten.js
+// grAddLine(): Erweiterung zusammengeführt, siehe 15-grundriss/020-flaechenarten.js
 // ---- Explosion: weiße Kontur (Auswahl/Hover) geht mit den Geschossen mit
 function outPts(b, k, i) {
   const pts = [],
@@ -453,23 +301,9 @@ function setLines(o, b, k, i) {
     o.geometry = new T.BufferGeometry().setFromPoints(outPts(b, k, i));
   }
 }
-{
-  const _x2 = exApply;
-  let lastE = -1;
-  exApply = function () {
-    const r = _x2.apply(this, arguments);
-    try {
-      const c = S.expl ? +S.expl.cur.toFixed(2) : 0;
-      if (c !== lastE) {
-        lastE = c;
-        updSel2();
-      }
-    } catch (e) {
-      logErr(e, 'exApply');
-    }
-    return r;
-  };
-}
+// zuletzt angewendeter Explosionswert (Auswahlkontur nur bei Änderung neu)
+let exLastE = -1;
+// exApply(): Erweiterung zusammengeführt, siehe 15-grundriss/060-explosionsansicht.js
 
 // ---- Enden/Verbindungspunkte einer Wand an der Außenwand werden an der Innenseite der Außenwand angezeigt (Daten bleiben am Umriss, damit die Trennlinie den Raum schneidet)
 function l2Disp(lv, gid, p) {
@@ -497,21 +331,4 @@ function l2Disp(lv, gid, p) {
     return p;
   }
 }
-{
-  const _h = grEdHit;
-  grEdHit = function (lv, g, p) {
-    const r = _h.apply(this, arguments);
-    if (r || !l2on()) return r;
-    try {
-      const grp = grGrp(lv, g),
-        tol = 9 / GRS.view.s;
-      for (const v of grp.vs) {
-        const q = l2Disp(lv, g, v.p);
-        if (Math.hypot(q[0] - p.x, q[1] - p.z) < tol) return { m: 'v', k: v.k, grp };
-      }
-    } catch (e) {
-      logErr(e, 'grEdHit');
-    }
-    return r;
-  };
-}
+// grEdHit(): Erweiterung zusammengeführt, siehe 15-grundriss/130-nachtraegliches-bearbeiten-gewaehlter-schnittgruppen.js

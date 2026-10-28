@@ -282,56 +282,64 @@ function layRender() {
   });
 }
 function layProp() {
-  const el = $('layProp'),
-    e = layEl(LAY.sel);
-  if (!e) {
-    el.innerHTML =
-      '<h4>Layout</h4><div style="color:var(--mu)">Element anklicken zum Bearbeiten, ziehen zum Verschieben. Elemente oben in der Leiste hinzufügen.<br><br>Ansichten speicherst du im Hauptfenster unter „Ansichten“.</div>';
-    return;
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/100-eigenschaften.js
+  (() => {
+    const el = $('layProp'),
+      e = layEl(LAY.sel);
+    if (!e) {
+      el.innerHTML =
+        '<h4>Layout</h4><div style="color:var(--mu)">Element anklicken zum Bearbeiten, ziehen zum Verschieben. Elemente oben in der Leiste hinzufügen.<br><br>Ansichten speicherst du im Hauptfenster unter „Ansichten“.</div>';
+      return;
+    }
+    const N = (k, l, st) =>
+        `<label class="lp">${l}<input type="number" step="${st || 1}" value="${Math.round(e[k] * 10) / 10}" onchange="layPut('${k}',+this.value)"></label>`,
+      S2 = (k, l, o) =>
+        `<label class="lp">${l}<select onchange="layPut('${k}',this.value)">${o.map(([v, t]) => `<option value="${v}" ${e[k] == v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`,
+      C = (k, l) =>
+        `<label class="lp">${l}<input type="checkbox" ${e[k] ? 'checked' : ''} onchange="layPut('${k}',this.checked)"></label>`;
+    let h = `<h4>${{ view: 'Ansicht', pic: 'Zeichnung', head: 'Überschrift', text: 'Fließtext', info: 'Kennzahlen', legend: 'Legende' }[e.type]}</h4>`;
+    if (e.type === 'view') {
+      h +=
+        `<label class="lp">Ansicht<select onchange="layView(this.value)"><option value="">${esc(e.name || 'Aktuelle Kamera')}</option>${S.views.map((v, i) => `<option value="${i}">${esc(v.name)} (${v.m3 ? '3D' : '2D'})</option>`).join('')}</select></label>${C('border', 'Rahmen')}${C('cap', 'Beschriftung')}` +
+        (e.cap ? N('size', 'Schriftgröße (pt)') : '') +
+        `${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}${N('h', 'Höhe (mm)')}<button class="sm" style="margin-top:6px" onclick="layRefresh()">Bild neu rendern</button>` +
+        layLockProp(e);
+    } else if (e.type === 'pic') {
+      h +=
+        `<label class='lp'>Quelle<select onchange='layPicSrc(this.value)' style='max-width:150px'><option value=''>${esc(e.name || 'Zeichnung')}</option>${lpSources()
+          .map((q) => `<option value='${esc(q.k)}' ${q.k === e.pk ? 'selected' : ''}>${esc(q.t)}</option>`)
+          .join('')}</select></label>${C('border', 'Rahmen')}${C('cap', 'Beschriftung')}` +
+        (e.cap ? N('size', 'Schriftgröße (pt)') : '') +
+        `${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}<div style='color:var(--mu);font-size:11px;margin-top:4px'>Live aus dem Grundriss- bzw. Ansichtstool; Änderungen dort erscheinen hier automatisch.</div>`;
+    } else if (e.type === 'head' || e.type === 'text') {
+      h += `<textarea oninput="layPut('text',this.value,1)" rows="${e.type === 'head' ? 3 : 8}" style="width:100%;box-sizing:border-box">${esc(e.text || '')}</textarea>${N('size', 'Schriftgröße (pt)')}${e.type === 'text' ? C('bold', 'Fett') : ''}${S2(
+        'align',
+        'Ausrichtung',
+        [
+          ['l', 'Links'],
+          ['c', 'Mitte'],
+          ['r', 'Rechts'],
+        ],
+      )}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}`;
+    } else if (e.type === 'info') {
+      h += `<label class="lp">Titel<input type="text" value="${esc(e.title || '')}" oninput="layPut('title',this.value,1)" style="width:130px"></label>${C('perB', 'Je Gebäude aufteilen')}${C('flr', 'Geschosse auflisten')}<label class="lp">Flurstücke zeigen<input type="checkbox" ${e.fln !== false ? 'checked' : ''} onchange="layPut('fln',this.checked)"></label>${LAYK.map(([k, l]) => `<label class="lp" style="margin:1px 0">${l}<input type="checkbox" ${(e.keys || []).includes(k) ? 'checked' : ''} onchange="layKey('${k}',this.checked)"></label>`).join('')}${N('size', 'Schriftgröße (pt)')}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}<div style="color:var(--mu);font-size:11px;margin-top:4px">Werte aller Gebäude im Projekt (live aus der Analyse).</div>`;
+    } else if (e.type === 'legend') {
+      h += `<label class="lp">Titel<input type="text" value="${esc(e.title || '')}" oninput="layPut('title',this.value,1)" style="width:130px"></label>${C('bgf', 'BGF anzeigen')}${C('bri', 'BRI anzeigen')}${C('perB', 'Je Gebäude aufteilen')}${N('size', 'Schriftgröße (pt)')}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}`;
+    }
+    if (e.type !== 'view' || e.cap || e.capSc) {
+      h += `<label class="lp">Schrift<select onchange="layPut('font',this.value||null)" style="max-width:130px">${layFontOpts(null, e.font || '', `wie Layout (${(LFOPT.find((x) => x[0] === LAY.font) || [0, 'Helvetica'])[1]})`)}</select></label>`;
+      const fo = layFo(e);
+      if (lfOk(fo) && LFONT[fo].s && LFONT[fo].s !== LFONT[fo].n)
+        h += `<div style="color:var(--mu);font-size:11px">${LFONT[fo].n} ist lizenzpflichtig; verwendet wird die freie Ersatzschrift ${LFONT[fo].s}.</div>`;
+    }
+    h += `<div style="display:flex;gap:6px;margin-top:8px"><button class="sm" onclick="layDup()">Duplizieren</button><button class="sm" onclick="layDel()" style="color:var(--wa)">Löschen</button></div>`;
+    el.innerHTML = h;
+  })();
+  try {
+    layProp2();
+  } catch (err) {
+    console.warn('layProp2', err);
   }
-  const N = (k, l, st) =>
-      `<label class="lp">${l}<input type="number" step="${st || 1}" value="${Math.round(e[k] * 10) / 10}" onchange="layPut('${k}',+this.value)"></label>`,
-    S2 = (k, l, o) =>
-      `<label class="lp">${l}<select onchange="layPut('${k}',this.value)">${o.map(([v, t]) => `<option value="${v}" ${e[k] == v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`,
-    C = (k, l) =>
-      `<label class="lp">${l}<input type="checkbox" ${e[k] ? 'checked' : ''} onchange="layPut('${k}',this.checked)"></label>`;
-  let h = `<h4>${{ view: 'Ansicht', pic: 'Zeichnung', head: 'Überschrift', text: 'Fließtext', info: 'Kennzahlen', legend: 'Legende' }[e.type]}</h4>`;
-  if (e.type === 'view') {
-    h +=
-      `<label class="lp">Ansicht<select onchange="layView(this.value)"><option value="">${esc(e.name || 'Aktuelle Kamera')}</option>${S.views.map((v, i) => `<option value="${i}">${esc(v.name)} (${v.m3 ? '3D' : '2D'})</option>`).join('')}</select></label>${C('border', 'Rahmen')}${C('cap', 'Beschriftung')}` +
-      (e.cap ? N('size', 'Schriftgröße (pt)') : '') +
-      `${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}${N('h', 'Höhe (mm)')}<button class="sm" style="margin-top:6px" onclick="layRefresh()">Bild neu rendern</button>` +
-      layLockProp(e);
-  } else if (e.type === 'pic') {
-    h +=
-      `<label class='lp'>Quelle<select onchange='layPicSrc(this.value)' style='max-width:150px'><option value=''>${esc(e.name || 'Zeichnung')}</option>${lpSources()
-        .map((q) => `<option value='${esc(q.k)}' ${q.k === e.pk ? 'selected' : ''}>${esc(q.t)}</option>`)
-        .join('')}</select></label>${C('border', 'Rahmen')}${C('cap', 'Beschriftung')}` +
-      (e.cap ? N('size', 'Schriftgröße (pt)') : '') +
-      `${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}<div style='color:var(--mu);font-size:11px;margin-top:4px'>Live aus dem Grundriss- bzw. Ansichtstool; Änderungen dort erscheinen hier automatisch.</div>`;
-  } else if (e.type === 'head' || e.type === 'text') {
-    h += `<textarea oninput="layPut('text',this.value,1)" rows="${e.type === 'head' ? 3 : 8}" style="width:100%;box-sizing:border-box">${esc(e.text || '')}</textarea>${N('size', 'Schriftgröße (pt)')}${e.type === 'text' ? C('bold', 'Fett') : ''}${S2(
-      'align',
-      'Ausrichtung',
-      [
-        ['l', 'Links'],
-        ['c', 'Mitte'],
-        ['r', 'Rechts'],
-      ],
-    )}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}`;
-  } else if (e.type === 'info') {
-    h += `<label class="lp">Titel<input type="text" value="${esc(e.title || '')}" oninput="layPut('title',this.value,1)" style="width:130px"></label>${C('perB', 'Je Gebäude aufteilen')}${C('flr', 'Geschosse auflisten')}<label class="lp">Flurstücke zeigen<input type="checkbox" ${e.fln !== false ? 'checked' : ''} onchange="layPut('fln',this.checked)"></label>${LAYK.map(([k, l]) => `<label class="lp" style="margin:1px 0">${l}<input type="checkbox" ${(e.keys || []).includes(k) ? 'checked' : ''} onchange="layKey('${k}',this.checked)"></label>`).join('')}${N('size', 'Schriftgröße (pt)')}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}<div style="color:var(--mu);font-size:11px;margin-top:4px">Werte aller Gebäude im Projekt (live aus der Analyse).</div>`;
-  } else if (e.type === 'legend') {
-    h += `<label class="lp">Titel<input type="text" value="${esc(e.title || '')}" oninput="layPut('title',this.value,1)" style="width:130px"></label>${C('bgf', 'BGF anzeigen')}${C('bri', 'BRI anzeigen')}${C('perB', 'Je Gebäude aufteilen')}${N('size', 'Schriftgröße (pt)')}${N('x', 'X (mm)')}${N('y', 'Y (mm)')}${N('w', 'Breite (mm)')}`;
-  }
-  if (e.type !== 'view' || e.cap || e.capSc) {
-    h += `<label class="lp">Schrift<select onchange="layPut('font',this.value||null)" style="max-width:130px">${layFontOpts(null, e.font || '', `wie Layout (${(LFOPT.find((x) => x[0] === LAY.font) || [0, 'Helvetica'])[1]})`)}</select></label>`;
-    const fo = layFo(e);
-    if (lfOk(fo) && LFONT[fo].s && LFONT[fo].s !== LFONT[fo].n)
-      h += `<div style="color:var(--mu);font-size:11px">${LFONT[fo].n} ist lizenzpflichtig; verwendet wird die freie Ersatzschrift ${LFONT[fo].s}.</div>`;
-  }
-  h += `<div style="display:flex;gap:6px;margin-top:8px"><button class="sm" onclick="layDup()">Duplizieren</button><button class="sm" onclick="layDel()" style="color:var(--wa)">Löschen</button></div>`;
-  el.innerHTML = h;
 }
 function layLockProp(e) {
   const v = e.v || {};
@@ -404,55 +412,88 @@ function layRefresh() {
   layRender();
 }
 function layAdd(type, v, name) {
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/090-layouter.js
+  if (type !== 'box' && type !== 'board')
+    return (() => {
+      const [pw, ph] = layPage(),
+        id = 'e' + ++LAY.n,
+        b = { id, type, x: 15 + (LAY.els.length % 6) * 4, y: 15 + (LAY.els.length % 6) * 4 };
+      if (type === 'head')
+        Object.assign(b, {
+          text: (S.project && S.project.name) || 'Überschrift',
+          size: 28,
+          w: Math.min(pw - 30, 200),
+          align: 'l',
+        });
+      else if (type === 'text')
+        Object.assign(b, {
+          text: 'Fließtext eingeben …',
+          size: 10,
+          w: Math.min(90, pw - 30),
+          align: 'l',
+          bold: false,
+        });
+      else if (type === 'info')
+        Object.assign(b, {
+          title: 'Kennzahlen',
+          keys: ['bgf', 'bri', 'fas', 'dach', 'hmax'],
+          perB: true,
+          flr: false,
+          size: 10,
+          w: 70,
+        });
+      else if (type === 'legend')
+        Object.assign(b, { title: 'Legende', bgf: true, bri: false, perB: false, size: 10, w: 70 });
+      else if (type === 'pic')
+        Object.assign(b, {
+          pk: v,
+          name: name || 'Zeichnung',
+          w: Math.round(Math.min(pw * 0.5, 180)),
+          border: false,
+          cap: true,
+          size: 9,
+        });
+      else if (type === 'view')
+        Object.assign(b, {
+          v: v || vwState(),
+          name: name || 'Aktuelle Ansicht',
+          w: Math.round(pw * 0.5),
+          h: Math.round(ph * 0.5),
+          border: true,
+          cap: false,
+          size: 9,
+        });
+      LAY.els.push(b);
+      LAY.sel = id;
+      laySave();
+      layRender();
+      layProp();
+    })();
   const [pw, ph] = layPage(),
     id = 'e' + ++LAY.n,
+    kd = layKd(),
     b = { id, type, x: 15 + (LAY.els.length % 6) * 4, y: 15 + (LAY.els.length % 6) * 4 };
-  if (type === 'head')
+  if (type === 'box') Object.assign(b, { w: 60, h: 30, fc: '#E9EDEF', fa: 1, rx: 0, bw: kd.w, bc: kd.c });
+  else
     Object.assign(b, {
-      text: (S.project && S.project.name) || 'Überschrift',
-      size: 28,
-      w: Math.min(pw - 30, 200),
-      align: 'l',
-    });
-  else if (type === 'text')
-    Object.assign(b, {
-      text: 'Fließtext eingeben …',
-      size: 10,
-      w: Math.min(90, pw - 30),
-      align: 'l',
-      bold: false,
-    });
-  else if (type === 'info')
-    Object.assign(b, {
-      title: 'Kennzahlen',
-      keys: ['bgf', 'bri', 'fas', 'dach', 'hmax'],
+      w: 80,
+      size: 9,
+      big: 20,
       perB: true,
-      flr: false,
-      size: 10,
-      w: 70,
+      gr: true,
+      title: '',
+      bg: '#ffffff',
+      fa: 1,
+      bo: true,
+      bw: kd.w,
+      bc: kd.c,
+      rx: 2,
+      pad: 3,
+      x: 20,
+      y: 20,
     });
-  else if (type === 'legend')
-    Object.assign(b, { title: 'Legende', bgf: true, bri: false, perB: false, size: 10, w: 70 });
-  else if (type === 'pic')
-    Object.assign(b, {
-      pk: v,
-      name: name || 'Zeichnung',
-      w: Math.round(Math.min(pw * 0.5, 180)),
-      border: false,
-      cap: true,
-      size: 9,
-    });
-  else if (type === 'view')
-    Object.assign(b, {
-      v: v || vwState(),
-      name: name || 'Aktuelle Ansicht',
-      w: Math.round(pw * 0.5),
-      h: Math.round(ph * 0.5),
-      border: true,
-      cap: false,
-      size: 9,
-    });
-  LAY.els.push(b);
+  if (type === 'box') LAY.els.unshift(b);
+  else LAY.els.push(b);
   LAY.sel = id;
   laySave();
   layRender();
@@ -574,6 +615,12 @@ function layOpen() {
     layRender();
     layProp();
   }, 30);
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/030-zeichnungen-aus-grundriss.js (danach)
+  try {
+    lpOpts();
+  } catch (e) {
+    logErr(e, 'layOpen');
+  }
 }
 function layClose() {
   LAY.open = false;

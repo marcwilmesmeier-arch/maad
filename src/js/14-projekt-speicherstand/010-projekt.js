@@ -76,43 +76,127 @@ function projExtra(cam) {
   } catch (e) {
     console.warn('projExtra', e);
   }
+  // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js (danach)
+  try {
+    x.ft = JSON.parse(JSON.stringify(S.ft));
+  } catch (e) {
+    logErr(e, 'projExtra');
+  }
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js (danach)
+  try {
+    x.mat = JSON.parse(JSON.stringify(S.mat));
+  } catch (e) {
+    logErr(e, 'projExtra');
+  }
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js (danach)
+  try {
+    if (SKS.e.length) x.sk = { e: SKS.e, cv: SKS.cv, hide: SKS.hide };
+  } catch (e) {
+    logErr(e, 'projExtra');
+  }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js (danach)
+  try {
+    if (UT.length) x.utr = UT.map((t) => ({ x: t.x, z: t.z, h: t.h, r: t.r, sh: t.sh, sd: t.sd }));
+  } catch (e) {
+    logErr(e, 'projExtra');
+  }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/080-panel.js (danach)
+  try {
+    if (IMP.sh.length)
+      x.imp = IMP.sh.map((s) => ({
+        name: s.name,
+        url: s.url,
+        pw: s.pw,
+        ph: s.ph,
+        w: s.w,
+        h: s.h,
+        x: s.x,
+        z: s.z,
+        rot: s.rot,
+        op: s.op,
+        vis: s.vis,
+        lock: s.lock,
+      }));
+  } catch (e) {
+    logErr(e, 'projExtra');
+  }
   return x;
 }
 const cp = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 // vor dem Laden der Gebäude: Farben, entfernter Bestand/Bäume
 function projApplyPre(x) {
-  if (!x || !x.v) return;
+  // ── Erweiterung aus 27-skizze/020-kantennetz.js
+  const r = (() => {
+    if (!x || !x.v) return;
+    try {
+      if (x.edgeC) S.edgeC = x.edgeC;
+      if (x.oc) {
+        S.oc = x.oc;
+        ocApply();
+      }
+      if (x.lc) {
+        const ch = Object.keys(x.lc).filter((k) => S.lc[k] !== x.lc[k]);
+        Object.assign(S.lc, lcMig(x.lc));
+        if (ch.length) lcApplyAll(ch);
+      }
+      if (x.bdel && x.bdel.length && GEO.blist) {
+        const ks = new Set(x.bdel),
+          rm = GEO.blist.filter((b) => ks.has(bKey(b)));
+        if (rm.length) {
+          GEO.blist = GEO.blist.filter((b) => !rm.includes(b));
+          GEO.bdel = (GEO.bdel || []).concat(rm);
+          ctxBuild(GEO.blist.slice());
+        }
+      }
+      if (x.tdel && x.tdel.length && GEO.trees) {
+        const ks = new Set(x.tdel),
+          rm = GEO.trees.filter((t) => ks.has(tKey(t)));
+        if (rm.length) {
+          GEO.tdel = (GEO.tdel || []).concat(rm);
+          treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
+        }
+      }
+    } catch (e) {
+      console.warn('projApplyPre', e);
+    }
+  })();
   try {
-    if (x.edgeC) S.edgeC = x.edgeC;
-    if (x.oc) {
-      S.oc = x.oc;
-      ocApply();
-    }
-    if (x.lc) {
-      const ch = Object.keys(x.lc).filter((k) => S.lc[k] !== x.lc[k]);
-      Object.assign(S.lc, lcMig(x.lc));
-      if (ch.length) lcApplyAll(ch);
-    }
-    if (x.bdel && x.bdel.length && GEO.blist) {
-      const ks = new Set(x.bdel),
-        rm = GEO.blist.filter((b) => ks.has(bKey(b)));
-      if (rm.length) {
-        GEO.blist = GEO.blist.filter((b) => !rm.includes(b));
-        GEO.bdel = (GEO.bdel || []).concat(rm);
-        ctxBuild(GEO.blist.slice());
-      }
-    }
-    if (x.tdel && x.tdel.length && GEO.trees) {
-      const ks = new Set(x.tdel),
-        rm = GEO.trees.filter((t) => ks.has(tKey(t)));
-      if (rm.length) {
-        GEO.tdel = (GEO.tdel || []).concat(rm);
-        treesBuild(GEO.trees.filter((t) => !rm.includes(t)));
-      }
-    }
+    SKS.e = x && x.sk && x.sk.e ? JSON.parse(JSON.stringify(x.sk.e)) : [];
+    SKS.cv = (x && x.sk && x.sk.cv) || 0;
+    SKS.hide = x && x.sk && x.sk.hide ? x.sk.hide.slice() : [];
+    SKS.sel = [];
+    sksChanged();
   } catch (e) {
-    console.warn('projApplyPre', e);
+    logErr(e, 'projApplyPre');
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js (danach)
+  try {
+    const had = UT.length;
+    UT.length = 0;
+    ((x && x.utr) || []).forEach((t) =>
+      UT.push({
+        x: t.x,
+        z: t.z,
+        h: t.h,
+        r: t.r,
+        sp: 'Eigener Baum',
+        src: 'user',
+        u: 1,
+        sh: t.sh,
+        sd: t.sd,
+      }),
+    );
+    if (had || UT.length) trRebuild();
+  } catch (e) {
+    logErr(e, 'projApplyPre');
+  }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/080-panel.js (danach)
+  try {
+    if (x && x.imp && x.imp.length && !IMP.sh.length) x.imp.forEach((o) => impAdd(o));
+  } catch (e) {
+    console.warn('imp load', e);
+  }
+  return r;
 }
 function lcApplyAll(keys) {
   for (const k of keys) {
@@ -180,6 +264,21 @@ function projApplyPost(x) {
   }
 }
 function projApplySet(x) {
+  // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
+  try {
+    if (x && x.mat) {
+      S.mat = { o: x.mat.o || {}, nf: x.mat.nf || [] };
+      l2mReg();
+    }
+  } catch (e) {
+    logErr(e, 'projApplySet');
+  }
+  // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js
+  try {
+    if (x && x.ft && x.ft.length) S.ft = JSON.parse(JSON.stringify(x.ft));
+  } catch (e) {
+    logErr(e, 'projApplySet');
+  }
   if (x.ifc)
     try {
       IFC.cfg = ifcCfgFix(x.ifc);
@@ -305,6 +404,15 @@ function projApplySet(x) {
   } catch (e) {
     logErr(e, 'projApplySet');
   }
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js (danach)
+  try {
+    lyAfterRun();
+  } catch (e) {
+    logErr(e, 'projApplySet');
+  }
+
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/090-layer.js (danach)
+  sunDefault();
 }
 function projApplyView(x) {
   if (!x || !x.v || !x.view) return;

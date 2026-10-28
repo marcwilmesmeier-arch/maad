@@ -83,17 +83,7 @@ function layProp2() {
   }
   el.insertAdjacentHTML('beforeend', h);
 }
-{
-  const _p = layProp;
-  layProp = function () {
-    _p.apply(this, arguments);
-    try {
-      layProp2();
-    } catch (err) {
-      console.warn('layProp2', err);
-    }
-  };
-}
+// layProp(): Erweiterung zusammengeführt, siehe 08-layout-pdf/020-rendern-einer-gespeicherten-ansicht-in.js
 
 // Geschoss einzeln kopieren: Geschosse über Erde nach oben, Untergeschosse nach unten
 function lcp(i) {
@@ -320,45 +310,9 @@ async function hnrLoad() {
     logErr(e, 'hnrLoad');
   }
 }
-{
-  const _lv = lvis;
-  lvis = function (i, v) {
-    const r = _lv.apply(this, arguments);
-    try {
-      if (LY[i][1] === 'hnr') {
-        G.hnr.visible = !!v;
-        if (v) hnrLoad();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return r;
-  };
-}
-{
-  const _lb = labVis;
-  labVis = function () {
-    const r = _lb.apply(this, arguments);
-    try {
-      G.hnr.visible = hnrOn();
-    } catch (e) {
-      logErr(e, 'labVis');
-    }
-    return r;
-  };
-}
-{
-  const _cb = ctxBuild;
-  ctxBuild = function () {
-    const r = _cb.apply(this, arguments);
-    try {
-      if (HNR.data && hnrOn()) hnrBuild();
-    } catch (e) {
-      logErr(e, 'ctxBuild');
-    }
-    return r;
-  };
-}
+// lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
+// labVis(): Erweiterung zusammengeführt, siehe 02-geodaten/080-alkis.js
+// ctxBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
 /* Maus-Info: Gebäude (Adresse, Hausnummer, Flurstück), Straßen- und Gewässername unter dem Cursor */
 function hvLine(g, ls, tolMin) {
   let best = null,
@@ -378,49 +332,58 @@ function hvLine(g, ls, tolMin) {
   return best;
 }
 function hvExtra(g) {
-  HNR.hvB = 0;
-  try {
-    let h = '';
-    const parOf = (c) => {
-      const a = (AL || []).find((x) => !x.cut && x.poly && inP(c, x.poly));
-      return a ? 'Flurstück ' + esc(a.id) + '<br>' : '';
-    };
-    const pb = (S.bld || []).find((b) => b.fp && b.fp.length > 2 && inP(g, b.fp));
-    if (pb) {
-      HNR.hvB = 1;
-      h +=
-        '<b>' + esc(pb.name || pb.id) + '</b><br>' + (pb.use ? esc(pb.use) + '<br>' : '') + parOf(cen(pb.fp));
-    } else {
-      const cb = (GEO.blist || []).find((b) => b.o && b.o.length > 2 && inP(g, b.o));
-      if (cb) {
-        HNR.hvB = 1;
-        const ad = HNR.data ? HNR.data.filter((d) => inP([d.x, d.z], cb.o)) : [];
-        const p = cb.p || {};
-        const st = ad.find((d) => d.s) || {};
-        const nr = [...new Set(ad.map((d) => d.n))].join(', ');
-        const l1 = ((st.s || p['addr:street'] || '') + (nr ? ' ' + nr : '')).trim(),
-          l2 = ((st.pc || '') + ' ' + (st.c || '')).trim();
-        h +=
-          '<b>' +
-          (esc(l1) || 'Bestandsgebäude') +
-          '</b><br>' +
-          (l2 ? esc(l2) + '<br>' : '') +
-          parOf(cen(cb.o));
-        if (!HNR.data && !HNR.busy && !HNR.tried) {
-          HNR.tried = 1;
-          hnrLoad();
+  // ── Erweiterung aus 28-erweiterungen-v486-v519/040-eigene-gruenflaechen-als-eigener-layer.js
+  return inSite(g)
+    ? ''
+    : (() => {
+        HNR.hvB = 0;
+        try {
+          let h = '';
+          const parOf = (c) => {
+            const a = (AL || []).find((x) => !x.cut && x.poly && inP(c, x.poly));
+            return a ? 'Flurstück ' + esc(a.id) + '<br>' : '';
+          };
+          const pb = (S.bld || []).find((b) => b.fp && b.fp.length > 2 && inP(g, b.fp));
+          if (pb) {
+            HNR.hvB = 1;
+            h +=
+              '<b>' +
+              esc(pb.name || pb.id) +
+              '</b><br>' +
+              (pb.use ? esc(pb.use) + '<br>' : '') +
+              parOf(cen(pb.fp));
+          } else {
+            const cb = (GEO.blist || []).find((b) => b.o && b.o.length > 2 && inP(g, b.o));
+            if (cb) {
+              HNR.hvB = 1;
+              const ad = HNR.data ? HNR.data.filter((d) => inP([d.x, d.z], cb.o)) : [];
+              const p = cb.p || {};
+              const st = ad.find((d) => d.s) || {};
+              const nr = [...new Set(ad.map((d) => d.n))].join(', ');
+              const l1 = ((st.s || p['addr:street'] || '') + (nr ? ' ' + nr : '')).trim(),
+                l2 = ((st.pc || '') + ' ' + (st.c || '')).trim();
+              h +=
+                '<b>' +
+                (esc(l1) || 'Bestandsgebäude') +
+                '</b><br>' +
+                (l2 ? esc(l2) + '<br>' : '') +
+                parOf(cen(cb.o));
+              if (!HNR.data && !HNR.busy && !HNR.tried) {
+                HNR.tried = 1;
+                hnrLoad();
+              }
+            }
+          }
+          if (!HNR.hvB) {
+            const tm = Math.max(2, 6 * mpp());
+            const R = hvLine(g, (GEO.acc && GEO.acc.names) || [], tm),
+              Wt = hvLine(g, (GEO.acc && GEO.acc.line && GEO.acc.line.water) || [], tm);
+            if (R) h += '<b>' + esc(R.n) + '</b><br>Straße<br>';
+            else if (Wt) h += '<b>' + esc(Wt.n) + '</b><br>Gewässer<br>';
+          }
+          return h;
+        } catch (e) {
+          return '';
         }
-      }
-    }
-    if (!HNR.hvB) {
-      const tm = Math.max(2, 6 * mpp());
-      const R = hvLine(g, (GEO.acc && GEO.acc.names) || [], tm),
-        Wt = hvLine(g, (GEO.acc && GEO.acc.line && GEO.acc.line.water) || [], tm);
-      if (R) h += '<b>' + esc(R.n) + '</b><br>Straße<br>';
-      else if (Wt) h += '<b>' + esc(Wt.n) + '</b><br>Gewässer<br>';
-    }
-    return h;
-  } catch (e) {
-    return '';
-  }
+      })();
 }

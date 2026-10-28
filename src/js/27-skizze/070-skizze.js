@@ -63,18 +63,7 @@ function sknNodeAt(e) {
   });
   return best ? best.slice() : null;
 }
-const _sksRedrawOld = sksRedraw;
-sksRedraw = function () {
-  _sksRedrawOld.apply(this, arguments);
-  try {
-    [SKN.hv && [SKN.hv, sknHM], SKN.sel && [SKN.sel, sknSM]].forEach((x) => {
-      if (x) SKSG.add(sknPts([x[0][0], sksY(x[0]) + 0.2, x[0][1]], x[1]));
-    });
-    rr();
-  } catch (e) {
-    logErr(e, 'sksRedraw');
-  }
-};
+// sksRedraw(): Erweiterung zusammengeführt, siehe 27-skizze/020-kantennetz.js
 function sknTargets(skip) {
   const T0 = [];
   SKS.e.forEach((s) => {
@@ -284,40 +273,7 @@ const sknDM = new T.PointsMaterial({
   alphaTest: 0.3,
   depthTest: false,
 });
-const _sksRedraw2 = sksRedraw;
-sksRedraw = function () {
-  _sksRedraw2.apply(this, arguments);
-  try {
-    const fs = sksFacesNow(),
-      ids = new Set();
-    SKS.sel.forEach((s) => {
-      if (s.k === 'e') ids.add(s.i);
-      else if (s.k === 'f' && fs[s.f]) fs[s.f].es.forEach((k) => ids.add(k));
-    });
-    if (SKS.hv) {
-      if (SKS.hv.k === 'e') ids.add(SKS.hv.i);
-      else if (SKS.hv.k === 'f' && fs[SKS.hv.f]) fs[SKS.hv.f].es.forEach((k) => ids.add(k));
-    }
-    const seen = new Set(),
-      pos = [];
-    ids.forEach((i) => {
-      const s = SKS.e[i];
-      if (!s) return;
-      [s.a, s.b].forEach((q) => {
-        const k = Math.round(q[0] * 500) + ',' + Math.round(q[1] * 500);
-        if (seen.has(k)) return;
-        seen.add(k);
-        pos.push(q[0], sksY(q) + 0.15, q[1]);
-      });
-    });
-    if (pos.length) {
-      SKSG.add(sknPts(pos, sknDM));
-    }
-    rr();
-  } catch (e) {
-    logErr(e, 'sksRedraw');
-  }
-};
+// sksRedraw(): Erweiterung zusammengeführt, siehe 27-skizze/020-kantennetz.js
 addEventListener(
   'keydown',
   (e) => {

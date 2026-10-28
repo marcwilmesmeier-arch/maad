@@ -77,23 +77,7 @@ function l2NetFace(b, lv, f) {
   });
   return Math.max(0, f.a - w);
 }
-{
-  const _l = grLabelTxt;
-  grLabelTxt = function (lv, f) {
-    const L = _l.apply(this, arguments);
-    if (l2on() && S.gro.lab.ar) {
-      try {
-        const b = grB(),
-          n = l2NetFace(b, lv, f),
-          i = L.length - 1;
-        if (/m²$/.test(L[i])) L[i] = grFmt(n) + ' m² netto';
-      } catch (e) {
-        logErr(e, 'grLabelTxt');
-      }
-    }
-    return L;
-  };
-}
+// grLabelTxt(): Erweiterung zusammengeführt, siehe 15-grundriss/100-kopf.js
 function l2Ngf(b) {
   const u = ugN(b),
     L = bLv(b),
@@ -279,79 +263,7 @@ function zoBldTot(P, R, A, t) {
     R('', ab('GR', 'Grundfläche'), A(t.tr), 't', AL)
   );
 }
-{
-  const _z = zoRender;
-  zoRender = function () {
-    const r = _z.apply(this, arguments);
-    try {
-      if (!l2on()) return r;
-      const e = $('zol');
-      if (!e) return r;
-      const P = zoScope(),
-        m = S.zo.m,
-        A = (v) => f1(v, 1) + ' m²',
-        R = l2R;
-      let h = '';
-      if (m === 'b') {
-        // Modus 'b': bewusst keine Zusatzzeilen
-      } else if (m === 'f') {
-        const lv = {};
-        P.forEach((b) =>
-          l2Ngf(b).lv.forEach((l) => {
-            const x = lv[l.n] || (lv[l.n] = { a: 0, w: 0, n: 0 });
-            x.a += l.a;
-            x.w += l.w;
-            x.n += l.ngf;
-          }),
-        );
-        const ks = Object.keys(lv).reverse();
-        let t = 0;
-        ks.forEach((k) => (t += lv[k].n));
-        h +=
-          zoD(
-            'f3',
-            'NGF nach Geschoss',
-            A(t),
-            ks
-              .map((k) =>
-                R(
-                  k + ' <span class="mu">BGF ' + A(lv[k].a) + ' − Wände ' + A(lv[k].w) + '</span>',
-                  A(lv[k].n),
-                  '',
-                  ['ngf', '*', 'n:' + k],
-                ),
-              )
-              .join('') + R('NGF gesamt', A(t), 't', ['ngf', '*', 'all']),
-          ) +
-          zoD(
-            'f4',
-            'KF nach Geschoss',
-            A(ks.reduce((q, k) => q + lv[k].w, 0)),
-            ks.map((k) => R(k, A(lv[k].w), '', ['kf', '*', 'n:' + k])).join('') +
-              R('KF gesamt', A(ks.reduce((q, k) => q + lv[k].w, 0)), 't', ['kf', '*', 'all']),
-          );
-      }
-      if (l23() && (m === 'b' || m === 'f')) {
-        h +=
-          '<h5>Tragwerk · LOD 300</h5>' +
-          P.map((b) => {
-            const t = l2Tr(b);
-            return R(
-              (P.length > 1 ? esc(b.name || b.id) + ' · ' : '') +
-                'Nur tragende Komponenten <span class="mu">(Tragschichten)</span>',
-              l2f(t.v) + ' m³',
-              't',
-              ['tr', b.id, 'all'],
-            );
-          }).join('');
-      }
-      if (h) e.insertAdjacentHTML('beforeend', h);
-    } catch (err) {
-      console.warn('NGF', err);
-    }
-    return r;
-  };
-}
+// zoRender(): Erweiterung zusammengeführt, siehe 15-grundriss/050-isolieren.js
 {
   let last = '';
   setInterval(() => {

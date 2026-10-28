@@ -344,38 +344,8 @@ function nearUpd() {
   base.instanceMatrix.needsUpdate = true;
   if (NEAR.stem) NEAR.stem.instanceMatrix.needsUpdate = true;
 }
-/* Stamm der Detailbäume folgt der Transparenz der Detailkrone (gleicher Platz k) */
-{
-  const _t = tfTick;
-  tfTick = function () {
-    _t.apply(this, arguments);
-    try {
-      Object.values(NEAR.cls).forEach((o) => {
-        const ca = o.m.geometry.attributes.aHid,
-          ta = o.tr.geometry.attributes.aHid;
-        if (ca && ta && ca.array.length === ta.array.length) {
-          ta.array.set(ca.array);
-          ta.needsUpdate = true;
-        }
-      });
-    } catch (e) {
-      logErr(e, 'tfTick');
-    }
-  };
-}
-{
-  const _tb = treesBuild;
-  treesBuild = function () {
-    NEAR.cls = {};
-    NEAR.orig = null;
-    NEAR.base = null;
-    NEAR.stem = null;
-    NEAR.sorig = null;
-    NEAR.c = null;
-    NEAR.dir = null;
-    return _tb.apply(this, arguments);
-  };
-}
+// tfTick(): Erweiterung zusammengeführt, siehe 28-erweiterungen-v486-v519/100-schalen.js
+// treesBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
 setInterval(() => {
   try {
     nearUpd();
