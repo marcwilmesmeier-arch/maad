@@ -247,11 +247,7 @@ function skOpApply(op, d) {
     const a0 = skArea(o),
       a1 = skArea(r);
     if (a0 * a1 <= 0 || Math.abs(a1) < 1 || r.some((q) => !isFinite(q[0]) || !isFinite(q[1]))) return false;
-    if (
-      typeof znInterior === 'function' &&
-      (b.voids || []).some((v) => k >= v.j0 && k <= v.j1 && !znInterior(r, v.poly))
-    )
-      return false;
+    if ((b.voids || []).some((v) => k >= v.j0 && k <= v.j1 && !znInterior(r, v.poly))) return false;
     res[k] = r;
   }
   for (const k of op.js) b.levels[k].fp = res[k];

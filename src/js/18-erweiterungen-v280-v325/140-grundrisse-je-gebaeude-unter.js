@@ -40,8 +40,8 @@ cv.addEventListener(
     try {
       if (e.button !== 0 || S.fd || S.tool !== 'v' || !S.m3 || (S.draft && S.draft.length)) return;
       const A = typeof edv === 'function' ? edv() : null,
-        g = typeof ground === 'function' ? ground(e) : null;
-      if (A && g && typeof vhit === 'function' && vhit(g, A) >= 0 && A.length > 3) return;
+        g = ground(e);
+      if (A && g && vhit(g, A) >= 0 && A.length > 3) return;
       ray(e);
       const hit = rc.intersectObjects(
         G.nb.children.flatMap((q) => q.children.filter((o) => o.isMesh)),

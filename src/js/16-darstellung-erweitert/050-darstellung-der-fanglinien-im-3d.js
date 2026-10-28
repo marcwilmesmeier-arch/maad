@@ -180,7 +180,7 @@ function fgUpdateBasis() {
 function fgSetAl(v) {
   S.gro.al = v ? 1 : 0;
   try {
-    if (typeof GRS !== 'undefined' && GRS.bid && typeof grAlignSync === 'function') grAlignSync(grB());
+    if (typeof GRS !== 'undefined' && GRS.bid) grAlignSync(grB());
   } catch (e) {
     logErr(e, 'fgSetAl');
   }
@@ -662,12 +662,12 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
 // go(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 // nav(): Erweiterung zusammengeführt, siehe 07-analyse/010-analyse.js
 
-(function () {
-  /* v251: Datenebenen im Reiter Kontext – geordnete Liste aller geladenen Daten (Name, 2D/3D, Quelle, Lizenz, Anzahl, Ladedatum, Sichtbarkeit).
+// ---- Datenebenen (vorher in einer IIFE gekapselt)
+/* v251: Datenebenen im Reiter Kontext – geordnete Liste aller geladenen Daten (Name, 2D/3D, Quelle, Lizenz, Anzahl, Ladedatum, Sichtbarkeit).
    Registry DAT: neue Datenebene = ein Eintrag. Lesend: nutzt GEO.rep (Ladeprotokoll), CG/TKAT/TERR/ALQ/WMSK (Quellen), LY (Sichtbarkeit). */
-  const css = document.createElement('style');
-  css.id = 'datCss';
-  css.textContent = `
+const datCss = document.createElement('style');
+datCss.id = 'datCss';
+datCss.textContent = `
 .dat{margin:0 0 6px}
 .dat .zdsum{color:var(--mu);font-size:11px;margin:0 0 8px}
 .dat .dseg{display:flex;gap:2px;margin:2px 0 8px;padding:3px;border-radius:13px;background:#1d1d1b0f}
@@ -718,744 +718,739 @@ body.anOn #anbar .anr:first-child>.th-lock{display:flex;align-items:center;gap:8
 .dat i.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#bbb;flex:none}
 .dat i.dot.ok{background:#3c9a62}.dat i.dot.fb{background:#e0a030}.dat i.dot.fail{background:#c0504d}
 `;
-  document.head.appendChild(css);
-  const IC = {
-    terrain: '<path d="M3 18l6-9 4 5 3-4 5 8z"/><path d="M3 18h18"/>',
-    buildings: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
-    trees: '<circle cx="12" cy="9" r="5"/><path d="M12 14v7M9 21h6"/>',
-    parcels:
-      '<path d="M4 6l9-2 7 4-2 11-10 1z"/><path d="M4 6l7 5 7-3M11 11l-1 9" stroke-dasharray="2.5 2.5"/>',
-    wms: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 14l5-4 4 3 7-5M9 4v16" stroke-dasharray="2.5 2.5"/>',
-    bplan: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/>',
-    roads:
-      '<path d="M4 20C4 12 12 14 12 8S18 4 20 4"/><path d="M8 20c0-5 6-4 6-10" stroke-dasharray="2 2.5"/>',
-    paths:
-      '<path d="M5 20c2-6 5-4 7-9s3-6 7-7" stroke-dasharray="1 3"/><circle cx="5" cy="20" r="1"/><circle cx="19" cy="4" r="1"/>',
-    cycle:
-      '<circle cx="6.5" cy="16" r="3.5"/><circle cx="17.5" cy="16" r="3.5"/><path d="M6.5 16l4-8h5l2 8M10 8H8"/>',
-    green: '<path d="M12 21V11M12 11C8 11 6 8 6 4c4 0 6 2 6 7zM12 14c3 0 6-2 6-6-4 0-6 2-6 6z"/>',
-    water: '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.500 6-11 6-11z"/>',
-    abst: '<path d="M4 20V10l5-4v14M20 20V10l-5-4v14"/><path d="M4 20h16M9 15h6M9 15l1.500-1.500M9 15l1.500 1.500M15 15l-1.500-1.500M15 15l-1.500 1.500"/>',
-    pb: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/>',
-    pa: '<path d="M4 17l3-10 10-2 3 9-8 6z"/>',
-    ex: '<path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6"/>',
-  };
-  IC.clc = '<path d="M4 6h7v6H4zM13 4h7v8h-7zM4 14h5v6H4zM11 14h9v6h-9z"/>';
-  IC.ffh = IC.nsg = '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19c3-4 6-6 9-8"/>';
-  IC.vsg = IC.nsg;
-  IC.hq = '<path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 14c3-3 6 3 9 0s6 3 9 0M3 19c3-3 6 3 9 0s6 3 9 0"/>';
-  const dsv = (p) =>
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    (p || '') +
-    '</svg>';
+document.head.appendChild(datCss);
+const datIC = {
+  terrain: '<path d="M3 18l6-9 4 5 3-4 5 8z"/><path d="M3 18h18"/>',
+  buildings: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+  trees: '<circle cx="12" cy="9" r="5"/><path d="M12 14v7M9 21h6"/>',
+  parcels:
+    '<path d="M4 6l9-2 7 4-2 11-10 1z"/><path d="M4 6l7 5 7-3M11 11l-1 9" stroke-dasharray="2.5 2.5"/>',
+  wms: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 14l5-4 4 3 7-5M9 4v16" stroke-dasharray="2.5 2.5"/>',
+  bplan: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  roads: '<path d="M4 20C4 12 12 14 12 8S18 4 20 4"/><path d="M8 20c0-5 6-4 6-10" stroke-dasharray="2 2.5"/>',
+  paths:
+    '<path d="M5 20c2-6 5-4 7-9s3-6 7-7" stroke-dasharray="1 3"/><circle cx="5" cy="20" r="1"/><circle cx="19" cy="4" r="1"/>',
+  cycle:
+    '<circle cx="6.5" cy="16" r="3.5"/><circle cx="17.5" cy="16" r="3.5"/><path d="M6.5 16l4-8h5l2 8M10 8H8"/>',
+  green: '<path d="M12 21V11M12 11C8 11 6 8 6 4c4 0 6 2 6 7zM12 14c3 0 6-2 6-6-4 0-6 2-6 6z"/>',
+  water: '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.500 6-11 6-11z"/>',
+  abst: '<path d="M4 20V10l5-4v14M20 20V10l-5-4v14"/><path d="M4 20h16M9 15h6M9 15l1.500-1.500M9 15l1.500 1.500M15 15l-1.500-1.500M15 15l-1.500 1.500"/>',
+  pb: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/>',
+  pa: '<path d="M4 17l3-10 10-2 3 9-8 6z"/>',
+  ex: '<path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6"/>',
+};
+datIC.clc = '<path d="M4 6h7v6H4zM13 4h7v8h-7zM4 14h5v6H4zM11 14h9v6h-9z"/>';
+datIC.ffh = datIC.nsg = '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19c3-4 6-6 9-8"/>';
+datIC.vsg = datIC.nsg;
+datIC.hq = '<path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 14c3-3 6 3 9 0s6 3 9 0M3 19c3-3 6 3 9 0s6 3 9 0"/>';
+const datSv = (p) =>
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  (p || '') +
+  '</svg>';
 
-  /* Datenstand: Last-Modified-Angaben der Server (CORS-sicher lesbar) je Host merken – nur Lesen, die Anfrage bleibt unverändert */
-  const LM = {};
-  {
-    const _f = window.fetch;
-    if (typeof _f === 'function' && !_f.__lm) {
-      const w = function () {
-        const p = _f.apply(this, arguments);
-        try {
-          const u = String((arguments[0] && arguments[0].url) || arguments[0] || '');
-          p.then(
-            (r) => {
-              try {
-                const lm = r && r.headers && r.headers.get('last-modified');
-                if (!lm) return;
-                const t = Date.parse(lm);
-                if (!(t > 0)) return;
-                const d = decodeURIComponent(u),
-                  m = [...d.matchAll(/https?:\/\/([^\/?#&]+)/g)];
-                const h = (m.length ? m[m.length - 1][1] : '').toLowerCase();
-                if (h && (!LM[h] || t > LM[h])) LM[h] = t;
-              } catch (e) {
-                logErr(e, 'w>anonym');
-              }
-            },
-            () => {},
-          );
-        } catch (e) {
-          logErr(e, 'w');
-        }
-        return p;
-      };
-      w.__lm = 1;
-      window.fetch = w;
-    }
-  }
-  const hostOf = (u) => {
-    const m = String(u || '').match(/https?:\/\/([^\/?#]+)/);
-    return m ? m[1].toLowerCase() : u ? String(u).toLowerCase() : '';
-  };
-  const stdOf = (hs) => {
-    let best = 0;
-    (hs || []).forEach((u) => {
-      if (!u) return;
-      const h = hostOf(u);
-      for (const k in LM)
-        if (k === h || (h.length > 3 && k.indexOf(h) >= 0) || (!/\./.test(h) && k.indexOf(h) >= 0))
-          best = Math.max(best, LM[k]);
-    });
-    return best;
-  };
-  const provOf = (l) => {
-    const t = String(l || '')
-      .replace(/©/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const m = t.match(/^(.*?),\s*((?:dl-de|CC|ODbL|Datenlizenz|Open).*)$/i);
-    return m ? { p: m[1].trim(), l: m[2].trim() } : { p: t, l: '' };
-  };
-  const DATO = {};
-  const dfmt = (t) => {
-    try {
-      return new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch (_) {
-      return '';
-    }
-  };
-  const ly = (k) => LY.findIndex((l) => l[1] === k);
-  const OSMQ = 'Vektorkacheln (Straßen, Wege, Grün, Wasser)';
-  const rp = () => GEO.rep || null;
-  const stand = () => {
-    const r = rp();
-    return r && r.t ? 'geladen ' + dfmt(r.t) : '';
-  };
-  const rkey = () => {
-    const r = rp();
-    return (r && r.key) || '';
-  };
-  /* Registry: g = Gruppe, k = Layer-Schlüssel (oder null), n = Name, d = '2D'|'3D', f = Funktion → {st, src, lic, n, info:[[Label,Wert]…], probs:[]} oder null (nicht anzeigen) */
-  const DAT = [
-    {
-      g: 'geo',
-      k: 'terrain',
-      n: 'Gelände / Höhenmodell',
-      d: '3D',
-      f() {
-        const r = rp(),
-          R = r && r.ge,
-          K = rkey(),
-          t = TERR[K];
-        if (!S.geo) return { st: 'demo', src: 'Demo-Gelände (künstlich)', n: '', info: [] };
-        return {
-          st: R ? R.st : 'unk',
-          src: R ? R.head : GEO.dgm ? 'Höhenmodell' : 'MapTiler Terrain-RGB',
-          lic: (t && t.src) || (R && R.st === 'fb' ? '© MapTiler' : ''),
-          hs: [t && t.dgm && (t.dgm.u === 'tile' ? t.dgm.tile('1', '1')[0] : t.dgm.u), 'api.maptiler.com'],
-          n: GEO.N ? GEO.N + ' × ' + GEO.N + ' Raster' : '',
-          info: [
-            ['Meldung', GEO.terrMsg || ''],
-            ['DGM1', t && t.dgm ? (t.dgm.u === 'tile' ? 'Kacheln' : String(t.dgm.u)) : ''],
-            ['DOM1', t && t.dom ? (t.dom.u === 'tile' ? 'Kacheln' : String(t.dom.u)) : ''],
-          ],
-          probs: R ? R.probs : [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'buildings',
-      n: 'Gebäude (Umgebung)',
-      d: '3D',
-      f() {
-        const r = rp(),
-          R = r && r.gb,
-          K = rkey(),
-          c = CG[K];
-        if (!S.geo) return { st: 'demo', src: 'Demo-Gebäude', n: '', info: [] };
-        return {
-          st: R ? R.st : 'unk',
-          src: R ? R.head : 'MapTiler/OSM-Gebäude',
-          lic: (c && c.src) || '',
-          hs: [c && c.tile('1', '1')[0], typeof LOD2 !== 'undefined' && LOD2.url],
-          n: R && R.n != null ? R.n + ' Gebäude' : GEO.blist ? GEO.blist.length + ' Gebäude' : '',
-          info: [
-            ['Datensatz', c ? 'LoD2-CityGML ' + c.name : ''],
-            ['Meldung', R ? R.msg : ''],
-          ],
-          probs: R ? R.probs : [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'trees',
-      n: 'Bäume',
-      d: '3D',
-      f() {
-        const r = rp(),
-          R = r && r.tr,
-          K = rkey(),
-          t = TKAT[K];
-        if (!S.geo) return { st: 'demo', src: 'Demo-Bäume', n: '', info: [] };
-        return {
-          st: R ? R.st : 'unk',
-          src: R ? R.head : '',
-          lic: (t && t.src) || (R && /OSM/.test(R.head) ? '© OpenStreetMap-Mitwirkende, ODbL' : ''),
-          sh: t ? '' : 'OpenStreetMap',
-          hs: [t && t.u, 'overpass'],
-          n: GEO.trees ? GEO.trees.length + ' Bäume' : '',
-          info: [
-            ['Baumkataster', t ? t.name : 'kein amtliches Kataster hinterlegt'],
-            ['Meldung', GEO.treeMsg || ''],
-          ],
-          probs: R ? R.probs : [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'parcels',
-      n: 'Flurstücke',
-      d: '2D',
-      f() {
-        const r = rp(),
-          R = r && r.fl,
-          K = rkey();
-        if (!S.geo) return { st: 'demo', src: 'Demo-Flurstücke', n: '', info: [] };
-        return {
-          st: R ? R.st : 'unk',
-          src: R ? R.head : '',
-          lic: ALQ[K] || '',
-          hs: [ALS[K] && ALS[K][0] && ALS[K][0].u],
-          n: AL.length ? AL.length + ' Flurstücke' : '',
-          info: [
-            ['Bundesland', GEO.alkBL || ''],
-            ['Meldung', GEO.alkMsg || ''],
-          ],
-          probs: R ? R.probs : [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'wms',
-      n: 'Flurkarte (Bild)',
-      d: '2D',
-      f() {
-        if (!S.geo) return null;
-        const K = rkey(),
-          w = WMSK[K];
-        return {
-          st: GEO.wmsImg ? 'ok' : 'none',
-          src: GEO.wmsImg && w ? w.name : 'nicht geladen',
-          lic: (w && w.src) || '',
-          hs: [w && w.u],
-          n: '',
-          info: [['Meldung', GEO.wmsMsg || '']],
-          probs: [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'bplan',
-      n: 'Bebauungspläne',
-      d: '2D',
-      f() {
-        if (!S.geo) return null;
-        return {
-          st: BPL.length ? 'ok' : 'none',
-          src: BPL.length ? 'Bebauungsplan-Dienst (WFS)' : 'nicht geladen',
-          lic: '',
-          n: BPL.length ? BPL.length + ' Pläne' : '',
-          info: [['Meldung', GEO.bpMsg || '']],
-          probs: [],
-        };
-      },
-    },
-    {
-      g: 'geo',
-      k: 'clc',
-      n: 'Flächennutzung (CORINE)',
-      d: '2D',
-      f() {
-        return typeof ovInfo === 'function' ? ovInfo('clc') : null;
-      },
-    },
-    {
-      g: 'geo',
-      k: 'nsg',
-      n: 'Naturschutzgebiete',
-      d: '2D',
-      f() {
-        return typeof ovInfo === 'function' ? ovInfo('nsg') : null;
-      },
-    },
-    {
-      g: 'geo',
-      k: 'ffh',
-      n: 'FFH-Gebiete (Natura 2000)',
-      d: '2D',
-      f() {
-        return typeof ovInfo === 'function' ? ovInfo('ffh') : null;
-      },
-    },
-    {
-      g: 'geo',
-      k: 'vsg',
-      n: 'Vogelschutzgebiete (Natura 2000)',
-      d: '2D',
-      f() {
-        return typeof ovInfo === 'function' ? ovInfo('vsg') : null;
-      },
-    },
-    {
-      g: 'geo',
-      k: 'hq',
-      n: 'Überschwemmungsrisiko (Fluss)',
-      d: '2D',
-      f() {
-        return typeof ovInfo === 'function' ? ovInfo('hq') : null;
-      },
-    },
-    {
-      g: 'geo',
-      k: 'roads',
-      n: 'Straßen',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.line.roads.length, ' Abschnitte');
-      },
-    },
-    {
-      g: 'geo',
-      k: 'paths',
-      n: 'Gehwege',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.line.paths.length + a.fill.paths.length, ' Objekte');
-      },
-    },
-    {
-      g: 'geo',
-      k: 'cycle',
-      n: 'Radwege',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.line.cycle.length, ' Abschnitte');
-      },
-    },
-    {
-      g: 'geo',
-      k: 'rail',
-      n: 'Bahngleise',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.line.rail && a.line.rail.length, ' Abschnitte');
-      },
-    },
-    {
-      g: 'geo',
-      k: 'green',
-      n: 'Grünflächen',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.fill.green.length, ' Flächen');
-      },
-    },
-    {
-      g: 'geo',
-      k: 'water',
-      n: 'Gewässer',
-      d: '2D',
-      f() {
-        const a = GEO.acc;
-        return osmRow(a && a.fill.water.length + a.line.water.length, ' Objekte');
-      },
-    },
-    {
-      g: 'pl',
-      k: 'abst',
-      n: 'Abstandsflächen',
-      d: '3D',
-      f() {
-        return {
-          st: 'calc',
-          src: 'berechnet aus der Planung',
-          lic: '',
-          own: 'maad (berechnet)',
-          n: '',
-          info: [],
-          probs: [],
-        };
-      },
-    },
-    {
-      g: 'pl',
-      k: null,
-      ic: 'pb',
-      n: 'Planungsgebäude',
-      d: '3D',
-      f() {
-        return {
-          st: 'own',
-          src: 'eigene Eingabe',
-          lic: '',
-          own: 'eigene Eingabe',
-          n: S.bld.length + ' Gebäude',
-          info: [],
-          probs: [],
-        };
-      },
-    },
-    {
-      g: 'pl',
-      k: null,
-      ic: 'pa',
-      n: 'Planungsflächen',
-      d: '2D',
-      f() {
-        return {
-          st: 'own',
-          src: 'eigene Eingabe',
-          lic: '',
-          own: 'eigene Eingabe',
-          n: (S.areas ? S.areas.length : 0) + ' Flächen',
-          info: [],
-          probs: [],
-        };
-      },
-    },
-    {
-      g: 'pl',
-      k: null,
-      ic: 'ex',
-      n: 'Bestandsgebäude',
-      d: '3D',
-      f() {
-        return S.ex && S.ex.length
-          ? {
-              st: 'own',
-              src:
-                S.ex
-                  .map((x) => x.src)
-                  .filter((v, i, a) => v && a.indexOf(v) === i)
-                  .join(', ') || 'eigene Eingabe',
-              lic: '',
-              own: 'Bestand (eigene/geladene Daten)',
-              n: S.ex.length + ' Gebäude',
-              info: [],
-              probs: [],
-            }
-          : null;
-      },
-    },
-  ];
-  function osmRow(n, unit) {
-    if (!S.geo) return { st: 'demo', src: 'Demo-Daten', n: '', info: [], probs: [] };
-    return {
-      st: n ? 'ok' : 'none',
-      src: n ? OSMQ : 'keine Objekte im Ausschnitt',
-      lic: '© MapTiler © OpenStreetMap-Mitwirkende, ODbL',
-      hs: ['api.maptiler.com'],
-      sh: 'MapTiler / OSM',
-      n: n ? n + unit : '',
-      info: [],
-      probs: [],
-    };
-  }
-  /* Gliederung: Hauptgruppe (g) › Untergruppe (sg) › Ebene. Neue Ebene = Eintrag in DAT + Zuordnung in SGM (Schlüssel k bzw. Icon ic).
-   Planung ist für höhere Detaillierung (LOD) vorbereitet: spätere Bauteil-Ebenen (Wände, Geschossdecken, Dächer …) bekommen eine eigene Untergruppe z. B. 'bt' in GS.pl. */
-  const GN = { geo: 'Geodaten und Umgebung', pl: 'Planung' };
-  const SGN = {
-    gel: 'Gelände, Gebäude und Bäume',
-    gs: 'Grundstücke und Planungsrecht',
-    inf: 'Verkehr und Infrastruktur',
-    ln: 'Landnutzung',
-    gw: 'Grün und Gewässer',
-    nat: 'Naturschutz',
-    ris: 'Risikogebiete',
-    geb: 'Gebäude',
-    fl: 'Flächen',
-    nw: 'Nachweise',
-  };
-  const GS = { geo: ['gel', 'gs', 'inf', 'ln', 'gw', 'nat', 'ris'], pl: ['geb', 'fl', 'nw'] };
-  const SGM = {
-    terrain: 'gel',
-    buildings: 'gel',
-    trees: 'gel',
-    parcels: 'gs',
-    wms: 'gs',
-    bplan: 'gs',
-    roads: 'inf',
-    paths: 'inf',
-    cycle: 'inf',
-    rail: 'inf',
-    clc: 'ln',
-    green: 'gw',
-    water: 'gw',
-    nsg: 'nat',
-    ffh: 'nat',
-    vsg: 'nat',
-    hq: 'ris',
-    abst: 'nw',
-    pb: 'geb',
-    ex: 'geb',
-    pa: 'fl',
-  };
-  const sgOf = (e) => e.sg || SGM[e.k || e.ic] || (e.g === 'pl' ? 'geb' : 'gel');
-  const SGK = { geo: 'Geodaten', pl: 'Planung' };
-  const SGI = {
-    geo: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3.5 3 12.5 0 16M12 4c-3 3.5-3 12.5 0 16"/>',
-    pl: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
-  };
-  const DSG = { k: 'geo' };
-  try {
-    DSG.k = localStorage.getItem('lot_datseg') || 'geo';
-  } catch (e) {
-    logErr(e, 'init>anonym');
-  }
-  window.datSeg = function (k) {
-    DSG.k = k;
-    try {
-      localStorage.setItem('lot_datseg', k);
-    } catch (e) {
-      logErr(e, 'datSeg');
-    }
-    try {
-      rr();
-    } catch (e) {
-      logErr(e, 'datSeg');
-    }
-  };
-  const DGO = {};
-  try {
-    Object.assign(DGO, JSON.parse(localStorage.getItem('lot_datg') || '{}'));
-  } catch (e) {
-    logErr(e, 'init>anonym');
-  }
-  const gOpen = (id, def) => (DGO[id] == null ? def : !!DGO[id]);
-  const SL = {
-    ok: 'geladen',
-    fb: 'Fallback aktiv',
-    fail: 'nicht geladen',
-    unk: 'Quelle unbekannt',
-    demo: 'Demo-Daten',
-    none: 'nicht geladen',
-    calc: 'berechnet',
-    own: 'eigene Daten',
-  };
-  function dqHtml(r, e) {
-    const pv = r.lic ? provOf(r.lic) : { p: r.own || '', l: '' },
-      sd = stdOf(r.hs),
-      live = ['ok', 'fb'].includes(r.st);
-    if (r.st === 'demo') return 'Demo-Daten';
-    if (r.st === 'none' || r.st === 'unk') return esc(r.src || 'nicht geladen');
-    const q = r.sh || pv.p || r.own || '',
-      p = [
-        q,
-        live ? r.n || '' : r.n || '',
-        live ? (sd ? String(new Date(sd).getFullYear()) : '–') : '',
-      ].filter(Boolean);
-    return p.map(esc).join(' <i class="zds">|</i> ');
-  }
-  function detRows(r) {
-    const sd = stdOf(r.hs),
-      ab = rp() && rp().t ? dfmt(rp().t) : '',
-      live = ['ok', 'fb'].includes(r.st),
-      pv = r.lic ? provOf(r.lic) : null;
-    let h = '';
-    if (r.src && r.st !== 'none') h += kv('Datensatz', esc(r.src));
-    if (pv) h += kv('Herausgeber', esc(pv.p)) + (pv.l ? kv('Lizenz', esc(pv.l)) : '');
-    if (live) {
-      h += kv('Datenstand', sd ? esc(dfmt(sd)) + ' (Angabe des Servers)' : 'nicht vom Dienst mitgeteilt');
-      if (ab) h += kv('Abgerufen', esc(ab));
-    }
-    return h;
-  }
-  function datRows() {
-    const out = [];
-    DAT.forEach((e, j) => {
-      let r = null;
+/* Datenstand: Last-Modified-Angaben der Server (CORS-sicher lesbar) je Host merken – nur Lesen, die Anfrage bleibt unverändert */
+const datLM = {};
+{
+  const _f = window.fetch;
+  if (typeof _f === 'function' && !_f.__lm) {
+    const w = function () {
+      const p = _f.apply(this, arguments);
       try {
-        r = e.f();
-      } catch (_) {
-        r = { st: 'unk', src: '', info: [], probs: [] };
+        const u = String((arguments[0] && arguments[0].url) || arguments[0] || '');
+        p.then(
+          (r) => {
+            try {
+              const lm = r && r.headers && r.headers.get('last-modified');
+              if (!lm) return;
+              const t = Date.parse(lm);
+              if (!(t > 0)) return;
+              const d = decodeURIComponent(u),
+                m = [...d.matchAll(/https?:\/\/([^\/?#&]+)/g)];
+              const h = (m.length ? m[m.length - 1][1] : '').toLowerCase();
+              if (h && (!datLM[h] || t > datLM[h])) datLM[h] = t;
+            } catch (e) {
+              logErr(e, 'w>anonym');
+            }
+          },
+          () => {},
+        );
+      } catch (e) {
+        logErr(e, 'w');
       }
-      if (r) out.push({ e, j, r });
-    });
-    return out;
-  }
-  window.datHtml = function () {
-    const rows = datRows(),
-      on = rows.filter((o) => ['ok', 'fb', 'calc', 'own'].includes(o.r.st)).length,
-      r0 = rp(),
-      dd = r0 && r0.t ? ' · abgerufen ' + dfmt(r0.t) : '';
-    let h =
-      '<h4>Datenebenen</h4><div class="dat"><div class="zdsum">' +
-      (S.geo ? esc((r0 && r0.name) || 'Projekt') + ' · ' : 'Demo-Daten aktiv · ') +
-      on +
-      ' von ' +
-      rows.length +
-      ' Ebenen mit Daten' +
-      dd +
-      '</div>';
-    const rowH = ({ e, j, r }) => {
-      const i = e.k ? ly(e.k) : -1,
-        has = ['ok', 'fb', 'calc', 'own', 'demo'].includes(r.st),
-        dot = r.st === 'demo' || r.st === 'calc' || r.st === 'own' ? 'ok' : r.st === 'none' ? 'fail' : r.st;
-      const info = (r.info || []).filter((p) => p[1] && p[0] !== 'Datensatz'),
-        dh = detRows(r),
-        det = dh || info.length || (r.probs && r.probs.length);
-      return (
-        '<div class="zdr' +
-        (has ? '' : ' off') +
-        '"><div class="zdm">' +
-        (i >= 0
-          ? '<button type="button" class="zdth zdtg' +
-            (LY[i][2] ? ' on' : '') +
-            '" data-i="' +
-            i +
-            '" aria-pressed="' +
-            (LY[i][2] ? 'true' : 'false') +
-            '" onclick="datVis(' +
-            i +
-            ',!LY[' +
-            i +
-            '][2])" title="' +
-            (LY[i][2] ? 'Ebene ausblenden' : 'Ebene einblenden') +
-            '">' +
-            dsv(IC[e.ic || e.k]) +
-            '</button>'
-          : '<div class="zdth">' + dsv(IC[e.ic || e.k]) + '</div>') +
-        '<div class="zdn"><i class="dot ' +
-        dot +
-        '" title="' +
-        esc(SL[r.st] || '') +
-        '"></i><span>' +
-        esc(e.n) +
-        '</span></div><span class="zdt ' +
-        (e.d === '3D' ? 'd3' : '') +
-        '">' +
-        e.d +
-        '</span>' +
-        '<div class="zdq">' +
-        dqHtml(r, e) +
-        '</div></div>' +
-        (det
-          ? '<details' +
-            (DATO[j] ? ' open' : '') +
-            ' ontoggle="datTg(' +
-            j +
-            ',this.open)"><summary>Details</summary>' +
-            dh +
-            info.map((p) => kv(esc(p[0]), esc(p[1]))).join('') +
-            (r.probs && r.probs.length
-              ? '<div class="zdp">' + r.probs.map(esc).join('<br>') + '</div>'
-              : '') +
-            '</details>'
-          : '') +
-        '</div>'
-      );
+      return p;
     };
-    const gks = ['geo', 'pl'].filter((k) => rows.some((o) => o.e.g === k)),
-      gk = gks.includes(DSG.k) ? DSG.k : gks[0];
-    h +=
-      '<div class="dseg" role="tablist">' +
-      gks
-        .map(
-          (k) =>
-            '<button type="button" role="tab" class="' +
-            (k === gk ? 'on' : '') +
-            '" aria-selected="' +
-            (k === gk) +
-            '" onclick="datSeg(\'' +
-            k +
-            '\')" title="' +
-            GN[k] +
-            '" aria-label="' +
-            GN[k] +
-            '"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
-            SGI[k] +
-            '</svg><span>' +
-            SGK[k] +
-            '</span></button>',
-        )
-        .join('') +
-      '</div>';
-    {
-      const rs = rows.filter((o) => o.e.g === gk);
-      if (rs.length) {
-        const nOn = rs.filter((o) => ['ok', 'fb', 'calc', 'own'].includes(o.r.st)).length;
-        h += '<div class="dsegn">' + nOn + ' von ' + rs.length + ' mit Daten</div>';
-        const ids = [...GS[gk]];
-        rs.forEach((o) => {
-          const q = sgOf(o.e);
-          if (!ids.includes(q)) ids.push(q);
-        });
-        for (const q of ids) {
-          const ss = rs.filter((o) => sgOf(o.e) === q);
-          if (!ss.length) continue;
-          const vis = ss.filter((o) => o.e.k && ly(o.e.k) >= 0 && LY[ly(o.e.k)][2]).length,
-            anyL = ss.some((o) => o.e.k && ly(o.e.k) >= 0);
-          h +=
-            '<details class="zdsg"' +
-            (gOpen('s:' + q, false) ? ' open' : '') +
-            ' ontoggle="datGt(\'s:' +
-            q +
-            '\',this.open)"><summary>' +
-            esc(SGN[q] || q) +
-            '<i class="zdc">' +
-            ss.length +
-            (ss.length === 1 ? ' Ebene' : ' Ebenen') +
-            (anyL ? ' · ' + vis + ' sichtbar' : '') +
-            '</i></summary><div class="zdsb">' +
-            ss.map(rowH).join('') +
-            '</div></details>';
-        }
-      }
-    }
-    h +=
-      '<button class="sm zdbt" onclick="srcOpen()" title="Quellen je Bundesland testen, ändern und eigene Dateien einbinden">Datenquellen &amp; Einstellungen …</button><div class="zdsum" style="margin:6px 0 0">Testen, Quellen ändern, Optionen, Dateien, CORS-Proxy und Schlüssel.</div></div>';
-    return h;
+    w.__lm = 1;
+    window.fetch = w;
+  }
+}
+const datHostOf = (u) => {
+  const m = String(u || '').match(/https?:\/\/([^\/?#]+)/);
+  return m ? m[1].toLowerCase() : u ? String(u).toLowerCase() : '';
+};
+const datStdOf = (hs) => {
+  let best = 0;
+  (hs || []).forEach((u) => {
+    if (!u) return;
+    const h = datHostOf(u);
+    for (const k in datLM)
+      if (k === h || (h.length > 3 && k.indexOf(h) >= 0) || (!/\./.test(h) && k.indexOf(h) >= 0))
+        best = Math.max(best, datLM[k]);
+  });
+  return best;
+};
+const datProvOf = (l) => {
+  const t = String(l || '')
+    .replace(/©/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const m = t.match(/^(.*?),\s*((?:dl-de|CC|ODbL|Datenlizenz|Open).*)$/i);
+  return m ? { p: m[1].trim(), l: m[2].trim() } : { p: t, l: '' };
+};
+const DATO = {};
+const datFmt = (t) => {
+  try {
+    return new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch (_) {
+    return '';
+  }
+};
+const datLy = (k) => LY.findIndex((l) => l[1] === k);
+const OSMQ = 'Vektorkacheln (Straßen, Wege, Grün, Wasser)';
+const datRp = () => GEO.rep || null;
+const datStand = () => {
+  const r = datRp();
+  return r && r.t ? 'geladen ' + datFmt(r.t) : '';
+};
+const datRkey = () => {
+  const r = datRp();
+  return (r && r.key) || '';
+};
+/* Registry: g = Gruppe, k = Layer-Schlüssel (oder null), n = Name, d = '2D'|'3D', f = Funktion → {st, src, lic, n, info:[[Label,Wert]…], probs:[]} oder null (nicht anzeigen) */
+const DAT = [
+  {
+    g: 'geo',
+    k: 'terrain',
+    n: 'Gelände / Höhenmodell',
+    d: '3D',
+    f() {
+      const r = datRp(),
+        R = r && r.ge,
+        K = datRkey(),
+        t = TERR[K];
+      if (!S.geo) return { st: 'demo', src: 'Demo-Gelände (künstlich)', n: '', info: [] };
+      return {
+        st: R ? R.st : 'unk',
+        src: R ? R.head : GEO.dgm ? 'Höhenmodell' : 'MapTiler Terrain-RGB',
+        lic: (t && t.src) || (R && R.st === 'fb' ? '© MapTiler' : ''),
+        hs: [t && t.dgm && (t.dgm.u === 'tile' ? t.dgm.tile('1', '1')[0] : t.dgm.u), 'api.maptiler.com'],
+        n: GEO.N ? GEO.N + ' × ' + GEO.N + ' Raster' : '',
+        info: [
+          ['Meldung', GEO.terrMsg || ''],
+          ['DGM1', t && t.dgm ? (t.dgm.u === 'tile' ? 'Kacheln' : String(t.dgm.u)) : ''],
+          ['DOM1', t && t.dom ? (t.dom.u === 'tile' ? 'Kacheln' : String(t.dom.u)) : ''],
+        ],
+        probs: R ? R.probs : [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'buildings',
+    n: 'Gebäude (Umgebung)',
+    d: '3D',
+    f() {
+      const r = datRp(),
+        R = r && r.gb,
+        K = datRkey(),
+        c = CG[K];
+      if (!S.geo) return { st: 'demo', src: 'Demo-Gebäude', n: '', info: [] };
+      return {
+        st: R ? R.st : 'unk',
+        src: R ? R.head : 'MapTiler/OSM-Gebäude',
+        lic: (c && c.src) || '',
+        hs: [c && c.tile('1', '1')[0], typeof LOD2 !== 'undefined' && LOD2.url],
+        n: R && R.n != null ? R.n + ' Gebäude' : GEO.blist ? GEO.blist.length + ' Gebäude' : '',
+        info: [
+          ['Datensatz', c ? 'LoD2-CityGML ' + c.name : ''],
+          ['Meldung', R ? R.msg : ''],
+        ],
+        probs: R ? R.probs : [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'trees',
+    n: 'Bäume',
+    d: '3D',
+    f() {
+      const r = datRp(),
+        R = r && r.tr,
+        K = datRkey(),
+        t = TKAT[K];
+      if (!S.geo) return { st: 'demo', src: 'Demo-Bäume', n: '', info: [] };
+      return {
+        st: R ? R.st : 'unk',
+        src: R ? R.head : '',
+        lic: (t && t.src) || (R && /OSM/.test(R.head) ? '© OpenStreetMap-Mitwirkende, ODbL' : ''),
+        sh: t ? '' : 'OpenStreetMap',
+        hs: [t && t.u, 'overpass'],
+        n: GEO.trees ? GEO.trees.length + ' Bäume' : '',
+        info: [
+          ['Baumkataster', t ? t.name : 'kein amtliches Kataster hinterlegt'],
+          ['Meldung', GEO.treeMsg || ''],
+        ],
+        probs: R ? R.probs : [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'parcels',
+    n: 'Flurstücke',
+    d: '2D',
+    f() {
+      const r = datRp(),
+        R = r && r.fl,
+        K = datRkey();
+      if (!S.geo) return { st: 'demo', src: 'Demo-Flurstücke', n: '', info: [] };
+      return {
+        st: R ? R.st : 'unk',
+        src: R ? R.head : '',
+        lic: ALQ[K] || '',
+        hs: [ALS[K] && ALS[K][0] && ALS[K][0].u],
+        n: AL.length ? AL.length + ' Flurstücke' : '',
+        info: [
+          ['Bundesland', GEO.alkBL || ''],
+          ['Meldung', GEO.alkMsg || ''],
+        ],
+        probs: R ? R.probs : [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'wms',
+    n: 'Flurkarte (Bild)',
+    d: '2D',
+    f() {
+      if (!S.geo) return null;
+      const K = datRkey(),
+        w = WMSK[K];
+      return {
+        st: GEO.wmsImg ? 'ok' : 'none',
+        src: GEO.wmsImg && w ? w.name : 'nicht geladen',
+        lic: (w && w.src) || '',
+        hs: [w && w.u],
+        n: '',
+        info: [['Meldung', GEO.wmsMsg || '']],
+        probs: [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'bplan',
+    n: 'Bebauungspläne',
+    d: '2D',
+    f() {
+      if (!S.geo) return null;
+      return {
+        st: BPL.length ? 'ok' : 'none',
+        src: BPL.length ? 'Bebauungsplan-Dienst (WFS)' : 'nicht geladen',
+        lic: '',
+        n: BPL.length ? BPL.length + ' Pläne' : '',
+        info: [['Meldung', GEO.bpMsg || '']],
+        probs: [],
+      };
+    },
+  },
+  {
+    g: 'geo',
+    k: 'clc',
+    n: 'Flächennutzung (CORINE)',
+    d: '2D',
+    f() {
+      return ovInfo('clc');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'nsg',
+    n: 'Naturschutzgebiete',
+    d: '2D',
+    f() {
+      return ovInfo('nsg');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'ffh',
+    n: 'FFH-Gebiete (Natura 2000)',
+    d: '2D',
+    f() {
+      return ovInfo('ffh');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'vsg',
+    n: 'Vogelschutzgebiete (Natura 2000)',
+    d: '2D',
+    f() {
+      return ovInfo('vsg');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'hq',
+    n: 'Überschwemmungsrisiko (Fluss)',
+    d: '2D',
+    f() {
+      return ovInfo('hq');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'roads',
+    n: 'Straßen',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.line.roads.length, ' Abschnitte');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'paths',
+    n: 'Gehwege',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.line.paths.length + a.fill.paths.length, ' Objekte');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'cycle',
+    n: 'Radwege',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.line.cycle.length, ' Abschnitte');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'rail',
+    n: 'Bahngleise',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.line.rail && a.line.rail.length, ' Abschnitte');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'green',
+    n: 'Grünflächen',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.fill.green.length, ' Flächen');
+    },
+  },
+  {
+    g: 'geo',
+    k: 'water',
+    n: 'Gewässer',
+    d: '2D',
+    f() {
+      const a = GEO.acc;
+      return datOsmRow(a && a.fill.water.length + a.line.water.length, ' Objekte');
+    },
+  },
+  {
+    g: 'pl',
+    k: 'abst',
+    n: 'Abstandsflächen',
+    d: '3D',
+    f() {
+      return {
+        st: 'calc',
+        src: 'berechnet aus der Planung',
+        lic: '',
+        own: 'maad (berechnet)',
+        n: '',
+        info: [],
+        probs: [],
+      };
+    },
+  },
+  {
+    g: 'pl',
+    k: null,
+    ic: 'pb',
+    n: 'Planungsgebäude',
+    d: '3D',
+    f() {
+      return {
+        st: 'own',
+        src: 'eigene Eingabe',
+        lic: '',
+        own: 'eigene Eingabe',
+        n: S.bld.length + ' Gebäude',
+        info: [],
+        probs: [],
+      };
+    },
+  },
+  {
+    g: 'pl',
+    k: null,
+    ic: 'pa',
+    n: 'Planungsflächen',
+    d: '2D',
+    f() {
+      return {
+        st: 'own',
+        src: 'eigene Eingabe',
+        lic: '',
+        own: 'eigene Eingabe',
+        n: (S.areas ? S.areas.length : 0) + ' Flächen',
+        info: [],
+        probs: [],
+      };
+    },
+  },
+  {
+    g: 'pl',
+    k: null,
+    ic: 'ex',
+    n: 'Bestandsgebäude',
+    d: '3D',
+    f() {
+      return S.ex && S.ex.length
+        ? {
+            st: 'own',
+            src:
+              S.ex
+                .map((x) => x.src)
+                .filter((v, i, a) => v && a.indexOf(v) === i)
+                .join(', ') || 'eigene Eingabe',
+            lic: '',
+            own: 'Bestand (eigene/geladene Daten)',
+            n: S.ex.length + ' Gebäude',
+            info: [],
+            probs: [],
+          }
+        : null;
+    },
+  },
+];
+function datOsmRow(n, unit) {
+  if (!S.geo) return { st: 'demo', src: 'Demo-Daten', n: '', info: [], probs: [] };
+  return {
+    st: n ? 'ok' : 'none',
+    src: n ? OSMQ : 'keine Objekte im Ausschnitt',
+    lic: '© MapTiler © OpenStreetMap-Mitwirkende, ODbL',
+    hs: ['api.maptiler.com'],
+    sh: 'MapTiler / OSM',
+    n: n ? n + unit : '',
+    info: [],
+    probs: [],
   };
-  window.datInfo = function (k) {
-    const e = DAT.find((x) => x.k === k);
-    if (!e) return null;
+}
+/* Gliederung: Hauptgruppe (g) › Untergruppe (sg) › Ebene. Neue Ebene = Eintrag in DAT + Zuordnung in SGM (Schlüssel k bzw. Icon ic).
+   Planung ist für höhere Detaillierung (LOD) vorbereitet: spätere Bauteil-Ebenen (Wände, Geschossdecken, Dächer …) bekommen eine eigene Untergruppe z. B. 'bt' in GS.pl. */
+const datGN = { geo: 'Geodaten und Umgebung', pl: 'Planung' };
+const SGN = {
+  gel: 'Gelände, Gebäude und Bäume',
+  gs: 'Grundstücke und Planungsrecht',
+  inf: 'Verkehr und Infrastruktur',
+  ln: 'Landnutzung',
+  gw: 'Grün und Gewässer',
+  nat: 'Naturschutz',
+  ris: 'Risikogebiete',
+  geb: 'Gebäude',
+  fl: 'Flächen',
+  nw: 'Nachweise',
+};
+const datGS = { geo: ['gel', 'gs', 'inf', 'ln', 'gw', 'nat', 'ris'], pl: ['geb', 'fl', 'nw'] };
+const SGM = {
+  terrain: 'gel',
+  buildings: 'gel',
+  trees: 'gel',
+  parcels: 'gs',
+  wms: 'gs',
+  bplan: 'gs',
+  roads: 'inf',
+  paths: 'inf',
+  cycle: 'inf',
+  rail: 'inf',
+  clc: 'ln',
+  green: 'gw',
+  water: 'gw',
+  nsg: 'nat',
+  ffh: 'nat',
+  vsg: 'nat',
+  hq: 'ris',
+  abst: 'nw',
+  pb: 'geb',
+  ex: 'geb',
+  pa: 'fl',
+};
+const datSgOf = (e) => e.sg || SGM[e.k || e.ic] || (e.g === 'pl' ? 'geb' : 'gel');
+const SGK = { geo: 'Geodaten', pl: 'Planung' };
+const SGI = {
+  geo: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3.5 3 12.5 0 16M12 4c-3 3.5-3 12.5 0 16"/>',
+  pl: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+};
+const DSG = { k: 'geo' };
+try {
+  DSG.k = localStorage.getItem('lot_datseg') || 'geo';
+} catch (e) {
+  logErr(e, 'init>anonym');
+}
+function datSeg(k) {
+  DSG.k = k;
+  try {
+    localStorage.setItem('lot_datseg', k);
+  } catch (e) {
+    logErr(e, 'datSeg');
+  }
+  try {
+    rr();
+  } catch (e) {
+    logErr(e, 'datSeg');
+  }
+}
+const DGO = {};
+try {
+  Object.assign(DGO, JSON.parse(localStorage.getItem('lot_datg') || '{}'));
+} catch (e) {
+  logErr(e, 'init>anonym');
+}
+const datGOpen = (id, def) => (DGO[id] == null ? def : !!DGO[id]);
+const datSL = {
+  ok: 'geladen',
+  fb: 'Fallback aktiv',
+  fail: 'nicht geladen',
+  unk: 'Quelle unbekannt',
+  demo: 'Demo-Daten',
+  none: 'nicht geladen',
+  calc: 'berechnet',
+  own: 'eigene Daten',
+};
+function dqHtml(r, e) {
+  const pv = r.lic ? datProvOf(r.lic) : { p: r.own || '', l: '' },
+    sd = datStdOf(r.hs),
+    live = ['ok', 'fb'].includes(r.st);
+  if (r.st === 'demo') return 'Demo-Daten';
+  if (r.st === 'none' || r.st === 'unk') return esc(r.src || 'nicht geladen');
+  const q = r.sh || pv.p || r.own || '',
+    p = [q, live ? r.n || '' : r.n || '', live ? (sd ? String(new Date(sd).getFullYear()) : '–') : ''].filter(
+      Boolean,
+    );
+  return p.map(esc).join(' <i class="zds">|</i> ');
+}
+function datDetRows(r) {
+  const sd = datStdOf(r.hs),
+    ab = datRp() && datRp().t ? datFmt(datRp().t) : '',
+    live = ['ok', 'fb'].includes(r.st),
+    pv = r.lic ? datProvOf(r.lic) : null;
+  let h = '';
+  if (r.src && r.st !== 'none') h += kv('Datensatz', esc(r.src));
+  if (pv) h += kv('Herausgeber', esc(pv.p)) + (pv.l ? kv('Lizenz', esc(pv.l)) : '');
+  if (live) {
+    h += kv('Datenstand', sd ? esc(datFmt(sd)) + ' (Angabe des Servers)' : 'nicht vom Dienst mitgeteilt');
+    if (ab) h += kv('Abgerufen', esc(ab));
+  }
+  return h;
+}
+function datRows() {
+  const out = [];
+  DAT.forEach((e, j) => {
     let r = null;
     try {
       r = e.f();
-    } catch (e) {
-      logErr(e, 'datInfo');
+    } catch (_) {
+      r = { st: 'unk', src: '', info: [], probs: [] };
     }
-    if (!r) return null;
-    return { n: e.n, d: e.d, st: r.st, line: dqHtml(r, e), det: detRows(r), ic: e.ic || e.k };
+    if (r) out.push({ e, j, r });
+  });
+  return out;
+}
+function datHtml() {
+  const rows = datRows(),
+    on = rows.filter((o) => ['ok', 'fb', 'calc', 'own'].includes(o.r.st)).length,
+    r0 = datRp(),
+    dd = r0 && r0.t ? ' · abgerufen ' + datFmt(r0.t) : '';
+  let h =
+    '<h4>Datenebenen</h4><div class="dat"><div class="zdsum">' +
+    (S.geo ? esc((r0 && r0.name) || 'Projekt') + ' · ' : 'Demo-Daten aktiv · ') +
+    on +
+    ' von ' +
+    rows.length +
+    ' Ebenen mit Daten' +
+    dd +
+    '</div>';
+  const rowH = ({ e, j, r }) => {
+    const i = e.k ? datLy(e.k) : -1,
+      has = ['ok', 'fb', 'calc', 'own', 'demo'].includes(r.st),
+      dot = r.st === 'demo' || r.st === 'calc' || r.st === 'own' ? 'ok' : r.st === 'none' ? 'fail' : r.st;
+    const info = (r.info || []).filter((p) => p[1] && p[0] !== 'Datensatz'),
+      dh = datDetRows(r),
+      det = dh || info.length || (r.probs && r.probs.length);
+    return (
+      '<div class="zdr' +
+      (has ? '' : ' off') +
+      '"><div class="zdm">' +
+      (i >= 0
+        ? '<button type="button" class="zdth zdtg' +
+          (LY[i][2] ? ' on' : '') +
+          '" data-i="' +
+          i +
+          '" aria-pressed="' +
+          (LY[i][2] ? 'true' : 'false') +
+          '" onclick="datVis(' +
+          i +
+          ',!LY[' +
+          i +
+          '][2])" title="' +
+          (LY[i][2] ? 'Ebene ausblenden' : 'Ebene einblenden') +
+          '">' +
+          datSv(datIC[e.ic || e.k]) +
+          '</button>'
+        : '<div class="zdth">' + datSv(datIC[e.ic || e.k]) + '</div>') +
+      '<div class="zdn"><i class="dot ' +
+      dot +
+      '" title="' +
+      esc(datSL[r.st] || '') +
+      '"></i><span>' +
+      esc(e.n) +
+      '</span></div><span class="zdt ' +
+      (e.d === '3D' ? 'd3' : '') +
+      '">' +
+      e.d +
+      '</span>' +
+      '<div class="zdq">' +
+      dqHtml(r, e) +
+      '</div></div>' +
+      (det
+        ? '<details' +
+          (DATO[j] ? ' open' : '') +
+          ' ontoggle="datTg(' +
+          j +
+          ',this.open)"><summary>Details</summary>' +
+          dh +
+          info.map((p) => kv(esc(p[0]), esc(p[1]))).join('') +
+          (r.probs && r.probs.length ? '<div class="zdp">' + r.probs.map(esc).join('<br>') + '</div>' : '') +
+          '</details>'
+        : '') +
+      '</div>'
+    );
   };
-  window.datTg = function (j, o) {
-    DATO[j] = o;
-  };
-  window.datCnt = function () {
-    document.querySelectorAll('.dat details.zdsg').forEach((d) => {
-      const n = d.querySelectorAll('.zdr').length,
-        c = d.querySelectorAll('.zdtg'),
-        v = [...c].filter((x) => x.classList.contains('on')).length,
-        z = d.querySelector(':scope>summary>.zdc');
-      if (z) z.textContent = n + (n === 1 ? ' Ebene' : ' Ebenen') + (c.length ? ' · ' + v + ' sichtbar' : '');
-    });
-  };
-  window.datGt = function (id, o) {
-    DGO[id] = o ? 1 : 0;
-    try {
-      localStorage.setItem('lot_datg', JSON.stringify(DGO));
-    } catch (e) {
-      logErr(e, 'datGt');
+  const gks = ['geo', 'pl'].filter((k) => rows.some((o) => o.e.g === k)),
+    gk = gks.includes(DSG.k) ? DSG.k : gks[0];
+  h +=
+    '<div class="dseg" role="tablist">' +
+    gks
+      .map(
+        (k) =>
+          '<button type="button" role="tab" class="' +
+          (k === gk ? 'on' : '') +
+          '" aria-selected="' +
+          (k === gk) +
+          '" onclick="datSeg(\'' +
+          k +
+          '\')" title="' +
+          datGN[k] +
+          '" aria-label="' +
+          datGN[k] +
+          '"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+          SGI[k] +
+          '</svg><span>' +
+          SGK[k] +
+          '</span></button>',
+      )
+      .join('') +
+    '</div>';
+  {
+    const rs = rows.filter((o) => o.e.g === gk);
+    if (rs.length) {
+      const nOn = rs.filter((o) => ['ok', 'fb', 'calc', 'own'].includes(o.r.st)).length;
+      h += '<div class="dsegn">' + nOn + ' von ' + rs.length + ' mit Daten</div>';
+      const ids = [...datGS[gk]];
+      rs.forEach((o) => {
+        const q = datSgOf(o.e);
+        if (!ids.includes(q)) ids.push(q);
+      });
+      for (const q of ids) {
+        const ss = rs.filter((o) => datSgOf(o.e) === q);
+        if (!ss.length) continue;
+        const vis = ss.filter((o) => o.e.k && datLy(o.e.k) >= 0 && LY[datLy(o.e.k)][2]).length,
+          anyL = ss.some((o) => o.e.k && datLy(o.e.k) >= 0);
+        h +=
+          '<details class="zdsg"' +
+          (datGOpen('s:' + q, false) ? ' open' : '') +
+          ' ontoggle="datGt(\'s:' +
+          q +
+          '\',this.open)"><summary>' +
+          esc(SGN[q] || q) +
+          '<i class="zdc">' +
+          ss.length +
+          (ss.length === 1 ? ' Ebene' : ' Ebenen') +
+          (anyL ? ' · ' + vis + ' sichtbar' : '') +
+          '</i></summary><div class="zdsb">' +
+          ss.map(rowH).join('') +
+          '</div></details>';
+      }
     }
-  };
-  window.datVis = function (i, v) {
-    lvis(i, v);
-    try {
-      lyRender();
-    } catch (e) {
-      logErr(e, 'datVis');
-    }
-  };
-})();
+  }
+  h +=
+    '<button class="sm zdbt" onclick="srcOpen()" title="Quellen je Bundesland testen, ändern und eigene Dateien einbinden">Datenquellen &amp; Einstellungen …</button><div class="zdsum" style="margin:6px 0 0">Testen, Quellen ändern, Optionen, Dateien, CORS-Proxy und Schlüssel.</div></div>';
+  return h;
+}
+function datInfo(k) {
+  const e = DAT.find((x) => x.k === k);
+  if (!e) return null;
+  let r = null;
+  try {
+    r = e.f();
+  } catch (e) {
+    logErr(e, 'datInfo');
+  }
+  if (!r) return null;
+  return { n: e.n, d: e.d, st: r.st, line: dqHtml(r, e), det: datDetRows(r), ic: e.ic || e.k };
+}
+function datTg(j, o) {
+  DATO[j] = o;
+}
+function datCnt() {
+  document.querySelectorAll('.dat details.zdsg').forEach((d) => {
+    const n = d.querySelectorAll('.zdr').length,
+      c = d.querySelectorAll('.zdtg'),
+      v = [...c].filter((x) => x.classList.contains('on')).length,
+      z = d.querySelector(':scope>summary>.zdc');
+    if (z) z.textContent = n + (n === 1 ? ' Ebene' : ' Ebenen') + (c.length ? ' · ' + v + ' sichtbar' : '');
+  });
+}
+function datGt(id, o) {
+  DGO[id] = o ? 1 : 0;
+  try {
+    localStorage.setItem('lot_datg', JSON.stringify(DGO));
+  } catch (e) {
+    logErr(e, 'datGt');
+  }
+}
+function datVis(i, v) {
+  lvis(i, v);
+  try {
+    lyRender();
+  } catch (e) {
+    logErr(e, 'datVis');
+  }
+}
+
 // lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js

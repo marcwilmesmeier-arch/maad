@@ -67,8 +67,8 @@ function mnSync() {
     mnGroups();
     const L = mnLevel(),
       ok = MNL[L],
-      stg = typeof mnStorey === 'function' && mnStorey(),
-      k = L + '|' + (typeof skModeNow === 'function' && skModeNow() ? 1 : 0) + '|' + (stg ? 1 : 0);
+      stg = mnStorey(),
+      k = L + '|' + (skModeNow() ? 1 : 0) + '|' + (stg ? 1 : 0);
     if (k === _mnk && !mnSync.f) return;
     _mnk = k;
     mnSync.f = 0;

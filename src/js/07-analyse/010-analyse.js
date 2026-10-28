@@ -259,31 +259,8 @@ function rr() {
           plotInfo() +
           `<h4>Planen</h4><div class="card">1. Grundstück anklicken<br>2. <b>Gebäude</b> (F) zeichnen<br>3. Enter → Geschosse eingeben<br>4. Freie <b>Flächen</b> (Grün, Platz, Wasser) ergänzen<br>5. In 3D betrachten, Variante speichern</div><button class="pri" onclick="plusBld()">+ Gebäude</button><button class="sm" style="margin-top:6px" onclick="setShape(S.shape,'area')">+ Fläche</button>` +
           parHint();
-    } else if (S.tab == 'Analyse' && typeof anPanel === 'function') {
-      h = anPanel(b);
     } else if (S.tab == 'Analyse') {
-      const k = b ? kw(b) : S.bld.length ? kw(S.bld.at(-1)) : null;
-      h =
-        abstCard() +
-        '<h4>Gebäude</h4>' +
-        (flHtml(b) || '<div style="color:var(--mu)">Noch kein Gebäude.</div>');
-      if (!k) h += '<div style="color:var(--mu)">Gebäude auf einem Grundstück erzeugen/auswählen.</div>';
-      else {
-        const w1 = k.grz > S.lim.grz,
-          w2 = k.gfz > S.lim.gfz;
-        h +=
-          '<h4>Grundstück</h4><div class="card">' +
-          kv('Grundstücksfläche', f1(k.A) + ' m²') +
-          kv('Überbaute Fläche', f1(k.fp) + ' m²') +
-          arKv(k) +
-          kv('GRZ', f1(k.grz, 2), w1 ? 'wa' : 'ok') +
-          kv('GFZ', f1(k.gfz, 2), w2 ? 'wa' : 'ok') +
-          '</div>' +
-          (w1 || w2
-            ? `<div class="card wa" style="margin-top:8px">⚠ Planungsrecht überschritten${w1 ? ' (GRZ &gt; ' + S.lim.grz + ')' : ''}${w2 ? ' (GFZ &gt; ' + S.lim.gfz + ')' : ''} – Hinweis, keine Sperre.</div>`
-            : '');
-      }
-      h += `<h4>Planungsrecht (Grenzwerte)</h4>GRZ max<input type="number" step="0.05" value="${S.lim.grz}" onchange="S.lim.grz=+this.value;rr()">GFZ max<input type="number" step="0.1" value="${S.lim.gfz}" onchange="S.lim.gfz=+this.value;rr()">`;
+      h = anPanel(b);
     } else if (S.tab == 'Varianten') {
       h =
         `<h4>Varianten</h4><button class="pri" onclick="sv()">Aktuellen Stand speichern</button>` +
@@ -538,14 +515,7 @@ addEventListener('keydown', (e) => {
       const e = ev0;
       try {
         const L = LY.find((l) => l[1] === 'parcels');
-        if (
-          dr ||
-          (typeof skEditing === 'function' && skEditing()) ||
-          !AL.length ||
-          !S.geo ||
-          (L && !L[2]) ||
-          (e.buttons && e.buttons !== 0)
-        ) {
+        if (dr || skEditing() || !AL.length || !S.geo || (L && !L[2]) || (e.buttons && e.buttons !== 0)) {
           hide();
           return;
         }

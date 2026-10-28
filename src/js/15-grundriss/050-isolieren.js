@@ -257,7 +257,7 @@ function zoRender() {
               'Flächen' + (P.length > 1 ? ' · ' + esc(b.name || b.id) : ''),
               '',
               R('', 'Fassadenfläche', A(k.fas), '', B('fas', 'Fassadenfläche')) +
-                (typeof fdRows === 'function' ? fdRows(b) : '') +
+                fdRows(b) +
                 R('', 'Dachfläche', A(k.dach), '', B('dach', 'Dachfläche')) +
                 R('', 'Terrassenfläche', A(k.terr), '', B('terr', 'Terrassenfläche')),
               [

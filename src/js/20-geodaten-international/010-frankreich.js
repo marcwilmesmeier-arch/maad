@@ -416,7 +416,7 @@ async function attRun() {
     );
     P('   ' + attHdr(ab));
   }
-  if (typeof atDgm === 'function' && LO > 9.5 && LO < 17.2 && LA > 46.3 && LA < 49.05) {
+  if (LO > 9.5 && LO < 17.2 && LA > 46.3 && LA < 49.05) {
     P('\n3) Probelauf Ausschnitt 200 m am Testort (wie beim Laden eines Projekts)');
     for (const [kind, lab] of [
       ['DTM', 'DGM'],

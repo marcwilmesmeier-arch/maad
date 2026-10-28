@@ -259,7 +259,7 @@ function ovSync() {
 }
 // lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
-window.ovInfo = function (k) {
+function ovInfo(k) {
   const d = OVD[k],
     c = envCfg(k) || {},
     S0 = ENVSRC[k] || {};
@@ -296,8 +296,8 @@ window.ovInfo = function (k) {
     src: S0.by || '',
     n: d.n + (d.n === 1 ? ' Fläche' : ' Flächen') + ' im Ausschnitt',
   });
-};
-window.ovTog = function (k) {
+}
+function ovTog(k) {
   const i = LY.findIndex((l) => l[1] === k);
   if (i < 0) return;
   lvis(i, !LY[i][2]);
@@ -311,7 +311,7 @@ window.ovTog = function (k) {
   } catch (e) {
     logErr(e, 'ovTog');
   }
-};
+}
 LY.push(
   ['Flächennutzung (CORINE)', 'clc', 0, 0.7],
   ['Naturschutzgebiete', 'nsg', 0, 0.7],

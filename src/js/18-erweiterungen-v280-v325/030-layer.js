@@ -200,7 +200,7 @@ function lyDGroup() {
   el.innerHTML = '';
   el.insertAdjacentHTML(
     'beforeend',
-    `<button type="button" class="lyx" onclick="lyDOpen(false)" title="Schließen">✕</button><div class="dmu" style="margin-bottom:4px"><b>Layer · ${mode}</b><br>Gilt nur für diese Darstellung. Symbol anklicken = ein-/ausblenden.</div>${typeof admLyBlock === 'function' ? admLyBlock() : ''}`,
+    `<button type="button" class="lyx" onclick="lyDOpen(false)" title="Schließen">✕</button><div class="dmu" style="margin-bottom:4px"><b>Layer · ${mode}</b><br>Gilt nur für diese Darstellung. Symbol anklicken = ein-/ausblenden.</div>${admLyBlock()}`,
   );
   const mkRow = (u) => {
     let row = u.node;

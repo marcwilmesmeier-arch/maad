@@ -154,7 +154,7 @@ function axDqUsed() {
   let h =
     '<div class="axk" style="margin:0 0 8px">Quelle | Größe | Stand der Daten, die in der Analyse „Grundstück und Umgebung“ verwendet werden. Alle geladenen Ebenen: Reiter „Datenebenen“.</div>';
   for (const k of ['terrain', 'bplan', 'trees', 'parcels']) {
-    const d = typeof datInfo === 'function' ? datInfo(k) : null;
+    const d = datInfo(k);
     if (!d) continue;
     h += axS(
       d.ic.length > 1 && AXI[d.ic]

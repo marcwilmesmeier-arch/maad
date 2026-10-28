@@ -55,7 +55,7 @@ function fangAxis() {
     k = 'b' + b.id + '|' + sg(f);
     if (FGK.k === k) return FGK.a;
     try {
-      if (typeof grAxis === 'function') a = grAxis(b);
+      a = grAxis(b);
     } catch (e) {
       logErr(e, 'fangAxis');
     }

@@ -94,6 +94,8 @@ function tool(t) {
   meist `<name>Basis`, und steht direkt unter der Funktion.
 - In der Datei, aus der eine Erweiterung stammt, steht ein Verweis:
   `// tool(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js`.
+- Neue Funktionen als normale Deklaration (`function name() {}`), nicht als `window.name = function`. Eine
+  Abfrage `typeof name === 'function'` ist dann überflüssig.
 - **Für neuen Code gilt:** die Funktion direkt ändern. Keine neuen Laufzeit-Umschreibungen (`f = function`).
   Ausnahme: Erweiterungen, die nur unter einer Bedingung gelten (`if (ACC) { … }` im Kundenzugang).
 

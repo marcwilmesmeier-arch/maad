@@ -517,7 +517,7 @@ function mesh(b) {
   b._h = cum;
   b._y = y0;
   (b.ex ? G.ex : G.nb).add(g);
-  if (!b.ex && typeof zoNew === 'function' && S.zo) zoNew(b);
+  if (!b.ex && S.zo) zoNew(b);
   if (S.hlk && !b.ex) hlApply();
   if (!b.ex)
     try {
@@ -527,7 +527,7 @@ function mesh(b) {
     }
   // ── Erweiterung aus 24-erweiterungen-v344-v436/070-gelaendeplanum.js (danach)
   try {
-    if (typeof PLM !== 'undefined' && typeof plmTick === 'function') {
+    if (typeof PLM !== 'undefined') {
       clearTimeout(PLM._ft);
       PLM._ft = setTimeout(() => plmTick(), 30);
     }

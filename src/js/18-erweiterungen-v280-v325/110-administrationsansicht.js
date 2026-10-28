@@ -124,7 +124,7 @@ function admApply(part) {
     logErr(e, 'admApply');
   }
 }
-window.gfxDefApply = function (quiet) {
+function gfxDefApply(quiet) {
   const o = gfxDefGet();
   if (!o) {
     if (!quiet) admMsg('Keine Voreinstellung vorhanden.');
@@ -151,7 +151,7 @@ window.gfxDefApply = function (quiet) {
     console.error(e);
     return false;
   }
-};
+}
 async function admSave() {
   const c = ADM.cfg;
   c.v = 1;
@@ -420,7 +420,7 @@ function admModeApply(m) {
   if (d.lyM) lyMApply(d.lyM);
 }
 try {
-  if (typeof HOME !== 'undefined' && HOME.open && typeof homePreset === 'function') homePreset();
+  if (typeof HOME !== 'undefined' && HOME.open) homePreset();
 } catch (e) {
   console.error(e);
 }

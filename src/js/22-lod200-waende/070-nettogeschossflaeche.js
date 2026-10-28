@@ -178,7 +178,7 @@ function zoBldHtml(b, k, R, A, B, P) {
         .map((l) => l2R(l.n, A(l.w), 's', ['kf', id, 'n:' + l.n]))
         .join(''),
     );
-  const fdr = typeof fdRows === 'function' ? fdRows(b) : '',
+  const fdr = fdRows(b),
     fas = fdr
       ? zoD(
           'bfa' + id,
@@ -284,7 +284,7 @@ function zoBldTot(P, R, A, t) {
       if (sg !== last) {
         last = sg;
         zoRender();
-        if (typeof zoTick === 'function') zoTick.k = undefined;
+        zoTick.k = undefined;
       }
     } catch (e) {
       logErr(e, 'init>anonym');

@@ -42,7 +42,7 @@ function projExtra(cam) {
     x.fx = S.fx;
     x.lyM = lyMSave();
     x.clg = S.clgc;
-    x.plm = typeof plmSave === 'function' ? plmSave() : null;
+    x.plm = plmSave();
     x.rb = S.rb;
     x.ifc = IFC.cfg || null;
     x.ortho = S.ortho;
@@ -233,7 +233,7 @@ function lcApplyAll(keys) {
 function projApplyPost(x) {
   if (!x || !x.v) return;
   try {
-    if (typeof plmLoad === 'function') plmLoad(x.plm);
+    plmLoad(x.plm);
   } catch (e) {
     logErr(e, 'projApplyPost');
   }
@@ -290,15 +290,15 @@ function projApplySet(x) {
       wm: Object.assign({ on: false, w: 3, c: '#000000' }, x.kon.wm),
       sch: Object.assign({ on: false, w: 3, c: '#000000' }, x.kon.sch),
     };
-    if (typeof konUi === 'function') konUi();
+    konUi();
   }
   if (x.hlc) {
     S.hlc = Object.assign({}, x.hlc);
-    if (typeof hlcApply === 'function') hlcApply();
+    hlcApply();
   }
   if (x.sky) {
     S.sky = Object.assign({}, S.sky, x.sky);
-    if (typeof skyUi === 'function') skyUi();
+    skyUi();
   }
   if (x.fang) S.fang = Object.assign({}, S.fang, x.fang);
   if (x.lim) Object.assign(S.lim, cp(x.lim));

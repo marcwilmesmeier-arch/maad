@@ -6,7 +6,7 @@ function vSnap() {
     areas: cp(S.areas || []),
     areaN: S.areaN,
     lab: cp(S.lab || []),
-    plm: cp(typeof plmSave === 'function' ? plmSave() : null),
+    plm: cp(plmSave()),
   };
 }
 function vSig() {

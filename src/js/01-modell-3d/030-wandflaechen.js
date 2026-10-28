@@ -1596,7 +1596,7 @@ function lcol(k, v) {
   }
   return r;
 }
-const ocHtml = () => (typeof datHtml === 'function' ? datHtml() : '');
+const ocHtml = () => datHtml();
 let layersHtml = () =>
   maskHtml() +
   '<h4>Layer</h4>' +

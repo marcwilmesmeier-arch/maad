@@ -173,12 +173,11 @@ function konSig() {
   return s;
 }
 function konPre(scn, cm) {
-  if (typeof skyPre === 'function')
-    try {
-      skyPre();
-    } catch (e) {
-      logErr(e, 'konPre');
-    }
+  try {
+    skyPre();
+  } catch (e) {
+    logErr(e, 'konPre');
+  }
   const md = S.dar === 'wm' ? 'wm' : S.dar === 'sch' ? 'sch' : null,
     cf = md && S.kon && S.kon[md],
     on = !!(cf && cf.on);

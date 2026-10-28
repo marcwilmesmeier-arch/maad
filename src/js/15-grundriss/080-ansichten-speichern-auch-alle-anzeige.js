@@ -49,15 +49,15 @@ function vwApplyDs(d, quiet) {
         const cl = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
         if (d.kon) {
           S.kon = cl(d.kon);
-          if (typeof konUi === 'function') konUi();
+          konUi();
         }
         if (d.hlc) {
           S.hlc = cl(d.hlc);
-          if (typeof hlcApply === 'function') hlcApply();
+          hlcApply();
         }
         if (d.sky) {
           S.sky = Object.assign({}, S.sky, cl(d.sky));
-          if (typeof skyUi === 'function') skyUi();
+          skyUi();
         }
         if (ZI.sp || S.hlk) {
           try {

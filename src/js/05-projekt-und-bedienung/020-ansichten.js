@@ -42,7 +42,7 @@ function vwRender() {
       : '<div style="color:var(--mu)">Noch keine Ansicht gespeichert.</div>');
 }
 const vwState = () => ({
-  cx: typeof camxSave === 'function' ? camxSave() : null,
+  cx: camxSave(),
   m3: !!S.m3,
   tx: V.tx,
   tz: V.tz,

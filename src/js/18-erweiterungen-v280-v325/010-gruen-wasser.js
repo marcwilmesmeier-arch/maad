@@ -242,7 +242,7 @@ function fxFlat() {
       x.closePath();
       x.fill();
     });
-  if (typeof clgMask === 'function') clgMask(x, W);
+  clgMask(x, W);
   const tex = new T.CanvasTexture(mc);
   tex.flipY = false;
   tex.minFilter = T.LinearFilter;
@@ -653,7 +653,7 @@ const FXPRE = [
   ['Flusswiese (Foto 1)', '#4f6836', '#79925e', 12, 8],
   ['Hügel im Morgenlicht (Foto 2)', '#263d1c', '#7d8a35', 20, 6],
 ];
-window.fxPre = function (i) {
+function fxPre(i) {
   const o = S.fx[S.dar],
     q = FXPRE[i];
   if (!o || !q) return;
@@ -673,8 +673,8 @@ window.fxPre = function (i) {
   } catch (e) {
     logErr(e, 'fxPre');
   }
-};
-window.fxSet = function (k, v) {
+}
+function fxSet(k, v) {
   if (!S.fx[S.dar]) return;
   S.fx[S.dar][k] =
     k === 'tv'
@@ -709,7 +709,7 @@ window.fxSet = function (k, v) {
     fxGrass();
   fxSync();
   if (k === 'trees') fxUi();
-};
+}
 function fxLoad(o) {
   if (!o) return;
   for (const m of ['sch', 'real']) if (o[m]) Object.assign(S.fx[m], o[m]);

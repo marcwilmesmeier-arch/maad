@@ -149,7 +149,7 @@ function sksSplitAt(h, e) {
             else SKS.sel.push({ k: h.k, i: h.i, f: h.f });
           } else SKS.sel = [{ k: h.k, i: h.i, f: h.f }];
           sksRedraw();
-          if (h.k === 'f' && !e.shiftKey && typeof skCm === 'function') {
+          if (h.k === 'f' && !e.shiftKey) {
             skCm('make');
             return true;
           }

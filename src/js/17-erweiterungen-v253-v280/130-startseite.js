@@ -3,8 +3,7 @@
 const RFD = ['sch', 'real', 'wm'];
 function homePreset() {
   try {
-    if (typeof admModeApply === 'function' && ADM.cfg && ADM.cfg.modes && ADM.cfg.modes[S.dar])
-      admModeApply(S.dar);
+    if (ADM.cfg && ADM.cfg.modes && ADM.cfg.modes[S.dar]) admModeApply(S.dar);
   } catch (e) {
     console.error(e);
   }
@@ -16,7 +15,7 @@ function homePreset() {
 }
 function homeDar(m) {
   try {
-    if (typeof admModeApply === 'function' && ADM.cfg && ADM.cfg.modes && ADM.cfg.modes[m]) admModeApply(m);
+    if (ADM.cfg && ADM.cfg.modes && ADM.cfg.modes[m]) admModeApply(m);
     else drSet(m);
   } catch (e) {
     console.error(e);

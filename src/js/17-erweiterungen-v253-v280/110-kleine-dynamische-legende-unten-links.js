@@ -154,7 +154,7 @@ function lgdUpd() {
   e.innerHTML = h;
   e.style.display = h ? 'block' : 'none';
 }
-window.lgdTog = function () {
+function lgdTog() {
   LGS.o = !LGS.o;
   try {
     localStorage.setItem('lot_lgd', LGS.o ? '1' : '0');
@@ -163,7 +163,7 @@ window.lgdTog = function () {
   }
   lgdSig = '';
   lgdUpd();
-};
+}
 {
   const c = document.createElement('style');
   c.textContent = `#lgd{position:absolute;left:12px;bottom:16px;z-index:8;width:max-content;min-width:168px;max-width:262px;padding:9px 12px 10px;font-size:12px;line-height:1.3;display:none;color:var(--tx)}

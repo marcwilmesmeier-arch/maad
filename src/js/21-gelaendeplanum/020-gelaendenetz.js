@@ -139,12 +139,12 @@ function plmReflow() {
     console.error(e);
   }
   try {
-    if (GEO.trees && GEO.trees.length && typeof treesBuild === 'function') treesBuild(GEO.trees);
+    if (GEO.trees && GEO.trees.length) treesBuild(GEO.trees);
   } catch (e) {
     console.error(e);
   }
   try {
-    if (GEO.blist && GEO.blist.length && typeof ctxBuild === 'function') ctxBuild(GEO.blist.slice());
+    if (GEO.blist && GEO.blist.length) ctxBuild(GEO.blist.slice());
   } catch (e) {
     console.error(e);
   }
@@ -249,7 +249,7 @@ function plmSrc(k) {
       if (s) {
         poly = s.poly;
         nm = s.name;
-      } else if (typeof selPolys === 'function') {
+      } else {
         const l = selPolys().list;
         if (l.length) {
           poly = l[0].poly;

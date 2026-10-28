@@ -242,9 +242,9 @@ setInterval(() => {
 // lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // ovSync(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/080-karten.js
 // treesBuild(): Erweiterung zusammengeführt, siehe 02-geodaten/070-baumkataster.js
-window.wldSet = function (k, v) {
+function wldSet(k, v) {
   if (k === 'nad') S.lc.nad = v;
-};
+}
 function wldStat() {
   const d = typeof OVD !== 'undefined' ? OVD.clc : null;
   if (!d) return 'Daten werden beim Einschalten geladen (CORINE)';

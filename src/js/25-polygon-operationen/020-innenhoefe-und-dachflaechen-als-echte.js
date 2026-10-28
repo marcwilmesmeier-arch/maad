@@ -93,7 +93,7 @@ function znCleanFp(b) {
 function znShape(b, l, i) {
   const fp = l.fp || b.fp,
     vs = znVoidsAt(b, i);
-  if (fp.length >= 4 && typeof boolOp === 'function' && znPinch(fp)) {
+  if (fp.length >= 4 && znPinch(fp)) {
     try {
       let R = boolOp([bpP(fp)], [bpP(fp)], 'u');
       if (vs.length)

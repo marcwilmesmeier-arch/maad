@@ -57,7 +57,7 @@ function clgPaint() {
 }
 // recomp(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 /* Rasen-Maske (fxFlat): CORINE-Flächen aussparen, wenn die Ebene sichtbar ist */
-window.clgMask = function (x, W) {
+function clgMask(x, W) {
   try {
     if (!clgOn()) return;
     if (!clgPaint()) return;
@@ -65,12 +65,12 @@ window.clgMask = function (x, W) {
   } catch (e) {
     console.error(e);
   }
-};
+}
 // lvis(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // lop(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/010-projekt.js
 // ovSync(): Erweiterung zusammengeführt, siehe 17-erweiterungen-v253-v280/080-karten.js
 let clgT = 0;
-window.clgSet = function (id, v) {
+function clgSet(id, v) {
   S.clgc[id] = v;
   clearTimeout(clgT);
   clgT = setTimeout(() => {
@@ -80,8 +80,8 @@ window.clgSet = function (id, v) {
       logErr(e, 'clgSet>anonym');
     }
   }, 80);
-};
-window.clgReset = function () {
+}
+function clgReset() {
   S.clgc = {};
   clgSig = '';
   try {
@@ -94,10 +94,10 @@ window.clgReset = function () {
   } catch (e) {
     logErr(e, 'clgReset');
   }
-};
-window.clgLoad = function (o) {
+}
+function clgLoad(o) {
   if (o && typeof o === 'object') Object.assign(S.clgc, o);
-};
+}
 function clgStat() {
   const d = typeof OVD !== 'undefined' ? OVD.clc : null;
   if (!d) return 'Daten werden beim Einschalten geladen';

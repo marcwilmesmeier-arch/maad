@@ -103,7 +103,7 @@ function hlcApply() {
   lp.addEventListener('input', (e) => {
     if (e.target.id === 'occ') {
       S.oc = e.target.value;
-      if (typeof ocApply === 'function') ocApply();
+      ocApply();
     } else if (e.target.id === 'hlcf') {
       S.hlc.fc = e.target.value;
       hlcApply();
