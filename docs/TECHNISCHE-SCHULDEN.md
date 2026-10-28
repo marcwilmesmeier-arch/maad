@@ -2,19 +2,10 @@
 
 Stand: 28.10.2026. Priorität: **A** = Fehler im Verhalten, **B** = erschwert Änderungen, **C** = Aufräumen.
 
-## A – Fehler, die das neue Fehlerprotokoll sichtbar gemacht hat
+## A – Fehler im Verhalten
 
-Diese Fehler wurden früher von leeren `catch`-Blöcken verschluckt. Sie treten beim Start auf
-(siehe Ausgabe von `npm test`):
-
-| Meldung                                                                    | Ursache (vermutet)                                                                                |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `Fehler in ocApply: Cannot access 'clr' before initialization`             | `patchViz` greift beim Laden auf eine `const` zu, die erst in einer späteren Datei definiert wird |
-| `Fehler in demoOff: Cannot access 'GA' before initialization`              | wie oben, in `areaSelDraw`                                                                        |
-| `Fehler in mkRender: Cannot read properties of undefined (reading 'skyM')` | `drTick` läuft, bevor die Darstellungs-Einstellungen angelegt sind                                |
-
-Vorgehen: die betroffene `const` nach vorn ziehen oder den Aufruf erst nach dem Start ausführen.
-Danach prüfen, ob die übersprungenen Schritte (Farben, Himmel) jetzt anders aussehen.
+Derzeit keine bekannten. Erledigt am 28.10.2026: vier Startfehler (Zugriff auf `clr`, `GA`, `DR` und `IDLE`,
+bevor sie angelegt waren), siehe Git-Verlauf. Der Rauchtest schlägt jetzt bei solchen Fehlern fehl.
 
 ## B – Struktur
 

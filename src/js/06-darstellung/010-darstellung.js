@@ -17,7 +17,7 @@ const DAR = [
     'Blauer Himmel, warmes Sonnenlicht mit Schattenwurf, einstellbare Kantenglättung, ohne Gebäudekonturen. Sonnenstand exakt nach Standort, Datum und Uhrzeit.',
   ],
 ];
-var DR = { n: 0, k: 0, skyM: null, wm: new Map(), aaK: [1, 1.25, 1.5, 2] };
+const DR = { n: 0, k: 0, skyM: null, wm: new Map(), aaK: [1, 1.25, 1.5, 2] };
 S.dar = 'sch';
 S.aa = 2;
 S.noK = false;

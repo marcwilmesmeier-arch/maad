@@ -150,8 +150,6 @@ function areasApply() {
   ctxPaint(GEO.acc);
   recomp();
 }
-const GA = new T.Group();
-sc.add(GA);
 function areaSelDraw() {
   while (GA.children.length) {
     const o = GA.children.pop();

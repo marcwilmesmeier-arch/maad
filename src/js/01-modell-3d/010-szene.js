@@ -47,6 +47,9 @@ G.bplan.visible = false;
 G.ex = new T.Group();
 G.nb = new T.Group();
 G.buildings.add(G.ex, G.nb);
+// Markierung gewählter Flächen (areaSelDraw); hier angelegt, weil demoOff() sie schon beim Laden leert
+const GA = new T.Group();
+sc.add(GA);
 const mat = (c, o = {}) => new T.MeshLambertMaterial(Object.assign({ color: c }, o));
 // Terrain
 {

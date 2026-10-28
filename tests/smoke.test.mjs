@@ -1,5 +1,5 @@
 // Rauchtest: lädt dist/maad.html in Chromium und bedient die Hauptbereiche einmal.
-// Schlägt fehl, wenn ein unbehandelter Fehler auftritt. Von logErr protokollierte,
+// Schlägt fehl bei unbehandelten Fehlern und bei console.error (außer fehlgeschlagenen Netzabrufen). Von logErr protokollierte,
 // abgefangene Fehler werden aufgelistet, lassen den Test aber bestehen.
 //
 // three.js und MapLibre kommen aus node_modules (gleiche Versionen wie im CDN-Link),
@@ -30,8 +30,14 @@ await page.route(/^https?:\/\//, (route) => {
 
 const pageErrors = [];
 const caught = [];
+const consoleErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
-page.on('console', (m) => m.text().startsWith('[maad]') && caught.push(m.text().split('\n')[0]));
+page.on('console', (m) => {
+  const text = m.text().split('\n')[0];
+  if (text.startsWith('[maad]')) caught.push(text);
+  else if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|Failed to fetch/.test(text))
+    consoleErrors.push(text);
+});
 
 await page.goto(pathToFileURL(join(ROOT, 'dist/maad.html')).href, { waitUntil: 'load', timeout: 90_000 });
 await page.waitForTimeout(4000);
@@ -64,12 +70,13 @@ const steps = await page.evaluate(async () => {
 
 await browser.close();
 
-let failed = pageErrors.length > 0;
+let failed = pageErrors.length > 0 || consoleErrors.length > 0;
 for (const [step, res] of Object.entries(steps)) {
   console.log(`${res === 'ok' ? '✓' : '✗'} ${step}${res === 'ok' ? '' : ' – ' + res}`);
   if (res !== 'ok') failed = true;
 }
 for (const e of pageErrors) console.log('✗ Unbehandelter Fehler:', e);
+for (const e of consoleErrors) console.log('✗ console.error:', e);
 if (caught.length) {
   console.log(`\nAbgefangene Fehler (logErr, ${caught.length}) – prüfen, Test besteht trotzdem:`);
   for (const c of caught) console.log('  ' + c);

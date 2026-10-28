@@ -40,13 +40,14 @@ const tLon = (x, z) => (x / 2 ** z) * 360 - 180,
     const n = Math.PI - (2 * Math.PI * y) / 2 ** z;
     return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
   };
-const clr = (g) => {
+// Gruppe leeren und Geometrien freigeben. Deklaration (nicht const), weil sie beim Laden schon gebraucht wird.
+function clr(g) {
   while (g.children.length) {
     const c = g.children[0];
     g.remove(c);
     if (c.geometry) c.geometry.dispose();
   }
-};
+}
 function gst(t) {
   GEO.status = t;
   ['gs', 'wzld'].forEach((id) => {

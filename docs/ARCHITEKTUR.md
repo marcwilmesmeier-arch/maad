@@ -9,6 +9,8 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   allen Dateien sichtbar. Es gibt keine `import`/`export`-Anweisungen.
 - **Funktionsdeklarationen gelten sofort überall** (Hoisting). `const`/`let` gelten erst ab der Zeile, in der sie
   stehen. Wer beim Laden auf eine `const` aus einer späteren Datei zugreift, löst einen `ReferenceError` aus.
+  Code, der beim Laden läuft, darf deshalb nur Werte aus derselben oder früheren Dateien benutzen. Die
+  Render-Schleife `loop()` startet per `requestAnimationFrame` erst nach dem Laden und darf alles benutzen.
 - **HTML-Ereignisse rufen globale Funktionen auf**, z. B. `onclick="baDo('mv')"` in `src/index.html` oder in
   HTML-Strings im Code. Eine solche Funktion umzubenennen heißt: alle Strings mitzuändern (`grep`).
 - Externe Bibliotheken kommen per CDN: three.js r128 (`THREE`, im Code meist als `T`) und MapLibre GL 5.24.0.

@@ -192,7 +192,8 @@ function loop() {
   mkRender(sc, act());
   requestAnimationFrame(loop);
 }
-loop();
+// Erster Frame erst nach dem Laden des ganzen Skripts: loop() liest Zustände späterer Dateien (DR, IDLE …)
+requestAnimationFrame(loop);
 // Interaktion
 const rc = new T.Raycaster(),
   cv = ren.domElement;
