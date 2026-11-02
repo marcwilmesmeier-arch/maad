@@ -3,14 +3,12 @@
   "host": "127.0.0.1",
   "port": 8080,
   "data_dir": "/var/lib/maad",
-  "tool_file": "/opt/maad/maad.html",
-  "demo_file": "/opt/maad/maad-demo.html",
-  "admin_emails": [
-    "marc.wilmesmeier@gmx.de"
-  ],
-  "session_days": 30,
-  "link_minutes": 15,
+  "tool_file": "/opt/maad/dist/maad.html",
+  "sperren_file": "/opt/maad/dist/maad.sperren.json",
+  "betreiber": ["marc.wilmesmeier@gmx.de"],
   "app_name": "maad",
+  "sitzung_tage": 14,
+  "passwort_min": 10,
   "smtp": {
     "host": "smtp.ionos.de",
     "port": 587,
@@ -19,6 +17,8 @@
     "from": "maad <zugang@getmaad.de>",
     "ssl": false
   },
-  "maptiler_key": "HIER-IHR-MAPTILER-SCHLUESSEL",
-  "proxy": true
+  "maptiler_key": "HIER-DER-MAPTILER-SCHLUESSEL",
+  "proxy": true,
+  "proxy_max_mb": 80,
+  "projekt_max_mb": 200
 }

@@ -1,0 +1,33 @@
+[Unit]
+Description=maad-Server (Mandanten, Kundenzugang, Projekte)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=maad
+Group=maad
+WorkingDirectory=/opt/maad
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning /opt/maad/server/src/server.mjs /etc/maad/konfig.json
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+
+# Härtung: nur Lesezugriff aufs System, Schreiben nur im Datenordner
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/maad
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

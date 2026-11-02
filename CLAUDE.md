@@ -40,6 +40,14 @@ Ohne installierten Browser: `npx playwright install chromium` oder `CHROMIUM_PAT
 5. Neue Erkenntnisse und offene Punkte in `docs/TECHNISCHE-SCHULDEN.md` eintragen. Änderungen am Aufbau in
    `docs/ARCHITEKTUR.md` festhalten.
 
+## Server
+
+- Code in `server/` (Node.js, keine externen Bibliotheken – bitte keine hinzufügen). Aufbau und Regeln:
+  `docs/ARCHITEKTUR.md` → „Server“. Betrieb: `docs/BETRIEB.md`.
+- Mandantentrennung ist Pflicht: Zugriffe auf Kundendaten nur über `verwaltung.mjs` (`bereich()`) bzw.
+  `projekte.mjs` (`stufe()`). Jede neue Route bekommt einen Test in `tests/server/api.test.mjs`.
+- Vor der Auslieferung `npm run check` (enthält die Server-Tests). Installationspaket: `npm run paket`.
+
 ## Wichtige Stellen
 
 - Zustand: `S` (`00-kern/010-kern.js`), Szene `G`/`V` (`01-modell-3d/010-szene.js`), Geodaten `GEO`.

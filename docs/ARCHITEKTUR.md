@@ -105,6 +105,38 @@ Alle Aufrufe, die beim Laden etwas ausführen (Platzhalter-Szene, Darstellung, R
 `start()` in `29-start/010-start-projekt-oeffnen.js` und laufen erst, wenn alle Dateien geladen sind. Neuer
 Startcode gehört dorthin, nicht in die Bereichsdateien.
 
+## Server (`server/`)
+
+Node.js ohne externe Bibliotheken; Daten in SQLite (`node:sqlite`), Projektdateien im Datenordner.
+
+| Datei                                                                       | Aufgabe                                                                                                                           |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `src/server.mjs`                                                            | Start, alle Routen, Fehlerbehandlung                                                                                              |
+| `src/verwaltung.mjs`                                                        | Mandanten, Nutzer, Gruppen, Protokoll – **jede Funktion prüft mit `bereich()`, ob der Handelnde den Mandanten sehen/ändern darf** |
+| `src/rechte.mjs`                                                            | Rechte, Abos, Rollen; `wirksameRechte()`                                                                                          |
+| `src/anmeldung.mjs`                                                         | Passwort-Anmeldung, Sitzungen, Einladungs-/Zurücksetzen-Links, Betreiber aus der Konfiguration                                    |
+| `src/projekte.mjs`                                                          | Projektablage, Zugriffsstufen (`stufe()`), Freigaben, Konfliktschutz                                                              |
+| `src/werkzeug.mjs`                                                          | Auslieferung des Tools je Rechte-Satz (Sperrstellen), Schlüssel, Kennung, `window.MAAD_ACC`                                       |
+| `src/proxy.mjs`                                                             | Geodienst-Weiterleitung mit Schutz vor internen Zielen                                                                            |
+| `src/http.mjs`, `sicherheit.mjs`, `mail.mjs`, `datenbank.mjs`, `konfig.mjs` | Grundlagen                                                                                                                        |
+| `seiten/`                                                                   | Anmeldung, Passwort festlegen, Verwaltung (strenge CSP: keine Inline-Skripte, Texte nur per `textContent`)                        |
+| `betrieb/`                                                                  | Installation, systemd, Caddy, Sicherung                                                                                           |
+
+**Regeln für Änderungen am Server:**
+
+- Neue Datenzugriffe mit Kundendaten gehören nach `verwaltung.mjs` bzw. `projekte.mjs` und prüfen den Mandanten
+  (`bereich()` bzw. `stufe()`). Nie Daten nur anhand einer Kennung aus der Anfrage laden, ohne den Mandanten zu prüfen.
+- Jede schreibende Route liegt hinter `schreibschutz()` (passiert zentral für alle Nicht-GET-Anfragen).
+- Neue Rechte in `rechte.mjs` eintragen; sollen Funktionen des Tools ohne das Recht fehlen, in `tools/demo.mjs`
+  (`SPERREN`) die Funktionsnamen ergänzen.
+- Schema-Änderungen nur als neuer Eintrag am Ende von `SCHEMA` in `datenbank.mjs` (nie bestehende ändern).
+- Jede neue Route bekommt einen Test in `tests/server/api.test.mjs`, Trennung zwischen Mandanten eingeschlossen.
+
+**Zusammenspiel mit dem Tool:** Der Server setzt `window.MAAD_ACC` (`mode` `demo`/`full`, `user.role`
+`betreiber`/`admin`/`nutzer`, `user.perms`). Im Tool entscheiden `accCan()` (Kundenzugang) und `ablageServer()`
+(Projektablage auf dem Server statt im Browser) danach. Ohne Server (Einzeldatei) ist `ACC` `null` und alles
+läuft wie bisher im Browser.
+
 ## Fehlerbehandlung
 
 - Erwartbare Fehler (Netz, Datenquelle fehlt) dem Nutzer melden, z. B. in der Statuszeile (`gst()`).

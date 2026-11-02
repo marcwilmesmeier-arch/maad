@@ -273,6 +273,19 @@ export function erstelleServer(konfig = ladeKonfig()) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const konfig = ladeKonfig();
+  // Hinweise auf unvollständige Einstellungen
+  if (!konfig.betreiber.length)
+    console.warn(
+      'Hinweis: Keine Betreiber in der Konfiguration („betreiber“) – niemand kann Mandanten anlegen.',
+    );
+  if (!konfig.smtp.host)
+    console.warn(`Hinweis: Kein Mailserver eingetragen – E-Mails landen in ${konfig.data_dir}/outbox.log.`);
+  if (!konfig.maptiler_key)
+    console.warn(
+      'Hinweis: Kein MapTiler-Schlüssel – Karten und Gelände von MapTiler fehlen in der Vollversion.',
+    );
+  if (/HIER-/.test(JSON.stringify(konfig)))
+    console.warn('Hinweis: In der Konfiguration stehen noch Platzhalter (HIER-…).');
   const srv = erstelleServer(konfig);
   srv.headersTimeout = 30000;
   srv.requestTimeout = 300000;

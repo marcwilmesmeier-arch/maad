@@ -1,0 +1,13 @@
+[Unit]
+Description=maad: tägliche Sicherung (Datenbank und Projektdateien)
+
+[Service]
+Type=oneshot
+User=maad
+Group=maad
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning /opt/maad/server/betrieb/sicherung.mjs /var/lib/maad /var/backups/maad 30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/maad /var/lib/maad
+PrivateTmp=true

@@ -13,7 +13,8 @@
     "check": "npm run format:check && npm run lint && npm test && npm run test:server",
     "vergleich": "node tools/build.mjs && node tools/vergleich.mjs",
     "test:server": "npm run build && node --test --test-concurrency=1 tests/server/*.test.mjs && node tests/server.test.mjs",
-    "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs"
+    "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs",
+    "paket": "npm run build && node tools/paket.mjs"
   },
   "devDependencies": {
     "eslint": "9.39.5",

@@ -30,6 +30,19 @@ bevor sie angelegt waren), siehe Git-Verlauf. Der Rauchtest schlägt jetzt bei s
    Für weitere Umbenennungen: `node tools/umbenennen.mjs <alt> <neu>` (siehe Punkt 5).
 8. **three.js r128** (2021) ist veraltet. Ein Update bringt API-Änderungen mit sich, dafür einen eigenen Schritt planen.
 
+## Server
+
+1. **Zwei-Faktor-Anmeldung** (Code-App) für Betreiber und Mandanten-Admins ergänzen.
+2. **node:sqlite** ist in Node.js noch als „experimentell“ gekennzeichnet (funktioniert stabil; die Warnung ist im
+   Dienst abgeschaltet). Bei Node-Updates die Tests laufen lassen.
+3. **Rechte `lod` und `own_sources`** sind im Server vorhanden, im Tool aber noch nicht an Funktionen gebunden
+   (`team` wirkt auf das Teilen von Projekten).
+4. **Nie auf echtem Server getestet:** IONOS-VPS, Mailversand über smtp.ionos.de, Caddy-Zertifikat, echter
+   MapTiler-Schlüssel, Geodienste hinter dem Proxy. Lokal getestet: alles andere (`npm run test:server`).
+5. **Rechtliches:** Impressum, Datenschutzerklärung, Auftragsverarbeitung (IONOS, MapTiler), Nutzungsbedingungen.
+6. **Mehrere Bearbeiter gleichzeitig:** Konflikte werden erkannt (Hinweis, kein Überschreiben), aber nicht
+   zusammengeführt.
+
 ## C – Aufräumen (Lint-Hinweise, `node tools/lint.mjs --alle`)
 
 Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 8 × `var` → `let`/`const`.
