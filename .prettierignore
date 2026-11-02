@@ -4,3 +4,4 @@ src/data/
 src/assets/
 src/**/*.daten.js
 src/styles/schrift-*.css
+src/index.html

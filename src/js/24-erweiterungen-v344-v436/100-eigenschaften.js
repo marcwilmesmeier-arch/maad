@@ -149,17 +149,7 @@ function projRen(id, ev) {
     const nv = inp.value.trim();
     if (ok && nv && nv !== old) {
       try {
-        const rec = await idbGet('proj:' + id);
-        if (rec) {
-          rec.name = nv;
-          await idbSet('proj:' + id, rec);
-        }
-        const ix = (await idbGet('projIdx')) || [];
-        const e = ix.find((x) => x.id === id);
-        if (e) {
-          e.name = nv;
-          await idbSet('projIdx', ix);
-        }
+        await projUmbenennen(id, nv);
         if (S.project && S.project.id === id) {
           S.project.name = nv;
           try {

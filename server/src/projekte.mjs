@@ -8,6 +8,8 @@ import { Fehler, protokolliere, rechteVon } from './verwaltung.mjs';
 import { json, sende, jsonRumpf, rumpf } from './http.mjs';
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
+// Vorschaubild: nur echte Bilddaten (wird bei Kollegen im Tool angezeigt)
+const BILD = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const STUFE = { lesen: 1, bearbeiten: 2, besitzer: 3 };
 
 export class Projekte {
@@ -103,7 +105,7 @@ export class Projekte {
       label: String(rec.label || '').slice(0, 200),
       t: Number(rec.t) || Date.now(),
       n: Number(rec.n) || 0,
-      thumb: typeof rec.thumb === 'string' && rec.thumb.length < 400_000 ? rec.thumb : null,
+      thumb: BILD.test(rec.thumb || '') && rec.thumb.length < 400_000 ? rec.thumb : null,
       lon: Number(rec.lon) || null,
       lat: Number(rec.lat) || null,
       size: Number(rec.size) || null,
@@ -211,8 +213,24 @@ export class Projekte {
     protokolliere(this.db, p.mandant_id, nutzer.email, 'freigaben', `${p.id}: ${JSON.stringify(sauber)}`);
   }
 
+  /** Gruppen und Kollegen des eigenen Mandanten (für den Teilen-Dialog im Tool). */
+  team(nutzer) {
+    if (nutzer.rolle === 'betreiber') throw new Fehler(400, 'Nur für Nutzer eines Mandanten');
+    const m = this.db.prepare('SELECT id, name FROM mandanten WHERE id = ?').get(nutzer.mandant_id);
+    return {
+      mandant: m,
+      gruppen: this.db.prepare('SELECT id, name FROM gruppen WHERE mandant_id = ? ORDER BY name').all(m.id),
+      nutzer: this.db
+        .prepare(
+          "SELECT id, email, name FROM nutzer WHERE mandant_id = ? AND status != 'gesperrt' ORDER BY email",
+        )
+        .all(m.id),
+    };
+  }
+
   routen(r, pflicht) {
     const MB = this.k.projekt_max_mb * 1048576;
+    r.add('GET', '/api/team', (req, res) => json(res, 200, this.team(pflicht(req))));
     r.add('GET', '/api/projekte', (req, res) => json(res, 200, { projekte: this.liste(pflicht(req)) }));
     r.add('GET', '/api/projekte/:id', (req, res, p) => {
       const x = this.laden(pflicht(req), p.id);

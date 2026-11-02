@@ -185,6 +185,43 @@ try {
     zeile.includes('Zeichner') && zeile.includes('Projekte öffnen'),
     'Nutzer mit Gruppe und Rechten angelegt',
   );
+  await p3.close();
+
+  // Projektablage im Tool: speichern auf dem Server, Liste, in neuem Tab wieder öffnen
+  const t1 = await neu(ctx2, 'Tool Admin: ');
+  await t1.goto(BASE + '/', { waitUntil: 'load' });
+  await t1.waitForFunction(() => GEO.snap && S.geo, null, { timeout: 120000 });
+  const gespeichert = await t1.evaluate(async () => {
+    S.project = {
+      id: projId(),
+      name: 'Serverprojekt',
+      label: 'Test',
+      size: GEO.size,
+      lon: GEO.lon,
+      lat: GEO.lat,
+    };
+    await projSave();
+    const L = await projList();
+    return { id: S.project.id, version: S.project._version, liste: L.map((x) => [x.id, x.name, x.eigenes]) };
+  });
+  ok(gespeichert.version === 1, 'Tool speichert Projekt auf dem Server (Version 1)');
+  ok(
+    gespeichert.liste.some(([id, n, e]) => id === gespeichert.id && n === 'Serverprojekt' && e),
+    'Projekt in der Liste (eigenes)',
+  );
+  await t1.close();
+  const t2 = await neu(ctx2, 'Tool Admin 2: ');
+  await t2.goto(BASE + '/', { waitUntil: 'load' });
+  await t2.waitForFunction(() => GEO.snap, null, { timeout: 120000 });
+  const geoeffnet = await t2.evaluate(async (id) => {
+    await projOpen(id);
+    return { name: S.project && S.project.name, version: S.project && S.project._version };
+  }, gespeichert.id);
+  ok(
+    geoeffnet.name === 'Serverprojekt' && geoeffnet.version === 1,
+    'Projekt in neuem Tab vom Server geöffnet',
+  );
+  await t2.close();
   await ctx2.close();
 
   // Abmelden und erneut mit Passwort anmelden

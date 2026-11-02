@@ -71,6 +71,8 @@ async function hmLoad() {
     const L = await projList();
     HM.list = L.filter(hmOk);
     hmDots();
+    // Nachtragen fehlender Koordinaten nur für alte Browser-Projekte (Server-Projekte speichern sie mit)
+    if (ablageServer()) return;
     const miss = L.filter((x) => !hmOk(x) && !x.nll);
     if (!miss.length) return;
     for (const x of miss) {

@@ -245,13 +245,65 @@ const projStrip = (o) =>
       : o;
 const projBld = () => JSON.stringify(projStrip(S.bld));
 const projId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+// ---- Projektablage: auf dem Server (angemeldete Kunden) oder im Browser (IndexedDB: Demo, Einzeldatei, Betreiber)
+function ablageServer() {
+  return !!(ACC && ACC.server && ACC.mode === 'full' && ACC.user && ACC.user.role !== 'betreiber');
+}
+async function ablageAbruf(pfad, opt = {}) {
+  const r = await fetch(pfad, { ...opt, headers: { 'X-Maad': '1', ...(opt.headers || {}) } });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    const e = new Error(j.error || 'Fehler ' + r.status);
+    e.status = r.status;
+    throw e;
+  }
+  return r;
+}
+// Vorschaubilder kommen evtl. von Kollegen: nur echte Bilddaten zulassen (sie landen in innerHTML)
+const sicheresBild = (s) =>
+  typeof s === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : null;
+// Projektkennungen landen in onclick-Attributen: nur unkritische Zeichen
+const sichereId = (id) => /^[A-Za-z0-9_-]{1,64}$/.test(String(id));
+
+/** Projekt auf dem Server speichern (Datensatz; Kartenausschnitt einmalig). */
+async function projSaveServer(p, rec) {
+  if (p._nurLesen || p._konflikt) return;
+  try {
+    const r = await ablageAbruf('/api/projekte/' + p.id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rec, basis: p._version == null ? null : p._version }),
+    });
+    p._version = (await r.json()).version;
+    if (!p._karte) {
+      await ablageAbruf('/api/projekte/' + p.id + '/karte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: await snapPack(),
+      });
+      p._karte = 1;
+    }
+  } catch (e) {
+    if (e.status === 409) {
+      p._konflikt = 1;
+      alert(
+        'Das Projekt wurde inzwischen von jemand anderem gespeichert. Ihre Änderungen ab jetzt werden nicht gespeichert – bitte das Projekt neu öffnen.',
+      );
+    } else if (e.status === 403) {
+      p._nurLesen = 1;
+      gst('Dieses Projekt ist für Sie nur lesbar – Änderungen werden nicht gespeichert.');
+    } else throw e;
+  }
+}
 async function projSave() {
   const p = S.project;
   if (!p || !p.id || !GEO.snap || !S.geo) return;
   try {
     const js = projBld();
-    if (!(await idbGet('snap:' + p.id))) await idbSet('snap:' + p.id, await snapPack());
-    const old = await idbGet('proj:' + p.id);
+    const server = ablageServer();
+    if (!server && !(await idbGet('snap:' + p.id))) await idbSet('snap:' + p.id, await snapPack());
+    const old = server ? null : await idbGet('proj:' + p.id);
     let thumb = old && old.thumb;
     try {
       thumb = layShot(
@@ -278,6 +330,11 @@ async function projSave() {
       lon: p.lon != null ? p.lon : GEO.lon,
       lat: p.lat != null ? p.lat : GEO.lat,
     };
+    if (server) {
+      await projSaveServer(p, rec);
+      p._last = projSig();
+      return;
+    }
     await idbSet('proj:' + p.id, rec);
     let ix = (await idbGet('projIdx')) || [];
     ix = ix.filter((x) => x.id !== p.id);
@@ -343,16 +400,56 @@ async function planSave() {
 }
 async function projList() {
   try {
-    return (await idbGet('projIdx')) || [];
-  } catch (_) {
+    const L = ablageServer()
+      ? (await (await ablageAbruf('/api/projekte')).json()).projekte
+      : (await idbGet('projIdx')) || [];
+    return L.filter((x) => sichereId(x.id)).map((x) => ({ ...x, thumb: sicheresBild(x.thumb) }));
+  } catch (e) {
+    logErr(e, 'projList');
     return [];
+  }
+}
+/** Datensatz und Kartenausschnitt eines Projekts laden. */
+async function projLaden(id) {
+  if (!ablageServer()) return { rec: await idbGet('proj:' + id), sn: await idbGet('snap:' + id) };
+  const r = await ablageAbruf('/api/projekte/' + encodeURIComponent(id));
+  const rec = await r.json();
+  const sn = new Uint8Array(
+    await (await ablageAbruf('/api/projekte/' + encodeURIComponent(id) + '/karte')).arrayBuffer(),
+  );
+  return { rec, sn, version: +r.headers.get('X-Version'), nurLesen: r.headers.get('X-Zugriff') === 'lesen' };
+}
+/** Projekt umbenennen (Liste auf der Startseite). */
+async function projUmbenennen(id, name) {
+  if (ablageServer()) {
+    const x = await projLaden(id);
+    x.rec.name = name;
+    await ablageAbruf('/api/projekte/' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rec: x.rec, basis: x.version }),
+    });
+    if (S.project && S.project.id === id) S.project._version = x.version + 1;
+    return;
+  }
+  const rec = await idbGet('proj:' + id);
+  if (rec) {
+    rec.name = name;
+    await idbSet('proj:' + id, rec);
+  }
+  const ix = (await idbGet('projIdx')) || [];
+  const e = ix.find((x) => x.id === id);
+  if (e) {
+    e.name = name;
+    await idbSet('projIdx', ix);
   }
 }
 async function projOpen(id) {
   try {
     homeUndo();
-    const rec = await idbGet('proj:' + id),
-      sn = await idbGet('snap:' + id);
+    const geladen = await projLaden(id),
+      rec = geladen.rec,
+      sn = geladen.sn;
     if (!rec || !sn) throw new Error('Projekt nicht gefunden.');
     $('hSide').innerHTML =
       '<h2>Öffne „' + esc(rec.name) + '“ …</h2><div class="sub">Karte und Gebäude werden geladen.</div>';
@@ -366,6 +463,8 @@ async function projOpen(id) {
     if (!r.ok) throw new Error(r.msg);
     newProjectReset();
     S.project = { id, name: rec.name, label: rec.label, size: rec.size, lon: s.lon, lat: s.lat };
+    if (ablageServer())
+      Object.assign(S.project, { _version: geladen.version, _nurLesen: geladen.nurLesen ? 1 : 0, _karte: 1 });
     projApplyPre(rec.x);
     load(rec.bld);
     lbRebuild(rec.lab);
@@ -398,14 +497,19 @@ async function projDel(id, ev) {
   if (ev) ev.stopPropagation();
   if (!confirm('Projekt endgültig löschen?')) return;
   try {
-    await idbDel('proj:' + id);
-    await idbDel('snap:' + id);
-    await idbSet(
-      'projIdx',
-      ((await idbGet('projIdx')) || []).filter((x) => x.id !== id),
-    );
+    if (ablageServer())
+      await ablageAbruf('/api/projekte/' + encodeURIComponent(id) + '/loeschen', { method: 'POST' });
+    else {
+      await idbDel('proj:' + id);
+      await idbDel('snap:' + id);
+      await idbSet(
+        'projIdx',
+        ((await idbGet('projIdx')) || []).filter((x) => x.id !== id),
+      );
+    }
   } catch (e) {
-    logErr(e, 'projDel');
+    if (e.status) alert(e.message);
+    else logErr(e, 'projDel');
   }
   homePanel('open');
   try {

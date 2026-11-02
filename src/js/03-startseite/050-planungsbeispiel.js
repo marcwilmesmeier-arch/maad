@@ -310,12 +310,62 @@ ${homeDemoFileBtn()}<button class="hback" onclick="homeBack()">‹ Zurück zur �
   } else {
     const L = await projList();
     el.innerHTML =
-      `<h2>Projekt öffnen</h2><div class="sub">${L.length ? L.length + ' gespeichert (in diesem Browser)' : 'Noch keine Projekte gespeichert.'}</div>` +
-      L.map(
-        (x) =>
-          `<div class="hproj" onclick="projOpen('${x.id}')">${x.thumb ? `<img src="${x.thumb}" alt="">` : '<div class="ph"></div>'}<div><b>${esc(x.name)}</b><small>${x.n || 0} Gebäude · ${new Date(x.t).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}</small><br><small>${esc((x.label || '').split(',')[0])}</small></div><button title="Umbenennen" onclick="projRen('${x.id}',event)">✎</button><button title="Löschen" onclick="projDel('${x.id}',event)">✕</button></div>`,
-      ).join('') +
+      `<h2>Projekt öffnen</h2><div class="sub">${L.length ? L.length + (ablageServer() ? ' verfügbar (auf dem Server)' : ' gespeichert (in diesem Browser)') : 'Noch keine Projekte gespeichert.'}</div>` +
+      L.map((x) => {
+        // Server: fremde Projekte zeigen den Besitzer; nur Besitzer/Admin dürfen umbenennen und löschen
+        const darf = x.eigenes !== false || (ACC && ACC.user && ACC.user.role === 'admin');
+        const von =
+          x.eigenes === false
+            ? `<br><small>von ${esc(x.besitzer || '')}${x.zugriff === 'lesen' ? ' · nur lesen' : ''}</small>`
+            : '';
+        return `<div class="hproj" onclick="projOpen('${x.id}')">${x.thumb ? `<img src="${x.thumb}" alt="">` : '<div class="ph"></div>'}<div><b>${esc(x.name)}</b><small>${x.n || 0} Gebäude · ${new Date(x.t).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}</small><br><small>${esc((x.label || '').split(',')[0])}</small>${von}</div>${darf && x.zugriff !== 'lesen' ? `<button title="Umbenennen" onclick="projRen('${x.id}',event)">✎</button>` : ''}${darf && accCan('team') && ablageServer() ? `<button title="Im Team teilen" onclick="projTeilen('${x.id}',event)">👥</button>` : ''}${darf ? `<button title="Löschen" onclick="projDel('${x.id}',event)">✕</button>` : ''}</div>`;
+      }).join('') +
       `<button class="hback" onclick="homePanel('main')">‹ Zurück</button>`;
+  }
+}
+/** Freigaben eines Server-Projekts bearbeiten: ganzes Büro, Gruppen, einzelne Kollegen – lesen oder bearbeiten. */
+async function projTeilen(id, ev) {
+  if (ev) ev.stopPropagation();
+  const el = $('hSide');
+  try {
+    const [team, fr] = await Promise.all([
+      ablageAbruf('/api/team').then((r) => r.json()),
+      ablageAbruf('/api/projekte/' + encodeURIComponent(id) + '/freigaben').then((r) => r.json()),
+    ]);
+    const recht = (art, zid) =>
+      (fr.freigaben.find((f) => f.art === art && f.ziel_id === zid) || {}).recht || '';
+    const wahl = (art, zid, text) =>
+      `<label class="hshare"><span>${esc(text)}</span><select data-art="${art}" data-id="${zid}"><option value="">–</option><option value="lesen"${recht(art, zid) === 'lesen' ? ' selected' : ''}>lesen</option><option value="bearbeiten"${recht(art, zid) === 'bearbeiten' ? ' selected' : ''}>bearbeiten</option></select></label>`;
+    const ich = ACC.user.email;
+    el.innerHTML =
+      `<h2>Im Team teilen</h2><div class="sub">Wer dieses Projekt öffnen darf. Zugriff ist nur innerhalb von „${esc(team.mandant.name)}“ möglich.</div>` +
+      wahl('mandant', team.mandant.id, 'Ganzes Büro') +
+      (team.gruppen.length
+        ? '<div class="sub">Gruppen</div>' + team.gruppen.map((g) => wahl('gruppe', g.id, g.name)).join('')
+        : '') +
+      '<div class="sub">Kolleginnen und Kollegen</div>' +
+      team.nutzer
+        .filter((n) => n.email !== ich)
+        .map((n) => wahl('nutzer', n.id, n.name ? n.name + ' (' + n.email + ')' : n.email))
+        .join('') +
+      `<button class="hbtn pri" id="hShareOk"><i>✓</i><span>Speichern</span></button><div class="sub" id="hShareMsg"></div><button class="hback" onclick="homePanel('open')">‹ Zurück</button>`;
+    $('hShareOk').onclick = async () => {
+      const freigaben = [...el.querySelectorAll('select[data-art]')]
+        .filter((s) => s.value)
+        .map((s) => ({ art: s.dataset.art, ziel_id: +s.dataset.id, recht: s.value }));
+      try {
+        await ablageAbruf('/api/projekte/' + encodeURIComponent(id) + '/freigaben', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ freigaben }),
+        });
+        $('hShareMsg').textContent = 'Gespeichert.';
+      } catch (e) {
+        $('hShareMsg').textContent = e.message;
+      }
+    };
+  } catch (e) {
+    alert('Freigaben konnten nicht geladen werden: ' + e.message);
   }
 }
 function homeCreate() {
