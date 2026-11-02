@@ -1,4 +1,4 @@
-/* v344 Fokus-Ansicht: zeigt nur noch das Gebäude und sein Grundstück auf weißem Hintergrund. Kein Körper, keine Größeneinstellung. Ein/Aus im oberen Menü. */
+/* v344 Fokus-Ansicht: zeigt nur noch die Gebäude des Grundstücks (Grundstück = Filter) und das Grundstück auf weißem Hintergrund. Kein Körper, keine Größeneinstellung. Ein/Aus im oberen Menü. */
 const ISO3 = { on: 0, g: new T.Group(), bid: '', sig: '', saved: new Map(), clr: null };
 sc.add(ISO3.g);
 function iso3Target() {
@@ -122,6 +122,24 @@ function iso3Draw(poly) {
     console.warn('Fokus Fläche', e);
   }
 }
+// Gebäude im Fokus: das gewählte und alle anderen auf demselben Grundstück
+function iso3Set() {
+  const t = iso3Target();
+  if (!t || !t._g) return { list: [], site: null, t };
+  const bx = new T.Box3().setFromObject(t._g);
+  if (bx.isEmpty()) return { list: [t], site: null, t };
+  const site = iso3Site(bx);
+  const list = site
+    ? S.bld.filter((x) => {
+        if (x.ex || !x._g || x._y == null) return false;
+        if (x === t) return true;
+        const q = new T.Box3().setFromObject(x._g);
+        if (q.isEmpty()) return false;
+        return iso3PIP(site.poly, (q.min.x + q.max.x) / 2, (q.min.z + q.max.z) / 2);
+      })
+    : [t];
+  return { list, site, t };
+}
 function iso3Clip(b) {
   // Fokus: der 3 m tiefe Gründungs-Fortsatz des EG liegt sonst durch die transparente Grundstücksfläche sichtbar wie ein Untergeschoss
   try {
@@ -150,51 +168,54 @@ function iso3Clip(b) {
 }
 function iso3Apply(force) {
   if (!ISO3.on) return;
-  const b = iso3Target();
+  const ss = iso3Set(),
+    b = ss.t;
   if (!b) return;
-  iso3Clip(b);
+  const L = ss.list,
+    inL = (x) => L.includes(x);
+  L.forEach(iso3Clip);
   iso3Ctx().forEach((o) => iso3Hide(o, b._g));
   if (G.un)
     G.un.children.forEach((g) => {
-      if (g.userData.bid !== b.id) iso3Hide(g);
+      if (!L.some((x) => x.id === g.userData.bid)) iso3Hide(g);
       else if (ISO3.saved.has(g)) {
         g.visible = ISO3.saved.get(g);
         ISO3.saved.delete(g);
       }
     });
   S.bld.forEach((x) => {
-    if (x._g && x !== b) {
+    if (x._g && !inL(x)) {
       if (!ISO3.saved.has(x._g)) ISO3.saved.set(x._g, x._g.visible);
       x._g.visible = false;
     }
   });
   ISO3.lk = ISO3.lk || new Map();
   S.bld.forEach((x) => {
-    if (x._g && x !== b)
+    if (x._g && !inL(x))
       x._g.traverse((o) => {
         if (!ISO3.lk.has(o)) ISO3.lk.set(o, o.layers.mask);
         o.layers.set(1);
       });
   });
-  if (b._g)
-    b._g.traverse((o) => {
-      if (ISO3.lk.has(o)) {
-        o.layers.mask = ISO3.lk.get(o);
-        ISO3.lk.delete(o);
-      }
-    });
-  if (b._g && ISO3.saved.has(b._g)) {
-    b._g.visible = ISO3.saved.get(b._g);
-    ISO3.saved.delete(b._g);
-  }
+  L.forEach((x) => {
+    if (x._g)
+      x._g.traverse((o) => {
+        if (ISO3.lk.has(o)) {
+          o.layers.mask = ISO3.lk.get(o);
+          ISO3.lk.delete(o);
+        }
+      });
+    if (x._g && ISO3.saved.has(x._g)) {
+      x._g.visible = ISO3.saved.get(x._g);
+      ISO3.saved.delete(x._g);
+    }
+  });
   if (ISO3.clr !== 'w') {
     ren.setClearColor(0xffffff);
     ISO3.clr = 'w';
   }
-  const bx = new T.Box3().setFromObject(b._g);
-  if (bx.isEmpty()) return;
-  const s = iso3Site(bx),
-    key = b.id + '|' + (s ? s.id + JSON.stringify(s.poly) : '-');
+  const s = ss.site,
+    key = L.map((x) => x.id).join(',') + '|' + (s ? s.id + JSON.stringify(s.poly) : '-');
   if (force || key !== ISO3.sig) {
     ISO3.sig = key;
     ISO3.bid = b.id;
@@ -239,11 +260,15 @@ function iso3Ui() {
   b.classList.toggle('on', !!ISO3.on);
 }
 function iso3Fly() {
-  const b = iso3Target();
+  const ss = iso3Set(),
+    b = ss.t;
   if (!b || !b._g) return;
-  const bx = new T.Box3().setFromObject(b._g);
+  const bx = new T.Box3();
+  ss.list.forEach((x) => {
+    if (x._g) bx.expandByObject(x._g);
+  });
   if (bx.isEmpty()) return;
-  const s = iso3Site(bx);
+  const s = ss.site;
   let x0 = bx.min.x,
     x1 = bx.max.x,
     z0 = bx.min.z,

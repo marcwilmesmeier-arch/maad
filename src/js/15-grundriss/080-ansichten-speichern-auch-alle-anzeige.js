@@ -291,7 +291,7 @@ function vwDsSwap(ds) {
 // ---- Einheitenkörper in 3D (Layer „Einheitenkörper“): je Geschoss und Einheit ein durchscheinender Körper
 G.un = new T.Group();
 sc.add(G.un);
-function grPrism(f, ya, yb) {
+function grPrism(f, ya, yb, oth) {
   const V = f.o.map((p) => new T.Vector2(p[0], p[1])),
     HV = f.h.map((h) => h.map((p) => new T.Vector2(p[0], p[1]))),
     AV = V.concat(...HV),
@@ -360,7 +360,76 @@ function grPrism(f, ya, yb) {
           yb,
           q[1],
         );
-      ln.push(p[0], ya, p[1], q[0], ya, q[1], p[0], yb, p[1], q[0], yb, q[1], p[0], ya, p[1], p[0], yb, p[1]);
+      if (!oth || !oth.length) {
+        ln.push(
+          p[0],
+          ya,
+          p[1],
+          q[0],
+          ya,
+          q[1],
+          p[0],
+          yb,
+          p[1],
+          q[0],
+          yb,
+          q[1],
+          p[0],
+          ya,
+          p[1],
+          p[0],
+          yb,
+          p[1],
+        );
+        continue;
+      }
+      // Linien nur am äußeren Umriss: Wandstücke, die an eine andere Einheit grenzen, bekommen keine Linien
+      const ts = [0, 1];
+      for (const o of oth)
+        for (const rr of [o.o].concat(o.h))
+          for (const v of rr) {
+            const t = ((v[0] - p[0]) * dx + (v[1] - p[1]) * dz) / (L * L);
+            if (t > 0.001 && t < 0.999 && Math.abs((v[0] - p[0]) * dz - (v[1] - p[1]) * dx) / L < 0.03)
+              ts.push(t);
+          }
+      ts.sort((a, c) => a - c);
+      const pc = [];
+      for (let k = 0; k < ts.length - 1; k++) {
+        const t0 = ts[k],
+          t1 = ts[k + 1];
+        if (t1 - t0 < 1e-4) continue;
+        const tm = (t0 + t1) / 2,
+          mx = p[0] + dx * tm,
+          mz = p[1] + dz * tm;
+        pc.push({
+          t0,
+          t1,
+          sh: oth.some(
+            (o) =>
+              grInFace(o, mx - (dz / L) * 0.06, mz + (dx / L) * 0.06) ||
+              grInFace(o, mx + (dz / L) * 0.06, mz - (dx / L) * 0.06),
+          ),
+        });
+      }
+      const V = (t) => {
+        const x = p[0] + dx * t,
+          z = p[1] + dz * t;
+        ln.push(x, ya, z, x, yb, z);
+      };
+      pc.forEach((c, k) => {
+        if (!c.sh) {
+          const a0 = p[0] + dx * c.t0,
+            a1 = p[1] + dz * c.t0,
+            b0 = p[0] + dx * c.t1,
+            b1 = p[1] + dz * c.t1;
+          ln.push(a0, ya, a1, b0, ya, b1, a0, yb, a1, b0, yb, b1);
+        }
+        const pr = pc[k - 1];
+        if (!pr) {
+          if (!c.sh) V(c.t0);
+        } else if (pr.sh !== c.sh) V(c.t0);
+        if (k === pc.length - 1 && !c.sh) V(c.t1);
+      });
     }
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
@@ -420,7 +489,12 @@ function grUnB(b) {
       const c = new T.Color((grFA(f.fa) || grDefFa(lv.use)).c);
       MU = { fa: f.fa, fi: f.idx, sn: lv.sn, use: lv.use };
       if (!lv.dg) {
-        const P = grPrism(f, y0, y0 + lv.h),
+        const P = grPrism(
+            f,
+            y0,
+            y0 + lv.h,
+            lv.faces.filter((o) => o !== f && o.un),
+          ),
           lg2 = new T.BufferGeometry();
         lg2.setAttribute('position', new T.BufferAttribute(new Float32Array(P.ln), 3));
         mk(P.g, c, lg2);
