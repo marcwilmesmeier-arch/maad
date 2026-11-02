@@ -1,0 +1,18 @@
+[Unit]
+Description=maad Kundenzugang
+After=network.target
+
+[Service]
+User=maad
+Group=maad
+WorkingDirectory=/opt/maad
+ExecStart=/usr/bin/python3 /opt/maad/maadserver.py /etc/maad/config.json
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/maad
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

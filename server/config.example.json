@@ -1,0 +1,24 @@
+{
+  "base_url": "https://getmaad.de",
+  "host": "127.0.0.1",
+  "port": 8080,
+  "data_dir": "/var/lib/maad",
+  "tool_file": "/opt/maad/maad.html",
+  "demo_file": "/opt/maad/maad-demo.html",
+  "admin_emails": [
+    "marc.wilmesmeier@gmx.de"
+  ],
+  "session_days": 30,
+  "link_minutes": 15,
+  "app_name": "maad",
+  "smtp": {
+    "host": "smtp.ionos.de",
+    "port": 587,
+    "user": "zugang@getmaad.de",
+    "password": "HIER-DAS-MAILPASSWORT",
+    "from": "maad <zugang@getmaad.de>",
+    "ssl": false
+  },
+  "maptiler_key": "HIER-IHR-MAPTILER-SCHLUESSEL",
+  "proxy": true
+}
