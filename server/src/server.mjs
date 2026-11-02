@@ -91,6 +91,7 @@ export function erstelleServer(konfig = ladeKonfig()) {
     sende(res, 200, readFileSync(join(SEITEN, d)), typ, { 'Cache-Control': 'no-cache' });
   });
   r.add('GET', '/healthz', (req, res) => sende(res, 200, 'ok'));
+  r.add('GET', '/favicon.ico', (req, res) => sende(res, 204, ''));
 
   // ---------- Anmeldung ----------
   r.add('POST', '/api/anmelden', async (req, res) => {

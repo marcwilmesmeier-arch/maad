@@ -74,19 +74,28 @@ try {
     const hit = LIBS.find(([re]) => re.test(url));
     return hit ? route.fulfill({ body: lib(hit[1]), contentType: hit[2] }) : route.abort();
   });
-  const page = await ctx.newPage();
   const seitenfehler = [];
-  page.on('pageerror', (e) => seitenfehler.push(e.message));
-  page.on(
-    'console',
-    (m) => m.type() === 'error' && /Content Security Policy/.test(m.text()) && seitenfehler.push(m.text()),
-  );
+  // Jede Ansicht in einem eigenen Tab: der Tool-Tab rendert laufend 3D (im Testbrowser ohne Grafikkarte
+  // sehr langsam), Wegnavigieren davon läuft dort oft in Zeitüberschreitungen.
+  const neu = async (c = ctx, wer = '') => {
+    const p = await c.newPage();
+    p.on('pageerror', (e) => seitenfehler.push(wer + e.message));
+    p.on(
+      'console',
+      (m) =>
+        m.type() === 'error' && /Content Security Policy/.test(m.text()) && seitenfehler.push(wer + m.text()),
+    );
+    return p;
+  };
 
   // Demo
-  await page.goto(BASE + '/', { waitUntil: 'load' });
-  await page.waitForTimeout(2500);
-  ok((await page.evaluate(() => window.MAAD_ACC.mode)) === 'demo', 'Ohne Anmeldung: Demo');
+  const pd = await neu();
+  await pd.goto(BASE + '/', { waitUntil: 'load' });
+  await pd.waitForTimeout(2500);
+  ok((await pd.evaluate(() => window.MAAD_ACC.mode)) === 'demo', 'Ohne Anmeldung: Demo');
   ok(seitenfehler.length === 0, 'Demo lädt ohne Fehler ' + seitenfehler.join(' | '));
+  await pd.close();
+  const page = await neu();
 
   // Anmeldeseite → Passwort vergessen → Link → Passwort festlegen
   await page.goto(BASE + '/anmelden', { waitUntil: 'load' });
@@ -110,23 +119,87 @@ try {
     'Leiste mit Abmelden/Verwaltung sichtbar',
   );
 
-  // Verwaltung erreichbar
-  await page.goto(BASE + '/verwaltung', { waitUntil: 'load' });
-  ok(page.url().endsWith('/verwaltung'), 'Verwaltung für Betreiber erreichbar');
+  // Verwaltung: Betreiber legt Mandanten an und lädt einen Admin ein
+  await page.close();
+  const pv = await neu(ctx, 'Verwaltung: ');
+  await pv.goto(BASE + '/verwaltung', { waitUntil: 'load' });
+  ok(pv.url().endsWith('/verwaltung'), 'Verwaltung für Betreiber erreichbar');
+  await pv.waitForSelector('#bereich-mandanten:not(.hide)');
+  await pv.click('#mandant-neu');
+  await pv.fill('#m-name', 'Testbüro');
+  await pv.selectOption('#m-abo', 'buero');
+  await pv.fill('#m-max', '5');
+  await pv.click('#f-mandant button[type=submit]');
+  await pv.waitForFunction(() => document.getElementById('mandanten').textContent.includes('Testbüro'));
+  ok(true, 'Mandant über die Oberfläche angelegt');
+  await pv.click('#mandanten button:has-text("Öffnen")');
+  await pv.waitForSelector('#bereich-mandant:not(.hide)');
+  await pv.fill('#n-email', 'chef@testbuero.invalid');
+  await pv.selectOption('#n-rolle', 'admin');
+  await pv.click('#n-einladen');
+  await pv.waitForFunction(() =>
+    document.getElementById('nutzer').textContent.includes('chef@testbuero.invalid'),
+  );
+  ok((await pv.textContent('#m-nutzer')).includes('Einladung'), 'Admin des Mandanten eingeladen');
+
+  // Mandanten-Admin in eigenem Browser-Kontext: Passwort setzen, nur eigener Mandant sichtbar
+  const ctx2 = await browser.newContext();
+  await ctx2.route(/^https?:\/\//, (route) => {
+    const url = route.request().url();
+    if (url.startsWith(BASE)) return route.continue();
+    const hit = LIBS.find(([re]) => re.test(url));
+    return hit ? route.fulfill({ body: lib(hit[1]), contentType: hit[2] }) : route.abort();
+  });
+  const p2 = await neu(ctx2, 'Admin: ');
+  await p2.goto(link(), { waitUntil: 'load' });
+  await p2.waitForSelector('#k-setzen:not(.hide)');
+  await p2.fill('#pw1', PW);
+  await p2.fill('#pw2', PW);
+  await p2.click('#f-setzen button[type=submit]');
+  await p2.waitForURL(BASE + '/', { timeout: 30000 });
+  await p2.close();
+  const p3 = await neu(ctx2, 'Admin: ');
+  await p3.goto(BASE + '/verwaltung', { waitUntil: 'load' });
+  await p3.waitForSelector('#bereich-mandant:not(.hide)');
+  ok(await p3.isHidden('#bereich-mandanten'), 'Mandanten-Admin sieht keine Mandantenliste');
+  ok((await p3.textContent('#mandant-titel')) === 'Testbüro', 'Mandanten-Admin sieht seinen Mandanten');
+  await p3.click('.tabs button[data-tab=gruppen]');
+  await p3.click('#gruppe-neu');
+  await p3.fill('#g-name', 'Zeichner');
+  const angeboten = await p3.$$eval('#g-rechte input', (L) => L.map((i) => i.value));
+  ok(!angeboten.includes('own_sources'), 'Gruppenrechte nur innerhalb des Abos angeboten');
+  await p3.check('#g-rechte input[value=project_open]');
+  await p3.click('#f-gruppe button[type=submit]');
+  await p3.waitForFunction(() => document.getElementById('gruppen').textContent.includes('Zeichner'));
+  ok(true, 'Gruppe angelegt');
+  await p3.click('.tabs button[data-tab=nutzer]');
+  await p3.fill('#n-email', 'zeichner@testbuero.invalid');
+  await p3.uncheck('#n-gruppen input >> nth=0');
+  await p3.check('#n-gruppen label:has-text("Zeichner") input');
+  await p3.click('#n-einladen');
+  await p3.waitForFunction(() =>
+    document.getElementById('nutzer').textContent.includes('zeichner@testbuero.invalid'),
+  );
+  const zeile = await p3.textContent('#nutzer tr:has-text("zeichner@testbuero.invalid")');
+  ok(
+    zeile.includes('Zeichner') && zeile.includes('Projekte öffnen'),
+    'Nutzer mit Gruppe und Rechten angelegt',
+  );
+  await ctx2.close();
 
   // Abmelden und erneut mit Passwort anmelden
-  await page.evaluate(() => fetch('/api/abmelden', { method: 'POST', headers: { 'X-Maad': '1' } }));
-  await page.goto(BASE + '/verwaltung', { waitUntil: 'load' });
-  ok(page.url().endsWith('/anmelden'), 'Nach Abmelden: Verwaltung leitet zur Anmeldung');
-  await page.fill('#email', BETREIBER);
-  await page.fill('#passwort', 'falsches-passwort');
-  await page.click('#f-anmelden button[type=submit]');
-  await page.waitForFunction(() => document.getElementById('fehler').textContent.length > 0);
-  ok((await page.textContent('#fehler')).includes('falsch'), 'Falsches Passwort: Hinweis');
-  await page.fill('#passwort', PW);
-  await page.click('#f-anmelden button[type=submit]');
-  await page.waitForURL(BASE + '/', { timeout: 30000 });
-  ok((await page.evaluate(() => window.MAAD_ACC.mode)) === 'full', 'Anmeldung mit Passwort');
+  await pv.evaluate(() => fetch('/api/abmelden', { method: 'POST', headers: { 'X-Maad': '1' } }));
+  await pv.goto(BASE + '/verwaltung', { waitUntil: 'load' });
+  ok(pv.url().endsWith('/anmelden'), 'Nach Abmelden: Verwaltung leitet zur Anmeldung');
+  await pv.fill('#email', BETREIBER);
+  await pv.fill('#passwort', 'falsches-passwort');
+  await pv.click('#f-anmelden button[type=submit]');
+  await pv.waitForFunction(() => document.getElementById('fehler').textContent.length > 0);
+  ok((await pv.textContent('#fehler')).includes('falsch'), 'Falsches Passwort: Hinweis');
+  await pv.fill('#passwort', PW);
+  await pv.click('#f-anmelden button[type=submit]');
+  await pv.waitForURL(BASE + '/', { timeout: 30000 });
+  ok((await pv.evaluate(() => window.MAAD_ACC && window.MAAD_ACC.mode)) === 'full', 'Anmeldung mit Passwort');
   ok(seitenfehler.length === 0, 'Keine Seitenfehler ' + seitenfehler.join(' | '));
 } catch (e) {
   fehler.push(String(e));

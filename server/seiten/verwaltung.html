@@ -1,3 +1,242 @@
 <!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>maad – Verwaltung</title><link rel="stylesheet" href="/seiten/gemeinsam.css"></head>
-<body><div class="wrap"><div class="top"><a class="logo" href="/">maad</a><span class="tag">Verwaltung</span></div><p>Die Verwaltungsoberfläche folgt im nächsten Schritt.</p></div></body></html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>maad – Verwaltung</title>
+    <link rel="stylesheet" href="/seiten/gemeinsam.css" />
+    <script src="/seiten/verwaltung.js" type="module"></script>
+  </head>
+  <body>
+    <div class="wrap breit">
+      <div class="top">
+        <a class="logo" href="/">maad</a><span class="tag">Verwaltung</span><span class="fuell"></span>
+        <span class="leise" id="ich"></span>
+        <a class="knopf" href="/">Zum Tool</a>
+        <button type="button" id="pw-oeffnen">Passwort ändern</button>
+        <button type="button" id="abmelden">Abmelden</button>
+      </div>
+
+      <!-- Betreiber: Mandanten -->
+      <section id="bereich-mandanten" class="hide">
+        <h1>Mandanten</h1>
+        <p>
+          Kundenfirmen mit Abo, Rechten und Laufzeit. Nutzer und Gruppen verwaltet jeder Mandant über seine
+          Admins selbst.
+        </p>
+        <div class="zeile">
+          <button class="pri" type="button" id="mandant-neu">Mandant anlegen</button>
+          <span class="fuell"></span>
+          <input
+            type="text"
+            id="kennung"
+            placeholder="Kundenkennung (12 Zeichen) prüfen"
+            aria-label="Kundenkennung prüfen"
+          />
+          <button type="button" id="kennung-pruefen">Prüfen</button
+          ><span class="leise" id="kennung-ergebnis"></span>
+        </div>
+        <div class="msg" id="m-mandanten" role="status"></div>
+        <div class="tbl">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Abo</th>
+                <th>Rechte</th>
+                <th>Nutzer</th>
+                <th>Gültig bis</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="mandanten"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Ein Mandant: Nutzer, Gruppen, Protokoll -->
+      <section id="bereich-mandant" class="hide">
+        <div class="wahl" id="wahl-zeile">
+          <label for="wahl" class="hide">Mandant</label
+          ><select id="wahl"></select>
+        </div>
+        <h1 id="mandant-titel"></h1>
+        <p id="mandant-info"></p>
+        <div class="tabs" role="tablist">
+          <button type="button" class="on" data-tab="nutzer">Nutzer</button>
+          <button type="button" data-tab="gruppen">Gruppen</button>
+          <button type="button" data-tab="protokoll">Protokoll</button>
+        </div>
+
+        <div id="tab-nutzer">
+          <div class="card">
+            <h2>Nutzer einladen</h2>
+            <div class="grid">
+              <div>
+                <label for="n-email">E-Mail-Adresse</label
+                ><input id="n-email" type="email" placeholder="name@buero.de" />
+              </div>
+              <div><label for="n-name">Name (optional)</label><input id="n-name" type="text" /></div>
+              <div>
+                <label for="n-rolle">Rolle</label
+                ><select id="n-rolle">
+                  <option value="nutzer">Nutzer</option>
+                  <option value="admin">Mandanten-Admin</option>
+                </select>
+              </div>
+            </div>
+            <label>Gruppen</label>
+            <div class="haken" id="n-gruppen"></div>
+            <div class="zeile">
+              <button class="pri" type="button" id="n-einladen">Einladen</button
+              ><span class="msg" id="m-nutzer" role="status"></span>
+            </div>
+          </div>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>E-Mail</th>
+                  <th>Name</th>
+                  <th>Rolle</th>
+                  <th>Gruppen</th>
+                  <th>Rechte</th>
+                  <th>Status</th>
+                  <th>Letzte Anmeldung</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="nutzer"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-gruppen" class="hide">
+          <div class="zeile">
+            <button class="pri" type="button" id="gruppe-neu">Gruppe anlegen</button
+            ><span class="msg" id="m-gruppen" role="status"></span>
+          </div>
+          <p class="leise">
+            Ein Nutzer erhält die Rechte all seiner Gruppen – nie mehr, als das Abo des Mandanten erlaubt.
+            Mandanten-Admins haben immer alle Rechte des Abos.
+          </p>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Gruppe</th>
+                  <th>Rechte</th>
+                  <th>Mitglieder</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="gruppen"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-protokoll" class="hide">
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zeit (UTC)</th>
+                  <th>Person</th>
+                  <th>Ereignis</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="protokoll"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Dialoge -->
+    <dialog id="d-mandant">
+      <form method="dialog" id="f-mandant">
+        <h2 id="d-mandant-titel">Mandant</h2>
+        <div class="grid">
+          <div><label for="m-name">Name</label><input id="m-name" type="text" required /></div>
+          <div>
+            <label for="m-abo">Abo</label
+            ><select id="m-abo"></select>
+          </div>
+          <div>
+            <label for="m-max">Höchstzahl Nutzer</label
+            ><input id="m-max" type="number" min="1" max="10000" value="10" />
+          </div>
+          <div>
+            <label for="m-bis">Gültig bis (leer = unbefristet)</label><input id="m-bis" type="date" />
+          </div>
+          <div>
+            <label for="m-status">Status</label
+            ><select id="m-status">
+              <option value="aktiv">Aktiv</option>
+              <option value="gesperrt">Gesperrt</option>
+            </select>
+          </div>
+        </div>
+        <label>Rechte (durch das Abo vorbelegt)</label>
+        <div class="haken" id="m-rechte"></div>
+        <div class="err" id="m-fehler" role="alert"></div>
+        <div class="zeile">
+          <button class="pri" type="submit" value="ok">Speichern</button
+          ><button type="button" class="schliessen">Abbrechen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="d-gruppe">
+      <form method="dialog" id="f-gruppe">
+        <h2 id="d-gruppe-titel">Gruppe</h2>
+        <label for="g-name">Name</label><input id="g-name" type="text" required maxlength="60" />
+        <label>Rechte</label>
+        <div class="haken" id="g-rechte"></div>
+        <div class="err" id="g-fehler" role="alert"></div>
+        <div class="zeile">
+          <button class="pri" type="submit" value="ok">Speichern</button
+          ><button type="button" class="schliessen">Abbrechen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="d-nutzer">
+      <form method="dialog" id="f-nutzer">
+        <h2 id="d-nutzer-titel">Nutzer</h2>
+        <label for="e-name">Name</label><input id="e-name" type="text" /> <label for="e-rolle">Rolle</label
+        ><select id="e-rolle">
+          <option value="nutzer">Nutzer</option>
+          <option value="admin">Mandanten-Admin</option>
+        </select>
+        <label>Gruppen</label>
+        <div class="haken" id="e-gruppen"></div>
+        <div class="err" id="e-fehler" role="alert"></div>
+        <div class="zeile">
+          <button class="pri" type="submit" value="ok">Speichern</button
+          ><button type="button" class="schliessen">Abbrechen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="d-passwort">
+      <form method="dialog" id="f-passwort">
+        <h2>Passwort ändern</h2>
+        <input type="email" id="p-email" autocomplete="username" class="hide" readonly />
+        <label for="p-alt">Bisheriges Passwort</label
+        ><input id="p-alt" type="password" autocomplete="current-password" required />
+        <label for="p-neu">Neues Passwort</label
+        ><input id="p-neu" type="password" autocomplete="new-password" required />
+        <label for="p-neu2">Neues Passwort wiederholen</label
+        ><input id="p-neu2" type="password" autocomplete="new-password" required />
+        <div class="err" id="p-fehler" role="alert"></div>
+        <div class="zeile">
+          <button class="pri" type="submit" value="ok">Ändern</button
+          ><button type="button" class="schliessen">Abbrechen</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
