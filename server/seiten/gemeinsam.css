@@ -1,0 +1,315 @@
+/* Gemeinsames Aussehen der Server-Seiten (Anmeldung, Passwort, Verwaltung) */
+body {
+  margin: 0;
+  background: #f2f2f0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: #1d1d1b;
+}
+a {
+  color: inherit;
+}
+.wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.wrap.breit {
+  max-width: 1240px;
+  padding-bottom: 60px;
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+}
+.logo {
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+}
+.tag {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #5f5f5c;
+}
+.fuell {
+  flex: 1;
+}
+.leise {
+  font-size: 13px;
+  color: #5f5f5c;
+}
+.karte {
+  max-width: 420px;
+  margin: 48px auto;
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 30px #0000000d;
+}
+.card {
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 20px;
+  padding: 22px;
+  margin-bottom: 18px;
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+}
+h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4a4a47;
+  margin: 0 0 20px;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='date'],
+input[type='number'],
+select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 46px;
+  border: 1px solid #cfcfcb;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+}
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid #1d1d1b;
+  outline-offset: 1px;
+}
+button,
+a.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #d6d6d2;
+  border-radius: 10px;
+  background: #fff;
+  color: #1d1d1b;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin: 2px;
+  text-decoration: none;
+}
+button.pri {
+  min-height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  background: #1d1d1b;
+  color: #fff;
+  font-size: 15px;
+}
+button.voll {
+  width: 100%;
+  margin: 16px 0 0;
+}
+button.warn {
+  color: #a6261d;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.err {
+  color: #a6261d;
+  font-size: 13px;
+  margin-top: 10px;
+  min-height: 18px;
+}
+.ok {
+  color: #17623d;
+  font-size: 13px;
+  margin-top: 10px;
+  min-height: 18px;
+}
+.msg {
+  font-size: 13px;
+  margin: 10px 0;
+  min-height: 18px;
+}
+.box {
+  background: #f2f2f0;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4a4a47;
+}
+.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  margin: 14px 0 0;
+  font-weight: 500;
+  text-decoration: underline;
+  color: #4a4a47;
+}
+.hide {
+  display: none !important;
+}
+/* Verwaltung */
+.tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: #e4e4e0;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.tabs button {
+  border: 0;
+  background: none;
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  color: #4a4a47;
+}
+.tabs button.on {
+  background: #fff;
+  color: #1d1d1b;
+}
+.tbl {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 20px;
+}
+table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th {
+  text-align: left;
+  padding: 13px 14px;
+  border-bottom: 1px solid #e8e8e4;
+  color: #5f5f5c;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #f0f0ec;
+  vertical-align: middle;
+}
+tr:last-child td {
+  border-bottom: 0;
+}
+td.akt {
+  text-align: right;
+  white-space: nowrap;
+}
+.pill {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #e4e4e0;
+  margin: 1px;
+}
+.st-aktiv {
+  color: #17623d;
+  font-weight: 600;
+}
+.st-eingeladen {
+  color: #8a5200;
+  font-weight: 600;
+}
+.st-gesperrt {
+  color: #a6261d;
+  font-weight: 600;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 14px;
+}
+.haken {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 2px 16px;
+  margin-top: 6px;
+}
+.haken label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  min-height: 36px;
+  margin: 0;
+}
+.haken input {
+  width: 18px;
+  height: 18px;
+  accent-color: #1d1d1b;
+}
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+}
+.wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.wahl select {
+  width: auto;
+  min-width: 260px;
+}
+dialog {
+  border: 0;
+  border-radius: 20px;
+  padding: 26px;
+  max-width: 640px;
+  width: calc(100% - 40px);
+  box-shadow: 0 20px 60px #0003;
+}
+dialog::backdrop {
+  background: #0004;
+}

@@ -39,7 +39,15 @@ export default [
     },
   },
   {
-    files: ['tools/**/*.mjs', 'tests/**/*.mjs', 'eslint.config.js'],
+    files: ['tools/**/*.mjs', 'tests/**/*.mjs', 'server/src/**/*.mjs', 'eslint.config.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
+    rules: { 'no-unused-vars': ['error', { args: 'none' }], 'no-empty': 'error', eqeqeq: ['error', 'smart'] },
   },
+  {
+    // Seiten des Servers (Browser, ES-Module, strenge CSP)
+    files: ['server/seiten/**/*.js'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.browser },
+    rules: { 'no-unused-vars': 'error', 'no-empty': 'error', eqeqeq: ['error', 'smart'] },
+  },
+  { ignores: ['server-vorlage/**', 'node_modules/**'] },
 ];

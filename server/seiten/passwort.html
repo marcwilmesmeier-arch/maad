@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>maad – Passwort festlegen</title>
+<link rel="stylesheet" href="/seiten/gemeinsam.css">
+<script src="/seiten/passwort.js" type="module"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="logo" href="/">maad</a></div>
+
+  <div class="karte hide" id="k-setzen">
+    <h1 id="titel">Passwort festlegen</h1>
+    <p id="fuer"></p>
+    <form id="f-setzen">
+      <input type="email" id="email" autocomplete="username" class="hide" readonly>
+      <label for="pw1">Neues Passwort</label>
+      <input id="pw1" type="password" autocomplete="new-password" required>
+      <label for="pw2">Passwort wiederholen</label>
+      <input id="pw2" type="password" autocomplete="new-password" required>
+      <div class="leise" id="regel"></div>
+      <div class="err" id="fehler" role="alert"></div>
+      <button class="pri voll" type="submit">Speichern und anmelden</button>
+    </form>
+  </div>
+
+  <div class="karte hide" id="k-ungueltig">
+    <h1>Link ungültig</h1>
+    <p>Der Link ist abgelaufen oder wurde schon benutzt.</p>
+    <a class="knopf" href="/anmelden">Neuen Link anfordern</a>
+  </div>
+</div>
+</body>
+</html>

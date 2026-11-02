@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>maad – Anmeldung</title>
+<link rel="stylesheet" href="/seiten/gemeinsam.css">
+<script src="/seiten/anmelden.js" type="module"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="logo" href="/">maad</a><span class="fuell"></span><a class="leise" href="/">‹ Zur Demo</a></div>
+
+  <div class="karte" id="k-anmelden">
+    <h1>Anmelden</h1>
+    <form id="f-anmelden">
+      <label for="email">E-Mail-Adresse</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="passwort">Passwort</label>
+      <input id="passwort" type="password" autocomplete="current-password" required>
+      <div class="err" id="fehler" role="alert"></div>
+      <button class="pri voll" type="submit">Anmelden</button>
+    </form>
+    <button class="link" id="zu-vergessen" type="button">Passwort vergessen oder noch keines festgelegt?</button>
+  </div>
+
+  <div class="karte hide" id="k-vergessen">
+    <h1>Passwort festlegen</h1>
+    <p>Sie erhalten per E-Mail einen Link, mit dem Sie ein neues Passwort festlegen.</p>
+    <form id="f-vergessen">
+      <label for="email2">E-Mail-Adresse</label>
+      <input id="email2" type="email" autocomplete="email" required>
+      <div class="err" id="fehler2" role="alert"></div>
+      <button class="pri voll" type="submit">Link senden</button>
+    </form>
+    <button class="link" id="zurueck" type="button">Zurück zur Anmeldung</button>
+  </div>
+
+  <div class="karte hide" id="k-gesendet">
+    <h1>Bitte E-Mail prüfen</h1>
+    <p>Wenn die Adresse zu einem Zugang gehört, haben wir einen Link gesendet.</p>
+    <div class="box">Keine E-Mail erhalten? Prüfen Sie den Spam-Ordner. Andernfalls wenden Sie sich an Ihren Ansprechpartner.</div>
+    <button class="link" id="zurueck2" type="button">Zurück zur Anmeldung</button>
+  </div>
+</div>
+</body>
+</html>

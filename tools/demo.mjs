@@ -1,6 +1,6 @@
-// Erzeugt aus dist/maad.html die Demo dist/maad-demo.html: Funktionen, die ein Recht voraussetzen, werden im
-// Code durch einen Sperrhinweis ersetzt (nicht nur ausgeblendet). Die Demo enthält damit weder Projektablage
-// noch Excel-/IFC-Export. MapTiler-Schlüssel und Proxy-Adresse entfernt der Server beim Ausliefern.
+// Sperrstellen: Funktionen, die ein Recht voraussetzen, werden für Nutzer ohne dieses Recht im ausgelieferten
+// Code durch einen Sperrhinweis ersetzt (nicht nur ausgeblendet). Die Demo ist die Fassung ohne alle Rechte.
+// Erzeugt dist/maad.sperren.json (für den Server) und zum Ansehen dist/maad-demo.html.
 //
 // Aufruf: node tools/demo.mjs   (läuft automatisch in npm run build)
 
@@ -93,36 +93,41 @@ export const SPERREN = {
   ],
 };
 
-/** Ersetzt die Rümpfe der Funktionen zu den gesperrten Rechten; liefert neues HTML. */
-export function sperren(html, rechte) {
+/**
+ * Stellen in maad.html, an denen die Funktionen zu jedem Recht stehen: { recht: [[von, bis, ersatz], …] }.
+ * Der Server ersetzt diese Bereiche für Nutzer ohne das Recht (und in der Demo für alle Rechte).
+ * Positionen sind Zeichenindizes (JavaScript-Strings) in der gesamten HTML-Datei.
+ */
+export function sperrStellen(html) {
   const a = html.indexOf('// ── src/js/');
   const b = html.lastIndexOf('</script></body>');
   if (a < 0 || b < 0) throw new Error('Skriptbereich in maad.html nicht gefunden');
-  const js = html.slice(a, b);
-  const ast = espree.parse(js, { ecmaVersion: 'latest', range: true });
-  const ziel = new Map();
-  for (const r of rechte) for (const f of SPERREN[r]) ziel.set(f, r);
-  const edits = [];
-  for (const s of ast.body) {
-    let name = null,
-      fn = null;
-    if (s.type === 'FunctionDeclaration') ((name = s.id.name), (fn = s));
-    if (!name || !ziel.has(name)) continue;
-    edits.push({ a: fn.body.range[0], b: fn.body.range[1], t: `{ return accDeny('demo'); }`, name });
+  const ast = espree.parse(html.slice(a, b), { ecmaVersion: 'latest', range: true });
+  const pos = new Map();
+  for (const s of ast.body) if (s.type === 'FunctionDeclaration') pos.set(s.id.name, s.body.range);
+  const out = {};
+  for (const [recht, namen] of Object.entries(SPERREN)) {
+    const fehlt = namen.filter((n) => !pos.has(n));
+    if (fehlt.length)
+      throw new Error(`Zu sperrende Funktionen (${recht}) nicht gefunden: ${fehlt.join(', ')}`);
+    out[recht] = namen.map((n) => [a + pos.get(n)[0], a + pos.get(n)[1], `{ return accDeny('${recht}'); }`]);
   }
-  const fehlt = [...ziel.keys()].filter((n) => !edits.some((e) => e.name === n));
-  if (fehlt.length) throw new Error('Zu sperrende Funktionen nicht gefunden: ' + fehlt.join(', '));
-  let out = js;
-  for (const e of edits.sort((x, y) => y.a - x.a)) out = out.slice(0, e.a) + e.t + out.slice(e.b);
-  return html.slice(0, a) + out + html.slice(b);
+  return out;
+}
+
+/** Wendet Sperrstellen für die fehlenden Rechte an (gleiche Logik wie im Server). */
+export function sperren(html, stellen, fehlendeRechte) {
+  const L = fehlendeRechte.flatMap((r) => stellen[r] || []).sort((x, y) => y[0] - x[0]);
+  for (const [von, bis, ersatz] of L) html = html.slice(0, von) + ersatz + html.slice(bis);
+  return html;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const full = readFileSync(join(ROOT, 'dist/maad.html'), 'utf8');
-  const demo = sperren(full, Object.keys(SPERREN));
-  writeFileSync(join(ROOT, 'dist/maad-demo.html'), demo);
+  const stellen = sperrStellen(full);
+  writeFileSync(join(ROOT, 'dist/maad.sperren.json'), JSON.stringify(stellen));
+  const demo = sperren(full, stellen, Object.keys(SPERREN));
+  writeFileSync(join(ROOT, 'dist/maad-demo.html'), demo); // zum Ansehen/Prüfen; der Server erzeugt sie selbst
   const n = Object.values(SPERREN).flat().length;
-  console.log(
-    `dist/maad-demo.html gebaut: ${n} Funktionen gesperrt, ${(Buffer.byteLength(demo) / 1e6).toFixed(2)} MB`,
-  );
+  console.log(`dist/maad.sperren.json gebaut: ${n} Funktionen zu ${Object.keys(SPERREN).length} Rechten`);
 }

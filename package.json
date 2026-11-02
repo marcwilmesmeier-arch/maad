@@ -6,13 +6,14 @@
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs && node tools/demo.mjs",
-    "format": "prettier --write \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\" \"*.md\" \"docs/**/*.md\"",
-    "format:check": "prettier --check \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\"",
-    "lint": "node tools/build.mjs && node tools/lint.mjs",
+    "format": "prettier --write \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\" \"server/**/*.{mjs,js,css}\" \"*.md\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\" \"server/**/*.{mjs,js,css}\"",
+    "lint": "node tools/build.mjs && node tools/lint.mjs && eslint \"server/**/*.{mjs,js}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\"",
     "test": "node tools/build.mjs && node tests/smoke.test.mjs",
-    "check": "npm run format:check && npm run lint && npm test",
+    "check": "npm run format:check && npm run lint && npm test && npm run test:server",
     "vergleich": "node tools/build.mjs && node tools/vergleich.mjs",
-    "test:server": "npm run build && node tests/server.test.mjs"
+    "test:server": "npm run build && node --test --test-concurrency=1 tests/server/*.test.mjs && node tests/server.test.mjs",
+    "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs"
   },
   "devDependencies": {
     "eslint": "9.39.5",

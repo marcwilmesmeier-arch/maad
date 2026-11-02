@@ -1,7 +1,8 @@
 /* v311: Administrationsansicht – Voreinstellungen (Grafik, Metriken, Ansichten, Startansicht, Demokarte) für alle Anwender.
    Anwender sehen die Speichern-Knöpfe nicht mehr, behalten aber alle Farb- und Grafikregler im Projekt. */
 const ADM = { cfg: null, msg: '', ro: false };
-const admIs = () => !ACC || (ACC.mode === 'full' && ACC.user && ACC.user.role === 'admin');
+// Voreinstellungen für alle Anwender: nur Betreiber (ohne Server: jeder, nur im eigenen Browser)
+const admIs = () => !ACC || (ACC.mode === 'full' && ACC.user && ACC.user.role === 'betreiber');
 const ADM_G = [
   ['ly', 'Layer: Sichtbarkeit und Transparenz', ['ly']],
   ['lc', 'Farben der Elemente', ['lc']],

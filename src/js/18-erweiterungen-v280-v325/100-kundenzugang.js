@@ -29,7 +29,9 @@ function accChip() {
   if (ACC.mode === 'full' && ACC.user) {
     s.textContent = ACC.user.email;
     d.append(s);
-    if (ACC.user.role === 'admin') d.append(b('Administration', () => (location.href = '/admin')));
+    // Verwaltung: Betreiber (alle Mandanten) und Mandanten-Admins (eigener Mandant)
+    if (ACC.user.role === 'betreiber' || ACC.user.role === 'admin')
+      d.append(b('Verwaltung', () => (location.href = '/verwaltung')));
     d.append(
       b('Abmelden', async () => {
         try {
