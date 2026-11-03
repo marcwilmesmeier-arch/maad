@@ -70,7 +70,7 @@ const utm2ll = (x, y, zone = 32) => {
   return [(lam * 180) / Math.PI, (phi * 180) / Math.PI];
 };
 const PROXY_DEFAULT = 'https://lot-cors.marc-wilmesmeier.workers.dev/?url=',
-  PXF = /bayernwolke\.de|(geoservices|geodaten)\.bayern\.de|daten-hamburg\.de/,
+  PXF = /bayernwolke\.de|(geoservices|geodaten)\.bayern\.de|daten-hamburg\.de|opengeodata\.lgl-bw\.de/, // Hosts ohne CORS für fremde Seiten: gleich über den Proxy
   viaOrder = (u) => (GEO.proxy && PXF.test(String(u)) ? [true, false] : [false, true]);
 function proxySet(v) {
   GEO.proxy = (v || '').trim();
