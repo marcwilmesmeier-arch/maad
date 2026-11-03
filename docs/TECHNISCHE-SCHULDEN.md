@@ -69,3 +69,14 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Zeichenreihenfolge (Bäume blasser). Realistisch+ umgeht das (Schattenmaske blendet Auflagen aus).
 - Wasserflächen: nur Himmelsspiegelung, keine Spiegelung der Gebäude.
 - GeometryPass (MRT) scheitert an maads eigenen Shadern, deshalb eigene Hilfsdurchgänge.
+
+## Wind & Rauch (Analyse)
+
+- Planungshilfe, kein Windgutachten: grobes Gitter (3–5 m), Boden reibungsfrei mit Anströmprofil, Gebäude als
+  Klötze aus Grundriss und Höhe (keine Dachformen, keine Bäume als Hindernis).
+- Rechenzeit im Browser (JavaScript, 1 Thread): ca. 20–60 s für 240 m / 4 m. Schneller ginge es auf der Grafikkarte
+  (WebGL2) oder mit mehreren Threads.
+- Komfortklassen nach mittlerer Geschwindigkeit bei einer Windrichtung; eine Bewertung über die Windstatistik des
+  Standorts (Windrose, Überschreitungshäufigkeit nach Lawson) fehlt noch.
+- Emissionen: konstanter Wind, keine Abgasfahnenüberhöhung, keine Chemie/Ablagerung; Zusatzbelastung, kein Jahresmittel.
+- Noch nicht im PDF-/Excel-Export und ohne eigenes Recht im Server (Freischaltung je Abo).

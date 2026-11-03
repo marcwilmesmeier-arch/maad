@@ -17,6 +17,7 @@ const WI = {
   dauer: 0,
   fehler: '',
   t0: 0,
+  fv: [0, 0], // Rückgabe von wiFeld (wiederverwendet)
 };
 // Komfortklassen nach mittlerer Windgeschwindigkeit in Fußgängerhöhe (angelehnt an Lawson), m/s
 const WI_KLASSEN = [
@@ -223,7 +224,10 @@ function wiAuswerten(gt, u, ti) {
   };
 }
 
-/** Geschwindigkeit (m/s, Weltrichtung) an Weltpunkt in Fußgängerhöhe, bilinear; null außerhalb/Gebäude. */
+/**
+ * Geschwindigkeit (m/s, Weltrichtung) an Weltpunkt in Fußgängerhöhe, bilinear; null außerhalb/Gebäude.
+ * Ohne Speicheranlage je Aufruf (wird je Bild für viele Teilchen abgefragt); Ergebnis in WI.fv.
+ */
 function wiFeld(x, z) {
   const e = WI.erg;
   if (!e) return null;
@@ -237,18 +241,20 @@ function wiFeld(x, z) {
     j0 = j | 0,
     a = i - i0,
     b = j - j0,
-    c = i0 + gt.nx * j0,
-    idx = [c, c + 1, c + gt.nx, c + gt.nx + 1],
-    gw = [(1 - a) * (1 - b), a * (1 - b), (1 - a) * b, a * b];
+    c = i0 + gt.nx * j0;
   let sx = 0,
     sz = 0,
     sw = 0;
   for (let k = 0; k < 4; k++) {
-    if (!(e.v[idx[k]] >= 0)) continue;
-    sx += e.vx[idx[k]] * gw[k];
-    sz += e.vz[idx[k]] * gw[k];
-    sw += gw[k];
+    const ci = c + (k & 1) + (k >> 1) * gt.nx;
+    if (!(e.v[ci] >= 0)) continue;
+    const g = (k & 1 ? a : 1 - a) * (k >> 1 ? b : 1 - b);
+    sx += e.vx[ci] * g;
+    sz += e.vz[ci] * g;
+    sw += g;
   }
   if (sw < 0.5) return null;
-  return [sx / sw, sz / sw];
+  WI.fv[0] = sx / sw;
+  WI.fv[1] = sz / sw;
+  return WI.fv;
 }

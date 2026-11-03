@@ -313,7 +313,9 @@ function emZeichnen() {
     m.renderOrder = 2;
     WI_G.add(m);
   }
-  if (S.em.punkte && e.punkte.length) {
+  if (S.em.punkte && drReal())
+    wdRauch(); // bewegter Rauch
+  else if (S.em.punkte && e.punkte.length) {
     const n = e.punkte.length / 3,
       pos = new Float32Array(n * 3);
     for (let p = 0; p < n; p++) {

@@ -210,6 +210,7 @@ function rr() {
     if (S.hlk && S.tab !== 'Analyse' && !S.hlw) hlClear(1);
     // Wind-Darstellung nur im Analyse-Reiter „Wind & Emissionen“
     WI_G.visible = S.tab === 'Analyse' && S.anT === 'wi';
+    if (WI_G.visible && (WI.erg || EM.erg) && WI.zModus !== drReal()) wiZeichnen(); // Darstellung gewechselt
     envBuild();
     const R = $('pc'),
       b = S.sel;

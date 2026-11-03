@@ -373,7 +373,8 @@ function atmDurchgang(art, ziel, cm) {
     alt = [];
   try {
     for (const o of ATM.liste) {
-      const aus = !o.isMesh || (art === 's' && !o.castShadow && !o.receiveShadow);
+      // nurFarbe: Einblendungen (Analyse-Flächen, Strömungsstreifen) gehören nicht in Normalenbild und Maske
+      const aus = !o.isMesh || o.userData.nurFarbe || (art === 's' && !o.castShadow && !o.receiveShadow);
       alt.push([o, o.visible, o.material, o.receiveShadow]);
       if (aus) o.visible = false;
       else if (o.userData.atmVar) o.material = o.userData.atmVar[art];

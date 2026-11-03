@@ -35,11 +35,21 @@ function wiLeeren() {
 /** Alles neu zeichnen (nach Berechnung oder Wechsel der Darstellung). */
 function wiZeichnen() {
   wiLeeren();
+  try {
+    wiZeichnenInhalt();
+  } finally {
+    // alle Einblendungen: nur Farbe (nicht ins Normalenbild/die Maske von Realistisch+)
+    WI_G.traverse((o) => (o.userData.nurFarbe = true));
+  }
+}
+function wiZeichnenInhalt() {
   if (WI.p) wiRahmen();
   const e = WI.erg;
   if (S.tab !== 'Analyse' || S.anT !== 'wi') return;
   if (e && S.wiZ.flaeche) wiFlaeche(e);
-  if (e && S.wiZ.linien) wiStromlinien(e);
+  // Realistisch und Realistisch+: bewegte Strömungsstreifen statt statischer Stromlinien
+  WI.zModus = drReal();
+  if (e && S.wiZ.linien) (WI.zModus ? wdWind : wiStromlinien)(e);
   emZeichnen();
 }
 
@@ -180,9 +190,10 @@ function wiStromlinien(e) {
       let weg = 0;
       const eigen = new Set(); // Zellen dieser Linie (erst am Ende als belegt eintragen)
       for (let n = 0; n < 120; n++) {
-        const v1 = wiFeld(x, z);
-        if (!v1) break;
-        const s1 = Math.hypot(v1[0], v1[1]);
+        const f1 = wiFeld(x, z);
+        if (!f1) break;
+        const v1 = [f1[0], f1[1]],
+          s1 = Math.hypot(v1[0], v1[1]);
         if (s1 < 0.15) break;
         const mx = x + (v1[0] / s1) * schritt * 0.5,
           mz = z + (v1[1] / s1) * schritt * 0.5,

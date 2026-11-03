@@ -35,6 +35,11 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   und ist von der Nachbeleuchtung ausgenommen. Eigene Objekte mit Sondershadern können über `userData.atmVar`
   eigene Ersatzmaterialien mitgeben.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
+- Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
+  Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker
+  (Quelltext per `toString()`) und werden in `tests/wind.test.mjs` direkt aus der Quelldatei getestet. Einblendungen
+  liegen in der Gruppe `WI_G` (nur im Reiter sichtbar, `userData.nurFarbe`); in Realistisch/Realistisch+ bewegte
+  Strömungsstreifen und Rauch (`150-wind-dynamisch.js`).
 
 ## Zentrale Objekte
 
@@ -65,7 +70,7 @@ Ordner dessen Namen, sonst `erweiterungen-vAAA-vBBB`.
 | `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                   |
 | `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                  |
 | `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken     |
-| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen in Ansichten                       |
+| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen, Wind & Rauch (100–150)            |
 | `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                               |
 | `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                |
 | `10-excel-export`            | XLSX-Export (eigener ZIP-/Tabellen-Writer)                                        |
