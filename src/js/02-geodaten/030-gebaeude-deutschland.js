@@ -183,6 +183,18 @@ const CG = {
     zone: 32,
     tile: (E, N) => [`https://geobasis-rlp.de/data/geb3dlo/current/gml/LoD2_32_${E}_${N}_2_RP.gml`],
   },
+  // Baden-Württemberg: Open-Data-Download (opengeodata.lgl-bw.de), 2-km-ZIP mit vier 1-km-GML-Dateien; linke untere
+  // Ecke mit ungeradem Rechtswert (Versatz 1 km). Abruf über den CORS-Proxy (Server erlaubt nur die eigene Seite).
+  bw: {
+    key: 'bw',
+    name: 'Baden-Württemberg',
+    src: '© LGL-BW (' + new Date().getFullYear() + '), dl-de/by-2-0',
+    sz: 2,
+    versatz: [1, 0],
+    zone: 32,
+    zip: 1,
+    tile: (E, N) => [`https://opengeodata.lgl-bw.de/data/lod2/LoD2_32_${E}_${N}_2_bw.zip`],
+  },
   by: {
     key: 'by',
     name: 'Bayern',
@@ -812,17 +824,21 @@ async function unzipGml(buf) {
   }
   return outs;
 }
+/** Kachelecke (km) zur Koordinate m (Meter) bei Kachelgröße sz (km) und Rasterversatz v (km, z. B. BW: E ungerade). */
+function kachelEcke(m, sz, v = 0) {
+  return Math.floor((m / 1000 - v) / sz) * sz + v;
+}
 async function cityGmlLoad(prov, lon, lat, size) {
   if (prov.ogc) return ogcLod2Load(prov, lon, lat, size);
   const sz = prov.sz || 1,
     zone = prov.zone || 32,
     [cx, cy] = ll2utm(lon, lat, zone),
     h = size / 2,
-    st = 1000 * sz,
-    e0 = Math.floor((cx - h) / st) * sz,
-    e1 = Math.floor((cx + h) / st) * sz,
-    n0 = Math.floor((cy - h) / st) * sz,
-    n1 = Math.floor((cy + h) / st) * sz,
+    [ve, vn] = prov.versatz || [0, 0],
+    e0 = kachelEcke(cx - h, sz, ve),
+    e1 = kachelEcke(cx + h, sz, ve),
+    n0 = kachelEcke(cy - h, sz, vn),
+    n1 = kachelEcke(cy + h, sz, vn),
     tiles = [];
   for (let E = e0; E <= e1; E += sz) for (let N = n0; N <= n1; N += sz) tiles.push([E, N]);
   if (tiles.length > 16)

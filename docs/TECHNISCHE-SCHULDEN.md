@@ -106,5 +106,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   erlaubt CORS nur für die eigene Seite; maad lädt über den CORS-Proxy, der Host muss dort freigegeben sein. Ohne
   Proxy greift der INSPIRE-WCS als Ersatz (`ersatz` in `TERR.bw`): DGM nur in ganzen Metern (16 Bit), DOM nur als
   DOM5. Der WCS verlangt beim Ausschnitt die Achsen E/N, beim Skalieren x/y (`sax`).
-- LoD2 BW liegt im selben Portal (`/data/lod2/LoD2_32_{E}_{N}_2_bw.zip`, E ungerade) und ist noch nicht eingebunden:
-  das Kachelraster von `cityGmlLoad` kennt bisher nur gerade Kachelecken.
+- LoD2 BW kommt aus demselben Portal (`/data/lod2/…_2_bw.zip`, E ungerade → `versatz: [1, 0]` in `CG.bw`), ebenfalls
+  nur über den Proxy. Schlägt der Abruf fehl, greift „Gebäude Deutschland“ (Grundriss + Höhe, ohne Dachformen).

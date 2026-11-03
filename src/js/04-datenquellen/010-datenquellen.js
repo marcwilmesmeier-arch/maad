@@ -188,8 +188,8 @@ function srTile(c, pt) {
   const zone = c.zone || 32,
     [cx, cy] = ll2utm(pt.lon, pt.lat, zone),
     sz = c.sz || 1,
-    st = 1000 * sz;
-  return [Math.floor(cx / st) * sz, Math.floor(cy / st) * sz];
+    [ve, vn] = c.versatz || [0, 0];
+  return [kachelEcke(cx, sz, ve), kachelEcke(cy, sz, vn)];
 }
 function srUrls(tab, k, pt) {
   if (tab === 'gb') {
