@@ -47,7 +47,7 @@ const ATM_QUAL = [
 ];
 /** Einstellungen (werden mit Projekt und Ansichten gespeichert). */
 function atmDefault() {
-  return { wo: true, wd: 0.35, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6 };
+  return { wo: true, wd: 0.35, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6, lf: 0.5 };
 }
 S.atm = atmDefault();
 
@@ -103,15 +103,16 @@ function atmAufbau(L) {
   ATM.ap.sunLight = true; // Beleuchtung in der Nachbearbeitung (braucht das Normalenbild)
   ATM.ap.skyLight = true;
   ATM.cl = new L.CloudsEffect(cm);
-  // Wolkenschatten wie im Beispiel
+  // Wolkenschatten: Aufteilung wie im Beispiel, Reichweite auf maads Maßstab (Modell ~1 km) statt 100 km,
+  // dafür feinere Karte – sonst Streifenmuster auf den Flächen
   Object.assign(ATM.cl.shadow, {
     farScale: 0.25,
-    maxFar: 1e5,
+    maxFar: 1e4,
     cascadeCount: 2,
     splitMode: 'practical',
     splitLambda: 0.71,
   });
-  ATM.cl.shadow.mapSize.set(512, 512);
+  ATM.cl.shadow.mapSize.set(1024, 1024);
   ATM.cl.events.addEventListener('change', (ev) => {
     if (ev.property === 'atmosphereOverlay') ATM.ap.overlay = ATM.cl.atmosphereOverlay;
     else if (ev.property === 'atmosphereShadow') ATM.ap.shadow = ATM.cl.atmosphereShadow;
@@ -143,7 +144,7 @@ function atmAufbau(L) {
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSat;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
+    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
@@ -157,9 +158,12 @@ function atmAufbau(L) {
       '  vec3 himmel = uHimmelC * (0.5 + 0.5 * oben);\n' +
       '  vec3 nach = uSonneC * nl + himmel;\n' +
       // … und gewünschte Beleuchtung: Sonne nur außerhalb von maads Schatten, dazu Licht vom Boden
-      // Himmelslicht nur zur Hälfte blau (maads Farben wirken sonst zu kalt und kräftig)
-      '  vec3 himmelSoll = mix(vec3(dot(himmel, vec3(0.2126, 0.7152, 0.0722))), himmel, 0.5);\n' +
-      '  vec3 soll = uSonneC * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
+      // Lichtfarbe von Sonne und Himmel gedämpft (uLf: 1 = physikalisch, 0 = weiß); sonst färben Abendsonne und
+      // blauer Himmel maads Flächen zu stark
+      '  vec3 Y = vec3(0.2126, 0.7152, 0.0722);\n' +
+      '  vec3 sonneSoll = mix(vec3(dot(uSonneC, Y)), uSonneC, uLf);\n' +
+      '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf);\n' +
+      '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
       '  vec3 k = min(soll / max(nach, vec3(1e-4)), vec3(8.0));\n' +
       '  outputColor = vec4(a * k, inputColor.a);\n}\n',
     {
@@ -168,6 +172,7 @@ function atmAufbau(L) {
       uniforms: new Map([
         ['uK', new T.Uniform(0.6)],
         ['uSat', new T.Uniform(0.85)],
+        ['uLf', new T.Uniform(0.5)],
         ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uObenV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uSonneC', new T.Uniform(new T.Vector3(1, 1, 1))],
@@ -324,8 +329,14 @@ function atmMaske(cm) {
     cc = ren.getClearColor(new T.Color()),
     ca = ren.getClearAlpha(),
     hv = ATM.himmelM.visible,
-    rand = S.skirt && S.skirt.visible;
+    rand = S.skirt && S.skirt.visible,
+    sh = sunL.shadow,
+    bias = [sh.bias, sh.normalBias];
   try {
+    // Mehr Abstand als im normalen Bild: in der Maske wird Schatten voll abgedunkelt, Selbstbeschattung
+    // (Streifenmuster) fällt sonst stärker auf als bei maads eigener Beleuchtung
+    sh.bias = bias[0] * 2;
+    sh.normalBias = bias[1] * 2;
     ATM.himmelM.visible = false;
     if (S.skirt) S.skirt.visible = false; // Seitenwände des Geländes: Schattenkarte dort nur Streifen
     sc.overrideMaterial = ATM.maskeM;
@@ -339,6 +350,8 @@ function atmMaske(cm) {
     sc.overrideMaterial = om;
     ATM.himmelM.visible = hv;
     if (S.skirt) S.skirt.visible = rand;
+    sh.bias = bias[0];
+    sh.normalBias = bias[1];
   }
 }
 
@@ -364,6 +377,7 @@ function atmRender(scn, cm) {
     ATM.lin.uniforms.get('uObenV').value.set(0, 1, 0).transformDirection(cm.matrixWorldInverse);
     ren.toneMappingExposure = S.atm.bel * brK();
     ATM.lin.uniforms.get('uSat').value = S.atm.sat ?? 0.85;
+    ATM.lin.uniforms.get('uLf').value = S.atm.lf ?? 0.5;
     const now = performance.now(),
       dt = ATM.t ? Math.min(0.1, (now - ATM.t) / 1000) : 0;
     ATM.t = now;
@@ -391,7 +405,7 @@ function atmSet(k, v) {
   S.atm[k] = v;
   atmWolken();
   if (k === 'um' && ATM.st === 'bereit') atmUmgebung();
-  if (k === 'wd' || k === 'bel' || k === 'um' || k === 'sat' || k === 'wh') {
+  if (k === 'wd' || k === 'bel' || k === 'um' || k === 'sat' || k === 'wh' || k === 'lf') {
     // Regler: nur die Anzeige anpassen (Neuaufbau würde das Ziehen unterbrechen)
     const b = $('atmV_' + k);
     if (b) b.textContent = k === 'bel' ? String(v) : Math.round(v * 100) + ' %';
@@ -421,6 +435,7 @@ function atmUi() {
         `<label>Wolkenqualität <select onchange="atmSet('wq',this.value)">${ATM_QUAL.map((q) => `<option value="${q[0]}" ${q[0] === a.wq ? 'selected' : ''}>${q[1]}</option>`).join('')}</select></label>`
       : '') +
     regler('bel', 'Belichtung', a.bel, 2, 30, 1) +
+    regler('lf', 'Lichtfarbe', Math.round((a.lf ?? 0.5) * 100) + ' %', 0, 1, 0.05) +
     regler('sat', 'Farbsättigung', Math.round((a.sat ?? 0.85) * 100) + ' %', 0, 1.5, 0.05) +
     regler('um', 'Umgebungslicht (vom Boden)', Math.round((a.um ?? 1) * 100) + ' %', 0, 3, 0.1) +
     (st ? `<div class="dmu">${st}</div>` : '');
