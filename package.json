@@ -10,12 +10,13 @@
     "format:check": "prettier --check \"src/**/*.{js,css}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\" \"server/**/*.{mjs,js,css}\"",
     "lint": "node tools/build.mjs && node tools/lint.mjs && eslint \"server/**/*.{mjs,js}\" \"tools/**/*.mjs\" \"tests/**/*.mjs\"",
     "test": "node tools/build.mjs && node tests/smoke.test.mjs",
-    "check": "npm run format:check && npm run lint && npm test && npm run test:server",
+    "check": "npm run format:check && npm run lint && npm test && npm run test:wind && npm run test:server",
     "vergleich": "node tools/build.mjs && node tools/vergleich.mjs",
     "test:server": "npm run build && node --test --test-concurrency=1 tests/server/*.test.mjs && node tests/server.test.mjs",
     "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs",
     "paket": "npm run build && node tools/paket.mjs",
-    "vendor": "node tools/vendor.mjs"
+    "vendor": "node tools/vendor.mjs",
+    "test:wind": "node --test tests/wind.test.mjs"
   },
   "devDependencies": {
     "@takram/three-atmosphere": "0.19.1",
