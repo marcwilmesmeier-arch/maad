@@ -27,7 +27,8 @@ const ATM = {
   sonneW: new T.Vector3(0, 1, 0), // Sonnenrichtung in maad-Weltkoordinaten
   maske: null,
   maskeM: null,
-  normal: null,
+  auflagen: [], // Flächen ohne Schattenwurf/-empfang (Karte, Straßen …), in der Schattenmaske ausgeblendet
+  auflagenT: 0,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
   ref: 1, // Bezugshelligkeit der Sonne (hoher Sonnenstand), Einheit der Bibliothek
@@ -136,15 +137,14 @@ function atmAufbau(L) {
     blending: T.NoBlending,
     side: T.DoubleSide,
   });
-  // Normalenbild mit der Seite des jeweiligen Materials (sonst fehlen Rückseiten beidseitiger Flächen)
-  L.OverrideMaterialManager.workaroundEnabled = true;
   ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
-  ATM.normal = new L.NormalPass(sc, cm);
-  ATM.ap.normalBuffer = ATM.normal.texture;
+  // Normalen aus dem Tiefenbild des eigentlichen Bildes (stimmen so auch bei ausgeschnittenen Laubschalen,
+  // Rückseiten und maads eigenen Shadern; ein Normalen-Durchgang mit Ersatzmaterial entfällt)
+  ATM.ap.reconstructNormal = true;
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
+    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform mat4 uProjInv;\nuniform sampler2D tMaske;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
@@ -152,7 +152,9 @@ function atmAufbau(L) {
       ')) * uK;\n' +
       '  a = max(mix(vec3(dot(a, vec3(0.2126, 0.7152, 0.0722))), a, uSat), vec3(0.0));\n' +
       '  float schatten = texture2D(tMaske, uv).a;\n' +
-      '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
+      '  vec4 vp = uProjInv * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);\n' +
+      '  vp.xyz /= vp.w;\n' +
+      '  vec3 n = normalize(cross(dFdx(vp.xyz), dFdy(vp.xyz)));\n' +
       '  float nl = max(dot(n, uSonneV), 0.0), oben = dot(n, uObenV);\n' +
       // Schätzung der Beleuchtung durch die Nachbearbeitung (Sonne + Himmel nach Neigung) …
       '  vec3 himmel = uHimmelC * (0.5 + 0.5 * oben);\n' +
@@ -179,19 +181,13 @@ function atmAufbau(L) {
         ['uHimmelC', new T.Uniform(new T.Vector3(0.2, 0.2, 0.2))],
         ['uBodenC', new T.Uniform(new T.Vector3(0.1, 0.1, 0.1))],
         ['tMaske', new T.Uniform(ATM.maske.texture)],
-        ['tNormal', new T.Uniform(ATM.normal.texture)],
+        ['uProjInv', new T.Uniform(new T.Matrix4())],
       ]),
     },
   );
-  // Himmel nur im Farbbild, nicht im Normalenbild (blendet himmelM nach dem ersten Durchgang aus)
-  const aus = new L.Pass('MaadHimmelAus');
-  aus.needsSwap = false;
-  aus.render = () => (ATM.himmelM.visible = false);
   ATM.tm = new L.ToneMappingEffect({ mode: L.ToneMappingMode.AGX });
   ATM.comp = new L.EffectComposer(ren, { frameBufferType: T.HalfFloatType, multisampling: 0 });
   ATM.comp.addPass(new L.RenderPass(sc, cm));
-  ATM.comp.addPass(aus);
-  ATM.comp.addPass(ATM.normal);
   ATM.comp.addPass(new L.EffectPass(cm, ATM.lin));
   ATM.comp.addPass(new L.EffectPass(cm, ATM.cl, ATM.ap));
   // Faltungseffekte (Lichtreflexe, SMAA) brauchen je eine eigene Stufe
@@ -339,6 +335,17 @@ function atmMaske(cm) {
     sh.normalBias = bias[1] * 2;
     ATM.himmelM.visible = false;
     if (S.skirt) S.skirt.visible = false; // Seitenwände des Geländes: Schattenkarte dort nur Streifen
+    // Auflagen (Karte, Straßen, Flurstücke …) liegen über dem Gelände und würden es in der Maske als sonnig abdecken
+    const jetzt = performance.now();
+    if (jetzt - ATM.auflagenT > 1000) {
+      ATM.auflagenT = jetzt;
+      ATM.auflagen = [];
+      sc.traverseVisible((o) => {
+        if (o.isMesh && !o.castShadow && !o.receiveShadow) ATM.auflagen.push(o);
+      });
+    }
+    for (const o of ATM.auflagen) o.userData._atmV = o.visible;
+    for (const o of ATM.auflagen) o.visible = false;
     sc.overrideMaterial = ATM.maskeM;
     ren.setRenderTarget(ATM.maske);
     ren.setClearColor(0x000000, 0);
@@ -350,6 +357,7 @@ function atmMaske(cm) {
     sc.overrideMaterial = om;
     ATM.himmelM.visible = hv;
     if (S.skirt) S.skirt.visible = rand;
+    for (const o of ATM.auflagen) if (o.userData._atmV !== undefined) o.visible = o.userData._atmV;
     sh.bias = bias[0];
     sh.normalBias = bias[1];
   }
@@ -374,6 +382,7 @@ function atmRender(scn, cm) {
     if (ATM.maske.width !== sz.x || ATM.maske.height !== sz.y) ATM.maske.setSize(sz.x, sz.y);
     atmMaske(cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
+    ATM.lin.uniforms.get('uProjInv').value.copy(cm.projectionMatrixInverse);
     ATM.lin.uniforms.get('uObenV').value.set(0, 1, 0).transformDirection(cm.matrixWorldInverse);
     ren.toneMappingExposure = S.atm.bel * brK();
     ATM.lin.uniforms.get('uSat').value = S.atm.sat ?? 0.85;
