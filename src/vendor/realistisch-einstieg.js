@@ -1,5 +1,6 @@
 // Einstieg für das Bibliothekspaket der Darstellung „Realistisch“ (Himmel, Atmosphäre, Wolken, Nachbearbeitung).
-// Wird mit `npm run vendor` zu src/vendor/realistisch.js gebündelt (three.js bleibt extern und kommt über die
+// Wird beim Start geladen (src/index.html); setupMaterialsForGeometryPass() muss laufen, bevor maad Materialien
+// kompiliert. Wird mit `npm run vendor` zu src/vendor/realistisch.js gebündelt (three.js bleibt extern und kommt über die
 // Import-Map aus derselben Quelle wie im Hauptprogramm). Nur hier aufgeführte Namen stehen maad zur Verfügung.
 export {
   BlendFunction,
@@ -7,8 +8,6 @@ export {
   EffectAttribute,
   EffectComposer,
   EffectPass,
-  NormalPass,
-  Pass,
   RenderPass,
   SMAAEffect,
   SMAAPreset,
@@ -40,4 +39,9 @@ export {
   radians,
   STBNLoader,
 } from '@takram/three-geospatial';
-export { DitheringEffect, LensFlareEffect } from '@takram/three-geospatial-effects';
+export {
+  DitheringEffect,
+  GeometryPass,
+  LensFlareEffect,
+  setupMaterialsForGeometryPass,
+} from '@takram/three-geospatial-effects';

@@ -50,10 +50,19 @@
 <script type="module">
 // three.js gibt es nur noch als ES-Modul. maad ist ein klassisches Skript mit globalem THREE:
 // erst three.js laden, dann den Programmcode (oben, id="maadApp") als klassisches Skript ausführen.
-// Die Import-Map sorgt dafür, dass die Bibliotheken für „Realistisch“ (id="maadRealLib", bei Bedarf geladen)
-// dieselbe three.js-Instanz verwenden.
+// Die Import-Map sorgt dafür, dass die Bibliotheken für „Realistisch+“ (id="maadRealLib") dieselbe three.js-Instanz
+// verwenden. Sie werden vor dem Programm geladen: setupMaterialsForGeometryPass() erweitert die Standardmaterialien um
+// ein Normalenbild (GeometryPass) und muss laufen, bevor das erste Material kompiliert wird.
 import * as THREE from 'three';
 window.THREE = THREE;
+try {
+  const src = document.getElementById('maadRealLib').textContent;
+  const real = await import(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  real.setupMaterialsForGeometryPass();
+  window.MAAD_REAL = real;
+} catch (e) {
+  console.warn('[maad] Bibliotheken für Realistisch+ nicht geladen', e); // Realistisch+ bleibt dann wie Realistisch
+}
 const app = document.createElement('script');
 app.textContent = document.getElementById('maadApp').textContent;
 document.body.appendChild(app);
