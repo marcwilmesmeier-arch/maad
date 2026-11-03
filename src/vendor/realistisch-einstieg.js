@@ -4,6 +4,7 @@
 export {
   BlendFunction,
   Effect,
+  EffectAttribute,
   EffectComposer,
   EffectPass,
   RenderPass,
@@ -15,6 +16,7 @@ export {
 export {
   AerialPerspectiveEffect,
   PrecomputedTexturesGenerator,
+  SkyMaterial,
   SkyLightProbe,
   SunDirectionalLight,
 } from '@takram/three-atmosphere';

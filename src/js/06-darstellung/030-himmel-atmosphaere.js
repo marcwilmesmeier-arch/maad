@@ -15,6 +15,7 @@ const ATM = {
   L: null, // geladenes Modul
   comp: null,
   ap: null, // AerialPerspectiveEffect
+  himmelM: null, // Himmel mit Boden bis zum Horizont (SkyMaterial)
   cl: null, // CloudsEffect
   lin: null, // Umrechnung in lineare Strahldichte
   tm: null, // ToneMappingEffect
@@ -68,6 +69,7 @@ async function atmStart() {
     const tex = await gen.update();
     Object.assign(ATM.ap, tex);
     Object.assign(ATM.cl, tex);
+    Object.assign(ATM.himmelM.material, tex);
     ATM.sonne.transmittanceTexture = tex.transmittanceTexture;
     ATM.himmel.irradianceTexture = tex.irradianceTexture;
     atmWolkenTexturen(L);
@@ -86,7 +88,7 @@ async function atmStart() {
 function atmAufbau(L) {
   const cm = pc;
   ATM.ap = new L.AerialPerspectiveEffect(cm);
-  ATM.ap.sky = true; // Himmel dort, wo nichts gezeichnet ist
+  ATM.ap.sky = false; // Himmel zeichnet himmelM (mit Boden jenseits des Modells)
   ATM.ap.sunLight = false; // Licht kommt von maads Lichtern (s. atmLicht)
   ATM.ap.skyLight = false;
   ATM.cl = new L.CloudsEffect(cm);
@@ -95,13 +97,29 @@ function atmAufbau(L) {
     else if (ev.property === 'atmosphereShadow') ATM.ap.shadow = ATM.cl.atmosphereShadow;
     else if (ev.property === 'atmosphereShadowLength') ATM.ap.shadowLength = ATM.cl.atmosphereShadowLength;
   });
+  // Himmel als bildschirmfüllendes Rechteck in größter Tiefe; Boden jenseits des Modells mit mittlerer Albedo
+  const hm = new L.SkyMaterial();
+  hm.groundAlbedo.setRGB(0.12, 0.13, 0.1);
+  ATM.himmelM = new T.Mesh(new T.PlaneGeometry(2, 2), hm);
+  ATM.himmelM.frustumCulled = false;
+  ATM.himmelM.raycast = () => {};
+  ATM.himmelM.visible = false;
+  ATM.himmelM.userData._ov = 1;
+  sc.add(ATM.himmelM);
+  // maads Bild (gammakodiert) in lineare Strahldichte; Himmelspixel (Tiefe 1) bleiben unverändert
   ATM.lin = new L.Effect(
     'MaadLinear',
-    'uniform float uK;\nvoid mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {\n' +
+    'uniform float uK;\n' +
+      'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
+      '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  outputColor = vec4(pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
       ATM_GAMMA.toFixed(1) +
       ')) * uK, inputColor.a);\n}\n',
-    { blendFunction: L.BlendFunction.SRC, uniforms: new Map([['uK', new T.Uniform(1)]]) },
+    {
+      attributes: L.EffectAttribute.DEPTH,
+      blendFunction: L.BlendFunction.SRC,
+      uniforms: new Map([['uK', new T.Uniform(1)]]),
+    },
   );
   ATM.tm = new L.ToneMappingEffect({ mode: L.ToneMappingMode.AGX });
   ATM.comp = new L.EffectComposer(ren, { frameBufferType: T.HalfFloatType, multisampling: 0 });
@@ -181,7 +199,8 @@ function atmOrt() {
     oben = new T.Vector3();
   L.Ellipsoid.WGS84.getEastNorthUpVectors(p, ost, nord, oben);
   ATM.m.makeBasis(ost, oben, nord.negate()).setPosition(p);
-  for (const o of [ATM.ap, ATM.cl, ATM.sonne, ATM.himmel]) o.worldToECEFMatrix.copy(ATM.m);
+  for (const o of [ATM.ap, ATM.cl, ATM.sonne, ATM.himmel, ATM.himmelM.material])
+    o.worldToECEFMatrix.copy(ATM.m);
   // Bezugshelligkeit: Sonnenlicht bei 60° Sonnenhöhe an diesem Ort
   const r = new T.Matrix3().setFromMatrix4(ATM.m),
     d = new T.Vector3(0, Math.sin(Math.PI / 3), Math.cos(Math.PI / 3)).applyMatrix3(r).normalize();
@@ -200,7 +219,7 @@ function atmLicht(dir) {
   atmOrt();
   const r = new T.Matrix3().setFromMatrix4(ATM.m),
     d = new T.Vector3(dir[0], dir[1], dir[2]).applyMatrix3(r).normalize();
-  for (const o of [ATM.ap, ATM.cl, ATM.sonne, ATM.himmel]) o.sunDirection.copy(d);
+  for (const o of [ATM.ap, ATM.cl, ATM.sonne, ATM.himmel, ATM.himmelM.material]) o.sunDirection.copy(d);
   ATM.sonne.update();
   ATM.himmel.update();
   // Farben relativ zur Bezugshelligkeit, mit Gamma vorverzerrt (atmLinear hebt das wieder auf)
@@ -209,9 +228,9 @@ function atmLicht(dir) {
     h = ATM.himmel.sh.coefficients[0].clone().multiplyScalar(Math.sqrt(Math.PI) / ATM.ref);
   const norm = (c, k) => new T.Color(Math.pow(c.r * k, g), Math.pow(c.g * k, g), Math.pow(c.b * k, g));
   sunL.color.copy(norm(s, 1));
-  hemi.color.copy(
-    norm(new T.Color(h.x, h.y, h.z), 1 / Math.max(1e-6, atmY({ r: h.x, g: h.y, b: h.z }) * 1.2)),
-  );
+  // Himmelslicht: Farbton der Atmosphäre, zur Hälfte neutral (maads Materialien sind auf weißes Licht abgestimmt)
+  const hc = norm(new T.Color(h.x, h.y, h.z), 1 / Math.max(1e-6, atmY({ r: h.x, g: h.y, b: h.z })));
+  hemi.color.copy(hc.lerp(new T.Color(1, 1, 1), 0.5));
   hemi.groundColor.copy(hemi.color).multiplyScalar(0.55);
   return true;
 }
@@ -233,17 +252,20 @@ function atmRender(scn, cm) {
       ATM.comp.setSize(c.x, c.y, false);
     }
     // Helligkeit: Szene in Einheiten der Atmosphäre (Bezugshelligkeit / π), Belichtung für die Tonwertabbildung
-    ATM.lin.uniforms.get('uK').value = ATM.ref / Math.PI;
+    // 0.45: maads helle Materialfarben auf übliche Albedo von Gebäuden und Gelände
+    ATM.lin.uniforms.get('uK').value = (ATM.ref / Math.PI) * 0.45;
     ren.toneMappingExposure = S.atm.bel * brK();
     const now = performance.now(),
       dt = ATM.t ? Math.min(0.1, (now - ATM.t) / 1000) : 0;
     ATM.t = now;
     const oc = ren.outputColorSpace;
     ren.outputColorSpace = T.SRGBColorSpace; // nur die letzte Stufe (Bildschirm) ist sRGB
+    ATM.himmelM.visible = true;
     try {
       ATM.comp.render(dt);
     } finally {
       ren.outputColorSpace = oc;
+      ATM.himmelM.visible = false;
     }
     return true;
   } catch (e) {
