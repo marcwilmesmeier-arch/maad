@@ -86,7 +86,7 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Strömung).
 - Noch nicht im PDF-/Excel-Export und ohne eigenes Recht im Server (Freischaltung je Abo).
 - Windklima (Häufigkeit der Richtungen) kommt von Bright Sky (api.brightsky.dev, DWD-Stationsdaten, letztes volles
-  Jahr). Der Abruf ist in der Entwicklungsumgebung gesperrt und nur mit Testdaten geprüft; im Browser des Nutzers
-  ungeprüft. Der Dienst ist ein freies Angebot ohne Zusagen; für den Betrieb ggf. über den eigenen Server spiegeln.
+  Jahr); im Browser des Nutzers geprüft. Der Dienst ist ein freies Angebot ohne Zusagen; für den Betrieb ggf. über
+  den eigenen Server spiegeln.
 - Die Komfortbewertung nutzt die Häufigkeit nur für die Vorwahl der Richtung; eine Bewertung über alle Richtungen
   (gewichtete Überschreitungshäufigkeit) fehlt noch.
