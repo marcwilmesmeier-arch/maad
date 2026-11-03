@@ -56,7 +56,8 @@ function cloudsInit() {
 }
 function cloudsUp(now) {
   if (!CL.g) return;
-  CL.g.visible = CL.on && (HOME.open || IDLE.cf > 0.005);
+  // Realistisch+ hat eigene, physikalische Wolken
+  CL.g.visible = CL.on && (HOME.open || IDLE.cf > 0.005) && !(S.dar === 'realp' && ATM.st === 'bereit');
   if (!CL.g.visible) return;
   const k = act(),
     u = CL.g.material.uniforms;

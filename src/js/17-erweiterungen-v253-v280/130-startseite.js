@@ -1,6 +1,6 @@
 /* v318: Startseite – die Darstellung (Schattiert / Realistisch / Weißmodell) kommt komplett aus den in der Administration gespeicherten Voreinstellungen
    (Ebenen, Farben, Licht, Effekte). Kleiner Schalter „Darstellung“ unten rechts; voreingestellt bleibt Schattiert. */
-const RFD = ['sch', 'real', 'wm'];
+const RFD = ['sch', 'real', 'realp', 'wm'];
 function homePreset() {
   try {
     if (ADM.cfg && ADM.cfg.modes && ADM.cfg.modes[S.dar]) admModeApply(S.dar);
@@ -49,7 +49,7 @@ function rfBtn() {
   }
   d.textContent = 'Darstellung: ' + (DAR.find((x) => x[0] === S.dar) || [0, S.dar])[1];
   d.title =
-    'Darstellung der Startseite wechseln (Schattiert → Realistisch → Weißmodell) – jeweils mit den gespeicherten Voreinstellungen';
+    'Darstellung der Startseite wechseln (Schattiert → Realistisch → Realistisch+ → Weißmodell) – jeweils mit den gespeicherten Voreinstellungen';
 }
 // homeOpen(): Erweiterung zusammengeführt, siehe 03-startseite/040-3d.js
 // demoLoad(): Erweiterung zusammengeführt, siehe 03-startseite/010-demokarte.js

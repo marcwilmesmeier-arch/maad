@@ -34,11 +34,13 @@ function rfUp() {
       s = [q(cs.r, b0.r), q(cs.g, b0.g), q(cs.b, b0.b)],
       f = [q(cf.r, b0.r), q(cf.g, b0.g), q(cf.b, b0.b)];
     for (let i = 0; i < n; i++) {
-      const ny = nor[i * 3 + 1];
+      // Betrag: in LOD2-Daten sind Flächen oft falsch herum orientiert (Normale nach unten); die Neigung zählt.
+      // Grenze 0,1 ≈ 84°: auch steile Turmhelme sind Dach, Wände sind (fast) senkrecht.
+      const ny = Math.abs(nor[i * 3 + 1]);
       let c = null;
       if (ny > 0.985) {
         if (df) c = f;
-      } else if (ny > 0.17) {
+      } else if (ny > 0.1) {
         if (ds) c = s;
       }
       if (c) {
@@ -59,7 +61,7 @@ function rfUp() {
         b.roofEst = ratio < 0.88 ? 'geneigt' : 'flach';
         if (b.roofEst !== 'geneigt') continue;
         for (let i = r.s * 3; i < r.e * 3; i++) {
-          if (nor[i * 3 + 1] > 0.985) {
+          if (Math.abs(nor[i * 3 + 1]) > 0.985) {
             if (ds) {
               a[i * 3] = s[0];
               a[i * 3 + 1] = s[1];

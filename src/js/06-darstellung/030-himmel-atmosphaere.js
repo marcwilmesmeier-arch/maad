@@ -57,7 +57,7 @@ S.atm = atmDefault();
 
 /** Ist die Atmosphäre für diese Kamera zuständig? Startet beim ersten Bedarf das Laden. */
 function atmAktiv(cm) {
-  if (S.dar !== 'realp' || HOME.open || !cm || !cm.isPerspectiveCamera) return false;
+  if (S.dar !== 'realp' || !cm || !cm.isPerspectiveCamera) return false; // auch auf der Startseite
   if (ATM.st === 'aus') atmStart();
   return ATM.st === 'bereit';
 }
