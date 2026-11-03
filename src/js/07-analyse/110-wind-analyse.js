@@ -1,11 +1,14 @@
 // ======================= WIND: ANALYSE (Gitter, Berechnung, Auswertung) =======================
-// Rechenfenster um einen gewählten Punkt, in Windrichtung gedreht. Gebäude (Bestand und Planung) werden aus
+// Kreisförmiger Analysebereich (Radius, wie in Forma platziert); gerechnet wird in einem quadratischen Fenster
+// mit 40 m Rand um den Kreis, in Windrichtung gedreht. Gebäude (Bestand und Planung) werden aus
 // Grundriss und Höhe in Zellen übersetzt. Die Berechnung läuft im Hintergrund-Thread (wiLoeser). Ausgewertet wird
 // die unterste Zellschicht (Fußgängerhöhe ≈ halbe Rasterweite über Grund).
 //
 // Windrichtung: meteorologisch, „woher“ in Grad (0 = Nord, 90 = Ost). maad-Welt: x = Ost, z = Süd.
 
-S.wi = { r: 270, v: 5, fenster: 240, dx: 4 };
+S.wi = { r: 270, v: 5, radius: 100, dx: 4 };
+/** Kantenlänge des Rechenfensters: Kreis plus Rand (Ein- und Ausströmung brauchen Abstand). */
+const wiFenster = () => Math.max(120, 2 * S.wi.radius + 80);
 const WI = {
   p: null, // Mittelpunkt [x, z]
   st: 'aus', // aus · wahl · rechnet · fertig · fehler
@@ -59,7 +62,8 @@ const wiInnen = (o, x, z) => {
 
 /** Gitter aufbauen: Höhe je Säule, feste Zellen, Abbildung Gitter -> Welt. */
 function wiGitter() {
-  const { fenster, dx } = S.wi,
+  const { dx } = S.wi,
+    fenster = wiFenster(),
     [fx, fz] = wiRichtung(S.wi.r),
     qx = -fz,
     qz = fx, // quer zur Strömung
@@ -202,14 +206,33 @@ function wiAuswerten(gt, u, ti) {
     vx[c] = (a * gt.f[0] + b * gt.q[0]) * skala;
     vz[c] = (a * gt.f[1] + b * gt.q[1]) * skala;
   }
-  // Kennzahlen: Anteile der Komfortklassen
-  const anteil = WI_KLASSEN.map(() => 0);
-  let frei0 = 0;
-  for (let c = 0; c < m; c++) {
-    if (!(v[c] >= 0)) continue;
-    frei0++;
-    anteil[WI_KLASSEN.findIndex((k) => v[c] < k[0])]++;
-  }
+  // Dächer: Geschwindigkeit in der ersten freien Zelle über dem Dach (Dachterrassen, Aufenthalt auf Dächern)
+  const dach = new Float32Array(m).fill(NaN),
+    imKreis = new Uint8Array(m),
+    R2 = S.wi.radius * S.wi.radius;
+  for (let j = 0; j < ny; j++)
+    for (let i = 0; i < nx; i++) {
+      const c = i + nx * j,
+        [x, z] = gt.welt(i, j);
+      if ((x - WI.p[0]) ** 2 + (z - WI.p[1]) ** 2 <= R2) imKreis[c] = 1;
+      const h = gt.hoehe[c];
+      if (!(h > 0)) continue;
+      const k = Math.min(gt.nz - 1, Math.ceil(h / gt.dx - 0.5)),
+        cc = c + m * k;
+      if (gt.fest[cc]) continue;
+      dach[c] = Math.hypot(u[3 * cc], u[3 * cc + 1], u[3 * cc + 2]) * skala;
+    }
+  // Kennzahlen im Kreis: Anteile der Komfortklassen am Boden und auf Dächern
+  const zaehle = (feld) => {
+    const a = WI_KLASSEN.map(() => 0);
+    let n = 0;
+    for (let c = 0; c < m; c++) {
+      if (!imKreis[c] || !(feld[c] >= 0)) continue;
+      n++;
+      a[WI_KLASSEN.findIndex((k) => feld[c] < k[0])]++;
+    }
+    return a.map((x) => x / Math.max(1, n));
+  };
   return {
     v,
     verst,
@@ -217,7 +240,10 @@ function wiAuswerten(gt, u, ti) {
     rueck,
     vx,
     vz,
-    anteil: anteil.map((n) => n / Math.max(1, frei0)),
+    dach,
+    imKreis,
+    anteil: zaehle(v),
+    anteilDach: zaehle(dach),
     gt,
     r: S.wi.r,
     v10: S.wi.v,

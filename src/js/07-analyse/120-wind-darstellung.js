@@ -1,24 +1,66 @@
 // ======================= WIND: DARSTELLUNG (einfache Darstellungen) =======================
-// Farbfläche in Fußgängerhöhe (Komfortklassen, Windverstärkung oder Verwirbelung), Stromlinien mit Pfeilen,
-// Rahmen des Rechenfensters. Liegt knapp über dem Gelände, wirft und empfängt keine Schatten.
+// Kreisförmiger Analysebereich mit Farbbändern am Boden und auf Dächern (Komfort, Windverstärkung,
+// Verwirbelung), 3D-Stromlinien nach Wichtigkeit, bodennahe Stromlinien mit Pfeilen. Liegt knapp über dem Gelände, wirft und empfängt keine Schatten.
 
-S.wiZ = { art: 'komfort', linien: true, flaeche: true };
+S.wiZ = { art: 'komfort', linien: true, flaeche: true, linien3d: true, anzahl: 60 };
 const WI_G = new T.Group();
 WI_G.name = 'wind';
 sc.add(WI_G);
 
-/** Farbe je Zelle für die gewählte Darstellung; null = durchsichtig (Gebäude). */
-function wiFarbe(e, c, art) {
-  const v = e.v[c];
-  if (!(v >= 0)) return null;
-  if (art === 'komfort') return WI_KLASSEN.find((k) => v < k[0])[2];
-  // Verlauf blau (wenig) -> gelb -> rot (viel)
-  const t =
-      art === 'verst'
-        ? Math.min(1, e.verst[c] / 1.6) // 1,0 = wie freie Anströmung
-        : Math.min(1, e.turb[c] / 0.6 + (e.rueck[c] ? 0.35 : 0)),
-    stufen = ['#3b6fb6', '#5aa7d6', '#9fd3b0', '#e8d96a', '#f0a04b', '#e05a3c', '#9b1d4a'];
-  return stufen[Math.min(stufen.length - 1, Math.floor(t * (stufen.length - 1) + 0.5))];
+// Farbverläufe je Darstellung (Stützstellen [Wert, Farbe]); daraus entsteht eine Palettentextur mit Bändern.
+// Komfort: Geschwindigkeit in m/s, Klassengrenzen wie WI_KLASSEN.
+const WI_PAL = {
+  komfort: { max: 12, stufen: WI_KLASSEN.map((k, i) => [i ? WI_KLASSEN[i - 1][0] : 0, k[2]]) },
+  verst: {
+    max: 1.8,
+    stufen: [
+      [0, '#e8eef6'],
+      [0.3, '#bcd3ec'],
+      [0.6, '#86b1df'],
+      [0.9, '#4f86cc'],
+      [1.15, '#2f5fb8'],
+      [1.4, '#5a3fb0'],
+      [1.65, '#b0309a'],
+    ],
+  },
+  turb: {
+    max: 1,
+    stufen: [
+      [0, '#e8eef6'],
+      [0.15, '#bcd3ec'],
+      [0.3, '#86b1df'],
+      [0.45, '#e8d96a'],
+      [0.6, '#f0a04b'],
+      [0.8, '#e05a3c'],
+    ],
+  },
+};
+/** Wert je Zelle für die gewählte Darstellung (NaN = Gebäude/kein Wert). */
+function wiWert(e, c, art, feld) {
+  const v = feld ? feld[c] : e.v[c];
+  if (!(v >= 0)) return NaN;
+  if (art === 'komfort') return v;
+  if (art === 'verst') return feld ? v / (S.wi.v || 1) : e.verst[c];
+  return feld ? NaN : Math.min(1, e.turb[c] + (e.rueck[c] ? 0.35 : 0));
+}
+/** Farbe (THREE.Color) zu einem Wert, Bänder nach den Stützstellen. */
+function wiFarbeWert(art, v, col) {
+  const st = WI_PAL[art].stufen;
+  let f = st[0][1];
+  for (const [g, c] of st) if (v >= g) f = c;
+  return col.set(f);
+}
+/** Palettentextur (256 × 1) für den Flächen-Shader. */
+function wiPalette(art) {
+  const d = new Uint8Array(256 * 4),
+    col = new T.Color();
+  for (let i = 0; i < 256; i++) {
+    wiFarbeWert(art, (i / 255) * WI_PAL[art].max, col);
+    d.set([col.r * 255, col.g * 255, col.b * 255, 255], i * 4);
+  }
+  const t = new T.DataTexture(d, 256, 1);
+  t.needsUpdate = true;
+  return t;
 }
 
 function wiLeeren() {
@@ -35,6 +77,10 @@ function wiLeeren() {
 /** Alles neu zeichnen (nach Berechnung oder Wechsel der Darstellung). */
 function wiZeichnen() {
   wiLeeren();
+  if (!WI.maus) {
+    WI.maus = true; // Windgeschwindigkeit unter der Maus (wiMausInfo), einmal angemeldet
+    ren.domElement.addEventListener('pointermove', wiMausInfo);
+  }
   try {
     wiZeichnenInhalt();
   } finally {
@@ -49,181 +95,238 @@ function wiZeichnenInhalt() {
   if (e && S.wiZ.flaeche) wiFlaeche(e);
   // Realistisch und Realistisch+: bewegte Strömungsstreifen statt statischer Stromlinien
   WI.zModus = drReal();
-  if (e && S.wiZ.linien) (WI.zModus ? wdWind : wiStromlinien)(e);
+  if (e && S.wiZ.linien) (WI.zModus ? wdWind : (x) => wiStromlinien3D(x, true))(e);
+  if (e && S.wiZ.linien3d) wiStromlinien3D(e);
   emZeichnen();
 }
 
-/** Rahmen des Rechenfensters und Mittelpunkt. */
-function wiRahmen() {
-  const { fenster } = S.wi,
-    [fx, fz] = wiRichtung(S.wi.r),
-    [px, pz] = WI.p,
-    h = fenster / 2,
-    ecken = [
-      [-h, -h],
-      [h, -h],
-      [h, h],
-      [-h, h],
-      [-h, -h],
-    ],
-    pts = [];
-  for (let s = 0; s < 4; s++) {
-    const [a0, b0] = ecken[s],
-      [a1, b1] = ecken[s + 1];
-    for (let t = 0; t <= 20; t++) {
-      const a = a0 + ((a1 - a0) * t) / 20,
-        b = b0 + ((b1 - b0) * t) / 20,
-        x = px + fx * a - fz * b,
-        z = pz + fz * a + fx * b;
-      pts.push(new T.Vector3(x, gh(x, z) + 0.6, z));
-    }
+/** Kreisrand des Analysebereichs (auch als Vorschau beim Platzieren). */
+function wiKreisLinie(px, pz, farbe = 0x2f5d7c) {
+  const pts = [],
+    R = S.wi.radius;
+  for (let t = 0; t <= 128; t++) {
+    const a = (t / 128) * Math.PI * 2,
+      x = px + Math.cos(a) * R,
+      z = pz + Math.sin(a) * R;
+    pts.push(new T.Vector3(x, gh(x, z) + 0.7, z));
   }
-  const l = new T.Line(
-    new T.BufferGeometry().setFromPoints(pts),
-    new T.LineDashedMaterial({ color: 0x2f5d7c, dashSize: 4, gapSize: 3 }),
-  );
-  l.computeLineDistances();
+  const l = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: farbe }));
   l.raycast = () => {};
-  WI_G.add(l);
-  const ring = new T.Mesh(
-    new T.RingGeometry(2.2, 3, 32).rotateX(-Math.PI / 2),
-    new T.MeshBasicMaterial({ color: 0x2f5d7c, depthWrite: false }),
-  );
-  ring.position.set(px, gh(px, pz) + 0.5, pz);
-  ring.raycast = () => {};
-  WI_G.add(ring);
+  l.renderOrder = 6;
+  return l;
+}
+function wiRahmen() {
+  WI_G.add(wiKreisLinie(WI.p[0], WI.p[1]));
 }
 
-/** Farbfläche: eine Zelle je Bildpunkt einer Textur, Fläche folgt dem Gelände. */
+/**
+ * Farbfläche im Kreis (wie Forma): Werte je Zelle als Textur, zwischen den Zellen interpoliert, über eine
+ * Palettentextur in Farbbänder umgesetzt. Am Boden der Fußgängerbereich, auf den Dächern der Wind knapp über Dach.
+ */
 function wiFlaeche(e) {
   const gt = e.gt,
     { nx, ny } = gt,
-    data = new Uint8Array(nx * ny * 4),
-    col = new T.Color();
+    art = S.wiZ.art,
+    max = WI_PAL[art].max,
+    boden = new Float32Array(nx * ny * 2), // Wert (0..1), gültig (0/1)
+    dach = new Float32Array(nx * ny * 2);
   for (let c = 0; c < nx * ny; c++) {
-    const f = wiFarbe(e, c, S.wiZ.art);
-    if (!f) continue;
-    col.set(f);
-    data.set([col.r * 255, col.g * 255, col.b * 255, 255], c * 4);
+    const a = wiWert(e, c, art),
+      b = wiWert(e, c, art, e.dach);
+    if (a >= 0) boden.set([Math.min(1, a / max), 1], c * 2);
+    if (b >= 0) dach.set([Math.min(1, b / max), 1], c * 2);
   }
-  const tex = new T.DataTexture(data, nx, ny);
-  tex.magFilter = T.NearestFilter;
-  tex.needsUpdate = true;
+  const tex = (d) => {
+    const t = new T.DataTexture(d, nx, ny, T.RGFormat, T.FloatType);
+    t.magFilter = t.minFilter = T.LinearFilter;
+    t.needsUpdate = true;
+    return t;
+  };
+  const pal = wiPalette(art),
+    mat = (werte) =>
+      new T.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        side: T.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -4,
+        uniforms: {
+          tW: { value: werte },
+          tP: { value: pal },
+          uM: { value: new T.Vector3(WI.p[0], WI.p[1], S.wi.radius) },
+        },
+        vertexShader:
+          'varying vec2 vUv;varying vec3 vW;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+        // gültige Zellen gewichtet mitteln (an Gebäudekanten nicht zur 0 hin verwischen), Kreis ausschneiden
+        fragmentShader:
+          'uniform sampler2D tW,tP;uniform vec3 uM;varying vec2 vUv;varying vec3 vW;' +
+          'void main(){if(length(vW.xz-uM.xy)>uM.z)discard;vec2 w=texture2D(tW,vUv).rg;if(w.g<.35)discard;' +
+          'vec3 c=texture2D(tP,vec2(clamp(w.r/w.g,0.,1.),.5)).rgb;gl_FragColor=vec4(c,.82);}',
+      });
+  // Boden: Fläche folgt dem Gelände
   const g = new T.PlaneGeometry(1, 1, nx, ny),
     p = g.attributes.position,
     uv = g.attributes.uv;
   for (let v = 0; v < p.count; v++) {
-    // Ecken der Zellen: Gitterkoordinate aus UV
-    const i = uv.getX(v) * nx - 0.5,
-      j = uv.getY(v) * ny - 0.5,
-      [x, z] = gt.welt(i, j);
+    const [x, z] = gt.welt(uv.getX(v) * nx - 0.5, uv.getY(v) * ny - 0.5);
     p.setXYZ(v, x, gh(x, z) + 0.35, z);
   }
-  g.computeVertexNormals();
-  const m = new T.Mesh(
-    g,
-    new T.MeshBasicMaterial({
-      map: tex,
-      transparent: true,
-      opacity: 0.72,
-      depthWrite: false,
-      side: T.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -4,
-    }),
-  );
+  const m = new T.Mesh(g, mat(tex(boden)));
   m.raycast = () => {};
   m.renderOrder = 2;
   WI_G.add(m);
+  // Dächer: je Gebäudezelle ein Quadrat knapp über der Dachhöhe (gleiche Textur-Koordinaten wie der Boden)
+  const pos = [],
+    uvs = [];
+  for (let j = 0; j < ny; j++)
+    for (let i = 0; i < nx; i++) {
+      const c = i + nx * j;
+      if (!(e.dach[c] >= 0)) continue;
+      const h = gt.hoehe[c] + 0.3,
+        ecken = [
+          [i - 0.5, j - 0.5],
+          [i + 0.5, j - 0.5],
+          [i + 0.5, j + 0.5],
+          [i - 0.5, j - 0.5],
+          [i + 0.5, j + 0.5],
+          [i - 0.5, j + 0.5],
+        ];
+      for (const [a, b] of ecken) {
+        const [x, z] = gt.welt(a, b);
+        pos.push(x, gh(gt.welt(i, j)[0], gt.welt(i, j)[1]) + h, z);
+        uvs.push((a + 0.5) / nx, (b + 0.5) / ny);
+      }
+    }
+  if (pos.length) {
+    const gd = new T.BufferGeometry();
+    gd.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    gd.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
+    const md = new T.Mesh(gd, mat(tex(dach)));
+    md.raycast = () => {};
+    md.renderOrder = 2;
+    WI_G.add(md);
+  }
 }
 
-/** Stromlinien in Fußgängerhöhe (Runge-Kutta 2. Ordnung), Farbe nach Geschwindigkeit, Pfeile in Flussrichtung. */
-function wiStromlinien(e) {
+/**
+ * 3D-Stromlinien (wie Forma, Ansicht „Wichtigkeit“): viele Linien von der Einströmseite in verschiedenen Höhen
+ * durch das mittlere Feld verfolgen und die mit der stärksten Ablenkung zeigen. Farbe nach Geschwindigkeit.
+ */
+function wiStromlinien3D(e, nah) {
+  if (!WI.roh) return;
   const gt = e.gt,
-    abst = 10, // Abstand der Startpunkte, m
-    schritt = 1.5,
-    pos = [],
+    { nx, ny, nz } = gt,
+    u = WI.roh.u,
+    skala = S.wi.v / WI_U10,
+    zMax = Math.min(nz - 1.5, Math.max(3, (Math.max(...gt.hoehe) * 1.3) / gt.dx)),
+    kand = [];
+  let seed = 11;
+  const zufall = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const feld = (i, j, k, out) => {
+    // trilinear
+    const i0 = Math.max(0, Math.min(nx - 2, Math.floor(i - 0.5))),
+      j0 = Math.max(0, Math.min(ny - 2, Math.floor(j - 0.5))),
+      k0 = Math.max(0, Math.min(nz - 2, Math.floor(k - 0.5))),
+      a = Math.min(1, Math.max(0, i - 0.5 - i0)),
+      b = Math.min(1, Math.max(0, j - 0.5 - j0)),
+      c = Math.min(1, Math.max(0, k - 0.5 - k0));
+    out[0] = out[1] = out[2] = 0;
+    for (let n = 0; n < 8; n++) {
+      const di = n & 1,
+        dj = (n >> 1) & 1,
+        dk = n >> 2,
+        w = (di ? a : 1 - a) * (dj ? b : 1 - b) * (dk ? c : 1 - c),
+        q = 3 * (i0 + di + nx * (j0 + dj + ny * (k0 + dk)));
+      out[0] += u[q] * w;
+      out[1] += u[q + 1] * w;
+      out[2] += u[q + 2] * w;
+    }
+    return out;
+  };
+  const v = [0, 0, 0],
+    anzahl = nah ? 400 : S.wiZ.anzahl || 60,
+    belegt = new Set(), // bodennah: Startpunkte gleichmäßig über die Fläche, Linien nicht stapeln
+    R0 = S.wi.radius / gt.dx;
+  for (let s = 0; s < anzahl * (nah ? 2 : 5); s++) {
+    // Hoch: Start an der Einströmseite in allen Höhen. Bodennah: Start im Kreis in 1,5–3,5 m Höhe.
+    let i = 1.5,
+      j = 2 + zufall() * (ny - 4),
+      k = 0.6 + zufall() * zMax;
+    if (nah) {
+      const a = zufall() * Math.PI * 2,
+        rr = Math.sqrt(zufall()) * R0;
+      i = nx / 2 + Math.cos(a) * rr;
+      j = ny / 2 + Math.sin(a) * rr;
+      k = (1.5 + zufall() * 2) / gt.dx;
+      const z0 = (i | 0) + nx * ((j | 0) + ny * (k | 0));
+      if (gt.fest[z0] || belegt.has(((i / 2) | 0) + ',' + ((j / 2) | 0))) continue;
+    }
+    const pfad = [],
+      R = S.wi.radius / gt.dx;
+    let ablenkung = 0,
+      imKreis = 0,
+      vor = null;
+    for (let n = 0; n < (nah ? 260 : 900); n++) {
+      feld(i, j, k, v);
+      const sp = Math.hypot(v[0], v[1], v[2]);
+      if (sp < 0.004) break;
+      const st = 0.5 / sp;
+      if (n % 2 === 0) pfad.push(i, j, k, sp * skala);
+      if (vor) ablenkung += Math.hypot(v[0] / sp - vor[0], v[1] / sp - vor[1], v[2] / sp - vor[2]);
+      vor = [v[0] / sp, v[1] / sp, v[2] / sp];
+      i += v[0] * st;
+      j += v[1] * st;
+      k += v[2] * st;
+      if (Math.hypot(i - nx / 2, j - ny / 2) < R) imKreis++;
+      if (nah) belegt.add(((i / 2) | 0) + ',' + ((j / 2) | 0));
+      if (i < 0 || j < 0 || i >= nx - 1 || j >= ny - 1 || k < 0.1 || k >= nz - 1) break;
+      const z = (i | 0) + nx * ((j | 0) + ny * (k | 0));
+      if (gt.fest[z]) break;
+    }
+    if (imKreis > 10 && pfad.length > 20) kand.push({ pfad, w: ablenkung });
+  }
+  if (!nah) kand.sort((a, b) => b.w - a.w); // „Wichtigkeit“: stärkste Ablenkung zuerst
+  const pos = [],
     farbe = [],
     col = new T.Color(),
-    belegt = new Set(); // grobe Belegung, damit sich Linien nicht stapeln
-  const zelle = (x, z) => Math.round(x / 4) + ',' + Math.round(z / 4);
-  // flaches Band (≥ 0,4 m breit, mit dem Fenster wachsend) statt 1-Pixel-Linie; dunkel abgesetzt, damit es auf der Farbfläche lesbar bleibt
-  const B = Math.max(0.4, S.wi.fenster / 300),
-    fuege = (a, b, v, breite = B) => {
-      const dx = b[0] - a[0],
-        dz = b[1] - a[1],
-        l = Math.hypot(dx, dz) || 1,
-        ox = (-dz / l) * breite * 0.5,
-        oz = (dx / l) * breite * 0.5,
-        ya = gh(a[0], a[1]) + 1.6,
-        yb = gh(b[0], b[1]) + 1.6;
-      col.set(WI_KLASSEN.find((k) => v < k[0])[2]).multiplyScalar(0.45);
-      pos.push(
-        a[0] - ox,
-        ya,
-        a[1] - oz,
-        a[0] + ox,
-        ya,
-        a[1] + oz,
-        b[0] + ox,
-        yb,
-        b[1] + oz,
-        a[0] - ox,
-        ya,
-        a[1] - oz,
-        b[0] + ox,
-        yb,
-        b[1] + oz,
-        b[0] - ox,
-        yb,
-        b[1] - oz,
-      );
-      for (let n = 0; n < 6; n++) farbe.push(col.r, col.g, col.b);
-    };
-  const h = (gt.nx * gt.dx) / 2 - 2;
-  for (let a = -h; a <= h; a += abst)
-    for (let b = -h; b <= h; b += abst) {
-      let x = WI.p[0] + gt.f[0] * a + gt.q[0] * b,
-        z = WI.p[1] + gt.f[1] * a + gt.q[1] * b;
-      if (belegt.has(zelle(x, z))) continue;
-      let weg = 0;
-      const eigen = new Set(); // Zellen dieser Linie (erst am Ende als belegt eintragen)
-      for (let n = 0; n < 120; n++) {
-        const f1 = wiFeld(x, z);
-        if (!f1) break;
-        const v1 = [f1[0], f1[1]],
-          s1 = Math.hypot(v1[0], v1[1]);
-        if (s1 < 0.15) break;
-        const mx = x + (v1[0] / s1) * schritt * 0.5,
-          mz = z + (v1[1] / s1) * schritt * 0.5,
-          v2 = wiFeld(mx, mz);
-        if (!v2) break;
-        const s2 = Math.hypot(v2[0], v2[1]) || 1,
-          nx2 = x + (v2[0] / s2) * schritt,
-          nz2 = z + (v2[1] / s2) * schritt,
-          k = zelle(nx2, nz2);
-        if (belegt.has(k)) break;
-        eigen.add(k);
-        fuege([x, z], [nx2, nz2], s2);
-        weg += schritt;
-        // Pfeilspitze alle 12 m
-        if (weg % 12 < schritt) {
-          const dx = v2[0] / s2,
-            dz = v2[1] / s2,
-            l = 1.2 + B * 2;
-          fuege([nx2 - dx * l - dz * l * 0.55, nz2 - dz * l + dx * l * 0.55], [nx2, nz2], s2, B * 0.8);
-          fuege([nx2 - dx * l + dz * l * 0.55, nz2 - dz * l - dx * l * 0.55], [nx2, nz2], s2, B * 0.8);
+    vmax = WI_PAL.komfort.max;
+  for (const { pfad } of kand.slice(0, anzahl)) {
+    if (nah) {
+      // ein kleiner Pfeil in der Mitte der Linie (Flussrichtung)
+      const m = (((pfad.length / 4) >> 1) - 1) * 4;
+      if (m > 0) {
+        const [x0, z0] = gt.welt(pfad[m] - 0.5, pfad[m + 1] - 0.5),
+          [x1, z1] = gt.welt(pfad[m + 4] - 0.5, pfad[m + 5] - 0.5),
+          y = gh(x1, z1) + pfad[m + 6] * gt.dx,
+          l = Math.hypot(x1 - x0, z1 - z0) || 1,
+          dx = (x1 - x0) / l,
+          dz = (z1 - z0) / l,
+          L = 1.6;
+        col.setRGB(0.12, 0.2, 0.55);
+        for (const sgn of [1, -1]) {
+          pos.push(x1 - dx * L - sgn * dz * L * 0.5, y, z1 - dz * L + sgn * dx * L * 0.5, x1, y, z1);
+          farbe.push(col.r, col.g, col.b, col.r, col.g, col.b);
         }
-        x = nx2;
-        z = nz2;
       }
-      for (const k of eigen) belegt.add(k);
     }
+    for (let n = 0; n + 7 < pfad.length; n += 4) {
+      for (const o of [0, 4]) {
+        const [x, z] = gt.welt(pfad[n + o] - 0.5, pfad[n + o + 1] - 0.5);
+        pos.push(x, gh(x, z) + pfad[n + o + 2] * gt.dx, z);
+        // dunkelblau, schneller = kräftiger
+        col.setRGB(0.12, 0.2, 0.55).lerp(new T.Color(0.25, 0.1, 0.75), Math.min(1, pfad[n + o + 3] / vmax));
+        farbe.push(col.r, col.g, col.b);
+      }
+    }
+  }
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new T.Float32BufferAttribute(farbe, 3));
-  const l = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide }));
+  const l = new T.LineSegments(
+    g,
+    new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }),
+  );
   l.raycast = () => {};
   l.renderOrder = 3;
   WI_G.add(l);

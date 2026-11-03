@@ -40,6 +40,8 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   (Quelltext per `toString()`) und werden in `tests/wind.test.mjs` direkt aus der Quelldatei getestet. Einblendungen
   liegen in der Gruppe `WI_G` (nur im Reiter sichtbar, `userData.nurFarbe`); in Realistisch/Realistisch+ bewegte
   Strömungsstreifen und Rauch (`150-wind-dynamisch.js`).
+  Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
+  des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 
 ## Zentrale Objekte
 

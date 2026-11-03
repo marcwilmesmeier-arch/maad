@@ -151,7 +151,7 @@ function emStarten() {
   if (!innen) {
     // Quelle etwas in Luv des Fenstermittelpunkts: Die Fahne zieht mit dem Wind durch das Fenster
     const [fx, fz] = wiRichtung(S.wi.r),
-      v = S.wi.fenster * 0.2;
+      v = wiFenster() * 0.2;
     WI.p = [EM.q[0] + fx * v, EM.q[1] + fz * v];
     WI.erg = WI.roh = null;
     EM.nachWind = true;
