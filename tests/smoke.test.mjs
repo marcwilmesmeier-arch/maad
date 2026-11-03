@@ -7,28 +7,19 @@
 // Eigener Browser: CHROMIUM_PATH=/pfad/zu/chrome npm test
 
 import { chromium } from 'playwright';
-import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bibliothek } from './bibliotheken.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const lib = (p) => readFileSync(join(ROOT, 'node_modules', p));
-const LIBS = [
-  [/three@[\d.]+\/build\/three\.module\.js$/, 'three/build/three.module.js', 'text/javascript'],
-  [/three@[\d.]+\/build\/three\.core\.js$/, 'three/build/three.core.js', 'text/javascript'],
-  // alte Fassungen (Vergleiche mit Builds vor dem three.js-Update)
-  [/three\.js\/r128\/three\.min\.js$/, '.three-cache/0.128.0/build/three.min.js', 'text/javascript'],
-  [/maplibre-gl\.js$/, 'maplibre-gl/dist/maplibre-gl.js', 'text/javascript'],
-  [/maplibre-gl\.css$/, 'maplibre-gl/dist/maplibre-gl.css', 'text/css'],
-];
 
 const browser = await chromium.launch(
   process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
 );
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 await page.route(/^https?:\/\//, (route) => {
-  const hit = LIBS.find(([re]) => re.test(route.request().url()));
-  return hit ? route.fulfill({ body: lib(hit[1]), contentType: hit[2] }) : route.abort();
+  const hit = bibliothek(route.request().url());
+  return hit ? route.fulfill(hit) : route.abort();
 });
 
 const pageErrors = [];

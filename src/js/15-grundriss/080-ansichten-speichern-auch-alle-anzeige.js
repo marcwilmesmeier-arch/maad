@@ -22,6 +22,7 @@ function vwDs() {
   d.dar = S.dar;
   d.aa = S.aa;
   d.rb = S.rb;
+  d.atm = cl(S.atm);
   d.sun = !!S.sun;
   d.wire = !!S.wire;
   d.noK = !!S.noK;
@@ -128,6 +129,7 @@ function vwApplyDs(d, quiet) {
         }
         if (d.aa != null) S.aa = +d.aa;
         if (d.rb != null) S.rb = +d.rb;
+        if (d.atm) atmLaden(d.atm);
         if (d.dar) drSet(d.dar);
         if (d.noK != null) {
           S.noK = !!d.noK;

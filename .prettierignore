@@ -5,3 +5,4 @@ src/assets/
 src/**/*.daten.js
 src/styles/schrift-*.css
 src/index.html
+src/vendor/realistisch.js

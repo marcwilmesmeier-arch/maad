@@ -27,6 +27,8 @@ npm run format                    # Formatierung
 npm run check                     # Formatierung + Lint + Rauchtest – vor jeder Auslieferung
 npm run vergleich -- <alt.html>   # Verhalten alt/neu vergleichen (bei Umbauten, ca. 15 Min.)
 node tools/umbenennen.mjs <alt> <neu> [--auch-strings]   # globalen Namen sicher umbenennen
+npm run vendor                    # Bibliotheken für „Realistisch“ neu bündeln (nur nach Versionswechsel)
+node tools/bildvergleich.mjs <alt.html>   # Aussehen alt/neu pixelweise vergleichen (Grafikänderungen)
 ```
 
 Ohne installierten Browser: `npx playwright install chromium` oder `CHROMIUM_PATH=/pfad/zu/chrome npm test`.

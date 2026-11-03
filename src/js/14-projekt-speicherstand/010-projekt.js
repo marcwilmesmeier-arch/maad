@@ -44,6 +44,7 @@ function projExtra(cam) {
     x.clg = S.clgc;
     x.plm = plmSave();
     x.rb = S.rb;
+    x.atm = S.atm;
     x.ifc = IFC.cfg || null;
     x.ortho = S.ortho;
     x.sd = S.sd;
@@ -350,6 +351,7 @@ function projApplySet(x) {
   }
   if (x.aa != null) S.aa = +x.aa;
   if (x.rb != null) S.rb = +x.rb;
+  atmLaden(x.atm);
   try {
     fxLoad(x.fx);
     lyMLoad(x.lyM);

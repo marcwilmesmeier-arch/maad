@@ -7,6 +7,7 @@ import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { bibliothek } from './bibliotheken.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 18000 + Math.floor(Math.random() * 1000);
@@ -45,15 +46,6 @@ const link = () => {
   const m = existsSync(p) && readFileSync(p, 'utf8').match(/https?:\/\/\S+\/passwort\?t=[\w-]+/g);
   return m ? m.at(-1) : null;
 };
-const lib = (p) => readFileSync(join(ROOT, 'node_modules', p));
-const LIBS = [
-  [/three@[\d.]+\/build\/three\.module\.js$/, 'three/build/three.module.js', 'text/javascript'],
-  [/three@[\d.]+\/build\/three\.core\.js$/, 'three/build/three.core.js', 'text/javascript'],
-  // alte Fassungen (Vergleiche mit Builds vor dem three.js-Update)
-  [/three\.js\/r128\/three\.min\.js$/, '.three-cache/0.128.0/build/three.min.js', 'text/javascript'],
-  [/maplibre-gl\.js$/, 'maplibre-gl/dist/maplibre-gl.js', 'text/javascript'],
-  [/maplibre-gl\.css$/, 'maplibre-gl/dist/maplibre-gl.css', 'text/css'],
-];
 
 let browser;
 try {
@@ -74,8 +66,8 @@ try {
   await ctx.route(/^https?:\/\//, (route) => {
     const url = route.request().url();
     if (url.startsWith(BASE)) return route.continue();
-    const hit = LIBS.find(([re]) => re.test(url));
-    return hit ? route.fulfill({ body: lib(hit[1]), contentType: hit[2] }) : route.abort();
+    const hit = bibliothek(url);
+    return hit ? route.fulfill(hit) : route.abort();
   });
   const seitenfehler = [];
   // Jede Ansicht in einem eigenen Tab: der Tool-Tab rendert laufend 3D (im Testbrowser ohne Grafikkarte
@@ -150,8 +142,8 @@ try {
   await ctx2.route(/^https?:\/\//, (route) => {
     const url = route.request().url();
     if (url.startsWith(BASE)) return route.continue();
-    const hit = LIBS.find(([re]) => re.test(url));
-    return hit ? route.fulfill({ body: lib(hit[1]), contentType: hit[2] }) : route.abort();
+    const hit = bibliothek(url);
+    return hit ? route.fulfill(hit) : route.abort();
   });
   const p2 = await neu(ctx2, 'Admin: ');
   await p2.goto(link(), { waitUntil: 'load' });

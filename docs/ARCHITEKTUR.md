@@ -20,6 +20,14 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
 - Aussehen wie r128: `T.ColorManagement.enabled = false`, Renderer über `rendererAlt()` mit linearer Ausgabe,
   Lichtstärken mit `LICHT` (= π) multipliziert (alles in `01-modell-3d/010-szene.js`). Neue Renderer und Lichter
   genauso anlegen. `node tools/bildvergleich.mjs <alt.html>` vergleicht das Aussehen zweier Builds pixelweise.
+- Darstellung „Realistisch“ mit physikalischem Himmel, Atmosphäre und Wolken (`06-darstellung/030-himmel-atmosphaere.js`):
+  Die Bibliotheken (`postprocessing`, `@takram/three-*`) sind mit `npm run vendor` zu `src/vendor/realistisch.js`
+  gebündelt (eingecheckt, three.js bleibt extern) und stehen als Skript `id="maadRealLib"` in der HTML-Datei. Geladen
+  werden sie erst beim ersten Einschalten (`import()` über eine Blob-Adresse); die Import-Map in `src/index.html` gibt
+  ihnen dieselbe three.js-Instanz. `mkRender()` rendert dann über `atmRender()` (Nachbearbeitungskette), sonst wie
+  bisher. Wolkentexturen kommen von media.githubusercontent.com (an einen Commit gebunden). Versionen ändern:
+  `package.json` anpassen, `npm install`, `npm run vendor`.
+- Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 
 ## Zentrale Objekte
 
@@ -49,7 +57,7 @@ Ordner dessen Namen, sonst `erweiterungen-vAAA-vBBB`.
 | `03-startseite`              | Demokarte, Startseite, Wolken, 3D-Beschriftungen, Planungsbeispiel                |
 | `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                   |
 | `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                  |
-| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel                            |
+| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken     |
 | `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen in Ansichten                       |
 | `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                               |
 | `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                |

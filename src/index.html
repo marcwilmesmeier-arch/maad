@@ -28,7 +28,7 @@
 <label id="darSunL">Sonnenstand simulieren <input type="checkbox" id="sunck" onchange="tgl('sun')"></label>
 <div id="sunc">Datum <input type="date" id="dt" style="width:132px" value="2026-06-21" oninput="sunUp()"> <span class="dqk"><button onclick="drDate('03-21')">21.3.</button><button onclick="drDate('06-21')">21.6.</button><button onclick="drDate('12-21')">21.12.</button></span><br><input type="range" id="hr" min="4" max="22" step="0.25" value="14" oninput="sunUp()"> <b id="hl">14:00</b><div id="drSun"></div></div>
 <div id="darBase"><label>Grundhelligkeit <input type="range" id="lb" min="0" max="1.6" step="0.05" value="0.85" oninput="liUp(true)"></label><label>Sonnenstärke <input type="range" id="lk" min="0" max="2" step="0.05" value="0.2" oninput="liUp(true)"></label><div class="dmu">Grundhelligkeit wirkt unabhängig von der Sonne. Die Regler gelten getrennt für <b>Weißmodell</b> und <b>Schattiert</b>.</div></div>
-<div id="darReal"><label>Kantenglättung <select id="drAA"><option value="0">Aus</option><option value="1">Niedrig</option><option value="2">Mittel</option><option value="3">Hoch</option></select></label>
+<div id="darReal"><label>Kantenglättung <select id="drAA"><option value="0">Aus</option><option value="1">Niedrig</option><option value="2">Mittel</option><option value="3">Hoch</option></select></label><div id="atmBox" style="margin-top:8px"></div>
 <div class="dmu">Glättet Kanten durch höhere interne Auflösung; „Hoch“ braucht eine leistungsfähige Grafikkarte.</div></div></div>
 <div id="vc" class="fl"><button class="bt" id="bg" onclick="tgLayer()" title="Sichtbarkeit der geladenen Elemente">Layer ▾</button><button class="bt" id="b2" onclick="setMode(0)">2D</button><button class="bt" id="b3" onclick="setMode(1)">3D</button><button class="bt" id="bv" onclick="tgViews()" title="Blickwinkel speichern und anfahren">Ansichten ▾</button><button class="bt" id="bcam" onclick="camxToggle()" title="Kamera: Nahaufnahme, Blickrichtung, Perspektiven, Foto">Kamera</button><button class="bt" id="bl" onclick="tgLight()" title="Darstellung: Weißmodell, Schattiert, Realistisch · Sonnenstand · Analyse">Darstellung ▾</button><span id="cmp" onclick="northTog()" title="2D: Karte an Grundstückskante ausrichten / wieder nach Norden" style="cursor:pointer">N</span></div>
 </div>
@@ -45,10 +45,14 @@
 <script id="maadApp" type="text/plain">
 @@scripts@@
 </script>
+<script id="maadRealLib" type="text/plain">@@include:vendor/realistisch.js@@</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}</script>
 <script type="module">
 // three.js gibt es nur noch als ES-Modul. maad ist ein klassisches Skript mit globalem THREE:
 // erst three.js laden, dann den Programmcode (oben, id="maadApp") als klassisches Skript ausführen.
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js';
+// Die Import-Map sorgt dafür, dass die Bibliotheken für „Realistisch“ (id="maadRealLib", bei Bedarf geladen)
+// dieselbe three.js-Instanz verwenden.
+import * as THREE from 'three';
 window.THREE = THREE;
 const app = document.createElement('script');
 app.textContent = document.getElementById('maadApp').textContent;

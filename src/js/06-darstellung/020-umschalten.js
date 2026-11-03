@@ -116,6 +116,7 @@ function drUi() {
   $('bl').classList.toggle('sunon', S.sun || R);
   $('drAA').value = String(S.aa);
   drSunInfo();
+  atmUi();
   // ── Erweiterung aus 16-darstellung-erweitert/010-starke-schwarze-aussenkontur.js (danach)
   konUi();
 
@@ -148,7 +149,7 @@ function drDate(md) {
 }
 function drTick(cm) {
   if (DR.skyM) {
-    const v = S.dar === 'real' && !HOME.open && !!cm.isPerspectiveCamera;
+    const v = S.dar === 'real' && !HOME.open && !!cm.isPerspectiveCamera && !atmAktiv(cm);
     DR.skyM.visible = v;
     if (v) DR.skyM.position.copy(cm.position);
   }

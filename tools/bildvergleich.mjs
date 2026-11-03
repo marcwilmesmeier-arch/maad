@@ -7,9 +7,10 @@
 // Hinweis: Im Testbrowser ohne Grafikkarte (Software-Rendering) – Anhaltspunkt, keine Endabnahme.
 
 import { chromium } from 'playwright';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bibliothek } from '../tests/bibliotheken.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const [refFile, candFile = join(ROOT, 'dist/maad.html'), aus = join(ROOT, 'dist/bildvergleich')] =
@@ -19,16 +20,6 @@ if (!refFile) {
   process.exit(2);
 }
 mkdirSync(aus, { recursive: true });
-
-// Bibliotheken lokal ausliefern (beliebige Versionen aus node_modules bzw. dem Zwischenspeicher)
-const LIBS = [
-  [/three\.js\/(r128)\/(three\.min\.js)$/, null, 'text/javascript'],
-  [/three@([\d.]+)\/build\/(three\.module(?:\.min)?\.js)$/, null, 'text/javascript'],
-  [/three@([\d.]+)\/build\/(three\.core(?:\.min)?\.js)$/, null, 'text/javascript'],
-  [/maplibre-gl\.js$/, join(ROOT, 'node_modules/maplibre-gl/dist/maplibre-gl.js'), 'text/javascript'],
-  [/maplibre-gl\.css$/, join(ROOT, 'node_modules/maplibre-gl/dist/maplibre-gl.css'), 'text/css'],
-];
-const THREE_CACHE = process.env.THREE_CACHE || join(ROOT, 'node_modules/.three-cache');
 
 function deterministic() {
   let seed = 42;
@@ -89,13 +80,8 @@ async function lauf(browser, file) {
   await page.addInitScript(deterministic);
   await page.route(/^https?:\/\//, (route) => {
     const url = route.request().url();
-    for (const [re, pfad, typ] of LIBS) {
-      const m = re.exec(url);
-      if (!m) continue;
-      const datei = pfad || join(THREE_CACHE, m[1] === 'r128' ? '0.128.0' : m[1], 'build', m[2]);
-      return route.fulfill({ body: readFileSync(datei), contentType: typ });
-    }
-    return route.abort();
+    const hit = bibliothek(url);
+    return hit ? route.fulfill(hit) : route.abort();
   });
   const fehler = [];
   page.on('pageerror', (e) => fehler.push(e.message));

@@ -170,6 +170,7 @@ function sunUp() {
     sunL.castShadow = cs;
     sunL.intensity = (cs ? 1.1 : 0.1) * S.sunK * LICHT;
     sunL.color.set(R ? drWarm(el) : '#ffffff');
+    if (R) atmLicht(d); // physikalische Licht- und Himmelsfarben, sobald die Atmosphäre bereit ist
     if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
     drSunInfo();
   })();
