@@ -53,6 +53,7 @@ function wiPanel() {
       h += `<div style="height:10px;margin-top:8px;border-radius:3px;background:linear-gradient(90deg,#3b6fb6,#5aa7d6,#9fd3b0,#e8d96a,#f0a04b,#e05a3c,#9b1d4a)"></div><div style="display:flex;justify-content:space-between;font-size:11px" class="dmu"><span>${z.art === 'verst' ? 'windstill' : 'gleichmäßig'}</span><span>${z.art === 'verst' ? 'wie Anströmung' : ''}</span><span>${z.art === 'verst' ? '1,6-fach' : 'stark verwirbelt / Rückströmung'}</span></div>`;
     h += `<div class="dmu" style="margin-top:6px">Mittlere Geschwindigkeit in etwa ${(s.dx / 2).toFixed(1)} m Höhe. Komfortklassen angelehnt an Lawson.</div></div>`;
   }
+  h += emPanel();
   return h;
 }
 
@@ -62,9 +63,11 @@ function wiSet(k, v) {
   if (k === 'v') {
     // Strömungsbild hängt bei hohen Reynoldszahlen kaum von der Stärke ab: ohne Neuberechnung umrechnen
     if (WI.roh) WI.erg = wiAuswerten(WI.gitter, WI.roh.u, WI.roh.ti);
+    if (EM.erg) emRechnen(); // Ausbreitung hängt von der Windstärke ab
   } else if (WI.erg) {
     // Richtung oder Fenster geändert: altes Ergebnis passt nicht mehr
     WI.erg = WI.roh = null;
+    EM.erg = null;
     if (WI.st === 'fertig') WI.st = 'aus';
   }
   if (WI.p) wiZeichnen();

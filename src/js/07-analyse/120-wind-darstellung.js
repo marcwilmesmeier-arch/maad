@@ -37,9 +37,10 @@ function wiZeichnen() {
   wiLeeren();
   if (WI.p) wiRahmen();
   const e = WI.erg;
-  if (!e || S.tab !== 'Analyse' || S.anT !== 'wi') return;
-  if (S.wiZ.flaeche) wiFlaeche(e);
-  if (S.wiZ.linien) wiStromlinien(e);
+  if (S.tab !== 'Analyse' || S.anT !== 'wi') return;
+  if (e && S.wiZ.flaeche) wiFlaeche(e);
+  if (e && S.wiZ.linien) wiStromlinien(e);
+  emZeichnen();
 }
 
 /** Rahmen des Rechenfensters und Mittelpunkt. */

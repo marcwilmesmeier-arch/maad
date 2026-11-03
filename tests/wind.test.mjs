@@ -10,6 +10,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const wiLoeser = new Function(
   readFileSync(join(ROOT, 'src/js/07-analyse/100-wind-loeser.js'), 'utf8') + '\nreturn wiLoeser;',
 )();
+// nur die Rechenfunktion aus 140-emissionen.js (der Rest der Datei braucht den Browser)
+const emSrc = readFileSync(join(ROOT, 'src/js/07-analyse/140-emissionen.js'), 'utf8'),
+  wiAusbreitung = new Function(
+    emSrc.slice(emSrc.indexOf('function wiAusbreitung('), emSrc.indexOf('function wiAusbreitungHaupt(')) +
+      '\nreturn wiAusbreitung;',
+  )();
 
 function lauf(mitBlock) {
   const nx = 48,
@@ -44,4 +50,45 @@ test('Gebäudeblock: seitliche Beschleunigung und Rückströmung dahinter', () =
   assert.ok(seite > frei * 1.1, 'seitlich schneller als in der freien Anströmung');
   assert.ok(hinten < 0, 'direkt hinter dem Block Rückströmung');
   assert.ok([...r.u].every(Number.isFinite), 'keine ungültigen Werte');
+});
+
+test('Ausbreitung: Belastung in Lee, nicht in Luv; bodennahe Quelle belastet mehr als hoher Schornstein', () => {
+  const nx = 40,
+    ny = 24,
+    nz = 12,
+    n = nx * ny * nz,
+    u = new Float32Array(3 * n),
+    ti = new Float32Array(n).fill(0.01);
+  for (let c = 0; c < n; c++) u[3 * c] = 0.1; // gleichmäßiger Wind in x
+  const lauf = (k) =>
+    wiAusbreitung({
+      nx,
+      ny,
+      nz,
+      dx: 4,
+      fest: new Uint8Array(n),
+      u,
+      ti,
+      skala: 30,
+      quelle: [10, 12, k],
+      rate: 1,
+      streu: 0.2,
+      dauer: 120,
+      dt: 0.5,
+      proSchritt: 6,
+      seed: 3,
+    }).c;
+  const boden = lauf(0.2),
+    hoch = lauf(6);
+  const summe = (c, i0, i1) => {
+    let s = 0;
+    for (let j = 0; j < ny; j++) for (let i = i0; i < i1; i++) s += c[i + nx * j];
+    return s;
+  };
+  assert.ok(summe(boden, 12, 40) > 0, 'in Lee belastet');
+  assert.equal(summe(boden, 0, 9), 0, 'in Luv unbelastet');
+  assert.ok(summe(boden, 10, 20) > summe(hoch, 10, 20) * 3, 'Bodenquelle belastet nahe der Quelle stärker');
+  console.log(
+    `  Ausbreitung: Bodenquelle ${summe(boden, 10, 20).toFixed(1)}, Schornstein ${summe(hoch, 10, 20).toFixed(1)} (µg/m³ summiert, Nahbereich)`,
+  );
 });

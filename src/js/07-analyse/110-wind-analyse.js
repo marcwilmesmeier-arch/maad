@@ -134,6 +134,11 @@ function wiStarten() {
       WI.dauer = Math.round((performance.now() - WI.t0) / 1000);
       wiZeichnen();
       wiPanelAuf();
+      // Emissionen warten auf dieses Windfeld (Quelle lag außerhalb des alten Fensters)
+      if (EM.nachWind) {
+        EM.nachWind = false;
+        emRechnen();
+      }
     } else if (d.fehler) {
       WI.worker = null;
       wk.terminate();
