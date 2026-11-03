@@ -263,7 +263,31 @@ const TERR = {
     name: 'Baden-Württemberg',
     src: '© LGL-BW (' + new Date().getFullYear() + '), dl-de/by-2-0',
     z: [32],
-    dgm: { u: 'https://owsproxy.lgl-bw.de/owsproxy/wcs/WCS_INSP_BW_Hoehe_Coverage_DGM1', g: 1 },
+    // Open-Data-Download (opengeodata.lgl-bw.de): 2-km-ZIP (linke untere Ecke: E ungerade, N gerade) mit vier
+    // 1-km-Teilen – DGM1 als XYZ (cm genau), DOM1 als GeoTIFF. Der Server erlaubt CORS nur für die eigene Seite,
+    // maad lädt daher über den CORS-Proxy. Ohne Proxy: INSPIRE-WCS (nur ganze Meter, DOM nur 5-m-Raster).
+    dgm: {
+      u: 'tile',
+      tile: (E, N) => [bwKachel('dgm', 'dgm1', E, N)],
+      ersatz: {
+        u: 'https://owsproxy.lgl-bw.de/owsproxy/wcs/WCS_INSP_BW_Hoehe_Coverage_DGM1',
+        id: 'EL.ElevationGridCoverage',
+        ax: ['E', 'N'],
+        sax: ['x', 'y'],
+        hinweis: 'WCS, ganze Meter',
+      },
+    },
+    dom: {
+      u: 'tile',
+      tile: (E, N) => [bwKachel('dom1', 'dom1', E, N)],
+      ersatz: {
+        u: 'https://owsproxy.lgl-bw.de/owsproxy/wcs/WCS_INSP_BW_Hoehe_Coverage_DOM5',
+        id: 'EL.ElevationGridCoverage',
+        ax: ['E', 'N'],
+        sax: ['x', 'y'],
+        hinweis: 'WCS DOM5, 5-m-Raster',
+      },
+    },
   },
   ni: {
     name: 'Niedersachsen',
@@ -311,6 +335,13 @@ const TERR = {
     },
   },
 };
+// BW: Adresse der 2-km-ZIP zur 1-km-Kachel E/N, dahinter (#) der Name des Teils in der ZIP
+function bwKachel(ordner, art, E, N) {
+  const zahl = typeof E === 'number', // Anzeige der Vorlage mit '{E}'/'{N}' in der Datenquellen-Übersicht
+    e2 = zahl ? (E % 2 ? E : E - 1) : E,
+    n2 = zahl ? (N % 2 ? N - 1 : N) : N;
+  return `https://opengeodata.lgl-bw.de/data/${ordner}/${art}_32_${e2}_${n2}_2_bw.zip#${art}_32_${E}_${N}_1_bw`;
+}
 // Jahre der RLP-Höhenkacheln: zuletzt gefundenes Jahr zuerst, dann absteigend ab dem aktuellen Jahr bis 2015.
 const RP_JAHR = { zuletzt: 0 };
 function rpKacheln(art, E, N) {
@@ -382,7 +413,8 @@ async function wcsCov(u, re) {
   throw new Error('Coverage-Name nicht ermittelbar (' + err + ')');
 }
 // ZIP: ersten Eintrag als Bytes entpacken (z. B. Bayern-DGM1: ZIP mit ASCII-XYZ-Raster)
-async function zipFirstBytes(buf) {
+/** Ersten Daten-Eintrag einer ZIP entpacken; mit `teil` den ersten, dessen Name `teil` enthält (ohne .csv/.tfw). */
+async function zipFirstBytes(buf, teil) {
   const dv = new DataView(buf),
     u8 = new Uint8Array(buf),
     dec = new TextDecoder();
@@ -407,6 +439,7 @@ async function zipFirstBytes(buf) {
       name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
     p += 46 + nl + xl + cl;
     if (/\/$/.test(name) || /(\.xml|\.txt\.md|readme|\.pdf)$/i.test(name)) continue;
+    if (teil && !(name.includes(teil) && !/\.(csv|tfw|txt)$/i.test(name))) continue;
     const lnl = dv.getUint16(lo + 26, true),
       lxl = dv.getUint16(lo + 28, true),
       ds = lo + 30 + lnl + lxl,

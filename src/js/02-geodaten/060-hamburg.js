@@ -167,15 +167,19 @@ async function tileDgm(pv, zone, minx, miny, maxx, maxy, W, Hh, res, lab, errs) 
       sy: t.sy && t.sy * f,
     };
   };
+  // Mehrere 1-km-Kacheln können in einer gemeinsamen ZIP liegen (Baden-Württemberg: 2-km-ZIP mit vier Teilen). Die
+  // Adresse trägt dann hinter „#“ den Namensteil des gewünschten Eintrags; jede ZIP wird nur einmal geladen.
+  const zips = {};
   await Promise.all(
     L.map(async ([E, N]) => {
       for (const u of pv.sv.tile(E, N)) {
         try {
-          const r = await wfetch(u, 900000);
-          let buf = await r.arrayBuffer(),
+          const [adr, eintrag] = u.split('#');
+          if (!zips[adr]) zips[adr] = wfetch(adr, 900000).then((r) => r.arrayBuffer());
+          let buf = await zips[adr],
             b0 = new Uint8Array(buf, 0, 4);
           if (b0[0] === 0x50 && b0[1] === 0x4b) {
-            const z = await zipFirstBytes(buf);
+            const z = await zipFirstBytes(buf, eintrag);
             buf = z.buffer.slice(z.byteOffset, z.byteOffset + z.length);
             b0 = new Uint8Array(buf, 0, 4);
           }
@@ -310,7 +314,9 @@ async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
     if (pv.sv.tile) {
       const r = await tileDgm(pv, zone, minx, miny, maxx, maxy, W, Hh, res, lab, errs);
       if (r) return r;
-      continue;
+      if (!pv.sv.ersatz) continue;
+      // Kacheln nicht ladbar (z. B. ohne CORS-Proxy): Ersatzdienst der Quelle (WCS) versuchen
+      pv = Object.assign({}, pv, { sv: pv.sv.ersatz, src: pv.src + ', ' + pv.sv.ersatz.hinweis });
     }
     let id = pv.sv.id;
     if (!id) {
@@ -323,7 +329,8 @@ async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
     }
     const B = pv.sv.u + (pv.sv.u.includes('?') ? '&' : '?'),
       bb = [minx, miny, maxx, maxy].join(','),
-      ax = pv.sv.ax || ['x', 'y']; // Achsennamen der Coverage (WCS 2.0), z. B. Hessen: E/N
+      ax = pv.sv.ax || ['x', 'y'], // Achsennamen der Coverage (WCS 2.0), z. B. Hessen: E/N
+      sax = pv.sv.sax || ax; // Achsennamen für SCALESIZE, falls abweichend (Baden-Württemberg: Ausschnitt E/N, Skalierung x/y)
     const tries = [
       'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=' +
         id +
@@ -364,11 +371,11 @@ async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
         ',' +
         maxy +
         ')&SCALESIZE=' +
-        ax[0] +
+        sax[0] +
         '(' +
         W +
         '),' +
-        ax[1] +
+        sax[1] +
         '(' +
         Hh +
         ')',

@@ -99,3 +99,12 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Landes-Metalink `dgm1_tif_07.meta4`, 12 MB) über den eigenen Server.
 - LoD2-Kacheln (2 km, unkomprimiertes CityGML) sind in Innenstädten sehr groß (Mainz 446/5538: 163 MB); sie werden als
   Datenstrom gelesen, das Laden dauert entsprechend.
+
+## Landesdaten Baden-Württemberg
+
+- DGM1/DOM1 kommen aus dem Open-Data-Download (opengeodata.lgl-bw.de, 2-km-ZIP mit vier 1-km-Teilen). Der Server
+  erlaubt CORS nur für die eigene Seite; maad lädt über den CORS-Proxy, der Host muss dort freigegeben sein. Ohne
+  Proxy greift der INSPIRE-WCS als Ersatz (`ersatz` in `TERR.bw`): DGM nur in ganzen Metern (16 Bit), DOM nur als
+  DOM5. Der WCS verlangt beim Ausschnitt die Achsen E/N, beim Skalieren x/y (`sax`).
+- LoD2 BW liegt im selben Portal (`/data/lod2/LoD2_32_{E}_{N}_2_bw.zip`, E ungerade) und ist noch nicht eingebunden:
+  das Kachelraster von `cityGmlLoad` kennt bisher nur gerade Kachelecken.
