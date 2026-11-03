@@ -174,6 +174,15 @@ const CG = {
     zone: 32,
     tile: (E, N) => [`https://lod2.s3.eu-de.cloud-object-storage.appdomain.cloud/LoD2_32_${E}_${N}_1_ni.gml`],
   },
+  // Rheinland-Pfalz: 2-km-Kacheln (linke untere Ecke in km, gerade Werte), CityGML unkomprimiert, CORS offen
+  rp: {
+    key: 'rp',
+    name: 'Rheinland-Pfalz',
+    src: '© GeoBasis-DE / LVermGeoRP, dl-de/by-2-0',
+    sz: 2,
+    zone: 32,
+    tile: (E, N) => [`https://geobasis-rlp.de/data/geb3dlo/current/gml/LoD2_32_${E}_${N}_2_RP.gml`],
+  },
   by: {
     key: 'by',
     name: 'Bayern',

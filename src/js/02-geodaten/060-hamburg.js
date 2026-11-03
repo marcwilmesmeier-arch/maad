@@ -187,6 +187,7 @@ async function tileDgm(pv, zone, minx, miny, maxx, maxy, W, Hh, res, lab, errs) 
             errs.push('Kachel hat ein unbekanntes Format (weder TIFF noch ZIP/XYZ)');
             continue;
           }
+          if (pv.sv.treffer) pv.sv.treffer(u);
           return;
         } catch (e) {
           errs.push(

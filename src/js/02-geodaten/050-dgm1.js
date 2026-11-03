@@ -250,6 +250,15 @@ const TERR = {
     dgm: { u: 'https://inspire-hessen.de/raster/dgm1/ows', id: 'he_dgm1', ax: ['E', 'N'] },
     dom: { u: 'https://inspire-hessen.de/raster/dom1/ows', id: 'dom1', ax: ['E', 'N'] },
   },
+  // Rheinland-Pfalz: DGM1 und DOM1 als 1-km-GeoTIFF-Kacheln (geobasis-rlp.de, CORS offen). Der Dateiname endet
+  // auf das Erfassungsjahr, das je Kachel verschieden ist – rpKacheln() probiert die Jahre der Reihe nach.
+  rp: {
+    name: 'Rheinland-Pfalz',
+    src: '© GeoBasis-DE / LVermGeoRP (' + new Date().getFullYear() + '), dl-de/by-2-0',
+    z: [32],
+    dgm: { u: 'tile', tile: (E, N) => rpKacheln('dgm1', E, N), treffer: (u) => rpTreffer(u) },
+    dom: { u: 'tile', tile: (E, N) => rpKacheln('dom1', E, N), treffer: (u) => rpTreffer(u) },
+  },
   bw: {
     name: 'Baden-Württemberg',
     src: '© LGL-BW (' + new Date().getFullYear() + '), dl-de/by-2-0',
@@ -302,6 +311,21 @@ const TERR = {
     },
   },
 };
+// Jahre der RLP-Höhenkacheln: zuletzt gefundenes Jahr zuerst, dann absteigend ab dem aktuellen Jahr bis 2015.
+const RP_JAHR = { zuletzt: 0 };
+function rpKacheln(art, E, N) {
+  const bis = new Date().getFullYear(),
+    jahre = [];
+  for (let j = bis; j >= 2015; j--) jahre.push(j);
+  if (RP_JAHR.zuletzt) jahre.unshift(...jahre.splice(jahre.indexOf(RP_JAHR.zuletzt), 1));
+  return jahre.map(
+    (j) => `https://geobasis-rlp.de/data/${art}/current/tif/${art}_32_${E}_${N}_1_rp_${j}.tif`,
+  );
+}
+function rpTreffer(u) {
+  const m = /_rp_(\d{4})\.tif$/.exec(u);
+  if (m) RP_JAHR.zuletzt = +m[1];
+}
 const _cc = {};
 async function wfetch(u, ms, hd) {
   if (/^zip:\/\//.test(u)) return hhZipTile(u);
