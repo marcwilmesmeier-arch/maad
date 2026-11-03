@@ -90,3 +90,12 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   ungeprüft. Der Dienst ist ein freies Angebot ohne Zusagen; für den Betrieb ggf. über den eigenen Server spiegeln.
 - Die Komfortbewertung nutzt die Häufigkeit nur für die Vorwahl der Richtung; eine Bewertung über alle Richtungen
   (gewichtete Überschreitungshäufigkeit) fehlt noch.
+
+## Landesdaten Rheinland-Pfalz
+
+- DGM1/DOM1-Kacheln heißen `dgm1_32_{E}_{N}_1_rp_{Jahr}.tif`; das Erfassungsjahr ist je Kachel verschieden und nicht
+  aus der Lage ableitbar. `rpKacheln()` probiert die Jahre absteigend (zuletzt gefundenes Jahr zuerst), fehlende Jahre
+  kosten je einen schnellen 404-Abruf. Besser wäre ein kleines Verzeichnis Kachel → Jahr (z. B. aus dem
+  Landes-Metalink `dgm1_tif_07.meta4`, 12 MB) über den eigenen Server.
+- LoD2-Kacheln (2 km, unkomprimiertes CityGML) sind in Innenstädten sehr groß (Mainz 446/5538: 163 MB); sie werden als
+  Datenstrom gelesen, das Laden dauert entsprechend.

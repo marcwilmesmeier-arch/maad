@@ -188,6 +188,8 @@ const ALS = {
     },
   ],
   bw: [{ u: 'https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ALKIS', g: 1 }],
+  // Rheinland-Pfalz: ALKIS vereinfacht, geldleistungsfrei (dl-de/by-2-0), CORS offen, Abruf geprüft
+  rp: [{ u: 'https://geo5.service24.rlp.de/wfs/alkis_rp.fcgi', t: 'ave:Flurstueck', ns: AVE, direkt: 1 }],
 };
 const ALQ = {
   nrw: '© Geobasis NRW, dl-de/zero-2-0',
@@ -225,7 +227,6 @@ const BLX = {
   th: 'Thüringen: freier WFS vorhanden, Adresse noch nicht hinterlegt.',
   sh: 'Schleswig-Holstein: Download vorhanden, freier WFS-Zugang noch nicht hinterlegt.',
   sl: 'Saarland: Download-Portal vorhanden, WFS-Adresse noch nicht hinterlegt.',
-  rp: 'Rheinland-Pfalz: WFS ALKIS vereinfacht vorhanden, Lizenz/Adresse noch nicht geprüft.',
 };
 const BLB = {
   nrw: [5.8, 50.3, 9.5, 52.55],
