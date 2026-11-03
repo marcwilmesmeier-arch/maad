@@ -4,8 +4,11 @@
 // @takram/three-clouds, postprocessing – gebündelt in src/vendor/realistisch.js und erst beim ersten Einschalten
 // geladen (Skript id="maadRealLib").
 //
-// Aufbau: maad rendert die Szene wie bisher mit eigenen Lichtern und Schatten. Das Ergebnis wird in lineare
-// Strahldichte umgerechnet (atmLinear), dann legen Atmosphäre und Wolken Himmel, Dunst und Wolken darüber.
+// Aufbau wie im three.js-Beispiel webgl_loader_3dtiles („post-process lighting“): maad rendert die Szene nur mit
+// gleichmäßigem weißem Licht, das Bild ist dann die Grundfarbe (Albedo). Sonne und Himmel beleuchten erst in der
+// Nachbearbeitung (AerialPerspectiveEffect mit Normalenbild) – nur so werfen auch die Wolken Schatten.
+// maads Gebäudeschatten kommen aus einer Schattenmaske (eigener Durchgang mit ShadowMaterial): im Schatten wird die
+// Grundfarbe so abgedunkelt, dass nach der Beleuchtung nur das Himmelslicht übrig bleibt (atmLin).
 // Sonnenstand: maads eigene Berechnung (sunPos), damit Schatten, Sonne am Himmel und Lichtfarbe übereinstimmen.
 // Ohne Unterstützung (kein WebGL 2/Gleitkomma-Puffer) oder bei Fehlern bleibt die bisherige Darstellung.
 
@@ -21,6 +24,10 @@ const ATM = {
   tm: null, // ToneMappingEffect
   sonne: null, // SunDirectionalLight (nur zur Berechnung der Sonnenfarbe)
   himmel: null, // SkyLightProbe (nur zur Berechnung des Himmelslichts)
+  sonneW: new T.Vector3(0, 1, 0), // Sonnenrichtung in maad-Weltkoordinaten
+  maske: null,
+  maskeM: null,
+  normal: null,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
   ref: 1, // Bezugshelligkeit der Sonne (hoher Sonnenstand), Einheit der Bibliothek
@@ -89,9 +96,18 @@ function atmAufbau(L) {
   const cm = pc;
   ATM.ap = new L.AerialPerspectiveEffect(cm);
   ATM.ap.sky = false; // Himmel zeichnet himmelM (mit Boden jenseits des Modells)
-  ATM.ap.sunLight = false; // Licht kommt von maads Lichtern (s. atmLicht)
-  ATM.ap.skyLight = false;
+  ATM.ap.sunLight = true; // Beleuchtung in der Nachbearbeitung (braucht das Normalenbild)
+  ATM.ap.skyLight = true;
   ATM.cl = new L.CloudsEffect(cm);
+  // Wolkenschatten wie im Beispiel
+  Object.assign(ATM.cl.shadow, {
+    farScale: 0.25,
+    maxFar: 1e5,
+    cascadeCount: 2,
+    splitMode: 'practical',
+    splitLambda: 0.71,
+  });
+  ATM.cl.shadow.mapSize.set(512, 512);
   ATM.cl.events.addEventListener('change', (ev) => {
     if (ev.property === 'atmosphereOverlay') ATM.ap.overlay = ATM.cl.atmosphereOverlay;
     else if (ev.property === 'atmosphereShadow') ATM.ap.shadow = ATM.cl.atmosphereShadow;
@@ -106,24 +122,47 @@ function atmAufbau(L) {
   ATM.himmelM.visible = false;
   ATM.himmelM.userData._ov = 1;
   sc.add(ATM.himmelM);
-  // maads Bild (gammakodiert) in lineare Strahldichte; Himmelspixel (Tiefe 1) bleiben unverändert
+  // Schattenmaske: Alpha = Anteil im Schatten (three.js ShadowMaterial)
+  ATM.maskeM = new T.ShadowMaterial({ color: 0, opacity: 1, transparent: false, blending: T.NoBlending });
+  ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
+  ATM.normal = new L.NormalPass(sc, cm);
+  ATM.ap.normalBuffer = ATM.normal.texture;
+  // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
-    'MaadLinear',
-    'uniform float uK;\n' +
+    'MaadAlbedo',
+    'uniform float uK, uSonne, uHimmel;\nuniform vec3 uSonneV;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
-      '  outputColor = vec4(pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
+      '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
       ATM_GAMMA.toFixed(1) +
-      ')) * uK, inputColor.a);\n}\n',
+      ')) * uK;\n' +
+      '  float schatten = texture2D(tMaske, uv).a;\n' +
+      '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
+      '  float nl = max(dot(n, uSonneV), 0.0);\n' +
+      '  float k = uHimmel / (uSonne * nl + uHimmel + 1e-6);\n' +
+      '  outputColor = vec4(a * mix(1.0, k, schatten), inputColor.a);\n}\n',
     {
       attributes: L.EffectAttribute.DEPTH,
       blendFunction: L.BlendFunction.SRC,
-      uniforms: new Map([['uK', new T.Uniform(1)]]),
+      uniforms: new Map([
+        ['uK', new T.Uniform(0.6)],
+        ['uSonne', new T.Uniform(1)],
+        ['uHimmel', new T.Uniform(0.2)],
+        ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
+        ['tMaske', new T.Uniform(ATM.maske.texture)],
+        ['tNormal', new T.Uniform(ATM.normal.texture)],
+      ]),
     },
   );
+  // Himmel nur im Farbbild, nicht im Normalenbild (blendet himmelM nach dem ersten Durchgang aus)
+  const aus = new L.Pass('MaadHimmelAus');
+  aus.needsSwap = false;
+  aus.render = () => (ATM.himmelM.visible = false);
   ATM.tm = new L.ToneMappingEffect({ mode: L.ToneMappingMode.AGX });
   ATM.comp = new L.EffectComposer(ren, { frameBufferType: T.HalfFloatType, multisampling: 0 });
   ATM.comp.addPass(new L.RenderPass(sc, cm));
+  ATM.comp.addPass(aus);
+  ATM.comp.addPass(ATM.normal);
   ATM.comp.addPass(new L.EffectPass(cm, ATM.lin));
   ATM.comp.addPass(new L.EffectPass(cm, ATM.cl, ATM.ap));
   // Faltungseffekte (Lichtreflexe, SMAA) brauchen je eine eigene Stufe
@@ -183,7 +222,7 @@ function atmWolken() {
   const a = S.atm;
   ATM.cl.qualityPreset = ATM_QUAL.some((q) => q[0] === a.wq) ? a.wq : 'medium';
   ATM.cl.coverage = a.wo ? +a.wd : 0;
-  ATM.cl.localWeatherVelocity.set(a.wo ? 0.00005 : 0, 0);
+  ATM.cl.localWeatherVelocity.set(a.wo ? 0.001 : 0, 0);
 }
 
 /** Bezugsrahmen am Projektort: maad-Welt (x Ost, y oben, z Süd, Meter) -> Erdkoordinaten (ECEF). */
@@ -211,8 +250,8 @@ function atmOrt() {
 const atmY = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 
 /**
- * Sonnenrichtung an Atmosphäre und Wolken geben und maads Lichter einfärben (Sonnenfarbe nach Sonnenstand,
- * Himmelslicht). Aufruf aus sunUp(); dir = maads Sonnenrichtung (Einheitsvektor).
+ * Sonnenrichtung an Atmosphäre, Wolken und Himmel geben; maads Lichter auf gleichmäßiges Weiß stellen (das Bild ist
+ * dann die Grundfarbe, beleuchtet wird in der Nachbearbeitung). Aufruf aus sunUp(); dir = maads Sonnenrichtung.
  */
 function atmLicht(dir) {
   if (ATM.st !== 'bereit' || S.dar !== 'realp') return false;
@@ -222,17 +261,42 @@ function atmLicht(dir) {
   for (const o of [ATM.ap, ATM.cl, ATM.sonne, ATM.himmel, ATM.himmelM.material]) o.sunDirection.copy(d);
   ATM.sonne.update();
   ATM.himmel.update();
-  // Farben relativ zur Bezugshelligkeit, mit Gamma vorverzerrt (atmLinear hebt das wieder auf)
-  const g = 1 / ATM_GAMMA,
-    s = ATM.sonne.color.clone().multiplyScalar(1 / ATM.ref),
-    h = ATM.himmel.sh.coefficients[0].clone().multiplyScalar(Math.sqrt(Math.PI) / ATM.ref);
-  const norm = (c, k) => new T.Color(Math.pow(c.r * k, g), Math.pow(c.g * k, g), Math.pow(c.b * k, g));
-  sunL.color.copy(norm(s, 1));
-  // Himmelslicht: Farbton der Atmosphäre, zur Hälfte neutral (maads Materialien sind auf weißes Licht abgestimmt)
-  const hc = norm(new T.Color(h.x, h.y, h.z), 1 / Math.max(1e-6, atmY({ r: h.x, g: h.y, b: h.z })));
-  hemi.color.copy(hc.lerp(new T.Color(1, 1, 1), 0.5));
-  hemi.groundColor.copy(hemi.color).multiplyScalar(0.55);
+  ATM.sonneW.set(dir[0], dir[1], dir[2]).normalize();
+  // Verhältnis Sonne : Himmel für die Schattenmaske (Bestrahlungsstärken, Helligkeit)
+  const h = ATM.himmel.sh.coefficients[0];
+  ATM.lin.uniforms.get('uSonne').value = atmY(ATM.sonne.color);
+  ATM.lin.uniforms.get('uHimmel').value = Math.max(
+    1e-6,
+    (0.2126 * h.x + 0.7152 * h.y + 0.0722 * h.z) * Math.sqrt(Math.PI),
+  );
+  hemi.color.set(0xffffff);
+  hemi.groundColor.set(0xffffff);
+  hemi.intensity = LICHT; // Grundfarbe unverändert (r128-Einheit 1)
+  sunL.intensity = 0; // wirft weiter Schatten (für die Maske), trägt aber kein Licht bei
+  sunL.color.set(0xffffff);
   return true;
+}
+
+/** Schattenmaske rendern: Szene mit ShadowMaterial, Alpha = Schatten (vor der Nachbearbeitung, gleiche Kamera). */
+function atmMaske(cm) {
+  const rt = ren.getRenderTarget(),
+    om = sc.overrideMaterial,
+    cc = ren.getClearColor(new T.Color()),
+    ca = ren.getClearAlpha(),
+    hv = ATM.himmelM.visible;
+  try {
+    ATM.himmelM.visible = false;
+    sc.overrideMaterial = ATM.maskeM;
+    ren.setRenderTarget(ATM.maske);
+    ren.setClearColor(0x000000, 0);
+    ren.clear();
+    ren.render(sc, cm);
+  } finally {
+    ren.setRenderTarget(rt);
+    ren.setClearColor(cc, ca);
+    sc.overrideMaterial = om;
+    ATM.himmelM.visible = hv;
+  }
 }
 
 /** Rendert die Szene über die Atmosphäre. Rückgabe false = nicht zuständig (normal rendern). */
@@ -251,9 +315,9 @@ function atmRender(scn, cm) {
       const c = ren.getSize(new T.Vector2());
       ATM.comp.setSize(c.x, c.y, false);
     }
-    // Helligkeit: Szene in Einheiten der Atmosphäre (Bezugshelligkeit / π), Belichtung für die Tonwertabbildung
-    // 0.45: maads helle Materialfarben auf übliche Albedo von Gebäuden und Gelände
-    ATM.lin.uniforms.get('uK').value = (ATM.ref / Math.PI) * 0.45;
+    if (ATM.maske.width !== sz.x || ATM.maske.height !== sz.y) ATM.maske.setSize(sz.x, sz.y);
+    atmMaske(cm);
+    ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
     ren.toneMappingExposure = S.atm.bel * brK();
     const now = performance.now(),
       dt = ATM.t ? Math.min(0.1, (now - ATM.t) / 1000) : 0;

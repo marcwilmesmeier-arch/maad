@@ -7,6 +7,8 @@ export {
   EffectAttribute,
   EffectComposer,
   EffectPass,
+  NormalPass,
+  Pass,
   RenderPass,
   SMAAEffect,
   SMAAPreset,
