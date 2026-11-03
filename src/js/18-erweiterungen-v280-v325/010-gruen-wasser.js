@@ -431,7 +431,6 @@ function fxWater() {
     V3 = new T.Vector3(),
     Dv = new T.Vector3(),
     Up = new T.Vector3();
-  let fr = 0;
   m.onBeforeRender = (rd, scn, cam) => {
     mat.uniforms.uTm.value = 7.3;
     mat.uniforms.uSun.value.copy(sunL.position).sub(sunL.target.position).normalize();
@@ -452,20 +451,9 @@ function fxWater() {
         });
         FX.rtOk = 0;
       }
-      let h0 = FX.wh;
-      {
-        const q = FX.wp;
-        let bd = 1e18;
-        for (let i = 0; i < q.length; i += 3) {
-          const dx = q[i] - V.tx,
-            dz = q[i + 1] - V.tz,
-            dd = dx * dx + dz * dz;
-          if (dd < bd) {
-            bd = dd;
-            h0 = q[i + 2];
-          }
-        }
-      }
+      // feste Spiegelebene auf mittlerer Wasserhöhe (früher: Höhe des Wasserpunkts am nächsten zum Blickziel –
+      // sprang beim Drehen/Verschieben und ließ die Spiegelung flackern)
+      const h0 = FX.wh;
       cam.updateMatrixWorld();
       V3.setFromMatrixPosition(cam.matrixWorld);
       cam.getWorldDirection(Dv);
@@ -478,7 +466,8 @@ function fxWater() {
       vc.projectionMatrix.copy(cam.projectionMatrix);
       vc.projectionMatrixInverse.copy(cam.projectionMatrixInverse);
       mat.uniforms.uTM.value.copy(bias).multiply(vc.projectionMatrix).multiply(vc.matrixWorldInverse);
-      if ((fr++ & 1) === 0 || !FX.rtOk) {
+      // jedes Bild neu: ein Bild altes Spiegelbild passt bei bewegter Kamera nicht zur Projektion (Flackern)
+      {
         const cur = rd.getRenderTarget(),
           sa = rd.shadowMap.autoUpdate,
           xr = rd.xr.enabled;

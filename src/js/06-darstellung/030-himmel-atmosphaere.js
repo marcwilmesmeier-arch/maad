@@ -27,8 +27,9 @@ const ATM = {
   sonneW: new T.Vector3(0, 1, 0), // Sonnenrichtung in maad-Weltkoordinaten
   maske: null,
   normalRT: null, // Normalenbild (eigener Durchgang, atmDurchgang)
-  varianten: { n: new WeakMap(), s: new WeakMap() }, // Ersatzmaterialien je Original
-  liste: [], // sichtbare Objekte für die Hilfsdurchgänge (alle 1 s neu)
+  varianten: { n: new WeakMap(), nf: new WeakMap(), s: new WeakMap() }, // Ersatzmaterialien je Original
+  liste: [],
+  flach: new WeakSet(), // Gebäude (Normalenbild mit Flächennormalen) // sichtbare Objekte für die Hilfsdurchgänge (alle 1 s neu)
   listeT: 0,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
@@ -324,8 +325,8 @@ function atmVariante(m, art) {
   let v = map.get(m);
   if (v) return v;
   v =
-    art === 'n'
-      ? new T.MeshNormalMaterial()
+    art === 'n' || art === 'nf'
+      ? new T.MeshNormalMaterial({ flatShading: art === 'nf' })
       : new T.ShadowMaterial({ color: 0xffffff, opacity: 1, transparent: false, blending: T.NoBlending });
   v.side = m.side;
   if (
@@ -360,6 +361,9 @@ function atmDurchgang(art, ziel, cm) {
       if (o !== sc && o !== ATM.himmelM && (o.isMesh || o.isLine || o.isPoints || o.isSprite))
         ATM.liste.push(o);
     });
+    // Gebäude: exakte Flächennormalen (gemittelte Normalen über First/Kanten ließen Dachseiten gleich hell wirken)
+    ATM.flach = new WeakSet();
+    G.buildings.traverse((o) => o.isMesh && ATM.flach.add(o));
   }
   const rt = ren.getRenderTarget(),
     cc = ren.getClearColor(new T.Color()),
@@ -375,8 +379,8 @@ function atmDurchgang(art, ziel, cm) {
       else if (o.userData.atmVar) o.material = o.userData.atmVar[art];
       else
         o.material = Array.isArray(o.material)
-          ? o.material.map((m) => atmVariante(m, art))
-          : atmVariante(o.material, art);
+          ? o.material.map((m) => atmVariante(m, art === 'n' && ATM.flach.has(o) ? 'nf' : art))
+          : atmVariante(o.material, art === 'n' && ATM.flach.has(o) ? 'nf' : art);
       if (art === 's' && o === S.skirt) o.receiveShadow = false; // Seitenwände: ohne Schatten (sonst Streifen)
     }
     ATM.himmelM.visible = false;
@@ -423,7 +427,7 @@ function atmRender(scn, cm) {
       ATM.maske.setSize(sz.x, sz.y);
       ATM.normalRT.setSize(sz.x, sz.y);
     }
-    wasVorher();
+    wasVorher(cm);
     atmDurchgang('n', ATM.normalRT, cm);
     atmDurchgang('s', ATM.maske, cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
