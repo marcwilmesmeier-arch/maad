@@ -271,8 +271,8 @@ function wiStromlinien3D(e, nah) {
       feld(i, j, k, v);
       const sp = Math.hypot(v[0], v[1], v[2]);
       if (sp < 0.004) break;
-      const st = 0.5 / sp;
-      if (n % 2 === 0) pfad.push(i, j, k, sp * skala);
+      const st = 0.4 / sp;
+      pfad.push(i, j, k, sp * skala); // jeder Schritt (½ Zelle): Strecken schneiden keine Gebäudeecken
       if (vor) ablenkung += Math.hypot(v[0] / sp - vor[0], v[1] / sp - vor[1], v[2] / sp - vor[2]);
       vor = [v[0] / sp, v[1] / sp, v[2] / sp];
       i += v[0] * st;
@@ -283,6 +283,9 @@ function wiStromlinien3D(e, nah) {
       if (i < 0 || j < 0 || i >= nx - 1 || j >= ny - 1 || k < 0.1 || k >= nz - 1) break;
       const z = (i | 0) + nx * ((j | 0) + ny * (k | 0));
       if (gt.fest[z]) break;
+      // gegen die echten Gebäude prüfen (das Gitter bildet sie nur in 3–5-m-Klötzen ab)
+      const [wx, wz] = gt.welt(i - 0.5, j - 0.5);
+      if (k * gt.dx < gt.hFein(wx, wz) + 0.5) break; // Punkt im Gebäude wird nicht mehr eingetragen
     }
     if (imKreis > 10 && pfad.length > 20) kand.push({ pfad, w: ablenkung });
   }

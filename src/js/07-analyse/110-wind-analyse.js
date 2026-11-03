@@ -104,7 +104,32 @@ function wiGitter() {
   // Einströmrand frei halten (Gebäude dort würden die Einströmung blockieren)
   for (let k = 0; k < nz; k++)
     for (let j = 0; j < ny; j++) for (let i = 0; i < 2; i++) fest[i + nx * (j + ny * k)] = 0;
-  return { nx, ny, nz, dx, fest, hoehe, f: [fx, fz], q: [qx, qz], welt };
+  // Feines Höhenraster (1 m, an den Weltachsen) aus den echten Grundrissen: Darstellungen (Stromlinien, Rauch)
+  // prüfen damit gegen die tatsächlichen Gebäude statt gegen die groben Gitterklötze
+  const fr = 1,
+    fh = Math.ceil(R),
+    fn = 2 * fh,
+    fein = new Float32Array(fn * fn),
+    fx0 = px - fh,
+    fz0 = pz - fh;
+  for (const b of nah) {
+    const i0 = Math.max(0, Math.floor((b.x0 - fx0) / fr)),
+      i1 = Math.min(fn - 1, Math.ceil((b.x1 - fx0) / fr)),
+      j0 = Math.max(0, Math.floor((b.z0 - fz0) / fr)),
+      j1 = Math.min(fn - 1, Math.ceil((b.z1 - fz0) / fr));
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++) {
+        const c = i + fn * j;
+        if (fein[c] < b.h && wiInnen(b.o, fx0 + (i + 0.5) * fr, fz0 + (j + 0.5) * fr)) fein[c] = b.h;
+      }
+  }
+  /** Gebäudehöhe an Weltpunkt (1-m-Raster), 0 außerhalb von Gebäuden. */
+  const hFein = (x, z) => {
+    const i = Math.floor((x - fx0) / fr),
+      j = Math.floor((z - fz0) / fr);
+    return i < 0 || j < 0 || i >= fn || j >= fn ? 0 : fein[i + fn * j];
+  };
+  return { nx, ny, nz, dx, fest, hoehe, f: [fx, fz], q: [qx, qz], welt, hFein };
 }
 
 /** Berechnung starten (Hintergrund-Thread). */

@@ -76,8 +76,8 @@ function wdWind(e) {
     bild++;
     for (let n = 0; n < N; n++) {
       const v = alt[n] < 8 ? wiFeld(px[n], pz[n]) : null;
-      if (!v || Math.hypot(v[0], v[1]) < 0.2) {
-        neu(n);
+      if (!v || Math.hypot(v[0], v[1]) < 0.2 || gt.hFein(px[n], pz[n]) > 0) {
+        neu(n); // kein Wind, außerhalb oder in einem Gebäude (echter Grundriss): neu starten
         continue;
       }
       const sp = Math.hypot(v[0], v[1]),
@@ -225,9 +225,21 @@ function wdRauch() {
         vz = u[3 * c + 2] * skala,
         sig = Math.max(0.15, ti[c] * skala, 0.18 * Math.hypot(vx, vy, vz)),
         s = (sig * Math.sqrt(dt)) / gt.dx;
+      const ai = pi[n],
+        aj = pj[n],
+        ak = pk[n];
       pi[n] += (vx * dt) / gt.dx + (Math.random() - 0.5) * 2 * s;
       pj[n] += (vy * dt) / gt.dx + (Math.random() - 0.5) * 2 * s;
       pk[n] = Math.abs(pk[n] + (vz * dt) / gt.dx + (Math.random() - 0.5) * 2 * s);
+      {
+        // nicht in echte Gebäude hinein (Grundriss 1 m): Schritt verwerfen
+        const [wx, wz] = gt.welt(pi[n] - 0.5, pj[n] - 0.5);
+        if (pk[n] * gt.dx < gt.hFein(wx, wz)) {
+          pi[n] = ai;
+          pj[n] = aj;
+          pk[n] = ak;
+        }
+      }
       const [x, z] = gt.welt(pi[n] - 0.5, pj[n] - 0.5),
         a = Math.min(1, alt[n]) * (1 - alt[n] / leben) * 0.55;
       pos.set([x, gh(x, z) + pk[n] * gt.dx, z], n * 3);
