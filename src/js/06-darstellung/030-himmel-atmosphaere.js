@@ -26,9 +26,10 @@ const ATM = {
   himmel: null, // SkyLightProbe (nur zur Berechnung des Himmelslichts)
   sonneW: new T.Vector3(0, 1, 0), // Sonnenrichtung in maad-Weltkoordinaten
   maske: null,
-  maskeM: null,
-  auflagen: [], // Flächen ohne Schattenwurf/-empfang (Karte, Straßen …), in der Schattenmaske ausgeblendet
-  auflagenT: 0,
+  normalRT: null, // Normalenbild (eigener Durchgang, atmDurchgang)
+  varianten: { n: new WeakMap(), s: new WeakMap() }, // Ersatzmaterialien je Original
+  liste: [], // sichtbare Objekte für die Hilfsdurchgänge (alle 1 s neu)
+  listeT: 0,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
   ref: 1, // Bezugshelligkeit der Sonne (hoher Sonnenstand), Einheit der Bibliothek
@@ -128,23 +129,14 @@ function atmAufbau(L) {
   ATM.himmelM.visible = false;
   ATM.himmelM.userData._ov = 1;
   sc.add(ATM.himmelM);
-  // Schattenmaske: Alpha = Anteil im Schatten (three.js ShadowMaterial)
-  // Beidseitig: maad hat viele beidseitig sichtbare Flächen (z. B. Seitenwände des Geländes)
-  ATM.maskeM = new T.ShadowMaterial({
-    color: 0,
-    opacity: 1,
-    transparent: false,
-    blending: T.NoBlending,
-    side: T.DoubleSide,
-  });
+  // Hilfsbilder (atmDurchgang): Schattenmaske (Alpha = Anteil im Schatten) und Normalenbild
   ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
-  // Normalen aus dem Tiefenbild des eigentlichen Bildes (stimmen so auch bei ausgeschnittenen Laubschalen,
-  // Rückseiten und maads eigenen Shadern; ein Normalen-Durchgang mit Ersatzmaterial entfällt)
-  ATM.ap.reconstructNormal = true;
+  ATM.normalRT = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType });
+  ATM.ap.normalBuffer = ATM.normalRT.texture;
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform mat4 uProjInv;\nuniform sampler2D tMaske;\n' +
+    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
@@ -152,9 +144,7 @@ function atmAufbau(L) {
       ')) * uK;\n' +
       '  a = max(mix(vec3(dot(a, vec3(0.2126, 0.7152, 0.0722))), a, uSat), vec3(0.0));\n' +
       '  float schatten = texture2D(tMaske, uv).a;\n' +
-      '  vec4 vp = uProjInv * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);\n' +
-      '  vp.xyz /= vp.w;\n' +
-      '  vec3 n = normalize(cross(dFdx(vp.xyz), dFdy(vp.xyz)));\n' +
+      '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
       '  float nl = max(dot(n, uSonneV), 0.0), oben = dot(n, uObenV);\n' +
       // Schätzung der Beleuchtung durch die Nachbearbeitung (Sonne + Himmel nach Neigung) …
       '  vec3 himmel = uHimmelC * (0.5 + 0.5 * oben);\n' +
@@ -181,7 +171,7 @@ function atmAufbau(L) {
         ['uHimmelC', new T.Uniform(new T.Vector3(0.2, 0.2, 0.2))],
         ['uBodenC', new T.Uniform(new T.Vector3(0.1, 0.1, 0.1))],
         ['tMaske', new T.Uniform(ATM.maske.texture)],
-        ['uProjInv', new T.Uniform(new T.Matrix4())],
+        ['tNormal', new T.Uniform(ATM.normalRT.texture)],
       ]),
     },
   );
@@ -318,46 +308,86 @@ function atmUmgebung() {
   );
 }
 
-/** Schattenmaske rendern: Szene mit ShadowMaterial, Alpha = Schatten (vor der Nachbearbeitung, gleiche Kamera). */
-function atmMaske(cm) {
+/**
+ * Ersatzmaterial für einen Hilfsdurchgang: 'n' = Normalen, 's' = Schattenmaske. Übernimmt Seite und die
+ * Shader-Erweiterung (onBeforeCompile) des Originals – so schneiden z. B. Laubschalen ihre Löcher auch hier aus.
+ */
+function atmVariante(m, art) {
+  const map = ATM.varianten[art];
+  let v = map.get(m);
+  if (v) return v;
+  v =
+    art === 'n'
+      ? new T.MeshNormalMaterial()
+      : new T.ShadowMaterial({ color: 0, opacity: 1, transparent: false, blending: T.NoBlending });
+  v.side = m.side;
+  if (
+    m.onBeforeCompile &&
+    !m.isShaderMaterial &&
+    m.onBeforeCompile !== T.Material.prototype.onBeforeCompile
+  ) {
+    // MeshNormalMaterial hat im Fragment-Shader kein #include <common>, an das maads Erweiterungen anknüpfen
+    v.onBeforeCompile = function (sh, r) {
+      if (!sh.fragmentShader.includes('#include <common>'))
+        sh.fragmentShader = '#include <common>\n' + sh.fragmentShader;
+      m.onBeforeCompile.call(this, sh, r);
+    };
+    v.customProgramCacheKey = () => art + '|' + m.customProgramCacheKey();
+  }
+  map.set(m, v);
+  return v;
+}
+
+/**
+ * Hilfsbild rendern (vor der Nachbearbeitung, gleiche Kamera): Normalenbild ('n') oder Schattenmaske ('s').
+ * Jedes Objekt bekommt sein Ersatzmaterial; Linien, Punkte und Beschriftungen sind dabei ausgeblendet.
+ * In der Maske außerdem ausgeblendet: Auflagen ohne Schattenwurf und -empfang (Karte, Straßen, Flurstücke), die
+ * sonst das Gelände als sonnig abdecken, und die Seitenwände des Geländes (Schattenkarte dort nur Streifen).
+ */
+function atmDurchgang(art, ziel, cm) {
+  const jetzt = performance.now();
+  if (jetzt - ATM.listeT > 1000) {
+    ATM.listeT = jetzt;
+    ATM.liste = [];
+    sc.traverseVisible((o) => {
+      if (o !== sc && o !== ATM.himmelM && (o.isMesh || o.isLine || o.isPoints || o.isSprite))
+        ATM.liste.push(o);
+    });
+  }
   const rt = ren.getRenderTarget(),
-    om = sc.overrideMaterial,
     cc = ren.getClearColor(new T.Color()),
     ca = ren.getClearAlpha(),
-    hv = ATM.himmelM.visible,
-    rand = S.skirt && S.skirt.visible,
     sh = sunL.shadow,
-    bias = [sh.bias, sh.normalBias];
+    bias = [sh.bias, sh.normalBias],
+    alt = [];
   try {
-    // Mehr Abstand als im normalen Bild: in der Maske wird Schatten voll abgedunkelt, Selbstbeschattung
-    // (Streifenmuster) fällt sonst stärker auf als bei maads eigener Beleuchtung
-    sh.bias = bias[0] * 2;
-    sh.normalBias = bias[1] * 2;
-    ATM.himmelM.visible = false;
-    if (S.skirt) S.skirt.visible = false; // Seitenwände des Geländes: Schattenkarte dort nur Streifen
-    // Auflagen (Karte, Straßen, Flurstücke …) liegen über dem Gelände und würden es in der Maske als sonnig abdecken
-    const jetzt = performance.now();
-    if (jetzt - ATM.auflagenT > 1000) {
-      ATM.auflagenT = jetzt;
-      ATM.auflagen = [];
-      sc.traverseVisible((o) => {
-        if (o.isMesh && !o.castShadow && !o.receiveShadow) ATM.auflagen.push(o);
-      });
+    for (const o of ATM.liste) {
+      const aus = !o.isMesh || (art === 's' && ((!o.castShadow && !o.receiveShadow) || o === S.skirt));
+      alt.push([o, o.visible, o.material]);
+      if (aus) o.visible = false;
+      else
+        o.material = Array.isArray(o.material)
+          ? o.material.map((m) => atmVariante(m, art))
+          : atmVariante(o.material, art);
     }
-    for (const o of ATM.auflagen) o.userData._atmV = o.visible;
-    for (const o of ATM.auflagen) o.visible = false;
-    sc.overrideMaterial = ATM.maskeM;
-    ren.setRenderTarget(ATM.maske);
-    ren.setClearColor(0x000000, 0);
+    ATM.himmelM.visible = false;
+    if (art === 's') {
+      // mehr Abstand als im normalen Bild: Selbstbeschattung (Streifen) fällt in der Maske stärker auf
+      sh.bias = bias[0] * 2;
+      sh.normalBias = bias[1] * 2;
+    }
+    ren.setRenderTarget(ziel);
+    if (art === 'n') ren.setClearColor(new T.Color(0.5, 0.5, 1), 1);
+    else ren.setClearColor(0x000000, 0);
     ren.clear();
     ren.render(sc, cm);
   } finally {
+    for (const [o, v, m] of alt) {
+      o.visible = v;
+      o.material = m;
+    }
     ren.setRenderTarget(rt);
     ren.setClearColor(cc, ca);
-    sc.overrideMaterial = om;
-    ATM.himmelM.visible = hv;
-    if (S.skirt) S.skirt.visible = rand;
-    for (const o of ATM.auflagen) if (o.userData._atmV !== undefined) o.visible = o.userData._atmV;
     sh.bias = bias[0];
     sh.normalBias = bias[1];
   }
@@ -379,10 +409,13 @@ function atmRender(scn, cm) {
       const c = ren.getSize(new T.Vector2());
       ATM.comp.setSize(c.x, c.y, false);
     }
-    if (ATM.maske.width !== sz.x || ATM.maske.height !== sz.y) ATM.maske.setSize(sz.x, sz.y);
-    atmMaske(cm);
+    if (ATM.maske.width !== sz.x || ATM.maske.height !== sz.y) {
+      ATM.maske.setSize(sz.x, sz.y);
+      ATM.normalRT.setSize(sz.x, sz.y);
+    }
+    atmDurchgang('n', ATM.normalRT, cm);
+    atmDurchgang('s', ATM.maske, cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
-    ATM.lin.uniforms.get('uProjInv').value.copy(cm.projectionMatrixInverse);
     ATM.lin.uniforms.get('uObenV').value.set(0, 1, 0).transformDirection(cm.matrixWorldInverse);
     ren.toneMappingExposure = S.atm.bel * brK();
     ATM.lin.uniforms.get('uSat').value = S.atm.sat ?? 0.85;
