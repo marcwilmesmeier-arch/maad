@@ -321,7 +321,8 @@ async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
       }
     }
     const B = pv.sv.u + (pv.sv.u.includes('?') ? '&' : '?'),
-      bb = [minx, miny, maxx, maxy].join(',');
+      bb = [minx, miny, maxx, maxy].join(','),
+      ax = pv.sv.ax || ['x', 'y']; // Achsennamen der Coverage (WCS 2.0), z. B. Hessen: E/N
     const tries = [
       'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=' +
         id +
@@ -349,17 +350,25 @@ async function dgmLoadBasis(lon, lat, size, cov = 'nw_dgm', lab = 'DGM1') {
         id +
         '&FORMAT=image/tiff&SUBSETTINGCRS=http://www.opengis.net/def/crs/EPSG/0/258' +
         zone +
-        '&SUBSET=x(' +
+        '&SUBSET=' +
+        ax[0] +
+        '(' +
         minx +
         ',' +
         maxx +
-        ')&SUBSET=y(' +
+        ')&SUBSET=' +
+        ax[1] +
+        '(' +
         miny +
         ',' +
         maxy +
-        ')&SCALESIZE=x(' +
+        ')&SCALESIZE=' +
+        ax[0] +
+        '(' +
         W +
-        '),y(' +
+        '),' +
+        ax[1] +
+        '(' +
         Hh +
         ')',
     ];

@@ -242,11 +242,13 @@ const TERR = {
     z: [33, 32],
     dgm: { u: 'https://isk.geobasis-bb.de/ows/dgm_wcs', g: 1 },
   },
+  // Hessen: INSPIRE-WCS 2.0 (Achsen E/N, GeoTIFF Float32), DGM1 und DOM1 je 1 m – Abruf geprüft
   he: {
     name: 'Hessen',
     src: '© HVBG, dl-de/zero-2-0',
     z: [32],
-    dgm: { u: 'https://inspire-hessen.de/raster/dgm1/ows', g: 1 },
+    dgm: { u: 'https://inspire-hessen.de/raster/dgm1/ows', id: 'he_dgm1', ax: ['E', 'N'] },
+    dom: { u: 'https://inspire-hessen.de/raster/dom1/ows', id: 'dom1', ax: ['E', 'N'] },
   },
   bw: {
     name: 'Baden-Württemberg',

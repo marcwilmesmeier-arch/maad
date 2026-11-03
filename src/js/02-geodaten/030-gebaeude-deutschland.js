@@ -150,6 +150,13 @@ const CG = {
       `https://geocloud.landesvermessung.sachsen.de/index.php/s/3XKFZqznzR2PrFk/download?path=%2F&files=lod2_33${E}_${N}_2_sn_citygml.zip`,
     ],
   },
+  // Hessen: LoD2 über OGC API Features (INSPIRE-Dienst, GeoJSON mit 3D-Flächen, Abfrage nach Ausschnitt) – geprüft
+  he: {
+    key: 'he',
+    name: 'Hessen',
+    src: '© HVBG, dl-de/by-2-0',
+    ogc: 'https://inspire-hessen.de/ows/datasets/org.2.eb6e9422-58e6-4867-942c-ba378d804481_ogcapi',
+  },
   be: {
     key: 'be',
     name: 'Berlin',
@@ -394,9 +401,17 @@ function cgBuilding(el, ctx) {
     }
   }
   if (!ok) return null;
-  const H = ctx.H,
-    cxm = sx / n,
-    czm = sy / n;
+  const m = el.getElementsByTagNameNS(GM, 'measuredHeight')[0],
+    fnn = el.getElementsByTagNameNS(GM, 'function')[0];
+  return cgBau(polys, sx / n, sy / n, ctx, { mh: m ? +m.textContent : 0, fn: fnn ? fnn.textContent : '' });
+}
+/**
+ * Gebäude aus 3D-Flächen aufbauen (gemeinsam für CityGML und GeoJSON/OGC API): Zuschnitt auf den Ausschnitt,
+ * Dreiecke, Grundriss, Höhe. polys: [{typ: 'g'|'r'|'w', ext: [[x, Höhe, z] …], holes}], cxm/czm: Mittelpunkt,
+ * extra: { mh: gemessene Höhe, fn: Gebäudefunktion, src: Quelle }.
+ */
+function cgBau(polys, cxm, czm, ctx, extra) {
+  const H = ctx.H;
   if (Math.abs(cxm) > H + 60 || Math.abs(czm) > H + 60) return null;
   // auf Kartenausschnitt zuschneiden
   const cl = [];
@@ -594,9 +609,7 @@ function cgBuilding(el, ctx) {
     });
   }
   if (!pos.length) return null;
-  let mh = 0;
-  const m = el.getElementsByTagNameNS(GM, 'measuredHeight')[0];
-  if (m) mh = +m.textContent;
+  let mh = extra.mh || 0;
   if (!(mh > 0)) mh = zmax - zmin;
   const fo = (gnd.length ? gnd : cl).reduce(
       (a, p) => {
@@ -605,8 +618,7 @@ function cgBuilding(el, ctx) {
       },
       { ar: -1 },
     ).p,
-    o = fo.ext.map((q) => [q[0], q[2]]),
-    fnn = el.getElementsByTagNameNS(GM, 'function')[0];
+    o = fo.ext.map((q) => [q[0], q[2]]);
   return {
     o,
     holes: [],
@@ -617,7 +629,126 @@ function cgBuilding(el, ctx) {
     gp,
     xr: cl.filter((p) => p.typ !== 'w').map((p) => p.ext.map((q) => [q[0], q[2]])),
     tris: { pos: new Float32Array(pos), nor: new Float32Array(nor) },
-    p: { bldg_function: fnn ? fnn.textContent : '', src: 'LoD2-CityGML' },
+    p: { bldg_function: extra.fn || '', src: extra.src || 'LoD2-CityGML' },
+  };
+}
+/**
+ * LoD2 über OGC API Features (z. B. Hessen): Gebäude und Gebäudeteile im Ausschnitt als GeoJSON mit 3D-Flächen
+ * (WGS84, Höhen über NHN). Flächen werden nach Neigung und Höhe als Boden, Dach oder Wand eingeordnet, Flächen, die
+ * in Gebäude und Gebäudeteil doppelt vorkommen, nur einmal übernommen; der Aufbau folgt dem CityGML-Weg (cgBau).
+ */
+async function ogcLod2Load(prov, lon, lat, size) {
+  const H = size / 2,
+    dLat = (H + 40) / 110574,
+    dLon = (H + 40) / (111320 * Math.cos((lat * Math.PI) / 180)),
+    bbox = [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map((v) => v.toFixed(6)).join(','),
+    ctx = { H, zone: 32 },
+    list = [],
+    errs = [],
+    gesehen = new Set(), // Flächen (gerundete Eckpunkte), um Doppelte zu überspringen
+    schl = (r) =>
+      r
+        .map((q) => q[0].toFixed(6) + ',' + q[1].toFixed(6) + ',' + q[2].toFixed(1))
+        .sort()
+        .join(';');
+  for (const coll of ['Building', 'BuildingPart']) {
+    let url = `${prov.ogc}/collections/${coll}/items?f=json&limit=1000&bbox=${bbox}`,
+      seite = 0;
+    while (url && seite++ < 30) {
+      gst(`Lade LoD2 ${prov.name} – ${coll === 'Building' ? 'Gebäude' : 'Gebäudeteile'}, Seite ${seite} …`);
+      let j;
+      try {
+        const r = await wfetch(url, 120000);
+        j = await r.json();
+      } catch (e) {
+        errs.push(String(e.message || e));
+        break;
+      }
+      for (const f of j.features || []) {
+        const g = f.geometry;
+        if (!g) continue;
+        const pgs = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+        let zmin = Infinity;
+        for (const pg of pgs) for (const q of pg[0]) zmin = Math.min(zmin, q[2]);
+        const polys = [];
+        let sx = 0,
+          sz = 0,
+          n = 0;
+        for (const pg of pgs) {
+          const k = schl(pg[0]);
+          if (gesehen.has(k)) continue;
+          gesehen.add(k);
+          const ringe = pg.map((r) => {
+            const pts = r.map(([lo, la, h]) => {
+              const xz = ll2xz(lo, la);
+              return [xz[0], h, xz[1]];
+            });
+            const a = pts[0],
+              b = pts.at(-1);
+            if (pts.length > 1 && a[0] === b[0] && a[1] === b[1] && a[2] === b[2]) pts.pop();
+            return pts;
+          });
+          if (ringe[0].length < 3) continue;
+          // Neigung aus der Flächennormalen (Newell): waagerecht unten = Boden, sonst geneigt/waagerecht = Dach
+          let nx = 0,
+            ny = 0,
+            nz = 0,
+            hm = 0;
+          const e = ringe[0];
+          for (let i = 0; i < e.length; i++) {
+            const p = e[i],
+              q = e[(i + 1) % e.length];
+            nx += (p[1] - q[1]) * (p[2] + q[2]);
+            ny += (p[2] - q[2]) * (p[0] + q[0]);
+            nz += (p[0] - q[0]) * (p[1] + q[1]);
+            hm += p[1];
+          }
+          hm /= e.length;
+          const neig = Math.abs(ny) / (Math.hypot(nx, ny, nz) || 1),
+            typ = neig > 0.95 && hm < zmin + 0.5 ? 'g' : neig > 0.15 ? 'r' : 'w';
+          polys.push({ typ, ext: e, holes: ringe.slice(1).filter((r) => r.length >= 3) });
+          for (const q of e) {
+            sx += q[0];
+            sz += q[2];
+            n++;
+          }
+        }
+        if (!polys.length) continue;
+        const pr = f.properties || {},
+          hag = pr.heightAboveGround && pr.heightAboveGround.HeightAboveGround,
+          cu = pr.currentUse && pr.currentUse.CurrentUse && pr.currentUse.CurrentUse.currentUse;
+        try {
+          const b = cgBau(polys, sx / n, sz / n, ctx, {
+            mh: hag && hag.value ? +hag.value.value : 0,
+            fn: cu && cu.href ? cu.href.split('/').pop() : '',
+            src: 'LoD2 ' + prov.name,
+          });
+          if (b) list.push(b);
+        } catch (e) {
+          errs.push('Auswertung: ' + e.message);
+        }
+      }
+      const next = (j.links || []).find((l) => l.rel === 'next');
+      url = next ? next.href : null;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+  if (!list.length)
+    return {
+      list: [],
+      msg:
+        `LoD2 ${prov.name} nicht geladen` +
+        (errs.length
+          ? ' (' + [...new Set(errs)].slice(0, 2).join('; ') + ')'
+          : ' (keine Gebäude in diesem Ausschnitt)') +
+        '.',
+    };
+  return {
+    list,
+    msg:
+      `LoD2 ${prov.name} (${prov.src}): ${list.length} Gebäude mit Dachformen` +
+      (errs.length ? ' – teilweise geladen' : '') +
+      '.',
   };
 }
 async function unzipGml(buf) {
@@ -663,6 +794,7 @@ async function unzipGml(buf) {
   return outs;
 }
 async function cityGmlLoad(prov, lon, lat, size) {
+  if (prov.ogc) return ogcLod2Load(prov, lon, lat, size);
   const sz = prov.sz || 1,
     zone = prov.zone || 32,
     [cx, cy] = ll2utm(lon, lat, zone),

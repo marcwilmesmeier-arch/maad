@@ -178,7 +178,15 @@ const ALS = {
     { u: 'https://gdi.berlin.de/services/wfs/liegenschaftsplan' },
   ],
   ni: [{ u: 'https://opendata.lgln.niedersachsen.de/doorman/noauth/alkis_wfs_einfach', g: 1 }],
-  he: [{ u: 'https://www.gds.hessen.de/wfs2/aaa-suite/cgi-bin/alkis/vereinf/wfs', g: 1 }],
+  // Hessen: ALKIS vereinfacht (gds.hessen.de ohne www – unter www gesperrt/umgeleitet), Abruf geprüft
+  he: [
+    {
+      u: 'https://gds.hessen.de/wfs2/aaa-suite/cgi-bin/alkis/vereinf/wfs',
+      t: 'ave:Flurstueck',
+      ns: AVE,
+      direkt: 1,
+    },
+  ],
   bw: [{ u: 'https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ALKIS', g: 1 }],
 };
 const ALQ = {
@@ -308,9 +316,18 @@ async function wfsParcels(sv, cx, cy, h) {
   const ac = new AbortController(),
     to = setTimeout(() => ac.abort(), 60000);
   try {
-    const r = await fetch(viaProxy(u), { signal: ac.signal });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return gmlParse(await r.text(), ty.loc);
+    // direkt: Dienst erlaubt Abrufe aus dem Browser (CORS) – erst direkt, bei Fehler über den Proxy
+    const wege = sv.direkt && GEO.proxy ? [u, viaProxy(u)] : [viaProxy(u)];
+    let fehler = null;
+    for (const w of wege)
+      try {
+        const r = await fetch(w, { signal: ac.signal });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return gmlParse(await r.text(), ty.loc);
+      } catch (e) {
+        fehler = e;
+      }
+    throw fehler;
   } finally {
     clearTimeout(to);
   }
