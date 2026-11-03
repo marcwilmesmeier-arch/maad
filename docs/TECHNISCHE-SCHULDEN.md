@@ -79,6 +79,11 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Komfortklassen nach mittlerer Geschwindigkeit bei einer Windrichtung; eine Bewertung über die Windstatistik des
   Standorts (Windrose, Überschreitungshäufigkeit nach Lawson) fehlt noch.
 - Emissionen: konstanter Wind, keine Abgasfahnenüberhöhung, keine Chemie/Ablagerung; Zusatzbelastung, kein Jahresmittel.
+- Straßenverkehr: Verkehrsaufkommen nach Straßenart (Voreinstellung) oder je Straße per Klick, ein Emissionsfaktor
+  für alle Straßen (Richtwert NOx); genauere Werte (Lkw-Anteil, Stau, HBEFA) noch nicht.
+- Qualm: Darstellung aus Teilchen im gemittelten Windfeld plus wanderndes Wirbelfeld nach örtlicher Turbulenz – zeigt
+  das Verhalten anschaulich, die Wirbel sind aber nicht einzeln berechnet (dafür bräuchte es eine zeitaufgelöste
+  Strömung).
 - Noch nicht im PDF-/Excel-Export und ohne eigenes Recht im Server (Freischaltung je Abo).
 - Windklima (Häufigkeit der Richtungen) kommt von Bright Sky (api.brightsky.dev, DWD-Stationsdaten, letztes volles
   Jahr). Der Abruf ist in der Entwicklungsumgebung gesperrt und nur mit Testdaten geprüft; im Browser des Nutzers

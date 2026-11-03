@@ -6,18 +6,27 @@
 
 const WD = { zeit: 3 };
 
-/** Weicher, runder Fleck als Textur für Rauchteilchen. */
+/** Wolkige Qualmflocke als Textur: mehrere weiche Flecken übereinander, Rand ausgeblendet. */
 function wdFleck() {
   if (WD.fleck) return WD.fleck;
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const x = c.getContext('2d'),
-    g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.5, 'rgba(255,255,255,.45)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = g;
-  x.fillRect(0, 0, 64, 64);
+  const c = document.createElement('canvas'),
+    N = 128;
+  c.width = c.height = N;
+  const x = c.getContext('2d');
+  let seed = 9;
+  const z = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let n = 0; n < 26; n++) {
+    const a = z() * Math.PI * 2,
+      r = Math.sqrt(z()) * N * 0.26,
+      px = N / 2 + Math.cos(a) * r,
+      py = N / 2 + Math.sin(a) * r,
+      rad = N * (0.12 + z() * 0.16),
+      g = x.createRadialGradient(px, py, 0, px, py, rad);
+    g.addColorStop(0, `rgba(255,255,255,${0.35 + z() * 0.3})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, N, N);
+  }
   WD.fleck = new T.CanvasTexture(c);
   return WD.fleck;
 }
@@ -154,68 +163,91 @@ function wdWind(e) {
   WI_G.add(l);
 }
 
-/** Rauchteilchen aus der Quelle im 3D-Feld. */
-function wdRauch() {
-  if (!EM.q || !WI.roh || !WI.gitter) return;
+/**
+ * Qualm wie Nebel: viele weiche, sich drehende Flocken, die aus den Quellen (Straßen, Punktquelle) aufsteigen, im
+ * 3D-Windfeld verweht und zufällig verwirbelt werden, mit dem Alter wachsen und verblassen. Wo sich die Abgase
+ * sammeln, überlagern sich die Flocken – der Qualm wird dort dichter. Startpunkte nach Emissionsstärke gewichtet.
+ */
+function wdQualm() {
+  if (!WI.roh || !WI.gitter) return;
   const gt = WI.gitter,
-    N = 600,
-    leben = 40, // s
+    { nx, ny, nz } = gt,
+    strassen = S.em.art === 'strassen' && EM.strassen && EM.strassen.quellen.length,
+    N = strassen ? 3500 : 900,
+    leben = strassen ? 45 : 40, // s
     skala = S.wi.v / WI_U10,
-    [qi, qj] = emGitter(EM.q[0], EM.q[1]),
-    qk = (EM.hoehe || (S.em.art === 'kfz' ? 0.5 : S.em.hoehe)) / gt.dx,
-    pi = new Float32Array(N),
+    u = WI.roh.u,
+    ti = WI.roh.ti;
+  // Quellen [i, j, k, Gewicht] (Gitterkoordinaten) mit Summenfunktion zum Ziehen
+  let Q;
+  if (strassen) Q = EM.strassen.quellen;
+  else {
+    if (!EM.q) return;
+    const [qi, qj] = emGitter(EM.q[0], EM.q[1]);
+    Q = Float32Array.of(qi, qj, (EM.hoehe || (S.em.art === 'kfz' ? 0.5 : S.em.hoehe)) / gt.dx, 1);
+  }
+  const nq = Q.length / 4,
+    kum = new Float64Array(nq);
+  let sum = 0;
+  for (let n = 0; n < nq; n++) kum[n] = sum += Q[4 * n + 3];
+  const pi = new Float32Array(N),
     pj = new Float32Array(N),
     pk = new Float32Array(N),
     alt = new Float32Array(N),
     pos = new Float32Array(N * 3),
-    col = new Float32Array(N * 4);
+    gr = new Float32Array(N), // Größe in m
+    al = new Float32Array(N), // Deckkraft
+    rot = new Float32Array(N); // Drehung
+  const streu = strassen ? 0.6 : S.em.art === 'kfz' ? 0.5 : 0.1;
   const neu = (n) => {
-    pi[n] = qi + (Math.random() - 0.5) * (S.em.art === 'kfz' ? 2 : 0.3);
-    pj[n] = qj + (Math.random() - 0.5) * (S.em.art === 'kfz' ? 2 : 0.3);
-    pk[n] = qk;
+    const z = Math.random() * sum;
+    let lo = 0,
+      hi = nq - 1;
+    while (lo < hi) {
+      const m = (lo + hi) >> 1;
+      if (kum[m] < z) lo = m + 1;
+      else hi = m;
+    }
+    pi[n] = Q[4 * lo] + (Math.random() - 0.5) * 2 * streu;
+    pj[n] = Q[4 * lo + 1] + (Math.random() - 0.5) * 2 * streu;
+    pk[n] = Q[4 * lo + 2];
     alt[n] = 0;
+    rot[n] = Math.random() * Math.PI * 2;
   };
-  for (let n = 0; n < N; n++) {
-    neu(n);
-    alt[n] = -Math.random() * leben; // gestaffelter Start
-  }
+  for (let n = 0; n < N; n++) neu(n);
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(pos, 3));
-  g.setAttribute('color', new T.BufferAttribute(col, 4));
-  const p = new T.Points(
-    g,
-    new T.PointsMaterial({
-      map: wdFleck(),
-      size: 6,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-    }),
-  );
+  g.setAttribute('aGr', new T.BufferAttribute(gr, 1));
+  g.setAttribute('aAl', new T.BufferAttribute(al, 1));
+  g.setAttribute('aRot', new T.BufferAttribute(rot, 1));
+  const mat = new T.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      tF: { value: wdFleck() },
+      uSkala: { value: 400 },
+      uFarbe: { value: new T.Color(0.42, 0.42, 0.45) }, // Abgasgrau, auf hellen Flächen sichtbar
+    },
+    vertexShader:
+      'attribute float aGr,aAl,aRot;uniform float uSkala;varying float vAl,vRot;' +
+      'void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;' +
+      'gl_PointSize=min(512.,aGr*uSkala/max(1.,-mv.z));vAl=aAl;vRot=aRot;}',
+    fragmentShader:
+      'uniform sampler2D tF;uniform vec3 uFarbe;varying float vAl,vRot;' +
+      'void main(){vec2 p=gl_PointCoord-.5;float c=cos(vRot),s=sin(vRot);p=mat2(c,-s,s,c)*p+.5;' +
+      'float a=texture2D(tF,p).a*vAl;if(a<.004)discard;gl_FragColor=vec4(uFarbe,a);}',
+  });
+  const p = new T.Points(g, mat);
   p.frustumCulled = false;
   p.raycast = () => {};
   p.renderOrder = 5;
-  const u = WI.roh.u,
-    ti = WI.roh.ti,
-    { nx, ny, nz } = gt;
-  const uhr = {};
-  let vorlauf = Math.ceil(leben / 0.5); // Fahne beim Aufbau einmal vollständig vorrechnen
-  p.onBeforeRender = () => {
-    if (vorlauf > 0) {
-      const dt0 = 0.5;
-      while (vorlauf-- > 0) schritt(dt0);
-      return;
-    }
-    schritt(wdDt(uhr));
-  };
+  const uhr = {},
+    v3 = new T.Vector2();
+  let zeit = 0;
   const schritt = (dt) => {
+    zeit += dt;
     for (let n = 0; n < N; n++) {
       alt[n] += dt;
-      if (alt[n] < 0) {
-        col[n * 4 + 3] = 0;
-        continue;
-      }
       if (alt[n] > leben || pi[n] < 0 || pj[n] < 0 || pi[n] >= nx || pj[n] >= ny || pk[n] >= nz) neu(n);
       const c =
           Math.min(nx - 1, pi[n] | 0) +
@@ -224,29 +256,54 @@ function wdRauch() {
         vy = u[3 * c + 1] * skala,
         vz = u[3 * c + 2] * skala,
         sig = Math.max(0.15, ti[c] * skala, 0.18 * Math.hypot(vx, vy, vz)),
-        s = (sig * Math.sqrt(dt)) / gt.dx;
-      const ai = pi[n],
+        s = (sig * Math.sqrt(dt)) / gt.dx,
+        ai = pi[n],
         aj = pj[n],
         ak = pk[n];
-      pi[n] += (vx * dt) / gt.dx + (Math.random() - 0.5) * 2 * s;
-      pj[n] += (vy * dt) / gt.dx + (Math.random() - 0.5) * 2 * s;
-      pk[n] = Math.abs(pk[n] + (vz * dt) / gt.dx + (Math.random() - 0.5) * 2 * s);
-      {
-        // nicht in echte Gebäude hinein (Grundriss 1 m): Schritt verwerfen
-        const [wx, wz] = gt.welt(pi[n] - 0.5, pj[n] - 0.5);
-        if (pk[n] * gt.dx < gt.hFein(wx, wz)) {
-          pi[n] = ai;
-          pj[n] = aj;
-          pk[n] = ak;
-        }
+      // Wirbel, die sich ablösen und durchziehen: divergenzfreies Rauschfeld (Rotation einer Stromfunktion), das
+      // sich mit der Zeit verschiebt und dessen Stärke der örtlichen Turbulenz folgt. Zusammen mit den gemittelten
+      // Wirbeln des Windfelds kreist der Qualm an Straßenmündungen, Ecken und auf Plätzen.
+      const ax = pi[n] * 0.55 - zeit * 0.35,
+        ay = pj[n] * 0.55 + zeit * 0.21,
+        // psi = sin(ax)·cos(ay) + 0,5·sin(1,7·ay + 0,8·ax)  ->  (∂psi/∂y, −∂psi/∂x)
+        wx0 = -Math.sin(ax) * Math.sin(ay) + 0.85 * Math.cos(1.7 * ay + 0.8 * ax),
+        wy0 = -(Math.cos(ax) * Math.cos(ay) + 0.4 * Math.cos(1.7 * ay + 0.8 * ax)),
+        wirb = sig * 1.4;
+      // Transport im Windfeld, Verwirbelung (Wirbel + Zufallsweg), leichter Auftrieb warmer Abgase am Anfang
+      pi[n] += ((vx + wx0 * wirb) * dt) / gt.dx + (Math.random() - 0.5) * 2 * s * 0.6;
+      pj[n] += ((vy + wy0 * wirb) * dt) / gt.dx + (Math.random() - 0.5) * 2 * s * 0.6;
+      pk[n] = Math.abs(pk[n] + ((vz + (alt[n] < 4 ? 0.3 : 0)) * dt) / gt.dx + (Math.random() - 0.5) * 2 * s);
+      const [wx, wz] = gt.welt(pi[n] - 0.5, pj[n] - 0.5);
+      if (pk[n] * gt.dx < gt.hFein(wx, wz)) {
+        // nicht in echte Gebäude hinein
+        pi[n] = ai;
+        pj[n] = aj;
+        pk[n] = ak;
       }
       const [x, z] = gt.welt(pi[n] - 0.5, pj[n] - 0.5),
-        a = Math.min(1, alt[n]) * (1 - alt[n] / leben) * 0.55;
-      pos.set([x, gh(x, z) + pk[n] * gt.dx, z], n * 3);
-      col.set([0.42, 0.4, 0.38, a], n * 4);
+        t = alt[n] / leben;
+      pos[3 * n] = x;
+      pos[3 * n + 1] = gh(x, z) + pk[n] * gt.dx;
+      pos[3 * n + 2] = z;
+      gr[n] = 3 + t * (strassen ? 11 : 14); // wächst mit dem Alter
+      al[n] = Math.min(1, alt[n] * 1.5) * (1 - t) * (strassen ? 0.22 : 0.3);
+      rot[n] += dt * 0.15 * (n % 2 ? 1 : -1); // langsames Drehen: Verwirbelung im Bild
     }
     g.attributes.position.needsUpdate = true;
-    g.attributes.color.needsUpdate = true;
+    g.attributes.aGr.needsUpdate = true;
+    g.attributes.aAl.needsUpdate = true;
+    g.attributes.aRot.needsUpdate = true;
+  };
+  // gestaffelt vorrechnen, damit der Qualm sofort ausgebildet ist
+  for (let n = 0; n < N; n++) alt[n] = Math.random() * leben;
+  for (let t = 0; t < 40; t++) schritt(0.5);
+  p.onBeforeRender = (r, scn, cam) => {
+    // Punktgröße in Pixeln: Höhe des Bildes / (2·tan(Blickwinkel/2))
+    const h = r.getDrawingBufferSize(v3).y;
+    mat.uniforms.uSkala.value = cam.isPerspectiveCamera
+      ? h / (2 * Math.tan((cam.fov * Math.PI) / 360))
+      : h / 2;
+    schritt(wdDt(uhr));
   };
   WI_G.add(p);
 }

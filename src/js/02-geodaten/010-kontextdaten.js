@@ -535,7 +535,7 @@ function ctxCollect(tiles) {
               : 'roads';
         if (f.type === 2) {
           const w = k === 'cycle' ? 2.2 : c === 'path' ? (s === 'steps' ? 1.5 : 1.8) : WR[c] || 5;
-          for (const r of f.rings) acc.line[k].push({ l: cv(r, R.ext), w });
+          for (const r of f.rings) acc.line[k].push({ l: cv(r, R.ext), w, c }); // c: Straßenart (z. B. für Emissionen)
         } else if (f.type === 3 && k === 'paths')
           for (const pg of polys(f.rings)) acc.fill.paths.push(pg.map((r) => cv(r, R.ext)));
       }

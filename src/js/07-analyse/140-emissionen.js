@@ -9,8 +9,9 @@
 
 /**
  * @param {{nx:number, ny:number, nz:number, dx:number, fest:Uint8Array, u:Float32Array, ti:Float32Array,
- *          skala:number, quelle:number[], rate:number, streu:number, dauer:number, dt:number, proSchritt:number,
- *          seed:number}} a  u/ti in Gittereinheiten, skala: m/s je Gittereinheit, quelle: [i, j, k] (Zellen),
+ *          skala:number, quelle?:number[], quellen?:Float32Array, rate:number, streu:number, dauer:number,
+ *          dt:number, proSchritt:number, seed:number}} a  u/ti in Gittereinheiten, skala: m/s je Gittereinheit,
+ *          quelle: [i, j, k] (Zellen) oder quellen: [i, j, k, Gewicht, …] (z. B. Straßenabschnitte),
  *          rate: g/s, streu: Quellbreite in Zellen, dauer/dt in s
  * @returns {{c:Float32Array, punkte:Float32Array, n:number}} c: µg/m³ je Bodenzelle, punkte: Teilchen [i, j, k] …
  */
@@ -34,14 +35,33 @@ function wiAusbreitung(a, fortschritt) {
       kk = Math.min(nz - 1, Math.max(0, k | 0));
     return ii + nx * (jj + ny * kk);
   };
+  // Mehrere Quellen: a.quellen = [i, j, k, Gewicht, …] (Gesamtrate a.rate wird nach Gewicht verteilt)
+  const Q = a.quellen || null,
+    nq = Q ? Q.length / 4 : 0,
+    kum = new Float64Array(nq);
+  let summe = 0;
+  for (let n = 0; n < nq; n++) kum[n] = summe += Q[4 * n + 3];
   const masse = (a.rate * a.dt) / a.proSchritt, // g je Teilchen
     dtz = a.dt / dx; // Zeitschritt in Zellen je (m/s)
   for (let t = 0; t < schritte; t++) {
     for (let n = 0; n < a.proSchritt; n++) {
       const p = anzahl++;
-      px[p] = a.quelle[0] + normal() * a.streu;
-      py[p] = a.quelle[1] + normal() * a.streu;
-      pz[p] = a.quelle[2];
+      let q = a.quelle;
+      if (Q) {
+        // mehrere Quellen (Straßenabschnitte): Startpunkt nach Gewicht ziehen
+        const z = zufall() * summe;
+        let lo = 0,
+          hi = nq - 1;
+        while (lo < hi) {
+          const m = (lo + hi) >> 1;
+          if (kum[m] < z) lo = m + 1;
+          else hi = m;
+        }
+        q = [Q[4 * lo], Q[4 * lo + 1], Q[4 * lo + 2]];
+      }
+      px[p] = q[0] + normal() * a.streu;
+      py[p] = q[1] + normal() * a.streu;
+      pz[p] = q[2];
       lebt[p] = 1;
     }
     const zaehlen = t >= anlauf;
@@ -97,7 +117,65 @@ function wiAusbreitungHaupt() {
 }
 
 // ---- Bedienung und Ablauf ----
-S.em = { art: 'kfz', hoehe: 15, rate: 0.01, flaeche: true, punkte: true };
+S.em = {
+  art: 'strassen',
+  hoehe: 15,
+  rate: 0.01,
+  flaeche: true,
+  punkte: true,
+  // Straßenverkehr: Kfz je Tag (DTV) nach Straßenart, Emissionsfaktor g NOx je Fahrzeug-km, Werte je Straße
+  dtv: { haupt: 25000, sammel: 10000, anlieger: 1500, zufahrt: 200 },
+  ef: 0.25,
+  dtvStr: {},
+};
+// Straßenarten (Kartendaten: class der OpenMapTiles-Ebene transportation), ohne Angabe nach Breite
+const EM_STRASSEN = [
+  ['haupt', 'Hauptverkehrsstraße', ['motorway', 'trunk', 'primary']],
+  ['sammel', 'Sammelstraße', ['secondary', 'tertiary']],
+  ['anlieger', 'Anliegerstraße', ['minor', 'residential', 'unclassified', 'living_street']],
+  ['zufahrt', 'Zufahrt, Parkplatz', ['service', 'busway']],
+];
+/** Straßenart einer Kartenlinie. */
+function emArt(r) {
+  for (const [k, , cs] of EM_STRASSEN) if (r.c && cs.includes(r.c)) return k;
+  return r.w >= 10 ? 'haupt' : r.w >= 7 ? 'sammel' : r.w >= 5 ? 'anlieger' : 'zufahrt';
+}
+const emSchl = (r) => r.l[0][0].toFixed(1) + ',' + r.l[0][1].toFixed(1); // Schlüssel je Straße (Startpunkt)
+/** Verkehrsaufkommen (Kfz/Tag) einer Straße: eigener Wert oder Vorgabe der Straßenart. */
+const emDtv = (r) => S.em.dtvStr[emSchl(r)] ?? S.em.dtv[emArt(r)];
+
+/**
+ * Straßen im Rechenfenster als Linienquellen: alle 2 m ein Quellpunkt in 0,5 m Höhe, Gewicht = Kfz/Tag × 2 m.
+ * Gesamtrate (g/s) = Σ Kfz/Tag × Länge (km) × Emissionsfaktor (g/km) / 86 400 s.
+ */
+function emStrassen(gt) {
+  const roads = (GEO.acc && GEO.acc.line && GEO.acc.line.roads) || [],
+    q = [],
+    abschnitte = [];
+  let km = 0;
+  for (const r of roads) {
+    const dtv = emDtv(r);
+    if (!(dtv > 0)) continue;
+    for (let n = 0; n + 1 < r.l.length; n++) {
+      const [x0, z0] = r.l[n],
+        [x1, z1] = r.l[n + 1],
+        L = Math.hypot(x1 - x0, z1 - z0),
+        m = Math.max(1, Math.round(L / 2));
+      let drin = false;
+      for (let t = 0; t < m; t++) {
+        const x = x0 + ((x1 - x0) * (t + 0.5)) / m,
+          z = z0 + ((z1 - z0) * (t + 0.5)) / m,
+          [i, j] = emGitter(x, z);
+        if (i < 1.5 || j < 1.5 || i > gt.nx - 1.5 || j > gt.ny - 1.5 || gt.hFein(x, z) > 0) continue;
+        q.push(i, j, 0.5 / gt.dx, dtv * (L / m));
+        km += (L / m / 1000) * dtv;
+        drin = true;
+      }
+      if (drin) abschnitte.push([x0, z0, x1, z1, dtv, r]);
+    }
+  }
+  return { quellen: Float32Array.from(q), rate: (km * S.em.ef) / 86400, abschnitte };
+}
 // Startwerte der Emissionsrate je Quellenart (grobe Größenordnung NOx, g/s)
 const EM_RATE = { kfz: 0.01, schornstein: 0.03 };
 const EM = { q: null, st: 'aus', anteil: 0, erg: null, fehler: '', worker: null, nachWind: false };
@@ -141,6 +219,17 @@ function emWahl() {
 
 /** Liegt die Quelle im berechneten Windfeld (mit Abstand zum Rand)? Sonst Wind um die Quelle neu rechnen. */
 function emStarten() {
+  if (S.em.art === 'strassen') {
+    // Straßen im Analysebereich: zuerst Wind (falls noch nicht berechnet), dann Ausbreitung
+    if (!WI.p) return;
+    if (!WI.roh) {
+      EM.nachWind = true;
+      wiStarten();
+      return;
+    }
+    emRechnen();
+    return;
+  }
   if (!EM.q) return;
   const gt = WI.gitter,
     innen = (() => {
@@ -173,6 +262,7 @@ function emGitter(x, z) {
 function emRechnen() {
   const gt = WI.gitter,
     s = S.em;
+  if (s.art === 'strassen') return emRechnenStrassen(gt);
   let [i, j] = emGitter(EM.q[0], EM.q[1]),
     hoehe = s.art === 'kfz' ? 0.5 : s.hoehe;
   const dach = gt.hoehe[Math.min(gt.nx - 1, i | 0) + gt.nx * Math.min(gt.ny - 1, j | 0)] || 0;
@@ -203,6 +293,28 @@ function emRechnen() {
     EM.hinweis = 'Quelle lag auf einem Gebäude und wurde auf die nächste freie Fläche verschoben.';
   }
   EM.hoehe = hoehe;
+  emWorker(gt, {
+    quelle: [i, j, hoehe / gt.dx],
+    rate: s.rate,
+    streu: s.art === 'kfz' ? 1.2 : 0.2, // Kfz: verteilt über die Fahrbahn
+    proSchritt: 6,
+  });
+}
+function emRechnenStrassen(gt) {
+  const st = emStrassen(gt);
+  EM.strassen = st;
+  EM.hinweis = '';
+  if (!st.quellen.length) {
+    EM.st = 'fehler';
+    EM.fehler = 'Im Analysebereich liegen keine Straßen (Kartendaten).';
+    rr();
+    return;
+  }
+  EM.hinweis = `${st.abschnitte.length} Straßenabschnitte, zusammen ${(st.rate * 1000).toFixed(1).replace('.', ',')} mg/s.`;
+  emWorker(gt, { quellen: st.quellen, rate: st.rate, streu: 0.6, proSchritt: 24 });
+}
+/** Ausbreitung im Hintergrund-Thread starten (Punkt- oder Linienquellen). */
+function emWorker(gt, q) {
   const skala = S.wi.v / WI_U10,
     dauer = Math.min(900, (gt.nx * gt.dx * 2.5) / Math.max(1, S.wi.v * 0.5));
   EM.st = 'rechnet';
@@ -243,27 +355,82 @@ function emRechnen() {
     u: WI.roh.u,
     ti: WI.roh.ti,
     skala,
-    quelle: [i, j, hoehe / gt.dx],
-    rate: s.rate,
-    streu: s.art === 'kfz' ? 1.2 : 0.2, // Kfz: verteilt über die Fahrbahn
     dauer,
     dt: 0.5,
-    proSchritt: 6,
     seed: 7,
+    ...q,
   });
 }
 function emSet(k, v) {
-  if (k === 'art' && v !== S.em.art) S.em.rate = EM_RATE[v];
-  S.em[k] = v;
+  if (k === 'art' && v !== S.em.art) {
+    if (EM_RATE[v]) S.em.rate = EM_RATE[v];
+    EM.erg = null;
+  }
+  if (k.startsWith('dtv.')) S.em.dtv[k.slice(4)] = v;
+  else S.em[k] = v;
   if (k === 'flaeche' || k === 'punkte') wiZeichnen();
-  else if (EM.q && EM.erg && WI.roh) emRechnen();
+  else if (EM.erg && WI.roh && (S.em.art === 'strassen' || EM.q)) emRechnen();
+  else wiZeichnen();
+  rr();
+}
+
+/** Straße anklicken und ihr Verkehrsaufkommen (Kfz/Tag) eintragen. */
+function emStrasseWahl() {
+  EM.st = 'strasse';
+  const el = ren.domElement,
+    klick = (ev) => {
+      el.removeEventListener('click', klick, true);
+      ev.stopPropagation();
+      ev.preventDefault();
+      EM.st = EM.erg ? 'fertig' : 'aus';
+      const r = el.getBoundingClientRect(),
+        rc = new T.Raycaster();
+      rc.setFromCamera(
+        new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1),
+        act(),
+      );
+      const hit = rc.intersectObjects([G.terrain], true)[0];
+      if (!hit) return rr();
+      // nächste Straße (Abstand Punkt–Strecke) innerhalb von 15 m
+      const px = hit.point.x,
+        pz = hit.point.z;
+      let best = null,
+        bd = 15;
+      for (const rd of (GEO.acc && GEO.acc.line && GEO.acc.line.roads) || [])
+        for (let n = 0; n + 1 < rd.l.length; n++) {
+          const [x0, z0] = rd.l[n],
+            [x1, z1] = rd.l[n + 1],
+            dx = x1 - x0,
+            dz = z1 - z0,
+            t = Math.max(0, Math.min(1, ((px - x0) * dx + (pz - z0) * dz) / (dx * dx + dz * dz || 1))),
+            d = Math.hypot(px - x0 - t * dx, pz - z0 - t * dz);
+          if (d < bd) {
+            bd = d;
+            best = rd;
+          }
+        }
+      if (!best) {
+        rr();
+        return;
+      }
+      const name = EM_STRASSEN.find((x) => x[0] === emArt(best))[1],
+        e = prompt(`Verkehrsaufkommen dieser Straße (${name}) in Kfz pro Tag:`, String(emDtv(best)));
+      if (e != null && e.trim() !== '' && +e >= 0) {
+        S.em.dtvStr[emSchl(best)] = Math.round(+e);
+        if (EM.erg && WI.roh) emRechnen();
+        else wiZeichnen();
+      }
+      rr();
+    };
+  el.addEventListener('click', klick, true);
   rr();
 }
 
 /** Darstellung: Konzentrationsfläche und Teilchenwolke (Punkte). Aufruf aus wiZeichnen(). */
 function emZeichnen() {
   const e = EM.erg;
-  if (EM.q) {
+  if (S.em.art === 'strassen' && WI.gitter && WI.p) emStrassenZeichnen();
+  if (EM.q && S.em.art !== 'strassen') {
     // Quelle: Kfz als flache Scheibe auf der Straße, Schornstein als kurzer Kamin bis zur Mündung
     const kfz = S.em.art === 'kfz',
       top = kfz ? 0.3 : EM.hoehe || S.em.hoehe,
@@ -313,61 +480,73 @@ function emZeichnen() {
     m.renderOrder = 2;
     WI_G.add(m);
   }
-  if (S.em.punkte && drReal())
-    wdRauch(); // bewegter Rauch
-  else if (S.em.punkte && e.punkte.length) {
-    const n = e.punkte.length / 3,
-      pos = new Float32Array(n * 3);
-    for (let p = 0; p < n; p++) {
-      const [x, z] = gt.welt(e.punkte[3 * p] - 0.5, e.punkte[3 * p + 1] - 0.5);
-      pos[3 * p] = x;
-      pos[3 * p + 1] = gh(x, z) + e.punkte[3 * p + 2] * gt.dx;
-      pos[3 * p + 2] = z;
-    }
-    const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.BufferAttribute(pos, 3));
-    const pt = new T.Points(
-      g,
-      new T.PointsMaterial({
-        color: 0x4a3f38,
-        size: 2.2,
-        sizeAttenuation: true,
-        transparent: true,
-        opacity: 0.6,
-      }),
-    );
-    pt.raycast = () => {};
-    WI_G.add(pt);
+  if (S.em.punkte) wdQualm(); // bewegter Qualm (alle Darstellungen)
+}
+
+/** Straßen als Quellen: Linien knapp über der Fahrbahn, Farbe nach Verkehrsaufkommen (gelb wenig, rot viel). */
+function emStrassenZeichnen() {
+  const st = WI.roh ? emStrassen(WI.gitter) : null;
+  if (!st || !st.abschnitte.length) return;
+  const pos = [],
+    farbe = [],
+    col = new T.Color(),
+    wenig = new T.Color('#e8c547'),
+    viel = new T.Color('#b3261e');
+  for (const [x0, z0, x1, z1, dtv] of st.abschnitte) {
+    col.copy(wenig).lerp(viel, Math.min(1, Math.log10(Math.max(100, dtv) / 100) / 2.6));
+    pos.push(x0, gh(x0, z0) + 0.8, z0, x1, gh(x1, z1) + 0.8, z1);
+    farbe.push(col.r, col.g, col.b, col.r, col.g, col.b);
   }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new T.Float32BufferAttribute(farbe, 3));
+  const l = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true }));
+  l.raycast = () => {};
+  l.renderOrder = 6;
+  WI_G.add(l);
 }
 
 /** Panel-Abschnitt „Emissionen“. */
 function emPanel() {
   const s = S.em,
     e = EM.erg;
-  let h = `<div class="card"><b>Emissionen</b><div class="dmu" style="margin:4px 0 8px">Ausbreitung von Abgasen einer Quelle im berechneten Windfeld (konstanter Wind, ohne Chemie). Liegt die Quelle außerhalb des Windfensters, wird der Wind zuerst um sie berechnet.</div>`;
+  let h = `<div class="card"><b>Emissionen</b><div class="dmu" style="margin:4px 0 8px">Ausbreitung von Abgasen im berechneten Windfeld (konstanter Wind, ohne Chemie): Straßenverkehr im Analysebereich oder eine einzelne Quelle.</div>`;
   h += `<div style="display:flex;gap:4px;margin-bottom:6px">${[
+    ['strassen', 'Straßenverkehr'],
+    ['kfz', 'Kfz-Punkt'],
     ['schornstein', 'Schornstein'],
-    ['kfz', 'Kfz-Abgase'],
   ]
     .map(
       ([k, n]) => `<button class="sm ${s.art === k ? 'on' : ''}" onclick="emSet('art','${k}')">${n}</button>`,
     )
     .join('')}</div>`;
-  if (s.art === 'schornstein')
-    h += `<label style="display:block;font-size:12px">Höhe der Mündung über Gelände <input type="number" min="2" max="150" step="1" value="${s.hoehe}" style="width:60px" onchange="emSet('hoehe',+this.value)"> m</label>`;
-  h += `<label style="display:block;font-size:12px;margin-top:4px">Emissionsrate <input type="number" min="0.001" step="0.01" value="${s.rate}" style="width:70px" onchange="emSet('rate',+this.value)"> g/s</label><div class="dmu">Rate des betrachteten Stoffs (z. B. NOx) – am besten aus Anlagen- oder Verkehrsdaten. Grobe Größenordnung NOx: stark befahrene Straße (~20.000 Kfz/Tag) ≈ 0,01 g/s je 100 m, Heizung Mehrfamilienhaus ≈ 0,01–0,05 g/s.</div>`;
+  if (s.art === 'strassen') {
+    h += `<div style="font-size:12px">Verkehrsaufkommen nach Straßenart (Kfz/Tag):</div>`;
+    h += EM_STRASSEN.map(
+      ([k, n]) =>
+        `<label style="display:flex;gap:6px;align-items:center;font-size:12px;margin-top:3px"><span style="flex:1">${n}</span><input type="number" min="0" step="100" value="${s.dtv[k]}" style="width:78px" onchange="emSet('dtv.${k}',+this.value)"></label>`,
+    ).join('');
+    const eigene = Object.keys(s.dtvStr).length;
+    h += `<div style="display:flex;gap:6px;margin-top:6px;align-items:center"><button class="sm ${EM.st === 'strasse' ? 'on' : ''}" onclick="emStrasseWahl()">${EM.st === 'strasse' ? 'Straße anklicken …' : 'Straße einzeln festlegen'}</button>${eigene ? `<span class="dmu">${eigene} eigene Werte <a href="#" onclick="S.em.dtvStr={};emSet('ef',S.em.ef);return false">zurücksetzen</a></span>` : ''}</div>`;
+    h += `<label style="display:block;font-size:12px;margin-top:6px">Emissionsfaktor <input type="number" min="0.001" step="0.01" value="${s.ef}" style="width:64px" onchange="emSet('ef',+this.value)"> g je Fahrzeug-km</label><div class="dmu">Richtwert NOx, gemischte Flotte innerorts ≈ 0,2–0,3 g/km (genauer: Handbuch für Emissionsfaktoren HBEFA). Straßen werden im Modell nach Verkehrsaufkommen eingefärbt.</div>`;
+  } else {
+    if (s.art === 'schornstein')
+      h += `<label style="display:block;font-size:12px">Höhe der Mündung über Gelände <input type="number" min="2" max="150" step="1" value="${s.hoehe}" style="width:60px" onchange="emSet('hoehe',+this.value)"> m</label>`;
+    h += `<label style="display:block;font-size:12px;margin-top:4px">Emissionsrate <input type="number" min="0.001" step="0.01" value="${s.rate}" style="width:70px" onchange="emSet('rate',+this.value)"> g/s</label><div class="dmu">Rate des betrachteten Stoffs (z. B. NOx) – am besten aus Anlagen- oder Verkehrsdaten. Grobe Größenordnung NOx: stark befahrene Straße (~20.000 Kfz/Tag) ≈ 0,01 g/s je 100 m, Heizung Mehrfamilienhaus ≈ 0,01–0,05 g/s.</div>`;
+  }
   if (EM.st === 'rechnet')
     h += `<div style="margin-top:10px;height:6px;background:var(--ln);border-radius:3px;overflow:hidden"><div id="emFort" style="height:100%;width:${Math.round(EM.anteil * 100)}%;background:#5b4636"></div></div><div class="dmu">Ausbreitung wird berechnet …</div>`;
   else if (WI.st === 'rechnet' && EM.nachWind)
     h += `<div class="dmu" style="margin-top:8px">Zuerst wird der Wind um die Quelle berechnet …</div>`;
+  else if (s.art === 'strassen')
+    h += `<button class="pri" style="margin-top:10px;width:100%" ${WI.p ? '' : 'disabled'} onclick="emStarten()">${WI.p ? 'Straßenemissionen berechnen' : 'Zuerst Analysebereich platzieren'}</button>`;
   else
     h += `<button class="pri" style="margin-top:10px;width:100%" onclick="emWahl()">${EM.st === 'wahl' ? 'Quelle im Modell anklicken …' : EM.q ? 'Neue Quelle setzen' : 'Quelle setzen'}</button>`;
   if (EM.st === 'fehler') h += `<div class="dmu" style="color:#b00">Fehler: ${esc(EM.fehler)}</div>`;
   if (e && EM.st === 'fertig') {
     let mx = 0;
     for (const v of e.c) if (v > mx) mx = v;
-    h += `<div style="margin-top:8px"><label class="ck"><input type="checkbox" ${s.flaeche ? 'checked' : ''} onchange="emSet('flaeche',this.checked)"> Belastung am Boden</label> <label class="ck"><input type="checkbox" ${s.punkte ? 'checked' : ''} onchange="emSet('punkte',this.checked)"> Abgasfahne (Punkte)</label></div>`;
+    h += `<div style="margin-top:8px"><label class="ck"><input type="checkbox" ${s.flaeche ? 'checked' : ''} onchange="emSet('flaeche',this.checked)"> Belastung am Boden</label> <label class="ck"><input type="checkbox" ${s.punkte ? 'checked' : ''} onchange="emSet('punkte',this.checked)"> Qualm (bewegt)</label></div>`;
     h += EM_KLASSEN.map(
       (k) =>
         `<div style="display:flex;gap:6px;align-items:center;font-size:12px;margin-top:3px"><span style="width:14px;height:10px;background:${k[2]};border-radius:2px"></span><span>${k[1]}</span></div>`,
@@ -375,7 +554,7 @@ function emPanel() {
     if (mx < 0.2)
       h += `<div class="dmu" style="margin-top:6px">Die Abgasfahne erreicht innerhalb des Rechenfensters den Boden nicht (hohe Quelle, Fahne zieht darüber hinweg).</div>`;
     if (EM.hinweis) h += `<div class="dmu" style="margin-top:6px">${esc(EM.hinweis)}</div>`;
-    h += `<div class="dmu" style="margin-top:6px">Zusatzbelastung in ca. ${(e.gt.dx / 2).toFixed(1)} m Höhe, höchster Wert ${mx.toFixed(1)} µg/m³ – bei konstantem Wind aus ${WI_ROSE[Math.round(S.wi.r / 45) % 8]} mit ${S.wi.v} m/s (ungünstiger Dauerfall, kein Jahresmittel).</div>`;
+    h += `<div class="dmu" style="margin-top:6px">Zusatzbelastung in ca. ${(e.gt.dx / 2).toFixed(1)} m Höhe, höchster Wert ${mx.toFixed(1).replace('.', ',')} µg/m³ – bei konstantem Wind aus ${WI_ROSE16[Math.round(S.wi.r / 22.5) % 16]} mit ${S.wi.v} m/s (ungünstiger Dauerfall, kein Jahresmittel).</div>`;
   }
   return h + '</div>';
 }
