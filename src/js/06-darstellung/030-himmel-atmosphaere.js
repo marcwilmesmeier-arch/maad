@@ -38,6 +38,7 @@ const ATM = {
   h: 0,
   t: 0,
   fehler: '',
+  tex: null, // vorberechnete Texturen der Atmosphäre
   dauer: 0, // Dauer der Himmelsberechnung in ms (zur Kontrolle)
   wolkenH: null, // Standardhöhen der Wolkenschichten
 };
@@ -80,6 +81,7 @@ async function atmStart() {
     const t0 = performance.now();
     const tex = await gen.update(); // maad pausiert solange das Rendern (loop)
     ATM.dauer = Math.round(performance.now() - t0);
+    ATM.tex = tex;
     Object.assign(ATM.ap, tex);
     Object.assign(ATM.cl, tex);
     Object.assign(ATM.himmelM.material, tex);
@@ -133,17 +135,21 @@ function atmAufbau(L) {
   ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
   ATM.normalRT = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType });
   ATM.ap.normalBuffer = ATM.normalRT.texture;
+  // Lichtmaske: Kanal r der Schattenmaske (1 = nachbeleuchten, 0 = Farbe ist schon Strahldichte, z. B. Wasser)
+  ATM.ap.lightingMask = { map: ATM.maske.texture, channel: 'r' };
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
     'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
+      '  vec4 mk = texture2D(tMaske, uv);\n' +
+      '  if (mk.r < 0.5) { outputColor = inputColor; return; }\n' + // nicht nachbeleuchten (Wasser)
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
       ATM_GAMMA.toFixed(1) +
       ')) * uK;\n' +
       '  a = max(mix(vec3(dot(a, vec3(0.2126, 0.7152, 0.0722))), a, uSat), vec3(0.0));\n' +
-      '  float schatten = texture2D(tMaske, uv).a;\n' +
+      '  float schatten = mk.a;\n' +
       '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
       '  float nl = max(dot(n, uSonneV), 0.0), oben = dot(n, uObenV);\n' +
       // Schätzung der Beleuchtung durch die Nachbearbeitung (Sonne + Himmel nach Neigung) …
@@ -280,6 +286,7 @@ function atmLicht(dir) {
   ATM.sonne.update();
   ATM.himmel.update();
   ATM.sonneW.set(dir[0], dir[1], dir[2]).normalize();
+  WAS.envNeu = true; // Himmelsspiegelung des Wassers neu rendern
   atmUmgebung();
   hemi.color.set(0xffffff);
   hemi.groundColor.set(0xffffff);
@@ -319,7 +326,7 @@ function atmVariante(m, art) {
   v =
     art === 'n'
       ? new T.MeshNormalMaterial()
-      : new T.ShadowMaterial({ color: 0, opacity: 1, transparent: false, blending: T.NoBlending });
+      : new T.ShadowMaterial({ color: 0xffffff, opacity: 1, transparent: false, blending: T.NoBlending });
   v.side = m.side;
   if (
     m.onBeforeCompile &&
@@ -342,7 +349,7 @@ function atmVariante(m, art) {
  * Hilfsbild rendern (vor der Nachbearbeitung, gleiche Kamera): Normalenbild ('n') oder Schattenmaske ('s').
  * Jedes Objekt bekommt sein Ersatzmaterial; Linien, Punkte und Beschriftungen sind dabei ausgeblendet.
  * In der Maske außerdem ausgeblendet: Auflagen ohne Schattenwurf und -empfang (Karte, Straßen, Flurstücke), die
- * sonst das Gelände als sonnig abdecken, und die Seitenwände des Geländes (Schattenkarte dort nur Streifen).
+ * sonst das Gelände als sonnig abdecken. Die Seitenwände des Geländes empfangen dort keinen Schatten (sonst Streifen).
  */
 function atmDurchgang(art, ziel, cm) {
   const jetzt = performance.now();
@@ -362,13 +369,15 @@ function atmDurchgang(art, ziel, cm) {
     alt = [];
   try {
     for (const o of ATM.liste) {
-      const aus = !o.isMesh || (art === 's' && ((!o.castShadow && !o.receiveShadow) || o === S.skirt));
-      alt.push([o, o.visible, o.material]);
+      const aus = !o.isMesh || (art === 's' && !o.castShadow && !o.receiveShadow);
+      alt.push([o, o.visible, o.material, o.receiveShadow]);
       if (aus) o.visible = false;
+      else if (o.userData.atmVar) o.material = o.userData.atmVar[art];
       else
         o.material = Array.isArray(o.material)
           ? o.material.map((m) => atmVariante(m, art))
           : atmVariante(o.material, art);
+      if (art === 's' && o === S.skirt) o.receiveShadow = false; // Seitenwände: ohne Schatten (sonst Streifen)
     }
     ATM.himmelM.visible = false;
     if (art === 's') {
@@ -382,9 +391,10 @@ function atmDurchgang(art, ziel, cm) {
     ren.clear();
     ren.render(sc, cm);
   } finally {
-    for (const [o, v, m] of alt) {
+    for (const [o, v, m, rs] of alt) {
       o.visible = v;
       o.material = m;
+      o.receiveShadow = rs;
     }
     ren.setRenderTarget(rt);
     ren.setClearColor(cc, ca);
@@ -413,6 +423,7 @@ function atmRender(scn, cm) {
       ATM.maske.setSize(sz.x, sz.y);
       ATM.normalRT.setSize(sz.x, sz.y);
     }
+    wasVorher();
     atmDurchgang('n', ATM.normalRT, cm);
     atmDurchgang('s', ATM.maske, cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
@@ -431,6 +442,7 @@ function atmRender(scn, cm) {
     } finally {
       ren.outputColorSpace = oc;
       ATM.himmelM.visible = false;
+      wasNachher();
     }
     return true;
   } catch (e) {
