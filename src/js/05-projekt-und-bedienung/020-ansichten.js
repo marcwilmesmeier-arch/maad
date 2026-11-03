@@ -188,7 +188,9 @@ function loop() {
   } catch (e) {
     console.error(e);
   }
-  mkRender(sc, act());
+  // Während der Himmel für Realistisch+ berechnet wird, nicht rendern: die Berechnung läuft nur in
+  // Leerlaufphasen des Browsers (requestIdleCallback) und käme sonst kaum voran.
+  if (ATM.st !== 'laedt') mkRender(sc, act());
   requestAnimationFrame(loop);
 }
 // Erster Frame erst nach dem Laden des ganzen Skripts: loop() liest Zustände späterer Dateien (DR, IDLE …)

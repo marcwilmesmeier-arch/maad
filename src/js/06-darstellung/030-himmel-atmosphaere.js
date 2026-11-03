@@ -36,6 +36,8 @@ const ATM = {
   h: 0,
   t: 0,
   fehler: '',
+  dauer: 0, // Dauer der Himmelsberechnung in ms (zur Kontrolle)
+  wolkenH: null, // Standardhöhen der Wolkenschichten
 };
 const ATM_GAMMA = 2.2;
 const ATM_QUAL = [
@@ -45,7 +47,7 @@ const ATM_QUAL = [
 ];
 /** Einstellungen (werden mit Projekt und Ansichten gespeichert). */
 function atmDefault() {
-  return { wo: true, wd: 0.35, wq: 'medium', bel: 10 };
+  return { wo: true, wd: 0.35, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6 };
 }
 S.atm = atmDefault();
 
@@ -73,7 +75,9 @@ async function atmStart() {
     const L = (ATM.L = await atmLib());
     const gen = new L.PrecomputedTexturesGenerator(ren);
     atmAufbau(L);
-    const tex = await gen.update();
+    const t0 = performance.now();
+    const tex = await gen.update(); // maad pausiert solange das Rendern (loop)
+    ATM.dauer = Math.round(performance.now() - t0);
     Object.assign(ATM.ap, tex);
     Object.assign(ATM.cl, tex);
     Object.assign(ATM.himmelM.material, tex);
@@ -115,7 +119,7 @@ function atmAufbau(L) {
   });
   // Himmel als bildschirmfüllendes Rechteck in größter Tiefe; Boden jenseits des Modells mit mittlerer Albedo
   const hm = new L.SkyMaterial();
-  hm.groundAlbedo.setRGB(0.12, 0.13, 0.1);
+  hm.groundAlbedo.setRGB(0.2, 0.21, 0.17);
   ATM.himmelM = new T.Mesh(new T.PlaneGeometry(2, 2), hm);
   ATM.himmelM.frustumCulled = false;
   ATM.himmelM.raycast = () => {};
@@ -123,32 +127,52 @@ function atmAufbau(L) {
   ATM.himmelM.userData._ov = 1;
   sc.add(ATM.himmelM);
   // Schattenmaske: Alpha = Anteil im Schatten (three.js ShadowMaterial)
-  ATM.maskeM = new T.ShadowMaterial({ color: 0, opacity: 1, transparent: false, blending: T.NoBlending });
+  // Beidseitig: maad hat viele beidseitig sichtbare Flächen (z. B. Seitenwände des Geländes)
+  ATM.maskeM = new T.ShadowMaterial({
+    color: 0,
+    opacity: 1,
+    transparent: false,
+    blending: T.NoBlending,
+    side: T.DoubleSide,
+  });
+  // Normalenbild mit der Seite des jeweiligen Materials (sonst fehlen Rückseiten beidseitiger Flächen)
+  L.OverrideMaterialManager.workaroundEnabled = true;
   ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
   ATM.normal = new L.NormalPass(sc, cm);
   ATM.ap.normalBuffer = ATM.normal.texture;
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSonne, uHimmel;\nuniform vec3 uSonneV;\nuniform sampler2D tMaske, tNormal;\n' +
+    'uniform float uK, uSat;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
       ATM_GAMMA.toFixed(1) +
       ')) * uK;\n' +
+      '  a = max(mix(vec3(dot(a, vec3(0.2126, 0.7152, 0.0722))), a, uSat), vec3(0.0));\n' +
       '  float schatten = texture2D(tMaske, uv).a;\n' +
       '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
-      '  float nl = max(dot(n, uSonneV), 0.0);\n' +
-      '  float k = uHimmel / (uSonne * nl + uHimmel + 1e-6);\n' +
-      '  outputColor = vec4(a * mix(1.0, k, schatten), inputColor.a);\n}\n',
+      '  float nl = max(dot(n, uSonneV), 0.0), oben = dot(n, uObenV);\n' +
+      // Schätzung der Beleuchtung durch die Nachbearbeitung (Sonne + Himmel nach Neigung) …
+      '  vec3 himmel = uHimmelC * (0.5 + 0.5 * oben);\n' +
+      '  vec3 nach = uSonneC * nl + himmel;\n' +
+      // … und gewünschte Beleuchtung: Sonne nur außerhalb von maads Schatten, dazu Licht vom Boden
+      // Himmelslicht nur zur Hälfte blau (maads Farben wirken sonst zu kalt und kräftig)
+      '  vec3 himmelSoll = mix(vec3(dot(himmel, vec3(0.2126, 0.7152, 0.0722))), himmel, 0.5);\n' +
+      '  vec3 soll = uSonneC * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
+      '  vec3 k = min(soll / max(nach, vec3(1e-4)), vec3(8.0));\n' +
+      '  outputColor = vec4(a * k, inputColor.a);\n}\n',
     {
       attributes: L.EffectAttribute.DEPTH,
       blendFunction: L.BlendFunction.SRC,
       uniforms: new Map([
         ['uK', new T.Uniform(0.6)],
-        ['uSonne', new T.Uniform(1)],
-        ['uHimmel', new T.Uniform(0.2)],
+        ['uSat', new T.Uniform(0.85)],
         ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
+        ['uObenV', new T.Uniform(new T.Vector3(0, 1, 0))],
+        ['uSonneC', new T.Uniform(new T.Vector3(1, 1, 1))],
+        ['uHimmelC', new T.Uniform(new T.Vector3(0.2, 0.2, 0.2))],
+        ['uBodenC', new T.Uniform(new T.Vector3(0.1, 0.1, 0.1))],
         ['tMaske', new T.Uniform(ATM.maske.texture)],
         ['tNormal', new T.Uniform(ATM.normal.texture)],
       ]),
@@ -220,9 +244,12 @@ function atmWolkenTexturen(L) {
 function atmWolken() {
   if (!ATM.cl) return;
   const a = S.atm;
-  ATM.cl.qualityPreset = ATM_QUAL.some((q) => q[0] === a.wq) ? a.wq : 'medium';
+  ATM.cl.qualityPreset = ATM_QUAL.some((q) => q[0] === a.wq) ? a.wq : 'low';
   ATM.cl.coverage = a.wo ? +a.wd : 0;
   ATM.cl.localWeatherVelocity.set(a.wo ? 0.001 : 0, 0);
+  // Wolkenhöhe: Faktor auf die Standardhöhen der Bibliothek (750 m, 1000 m, 7500 m)
+  if (!ATM.wolkenH) ATM.wolkenH = Array.from({ length: 4 }, (_, i) => ATM.cl.cloudLayers[i].altitude);
+  for (let i = 0; i < 4; i++) ATM.cl.cloudLayers[i].altitude = ATM.wolkenH[i] * (a.wh ?? 0.6);
 }
 
 /** Bezugsrahmen am Projektort: maad-Welt (x Ost, y oben, z Süd, Meter) -> Erdkoordinaten (ECEF). */
@@ -262,13 +289,7 @@ function atmLicht(dir) {
   ATM.sonne.update();
   ATM.himmel.update();
   ATM.sonneW.set(dir[0], dir[1], dir[2]).normalize();
-  // Verhältnis Sonne : Himmel für die Schattenmaske (Bestrahlungsstärken, Helligkeit)
-  const h = ATM.himmel.sh.coefficients[0];
-  ATM.lin.uniforms.get('uSonne').value = atmY(ATM.sonne.color);
-  ATM.lin.uniforms.get('uHimmel').value = Math.max(
-    1e-6,
-    (0.2126 * h.x + 0.7152 * h.y + 0.0722 * h.z) * Math.sqrt(Math.PI),
-  );
+  atmUmgebung();
   hemi.color.set(0xffffff);
   hemi.groundColor.set(0xffffff);
   hemi.intensity = LICHT; // Grundfarbe unverändert (r128-Einheit 1)
@@ -277,15 +298,36 @@ function atmLicht(dir) {
   return true;
 }
 
+/**
+ * Bestrahlungsstärken für die Grundfarben-Korrektur (atmAlbedo-Shader): Sonne, Himmel (waagerechte Fläche) und
+ * Licht vom Boden (Reflexion, warm). Ohne den Boden bekämen Unterseiten und Schattenseiten nur blaues Himmelslicht.
+ */
+function atmUmgebung() {
+  const u = ATM.lin.uniforms,
+    sc0 = ATM.sonne.color,
+    h = ATM.himmel.sh.coefficients[0].clone().multiplyScalar(Math.sqrt(Math.PI)),
+    hoch = Math.max(0, ATM.sonneW.y),
+    boden = 0.25 * (S.atm.um ?? 1);
+  u.get('uSonneC').value.set(sc0.r, sc0.g, sc0.b);
+  u.get('uHimmelC').value.copy(h);
+  u.get('uBodenC').value.set(
+    boden * (sc0.r * hoch + h.x) * 1.0,
+    boden * (sc0.g * hoch + h.y) * 0.95,
+    boden * (sc0.b * hoch + h.z) * 0.85,
+  );
+}
+
 /** Schattenmaske rendern: Szene mit ShadowMaterial, Alpha = Schatten (vor der Nachbearbeitung, gleiche Kamera). */
 function atmMaske(cm) {
   const rt = ren.getRenderTarget(),
     om = sc.overrideMaterial,
     cc = ren.getClearColor(new T.Color()),
     ca = ren.getClearAlpha(),
-    hv = ATM.himmelM.visible;
+    hv = ATM.himmelM.visible,
+    rand = S.skirt && S.skirt.visible;
   try {
     ATM.himmelM.visible = false;
+    if (S.skirt) S.skirt.visible = false; // Seitenwände des Geländes: Schattenkarte dort nur Streifen
     sc.overrideMaterial = ATM.maskeM;
     ren.setRenderTarget(ATM.maske);
     ren.setClearColor(0x000000, 0);
@@ -296,6 +338,7 @@ function atmMaske(cm) {
     ren.setClearColor(cc, ca);
     sc.overrideMaterial = om;
     ATM.himmelM.visible = hv;
+    if (S.skirt) S.skirt.visible = rand;
   }
 }
 
@@ -318,7 +361,9 @@ function atmRender(scn, cm) {
     if (ATM.maske.width !== sz.x || ATM.maske.height !== sz.y) ATM.maske.setSize(sz.x, sz.y);
     atmMaske(cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
+    ATM.lin.uniforms.get('uObenV').value.set(0, 1, 0).transformDirection(cm.matrixWorldInverse);
     ren.toneMappingExposure = S.atm.bel * brK();
+    ATM.lin.uniforms.get('uSat').value = S.atm.sat ?? 0.85;
     const now = performance.now(),
       dt = ATM.t ? Math.min(0.1, (now - ATM.t) / 1000) : 0;
     ATM.t = now;
@@ -345,10 +390,11 @@ function atmRender(scn, cm) {
 function atmSet(k, v) {
   S.atm[k] = v;
   atmWolken();
-  if (k === 'wd' || k === 'bel') {
+  if (k === 'um' && ATM.st === 'bereit') atmUmgebung();
+  if (k === 'wd' || k === 'bel' || k === 'um' || k === 'sat' || k === 'wh') {
     // Regler: nur die Anzeige anpassen (Neuaufbau würde das Ziehen unterbrechen)
     const b = $('atmV_' + k);
-    if (b) b.textContent = k === 'wd' ? Math.round(v * 100) + ' %' : String(v);
+    if (b) b.textContent = k === 'bel' ? String(v) : Math.round(v * 100) + ' %';
     return;
   }
   atmUi();
@@ -371,9 +417,12 @@ function atmUi() {
     `<label class="ck"><input type="checkbox" ${a.wo ? 'checked' : ''} onchange="atmSet('wo',this.checked)"> Wolken</label>` +
     (a.wo
       ? regler('wd', 'Bewölkung', Math.round(a.wd * 100) + ' %', 0, 1, 0.05) +
+        regler('wh', 'Wolkenhöhe', Math.round((a.wh ?? 0.6) * 100) + ' %', 0.2, 1.5, 0.05) +
         `<label>Wolkenqualität <select onchange="atmSet('wq',this.value)">${ATM_QUAL.map((q) => `<option value="${q[0]}" ${q[0] === a.wq ? 'selected' : ''}>${q[1]}</option>`).join('')}</select></label>`
       : '') +
     regler('bel', 'Belichtung', a.bel, 2, 30, 1) +
+    regler('sat', 'Farbsättigung', Math.round((a.sat ?? 0.85) * 100) + ' %', 0, 1.5, 0.05) +
+    regler('um', 'Umgebungslicht (vom Boden)', Math.round((a.um ?? 1) * 100) + ' %', 0, 3, 0.1) +
     (st ? `<div class="dmu">${st}</div>` : '');
 }
 /** Projekt/Ansicht laden: fehlende Werte mit Standard füllen. */

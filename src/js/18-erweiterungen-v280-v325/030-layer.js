@@ -237,7 +237,7 @@ function lyDGroup() {
             ? `<div class="ly lyr" style="padding-left:38px"><label>Variante</label><select onchange="fxSet('tv',+this.value)"><option value="8" ${o.tv !== 7 ? 'selected' : ''}>8 · Laubschalen</option><option value="7" ${o.tv === 7 ? 'selected' : ''}>7 · Laubschalen fein</option></select></div>`
             : '') +
           fr('nadel', 'Bäume · Nadelschalen', 'trees') +
-          (drReal() ? fr('water', 'Wasser · Shader mit Spiegelung', 'water') : ''),
+          (S.dar === 'real' ? fr('water', 'Wasser · Shader mit Spiegelung', 'water') : ''),
       );
       el.appendChild(g);
       continue;

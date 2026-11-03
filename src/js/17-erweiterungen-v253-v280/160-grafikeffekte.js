@@ -22,7 +22,8 @@ const fxOn = (k) => {
   const m = drKey();
   if (k === 'grass' || m === 'wm' || !S.fx) return false;
   const o = S.fx[m];
-  return !!(o && o[k] && (k !== 'water' || m === 'real'));
+  // Wasser-Shader mit Spiegelung nur in Realistisch (in Realistisch+ flackert die Spiegelung in der Nachbearbeitung)
+  return !!(o && o[k] && (k !== 'water' || S.dar === 'real'));
 };
 const fxGv = () => {
   if (!drReal()) return 1;

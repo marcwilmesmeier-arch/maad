@@ -8,6 +8,7 @@ export {
   EffectComposer,
   EffectPass,
   NormalPass,
+  OverrideMaterialManager,
   Pass,
   RenderPass,
   SMAAEffect,
