@@ -259,7 +259,7 @@ function fxFlat() {
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -4,
   });
-  const ao = S.fx[S.dar] || {},
+  const ao = S.fx[drKey()] || {},
     scl = (ao.sc == null ? 8 : ao.sc) / 100,
     vr = (ao.vr == null ? 8 : ao.vr) / 10,
     gd = new T.Color(ao.cd || '#1f3817'),
@@ -521,7 +521,7 @@ function fxWater() {
 
 /* Hinweis: entspricht exakt der Darstellung der Taste 8 im Grafiktest (dort läuft der Weichschalen-Shader mit Zellgröße 1,05 · Versatz 0,06 · 6 Schalen) */
 const fxTv = () => {
-  const o = S.fx[S.dar];
+  const o = S.fx[drKey()];
   return o && o.tv === 7 ? 7 : 8;
 };
 function fxTreeFx(NM) {
@@ -654,7 +654,7 @@ const FXPRE = [
   ['Hügel im Morgenlicht (Foto 2)', '#263d1c', '#7d8a35', 20, 6],
 ];
 function fxPre(i) {
-  const o = S.fx[S.dar],
+  const o = S.fx[drKey()],
     q = FXPRE[i];
   if (!o || !q) return;
   o.pre = i;
@@ -675,8 +675,8 @@ function fxPre(i) {
   }
 }
 function fxSet(k, v) {
-  if (!S.fx[S.dar]) return;
-  S.fx[S.dar][k] =
+  if (!S.fx[drKey()]) return;
+  S.fx[drKey()][k] =
     k === 'tv'
       ? v === 7
         ? 7

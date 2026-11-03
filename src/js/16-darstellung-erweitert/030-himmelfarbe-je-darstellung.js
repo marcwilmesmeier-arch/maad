@@ -1,7 +1,7 @@
 // ---- v240: Himmelfarbe je Darstellung (Weißmodell · Schattiert · Realistisch) – Menü "Darstellung"
 S.sky = Object.assign({ wm: '#f8f7f4', sch: '#f8f7f4', real: '#1560db' }, S.sky || {});
 const SKY0 = { wm: '#f8f7f4', sch: '#f8f7f4', real: '#1560db' };
-const skyMode = () => (S.dar === 'real' ? 'real' : S.dar === 'wm' ? 'wm' : 'sch');
+const skyMode = () => (drReal() ? 'real' : S.dar === 'wm' ? 'wm' : 'sch');
 const skyNm = { wm: 'Weißmodell', sch: 'Schattiert', real: 'Realistisch' };
 function skyPre() {
   const m = skyMode();

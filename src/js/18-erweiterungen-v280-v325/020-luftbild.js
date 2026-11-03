@@ -18,7 +18,7 @@ const AIRK = {
 // wmsRun(): Erweiterung zusammengeführt, siehe 02-geodaten/020-flurkarte-als-bild.js
 function airEnsure() {
   try {
-    if (GEO.air || GEO.airBusy || !GEO.airLL || (S.fx[S.dar] || {}).air === 0) return;
+    if (GEO.air || GEO.airBusy || !GEO.airLL || (S.fx[drKey()] || {}).air === 0) return;
     GEO.airBusy = 1;
     const [a, b, c] = GEO.airLL;
     airLoad(a, b, c)

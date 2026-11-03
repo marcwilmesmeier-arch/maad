@@ -220,7 +220,7 @@ function lyDGroup() {
     g.appendChild(mkRow(u));
     u.subs.forEach((x) => g.appendChild(x));
   };
-  const o = S.fx[S.dar] || {};
+  const o = S.fx[drKey()] || {};
 
   for (const [title, list] of LYG) {
     const g = document.createElement('div');
@@ -237,7 +237,7 @@ function lyDGroup() {
             ? `<div class="ly lyr" style="padding-left:38px"><label>Variante</label><select onchange="fxSet('tv',+this.value)"><option value="8" ${o.tv !== 7 ? 'selected' : ''}>8 · Laubschalen</option><option value="7" ${o.tv === 7 ? 'selected' : ''}>7 · Laubschalen fein</option></select></div>`
             : '') +
           fr('nadel', 'Bäume · Nadelschalen', 'trees') +
-          (S.dar === 'real' ? fr('water', 'Wasser · Shader mit Spiegelung', 'water') : ''),
+          (drReal() ? fr('water', 'Wasser · Shader mit Spiegelung', 'water') : ''),
       );
       el.appendChild(g);
       continue;
@@ -280,7 +280,7 @@ function lyDGroup() {
       }
       if (a.startsWith('fx:')) {
         const k = a.slice(3),
-          o = S.fx[S.dar] || {};
+          o = S.fx[drKey()] || {};
         fxSet(k, !o[k]);
         lyRender();
         return;
@@ -327,7 +327,7 @@ function fxUi() {
   try {
     const e = document.getElementById('fxo');
     if (!e || S.dar === 'wm' || e.querySelector('[data-nd]')) return r;
-    const o = S.fx[S.dar] || {},
+    const o = S.fx[drKey()] || {},
       ix = e.innerHTML.indexOf('<div class="dmu">');
     if (ix < 0) return r;
     e.innerHTML =

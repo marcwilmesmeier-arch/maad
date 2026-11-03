@@ -83,7 +83,7 @@ function drSetBasis(m) {
   if (!DAR.some((d) => d[0] === m)) m = 'sch';
   const was = S.dar;
   S.dar = m;
-  const R = m === 'real';
+  const R = drReal(m);
   hemi.color.set(R ? 0xcfe3ff : 0xffffff);
   hemi.groundColor.set(R ? 0xa49a8c : 0x999999);
   S.noK = R;
@@ -104,7 +104,7 @@ function drSetBasis(m) {
     }
 }
 function drUi() {
-  const R = S.dar === 'real';
+  const R = drReal();
   $('darBtns').innerHTML = DAR.map(
     (d) => `<button class="${d[0] === S.dar ? 'on' : ''}" onclick="drSet('${d[0]}')">${d[1]}</button>`,
   ).join('');
@@ -149,7 +149,7 @@ function drDate(md) {
 }
 function drTick(cm) {
   if (DR.skyM) {
-    const v = S.dar === 'real' && !HOME.open && !!cm.isPerspectiveCamera && !atmAktiv(cm);
+    const v = drReal() && !HOME.open && !!cm.isPerspectiveCamera && !atmAktiv(cm);
     DR.skyM.visible = v;
     if (v) DR.skyM.position.copy(cm.position);
   }
@@ -158,7 +158,7 @@ function drTick(cm) {
     if (S.noK) kontUp();
   }
   // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
-  if (S.dar === 'real' && ++brTickN % 20 === 0) brPatch();
+  if (drReal() && ++brTickN % 20 === 0) brPatch();
 }
 function drInit() {
   $('drAA').onchange = (e) => {

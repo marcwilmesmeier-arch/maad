@@ -16,7 +16,16 @@ const DAR = [
     'Realistisch',
     'Blauer Himmel, warmes Sonnenlicht mit Schattenwurf, einstellbare Kantenglättung, ohne Gebäudekonturen. Sonnenstand exakt nach Standort, Datum und Uhrzeit.',
   ],
+  [
+    'realp',
+    'Realistisch+',
+    'Wie Realistisch, dazu physikalisch berechneter Himmel mit Sonne, Dunst in der Ferne und ziehenden Wolken, Bildnachbearbeitung wie in der Fotografie. Braucht eine leistungsfähige Grafikkarte.',
+  ],
 ];
+/** Realistische Darstellung (Realistisch oder Realistisch+)? */
+const drReal = (m = S.dar) => m === 'real' || m === 'realp';
+/** Schlüssel für Einstellungen je Darstellung: Realistisch+ teilt sie mit Realistisch (Bäume, Wasser, Himmelfarbe). */
+const drKey = (m = S.dar) => (m === 'realp' ? 'real' : m);
 const DR = { n: 0, k: 0, skyM: null, wm: new Map(), aaK: [1, 1.25, 1.5, 2] };
 S.dar = 'sch';
 S.aa = 2;
@@ -148,7 +157,7 @@ function sunUp() {
   const r = (() => {
     const hr = +$('hr').value;
     $('hl').textContent = drHM(hr);
-    const R = S.dar === 'real',
+    const R = drReal(),
       on = S.sun || R;
     if (!on) {
       const ch = sunL.castShadow;
@@ -182,19 +191,19 @@ S.sunK = 0.2;
 S.lt = { wm: { b: 0.85, k: 0.2 }, sch: { b: 0.85, k: 0.2 } };
 const liK = () => (S.dar === 'wm' ? 'wm' : 'sch');
 function liLoad() {
-  if (S.dar === 'real') return;
+  if (drReal()) return;
   const t = S.lt[liK()];
   $('lb').value = t.b;
   $('lk').value = t.k;
 }
 function liUp(u) {
-  const R = S.dar === 'real';
+  const R = drReal();
   if (u === true && !R) S.lt[liK()] = { b: +$('lb').value, k: +$('lk').value };
   hemi.intensity = (R ? 0.5 : +$('lb').value) * LICHT;
   S.sunK = R ? 0.7 : +$('lk').value;
   sunUp();
   // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
-  if (S.dar === 'real') {
+  if (drReal()) {
     const k = brK();
     hemi.intensity = 0.5 * k * LICHT;
     S.sunK = 0.7 * k;
@@ -271,7 +280,7 @@ function wmGroups() {
 }
 // ---- Antialiasing (Supersampling über Pixelverhältnis) ----
 function drAA() {
-  const k = S.dar === 'real' ? DR.aaK[S.aa] || 1 : 1,
+  const k = drReal() ? DR.aaK[S.aa] || 1 : 1,
     pr = Math.min(3, devicePixelRatio * k);
   if (Math.abs(ren.getPixelRatio() - pr) > 0.01) ren.setPixelRatio(pr);
 }

@@ -190,12 +190,13 @@ function admModeCap(m) {
     d.lt = JSON.parse(JSON.stringify(S.lt[m]));
     d.kon = JSON.parse(JSON.stringify(S.kon[m]));
   }
-  if (m === 'sch' || m === 'real') d.fx = JSON.parse(JSON.stringify(S.fx[m]));
-  if (m === 'real') {
+  if (m === 'sch' || drReal(m)) d.fx = JSON.parse(JSON.stringify(S.fx[drKey(m)]));
+  if (drReal(m)) {
     d.sky = JSON.parse(JSON.stringify(S.sky));
     d.aa = S.aa;
     d.rb = S.rb;
   }
+  if (m === 'realp') d.atm = JSON.parse(JSON.stringify(S.atm));
   return d;
 }
 function admModePub(m) {
@@ -414,9 +415,10 @@ function admModeApply(m) {
   x.light.lt = Object.assign({}, (b.light && b.light.lt) || {});
   if (d.lyM) x.lyM[m] = d.lyM;
   if (d.kon) x.kon[m] = d.kon;
-  if (d.fx) x.fx[m] = d.fx;
+  if (d.fx) x.fx[drKey(m)] = d.fx;
   if (d.lt) x.light.lt[m] = d.lt;
   admApply(x);
+  if (d.atm) atmLaden(d.atm);
   drSet(m);
   if (d.lyM) lyMApply(d.lyM);
 }

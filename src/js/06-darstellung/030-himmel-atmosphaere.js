@@ -1,5 +1,5 @@
 // ======================= HIMMEL & ATMOSPHÄRE (Darstellung „Realistisch“) =======================
-// Physikalischer Himmel, Sonnen- und Himmelslicht, Dunst in der Ferne und volumetrische Wolken mit
+// Darstellung „Realistisch+“ (DAR 'realp'): wie „Realistisch“, dazu physikalischer Himmel, Sonnen- und Himmelslicht, Dunst in der Ferne und volumetrische Wolken mit
 // Bildnachbearbeitung (AgX-Tonwertabbildung, SMAA, Lichtreflexe, Dithering). Bibliotheken: @takram/three-atmosphere,
 // @takram/three-clouds, postprocessing – gebündelt in src/vendor/realistisch.js und erst beim ersten Einschalten
 // geladen (Skript id="maadRealLib").
@@ -37,13 +37,13 @@ const ATM_QUAL = [
 ];
 /** Einstellungen (werden mit Projekt und Ansichten gespeichert). */
 function atmDefault() {
-  return { an: true, wo: true, wd: 0.35, wq: 'medium', bel: 10 };
+  return { wo: true, wd: 0.35, wq: 'medium', bel: 10 };
 }
 S.atm = atmDefault();
 
 /** Ist die Atmosphäre für diese Kamera zuständig? Startet beim ersten Bedarf das Laden. */
 function atmAktiv(cm) {
-  if (S.dar !== 'real' || !S.atm.an || HOME.open || !cm || !cm.isPerspectiveCamera) return false;
+  if (S.dar !== 'realp' || HOME.open || !cm || !cm.isPerspectiveCamera) return false;
   if (ATM.st === 'aus') atmStart();
   return ATM.st === 'bereit';
 }
@@ -196,7 +196,7 @@ const atmY = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
  * Himmelslicht). Aufruf aus sunUp(); dir = maads Sonnenrichtung (Einheitsvektor).
  */
 function atmLicht(dir) {
-  if (ATM.st !== 'bereit' || S.dar !== 'real' || !S.atm.an) return false;
+  if (ATM.st !== 'bereit' || S.dar !== 'realp') return false;
   atmOrt();
   const r = new T.Matrix3().setFromMatrix4(ATM.m),
     d = new T.Vector3(dir[0], dir[1], dir[2]).applyMatrix3(r).normalize();
@@ -259,8 +259,10 @@ function atmRender(scn, cm) {
 function atmSet(k, v) {
   S.atm[k] = v;
   atmWolken();
-  if (k === 'an') {
-    drSet(S.dar); // Lichter und Himmel neu setzen
+  if (k === 'wd' || k === 'bel') {
+    // Regler: nur die Anzeige anpassen (Neuaufbau würde das Ziehen unterbrechen)
+    const b = $('atmV_' + k);
+    if (b) b.textContent = k === 'wd' ? Math.round(v * 100) + ' %' : String(v);
     return;
   }
   atmUi();
@@ -268,23 +270,24 @@ function atmSet(k, v) {
 function atmUi() {
   const e = $('atmBox');
   if (!e) return;
+  e.style.display = S.dar === 'realp' ? '' : 'none';
+  if (S.dar !== 'realp') return;
   const a = S.atm,
     st = {
       aus: '',
       laedt: 'Himmel wird berechnet …',
       bereit: '',
-      fehler: 'Nicht verfügbar – bisherige Darstellung (' + ATM.fehler + ')',
+      fehler: 'Himmel nicht verfügbar, Darstellung wie Realistisch (' + ATM.fehler + ')',
     }[ATM.st];
+  const regler = (k, titel, wert, min, max, step) =>
+    `<label style="display:block">${titel} <b id="atmV_${k}">${wert}</b><input type="range" min="${min}" max="${max}" step="${step}" value="${a[k]}" style="width:100%" oninput="atmSet('${k}',+this.value)"></label>`;
   e.innerHTML =
-    `<label class="ck"><input type="checkbox" ${a.an ? 'checked' : ''} onchange="atmSet('an',this.checked)"> Physikalischer Himmel &amp; Atmosphäre</label>` +
-    (a.an
-      ? `<label class="ck"><input type="checkbox" ${a.wo ? 'checked' : ''} onchange="atmSet('wo',this.checked)"> Wolken</label>` +
-        (a.wo
-          ? `<label style="display:block">Bewölkung <b>${Math.round(a.wd * 100)} %</b><input type="range" min="0" max="1" step="0.05" value="${a.wd}" style="width:100%" oninput="atmSet('wd',+this.value)"></label>` +
-            `<label>Wolkenqualität <select onchange="atmSet('wq',this.value)">${ATM_QUAL.map((q) => `<option value="${q[0]}" ${q[0] === a.wq ? 'selected' : ''}>${q[1]}</option>`).join('')}</select></label>`
-          : '') +
-        `<label style="display:block">Belichtung <b>${a.bel}</b><input type="range" min="2" max="30" step="1" value="${a.bel}" style="width:100%" oninput="atmSet('bel',+this.value)"></label>`
+    `<label class="ck"><input type="checkbox" ${a.wo ? 'checked' : ''} onchange="atmSet('wo',this.checked)"> Wolken</label>` +
+    (a.wo
+      ? regler('wd', 'Bewölkung', Math.round(a.wd * 100) + ' %', 0, 1, 0.05) +
+        `<label>Wolkenqualität <select onchange="atmSet('wq',this.value)">${ATM_QUAL.map((q) => `<option value="${q[0]}" ${q[0] === a.wq ? 'selected' : ''}>${q[1]}</option>`).join('')}</select></label>`
       : '') +
+    regler('bel', 'Belichtung', a.bel, 2, 30, 1) +
     (st ? `<div class="dmu">${st}</div>` : '');
 }
 /** Projekt/Ansicht laden: fehlende Werte mit Standard füllen. */

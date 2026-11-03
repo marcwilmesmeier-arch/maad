@@ -19,14 +19,14 @@ const FXT = {
   opak: null,
 };
 const fxOn = (k) => {
-  const m = S.dar;
+  const m = drKey();
   if (k === 'grass' || m === 'wm' || !S.fx) return false;
   const o = S.fx[m];
   return !!(o && o[k] && (k !== 'water' || m === 'real'));
 };
 const fxGv = () => {
-  if (S.dar !== 'real') return 1;
-  const o = S.fx && S.fx[S.dar],
+  if (!drReal()) return 1;
+  const o = S.fx && S.fx[drKey()],
     v = o && o.gv | 0;
   return v === 2 ? 2 : 1;
 };
@@ -49,7 +49,7 @@ function fxCrownGeo(p) {
     R = p.rauh / 100,
     sp = p.spitze / 100,
     vv = p.verl / 100,
-    tn = S.dar === 'real' ? [0.04, 0.03, 0.08][(S.fx.real && S.fx.real.pre) | 0] || 0 : 0;
+    tn = drReal() ? [0.04, 0.03, 0.08][(S.fx.real && S.fx.real.pre) | 0] || 0 : 0;
   for (let i = 0; i < n; i++) {
     let x = pos.getX(i),
       y = pos.getY(i),

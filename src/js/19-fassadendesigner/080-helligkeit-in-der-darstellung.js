@@ -29,7 +29,7 @@ function brPatch() {
         }
       }
     });
-    const k = S.dar === 'real' ? brK() : 1;
+    const k = drReal() ? brK() : 1;
     if (DR.skyM && DR.skyM.material.uniforms.uBr) DR.skyM.material.uniforms.uBr.value = k;
     sc.traverse((o) => {
       const m = o.material;

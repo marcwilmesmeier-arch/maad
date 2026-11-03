@@ -414,7 +414,7 @@ function konMode() {
 function konUi() {
   const m = konMode(),
     c = S.kon[m] || { on: false, w: 3, c: '#000000' },
-    real = S.dar === 'real',
+    real = drReal(),
     a = document.getElementById('konck');
   if (a) a.checked = !!c.on;
   const q = (id) => document.getElementById(id),
