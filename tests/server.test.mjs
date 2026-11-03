@@ -47,7 +47,10 @@ const link = () => {
 };
 const lib = (p) => readFileSync(join(ROOT, 'node_modules', p));
 const LIBS = [
-  [/three\.min\.js$/, 'three/build/three.min.js', 'text/javascript'],
+  [/three@[\d.]+\/build\/three\.module\.js$/, 'three/build/three.module.js', 'text/javascript'],
+  [/three@[\d.]+\/build\/three\.core\.js$/, 'three/build/three.core.js', 'text/javascript'],
+  // alte Fassungen (Vergleiche mit Builds vor dem three.js-Update)
+  [/three\.js\/r128\/three\.min\.js$/, '.three-cache/0.128.0/build/three.min.js', 'text/javascript'],
   [/maplibre-gl\.js$/, 'maplibre-gl/dist/maplibre-gl.js', 'text/javascript'],
   [/maplibre-gl\.css$/, 'maplibre-gl/dist/maplibre-gl.css', 'text/css'],
 ];

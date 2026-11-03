@@ -100,7 +100,7 @@ export const SPERREN = {
  */
 export function sperrStellen(html) {
   const a = html.indexOf('// ── src/js/');
-  const b = html.lastIndexOf('</script></body>');
+  const b = html.indexOf('</script>', a); // Ende des Programmcodes (Skript id="maadApp")
   if (a < 0 || b < 0) throw new Error('Skriptbereich in maad.html nicht gefunden');
   const ast = espree.parse(html.slice(a, b), { ecmaVersion: 'latest', range: true });
   const pos = new Map();

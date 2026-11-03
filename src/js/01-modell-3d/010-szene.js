@@ -1,18 +1,26 @@
 // ---- Szene
+// three.js ≥ r152/r155: Farbverwaltung und physikalische Lichteinheiten. maad behält das bisherige Aussehen
+// (lineare Ausgabe ohne sRGB-Umrechnung, Lichtstärken wie r128) – neue Renderer mit rendererAlt() einstellen.
+T.ColorManagement.enabled = false;
+const LICHT = Math.PI; // Faktor für Lichtstärken (r128-Werte × π)
+function rendererAlt(r) {
+  r.outputColorSpace = T.LinearSRGBColorSpace;
+  return r;
+}
 const mid = $('mid'),
-  ren = new T.WebGLRenderer({ antialias: true });
+  ren = rendererAlt(new T.WebGLRenderer({ antialias: true }));
 ren.setPixelRatio(devicePixelRatio);
 ren.setClearColor(0xf8f7f4);
 ren.shadowMap.enabled = true;
 mid.appendChild(ren.domElement);
 const sc = new T.Scene();
-const hemi = new T.HemisphereLight(0xffffff, 0x999999, 0.85);
+const hemi = new T.HemisphereLight(0xffffff, 0x999999, 0.85 * LICHT);
 sc.add(hemi);
-const sunL = new T.DirectionalLight(0xffffff, 0.8);
+const sunL = new T.DirectionalLight(0xffffff, 0.8 * LICHT);
 sunL.position.set(-120, 200, 160);
 sc.add(sunL);
 const sh = sunL.shadow;
-ren.shadowMap.type = T.PCFSoftShadowMap;
+ren.shadowMap.type = T.PCFShadowMap;
 sh.mapSize.set(4096, 4096);
 sh.bias = -0.0007;
 sh.normalBias = 0.25;

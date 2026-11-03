@@ -154,7 +154,7 @@ function sunUp() {
       const ch = sunL.castShadow;
       sunL.castShadow = false;
       sunL.position.set(-120, 200, 160);
-      sunL.intensity = 0.6 * S.sunK;
+      sunL.intensity = 0.6 * S.sunK * LICHT;
       sunL.color.set('#ffffff');
       if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
       drSunInfo();
@@ -168,7 +168,7 @@ function sunUp() {
     sunL.position.set(d[0] * 350, Math.max(d[1], 0.02) * 350, d[2] * 350);
     const ch = sunL.castShadow !== cs;
     sunL.castShadow = cs;
-    sunL.intensity = (cs ? 1.1 : 0.1) * S.sunK;
+    sunL.intensity = (cs ? 1.1 : 0.1) * S.sunK * LICHT;
     sunL.color.set(R ? drWarm(el) : '#ffffff');
     if (ch) sc.traverse((o) => o.material && (o.material.needsUpdate = true));
     drSunInfo();
@@ -189,13 +189,13 @@ function liLoad() {
 function liUp(u) {
   const R = S.dar === 'real';
   if (u === true && !R) S.lt[liK()] = { b: +$('lb').value, k: +$('lk').value };
-  hemi.intensity = R ? 0.5 : +$('lb').value;
+  hemi.intensity = (R ? 0.5 : +$('lb').value) * LICHT;
   S.sunK = R ? 0.7 : +$('lk').value;
   sunUp();
   // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
   if (S.dar === 'real') {
     const k = brK();
-    hemi.intensity = 0.5 * k;
+    hemi.intensity = 0.5 * k * LICHT;
     S.sunK = 0.7 * k;
     sunUp();
   }

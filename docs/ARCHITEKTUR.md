@@ -13,7 +13,13 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Render-Schleife `loop()` startet per `requestAnimationFrame` erst nach dem Laden und darf alles benutzen.
 - **HTML-Ereignisse rufen globale Funktionen auf**, z. B. `onclick="baDo('mv')"` in `src/index.html` oder in
   HTML-Strings im Code. Eine solche Funktion umzubenennen heißt: alle Strings mitzuändern (`grep`).
-- Externe Bibliotheken kommen per CDN: three.js r128 (`THREE`, im Code meist als `T`) und MapLibre GL 5.24.0.
+- Externe Bibliotheken kommen per CDN: three.js 0.187.0 (`THREE`, im Code meist als `T`) und MapLibre GL 5.24.0.
+- three.js gibt es nur noch als ES-Modul. `src/index.html` lädt es deshalb in einem kleinen Modul-Skript, setzt
+  `window.THREE` und führt erst danach den Programmcode (Skript `id="maadApp"`, `type="text/plain"`) als klassisches
+  Skript aus. `tools/demo.mjs` sucht die Sperrstellen in genau diesem Skript.
+- Aussehen wie r128: `T.ColorManagement.enabled = false`, Renderer über `rendererAlt()` mit linearer Ausgabe,
+  Lichtstärken mit `LICHT` (= π) multipliziert (alles in `01-modell-3d/010-szene.js`). Neue Renderer und Lichter
+  genauso anlegen. `node tools/bildvergleich.mjs <alt.html>` vergleicht das Aussehen zweier Builds pixelweise.
 
 ## Zentrale Objekte
 

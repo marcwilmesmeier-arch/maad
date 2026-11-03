@@ -28,7 +28,9 @@ bevor sie angelegt waren), siehe Git-Verlauf. Der Rauchtest schlägt jetzt bei s
 6. **Große Dateien teilen**, z. B. `13-geometrie-und-nutzung/010-hilfen-geometrie.js` (über 2000 Zeilen).
 7. ~~`function close()` überdeckt `window.close`~~ – erledigt am 28.10.2026: heißt jetzt `draftClose()`.
    Für weitere Umbenennungen: `node tools/umbenennen.mjs <alt> <neu>` (siehe Punkt 5).
-8. **three.js r128** (2021) ist veraltet. Ein Update bringt API-Änderungen mit sich, dafür einen eigenen Schritt planen.
+8. ~~three.js r128 veraltet~~ – erledigt: Update auf 0.187.0 mit unverändertem Aussehen. Offen: maad nutzt weiter die
+   alte lineare Farbausgabe statt sRGB-Farbverwaltung; `PCFSoftShadowMap` gibt es nicht mehr (jetzt `PCFShadowMap`,
+   Schattenkanten minimal anders). Eine Umstellung auf sRGB würde alle Farben verändern und braucht Abstimmung.
 
 ## Server
 

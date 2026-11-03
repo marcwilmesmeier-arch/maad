@@ -14,7 +14,7 @@ function l2cPv(c) {
     l2cPvStop();
     const w = cv.clientWidth || 360,
       h = cv.clientHeight || 200,
-      r = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+      r = rendererAlt(new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }));
     r.setPixelRatio(Math.min(2, devicePixelRatio || 1));
     r.setSize(w, h, false);
     r.shadowMap.enabled = true;
@@ -23,8 +23,8 @@ function l2cPv(c) {
       cam = new T.PerspectiveCamera(30, w / h, 0.1, 50);
     cam.position.set(2.5, 1.5, 2.9);
     cam.lookAt(0, 0.4, 0);
-    sc.add(new T.HemisphereLight(0xffffff, 0xb9b4a6, 0.75));
-    const dl = new T.DirectionalLight(0xffffff, 0.8);
+    sc.add(new T.HemisphereLight(0xffffff, 0xb9b4a6, 0.75 * LICHT));
+    const dl = new T.DirectionalLight(0xffffff, 0.8 * LICHT);
     dl.position.set(2.5, 4, 2);
     dl.castShadow = true;
     dl.shadow.mapSize.set(1024, 1024);
