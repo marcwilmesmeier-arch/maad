@@ -66,7 +66,7 @@ function wiPalette(art) {
 function wiLeeren() {
   while (WI_G.children.length) {
     const o = WI_G.children.pop();
-    if (o.geometry) o.geometry.dispose();
+    if (o.geometry && !o.userData.fremdGeo) o.geometry.dispose();
     if (o.material) {
       if (o.material.map) o.material.map.dispose();
       o.material.dispose();
@@ -91,13 +91,20 @@ function wiZeichnen() {
 function wiZeichnenInhalt() {
   if (WI.p) wiRahmen();
   const e = WI.erg;
-  if (S.tab !== 'Analyse' || S.anT !== 'wi') return;
+  WI.zReiter = S.anT;
+  if (S.tab !== 'Analyse') return;
+  if (S.anT === 'em') {
+    // Reiter „Emissionen“: Straßen, Belastung und Qualm (keine Windflächen/-linien)
+    WI.zModus = drReal();
+    emZeichnen();
+    return;
+  }
+  if (S.anT !== 'wi') return;
   if (e && S.wiZ.flaeche) wiFlaeche(e);
   // Realistisch und Realistisch+: bewegte Strömungsstreifen statt statischer Stromlinien
   WI.zModus = drReal();
   if (e && S.wiZ.linien) (WI.zModus ? wdWind : (x) => wiStromlinien3D(x, true))(e);
   if (e && S.wiZ.linien3d) wiStromlinien3D(e);
-  emZeichnen();
 }
 
 /** Kreisrand des Analysebereichs (auch als Vorschau beim Platzieren). */
@@ -176,37 +183,75 @@ function wiFlaeche(e) {
   m.raycast = () => {};
   m.renderOrder = 2;
   WI_G.add(m);
-  // Dächer: je Gebäudezelle ein Quadrat knapp über der Dachhöhe (gleiche Textur-Koordinaten wie der Boden)
-  const pos = [],
-    uvs = [];
+  // Dächer: Werte auf die echten Dachflächen projiziert (Gebäudegeometrie, nur nach oben zeigende Flächen).
+  // Damit Dachränder keine Lücken haben, werden die Werte um eine Zelle nach außen fortgesetzt.
+  const dachW = new Float32Array(dach);
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nx; i++) {
       const c = i + nx * j;
-      if (!(e.dach[c] >= 0)) continue;
-      const h = gt.hoehe[c] + 0.3,
-        ecken = [
-          [i - 0.5, j - 0.5],
-          [i + 0.5, j - 0.5],
-          [i + 0.5, j + 0.5],
-          [i - 0.5, j - 0.5],
-          [i + 0.5, j + 0.5],
-          [i - 0.5, j + 0.5],
-        ];
-      for (const [a, b] of ecken) {
-        const [x, z] = gt.welt(a, b);
-        pos.push(x, gh(gt.welt(i, j)[0], gt.welt(i, j)[1]) + h, z);
-        uvs.push((a + 0.5) / nx, (b + 0.5) / ny);
-      }
+      if (dach[c * 2 + 1]) continue;
+      let sw = 0,
+        sv = 0;
+      for (let dj = -1; dj <= 1; dj++)
+        for (let di = -1; di <= 1; di++) {
+          const ii = i + di,
+            jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue;
+          const cc = ii + nx * jj;
+          if (dach[cc * 2 + 1]) {
+            sv += dach[cc * 2];
+            sw++;
+          }
+        }
+      if (sw) dachW.set([sv / sw, 1], c * 2);
     }
-  if (pos.length) {
-    const gd = new T.BufferGeometry();
-    gd.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
-    gd.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
-    const md = new T.Mesh(gd, mat(tex(dach)));
-    md.raycast = () => {};
-    md.renderOrder = 2;
-    WI_G.add(md);
-  }
+  wiDachFlaechen(gt, tex(dachW), pal);
+}
+
+/**
+ * Einblendung auf den Dächern: dieselbe Geometrie wie die Gebäude (Bestand und Planung), Shader färbt nur Flächen
+ * mit nach oben zeigender Normale (auch bei falsch orientierten LOD2-Flächen) und rechnet die Weltposition in
+ * Gitterkoordinaten um – so liegen die Farben exakt auf den Dachflächen, auch bei geneigten Dächern.
+ */
+function wiDachFlaechen(gt, werte, pal) {
+  const mat = new T.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: T.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -8,
+    uniforms: {
+      tW: { value: werte },
+      tP: { value: pal },
+      uM: { value: new T.Vector3(WI.p[0], WI.p[1], S.wi.radius) },
+      // Gitter: Mittelpunkt, Achsen (Strömung f, quer q), Zellweite, Zellenzahl
+      uF: { value: new T.Vector2(gt.f[0], gt.f[1]) },
+      uQ: { value: new T.Vector2(gt.q[0], gt.q[1]) },
+      uN: { value: new T.Vector3(gt.nx, gt.ny, gt.dx) },
+    },
+    vertexShader:
+      'varying vec3 vW,vN;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:
+      'uniform sampler2D tW,tP;uniform vec3 uM,uN;uniform vec2 uF,uQ;varying vec3 vW,vN;' +
+      'void main(){if(abs(vN.y)<.3)discard;vec2 d=vW.xz-uM.xy;if(length(d)>uM.z)discard;' +
+      'vec2 uv=vec2(dot(d,uF)/uN.z+uN.x*.5,dot(d,uQ)/uN.z+uN.y*.5)/uN.xy;' +
+      'vec2 w=texture2D(tW,uv).rg;if(w.g<.35)discard;' +
+      'gl_FragColor=vec4(texture2D(tP,vec2(clamp(w.r/w.g,0.,1.),.5)).rgb,.85);}',
+  });
+  G.buildings.updateMatrixWorld(true);
+  G.buildings.traverseVisible((o) => {
+    if (!o.isMesh || o.isInstancedMesh || !o.geometry || !o.geometry.attributes.normal) return;
+    if (o.material && (o.material.transparent || o.material.wireframe)) return;
+    const m = new T.Mesh(o.geometry, mat);
+    m.matrixAutoUpdate = false;
+    m.matrix.copy(o.matrixWorld);
+    m.matrixWorld.copy(o.matrixWorld);
+    m.raycast = () => {};
+    m.renderOrder = 2;
+    m.userData.fremdGeo = true; // Geometrie gehört dem Gebäude: beim Leeren nicht freigeben
+    WI_G.add(m);
+  });
 }
 
 /**

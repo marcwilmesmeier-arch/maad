@@ -164,28 +164,20 @@ function wdWind(e) {
 }
 
 /**
- * Qualm wie Nebel: viele weiche, sich drehende Flocken, die aus den Quellen (Straßen, Punktquelle) aufsteigen, im
+ * Qualm wie Nebel: viele weiche, sich drehende Flocken, die aus den Straßen aufsteigen, im
  * 3D-Windfeld verweht und zufällig verwirbelt werden, mit dem Alter wachsen und verblassen. Wo sich die Abgase
  * sammeln, überlagern sich die Flocken – der Qualm wird dort dichter. Startpunkte nach Emissionsstärke gewichtet.
  */
 function wdQualm() {
-  if (!WI.roh || !WI.gitter) return;
+  if (!WI.roh || !WI.gitter || !EM.strassen || !EM.strassen.quellen.length) return;
   const gt = WI.gitter,
     { nx, ny, nz } = gt,
-    strassen = S.em.art === 'strassen' && EM.strassen && EM.strassen.quellen.length,
-    N = strassen ? 3500 : 900,
-    leben = strassen ? 45 : 40, // s
+    N = 3500,
+    leben = 45, // s
     skala = S.wi.v / WI_U10,
     u = WI.roh.u,
-    ti = WI.roh.ti;
-  // Quellen [i, j, k, Gewicht] (Gitterkoordinaten) mit Summenfunktion zum Ziehen
-  let Q;
-  if (strassen) Q = EM.strassen.quellen;
-  else {
-    if (!EM.q) return;
-    const [qi, qj] = emGitter(EM.q[0], EM.q[1]);
-    Q = Float32Array.of(qi, qj, (EM.hoehe || (S.em.art === 'kfz' ? 0.5 : S.em.hoehe)) / gt.dx, 1);
-  }
+    ti = WI.roh.ti,
+    Q = EM.strassen.quellen; // Quellen [i, j, k, Gewicht] (Gitterkoordinaten), Startpunkt nach Gewicht
   const nq = Q.length / 4,
     kum = new Float64Array(nq);
   let sum = 0;
@@ -198,7 +190,7 @@ function wdQualm() {
     gr = new Float32Array(N), // Größe in m
     al = new Float32Array(N), // Deckkraft
     rot = new Float32Array(N); // Drehung
-  const streu = strassen ? 0.6 : S.em.art === 'kfz' ? 0.5 : 0.1;
+  const streu = 0.6; // Fahrbahnbreite (Zellen)
   const neu = (n) => {
     const z = Math.random() * sum;
     let lo = 0,
@@ -285,8 +277,8 @@ function wdQualm() {
       pos[3 * n] = x;
       pos[3 * n + 1] = gh(x, z) + pk[n] * gt.dx;
       pos[3 * n + 2] = z;
-      gr[n] = 3 + t * (strassen ? 11 : 14); // wächst mit dem Alter
-      al[n] = Math.min(1, alt[n] * 1.5) * (1 - t) * (strassen ? 0.22 : 0.3);
+      gr[n] = 3 + t * 11; // wächst mit dem Alter
+      al[n] = Math.min(1, alt[n] * 1.5) * (1 - t) * 0.22;
       rot[n] += dt * 0.15 * (n % 2 ? 1 : -1); // langsames Drehen: Verwirbelung im Bild
     }
     g.attributes.position.needsUpdate = true;

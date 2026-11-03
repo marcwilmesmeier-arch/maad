@@ -1,4 +1,4 @@
-// ======================= WIND & RAUCH: BEDIENUNG (Analyse-Reiter „Wind & Rauch“) =======================
+// ======================= WIND: BEDIENUNG (Analyse-Reiter „Wind“) =======================
 
 const WI_ROSE = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'],
   WI_ROSE16 = [
@@ -143,7 +143,6 @@ function wiPanel() {
     if (e.anteilDach.some((v) => v > 0)) h += wiRingSvg(e.anteilDach, 'Dächer');
     h += `<div class="dmu" style="margin-top:6px">Boden: mittlere Geschwindigkeit in etwa ${(s.dx / 2).toFixed(1)} m Höhe; Dächer: knapp über Dach. Komfortklassen angelehnt an Lawson. Maus über die Fläche: Windgeschwindigkeit.</div></div>`;
   }
-  h += emPanel();
   return h;
 }
 
@@ -173,7 +172,7 @@ function wiZSet(k, v) {
 function wiPanelAuf() {
   const b = $('wiFort');
   if (WI.st === 'rechnet' && b) b.style.width = Math.round(WI.anteil * 100) + '%';
-  else if (S.tab === 'Analyse' && S.anT === 'wi') rr();
+  else if (S.tab === 'Analyse' && (S.anT === 'wi' || S.anT === 'em')) rr();
 }
 
 /** Analysebereich platzieren (wie Forma): Kreis folgt der Maus, Klick setzt ihn, Esc bricht ab. */

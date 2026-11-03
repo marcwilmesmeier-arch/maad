@@ -10,13 +10,15 @@ const ANI = {
   ue: '<rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="4" width="7" height="7" rx="1.2"/><rect x="4" y="13" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/>',
   re: '<path d="M12 3l8 3v6c0 4.500-3.200 7.800-8 9-4.800-1.200-8-4.500-8-9V6z"/><path d="M12 8v5M12 16v.5"/>',
   wi: '<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>',
+  em: '<path d="M4 20h16"/><path d="M7 20v-5h4v5"/><path d="M8 11c0-2 2-2 2-4s-2-2-2-4"/><path d="M13 12c0-2 2-2 2-4s-2-2-2-4"/>',
 };
 function anPanel(b) {
   const s = axSites(),
     T = [
       ['ue', 'Übersicht'],
       ['re', 'Restriktionen'],
-      ['wi', 'Wind & Rauch'],
+      ['wi', 'Wind'],
+      ['em', 'Emissionen'],
     ];
   if (!T.some((t) => t[0] === S.anT)) S.anT = 'ue';
   let h = '<div class="ax">';
@@ -30,6 +32,6 @@ function anPanel(b) {
         `<button class="${S.anT === k ? 'on' : ''}" role="tab" aria-selected="${S.anT === k}" onclick="anTab('${k}')" title="${n}" aria-label="${n}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ANI[k]}</svg><span>${n}</span></button>`,
     ).join('') +
     '</div>';
-  h += S.anT === 're' ? axRe(b) : S.anT === 'wi' ? wiPanel() : axUe(b);
+  h += S.anT === 're' ? axRe(b) : S.anT === 'wi' ? wiPanel() : S.anT === 'em' ? emPanel() : axUe(b);
   return h + '</div>';
 }
