@@ -1,8 +1,8 @@
 // ======================= HIMMEL & ATMOSPHÄRE (Darstellung „Realistisch“) =======================
 // Darstellung „Realistisch+“ (DAR 'realp'): wie „Realistisch“, dazu physikalischer Himmel, Sonnen- und Himmelslicht, Dunst in der Ferne und volumetrische Wolken mit
 // Bildnachbearbeitung (AgX-Tonwertabbildung, SMAA, Lichtreflexe, Dithering). Bibliotheken: @takram/three-atmosphere,
-// @takram/three-clouds, postprocessing – gebündelt in src/vendor/realistisch.js, beim Start geladen (src/index.html,
-// window.MAAD_REAL). Aufgebaut wird die Kette erst beim ersten Einschalten.
+// @takram/three-clouds, postprocessing – gebündelt in src/vendor/realistisch.js und erst beim ersten Einschalten
+// geladen (Skript id="maadRealLib").
 //
 // Aufbau wie im three.js-Beispiel webgl_loader_3dtiles („post-process lighting“): maad rendert die Szene nur mit
 // gleichmäßigem weißem Licht, das Bild ist dann die Grundfarbe (Albedo). Sonne und Himmel beleuchten erst in der
@@ -27,7 +27,7 @@ const ATM = {
   sonneW: new T.Vector3(0, 1, 0), // Sonnenrichtung in maad-Weltkoordinaten
   maske: null,
   maskeM: null,
-  geo: null, // GeometryPass
+  normal: null,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
   ref: 1, // Bezugshelligkeit der Sonne (hoher Sonnenstand), Einheit der Bibliothek
@@ -56,10 +56,14 @@ function atmAktiv(cm) {
   return ATM.st === 'bereit';
 }
 
-/** Bibliotheken (beim Start in src/index.html geladen). */
+/** Lädt die Bibliotheken (einmal) als ES-Modul aus dem eingebetteten Skript. */
 function atmLib() {
-  if (!window.MAAD_REAL) return Promise.reject(new Error('Bibliotheken nicht geladen'));
-  return Promise.resolve(window.MAAD_REAL);
+  if (!ATM.lib) {
+    const src = $('maadRealLib').textContent,
+      url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    ATM.lib = import(url);
+  }
+  return ATM.lib;
 }
 
 async function atmStart() {
@@ -121,22 +125,19 @@ function atmAufbau(L) {
   // Schattenmaske: Alpha = Anteil im Schatten (three.js ShadowMaterial)
   ATM.maskeM = new T.ShadowMaterial({ color: 0, opacity: 1, transparent: false, blending: T.NoBlending });
   ATM.maske = new T.WebGLRenderTarget(1, 1, { type: T.UnsignedByteType });
+  ATM.normal = new L.NormalPass(sc, cm);
+  ATM.ap.normalBuffer = ATM.normal.texture;
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
     'uniform float uK, uSonne, uHimmel;\nuniform vec3 uSonneV;\nuniform sampler2D tMaske, tNormal;\n' +
-      // Normalen aus dem GeometryPass (oktaedrisch in zwei Kanälen, wie packNormalToVec2 der Bibliothek)
-      'vec3 atmNormal(vec2 e) {\n' +
-      '  vec3 v = vec3(e, 1.0 - abs(e.x) - abs(e.y));\n' +
-      '  if (v.z < 0.0) v.xy = (1.0 - abs(v.yx)) * vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);\n' +
-      '  return normalize(v);\n}\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec3 a = pow(max(inputColor.rgb, vec3(0.0)), vec3(' +
       ATM_GAMMA.toFixed(1) +
       ')) * uK;\n' +
       '  float schatten = texture2D(tMaske, uv).a;\n' +
-      '  vec3 n = atmNormal(texture2D(tNormal, uv).xy);\n' +
+      '  vec3 n = normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0);\n' +
       '  float nl = max(dot(n, uSonneV), 0.0);\n' +
       '  float k = uHimmel / (uSonne * nl + uHimmel + 1e-6);\n' +
       '  outputColor = vec4(a * mix(1.0, k, schatten), inputColor.a);\n}\n',
@@ -149,18 +150,19 @@ function atmAufbau(L) {
         ['uHimmel', new T.Uniform(0.2)],
         ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['tMaske', new T.Uniform(ATM.maske.texture)],
-        ['tNormal', new T.Uniform(null)],
+        ['tNormal', new T.Uniform(ATM.normal.texture)],
       ]),
     },
   );
+  // Himmel nur im Farbbild, nicht im Normalenbild (blendet himmelM nach dem ersten Durchgang aus)
+  const aus = new L.Pass('MaadHimmelAus');
+  aus.needsSwap = false;
+  aus.render = () => (ATM.himmelM.visible = false);
   ATM.tm = new L.ToneMappingEffect({ mode: L.ToneMappingMode.AGX });
   ATM.comp = new L.EffectComposer(ren, { frameBufferType: T.HalfFloatType, multisampling: 0 });
-  // Farbbild und Normalenbild in einem Durchgang (GeometryPass, Materialien beim Start dafür eingerichtet)
-  ATM.geo = new L.GeometryPass(ATM.comp.inputBuffer, sc, cm);
-  ATM.comp.addPass(ATM.geo);
-  ATM.ap.normalBuffer = ATM.geo.geometryTexture;
-  ATM.ap.octEncodedNormal = true;
-  ATM.lin.uniforms.get('tNormal').value = ATM.geo.geometryTexture;
+  ATM.comp.addPass(new L.RenderPass(sc, cm));
+  ATM.comp.addPass(aus);
+  ATM.comp.addPass(ATM.normal);
   ATM.comp.addPass(new L.EffectPass(cm, ATM.lin));
   ATM.comp.addPass(new L.EffectPass(cm, ATM.cl, ATM.ap));
   // Faltungseffekte (Lichtreflexe, SMAA) brauchen je eine eigene Stufe
