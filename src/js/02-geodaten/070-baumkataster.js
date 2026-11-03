@@ -1202,7 +1202,8 @@ function ctxBuild(list) {
     ea = [];
   let tri = 0;
   list.sort((a, b) => Math.hypot(...cen(a.o)) - Math.hypot(...cen(b.o)));
-  for (const b of list.slice(0, 6000)) {
+  // Obergrenze (nach Abstand zur Mitte): früher 6000 – zu wenig für 2 × 2 km in Innenstädten (z. B. Darmstadt ~14 000)
+  for (const b of list.slice(0, 25000)) {
     const ge = b.tris ? triGeo(b) : bExtrude(b);
     if (!ge) continue;
     const pos = ge.attributes.position.array,

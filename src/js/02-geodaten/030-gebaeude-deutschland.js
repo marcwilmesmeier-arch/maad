@@ -651,19 +651,33 @@ async function ogcLod2Load(prov, lon, lat, size) {
         .map((q) => q[0].toFixed(6) + ',' + q[1].toFixed(6) + ',' + q[2].toFixed(1))
         .sort()
         .join(';');
-  for (const coll of ['Building', 'BuildingPart']) {
-    let url = `${prov.ogc}/collections/${coll}/items?f=json&limit=1000&bbox=${bbox}`,
-      seite = 0;
-    while (url && seite++ < 30) {
-      gst(`Lade LoD2 ${prov.name} – ${coll === 'Building' ? 'Gebäude' : 'Gebäudeteile'}, Seite ${seite} …`);
-      let j;
+  // Gebäude und Gebäudeteile gleichzeitig laden (je Sammlung seitenweise, bis 50 × 1000), dann in fester
+  // Reihenfolge auswerten: erst Gebäude, dann Teile (deren doppelte Flächen werden übersprungen)
+  let geladen = 0;
+  const lade = async (coll) => {
+    const seiten = [];
+    let url = `${prov.ogc}/collections/${coll}/items?f=json&limit=1000&bbox=${bbox}`;
+    while (url && seiten.length < 50) {
       try {
         const r = await wfetch(url, 120000);
-        j = await r.json();
+        const j = await r.json();
+        seiten.push(j);
+        geladen += (j.features || []).length;
+        gst(`Lade LoD2 ${prov.name} – ${geladen} Gebäude und Gebäudeteile …`);
+        const next = (j.links || []).find((l) => l.rel === 'next');
+        url = next ? next.href : null;
       } catch (e) {
         errs.push(String(e.message || e));
         break;
       }
+    }
+    return seiten;
+  };
+  const alle = await Promise.all(['Building', 'BuildingPart'].map(lade));
+  for (const seiten of alle)
+    for (const j of seiten) {
+      gst(`Verarbeite LoD2 ${prov.name} – ${list.length} Gebäude …`);
+      await new Promise((r) => setTimeout(r, 0));
       for (const f of j.features || []) {
         const g = f.geometry;
         if (!g) continue;
@@ -728,11 +742,7 @@ async function ogcLod2Load(prov, lon, lat, size) {
           errs.push('Auswertung: ' + e.message);
         }
       }
-      const next = (j.links || []).find((l) => l.rel === 'next');
-      url = next ? next.href : null;
-      await new Promise((r) => setTimeout(r, 10));
     }
-  }
   if (!list.length)
     return {
       list: [],
