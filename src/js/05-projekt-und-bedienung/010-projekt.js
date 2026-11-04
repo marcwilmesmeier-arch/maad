@@ -1108,8 +1108,16 @@ function lvis(i, v) {
   } catch (e) {
     logErr(e, 'lvis');
   }
+  // ── Erweiterung aus 07-analyse/120-wind-darstellung.js (danach)
+  if (LY[i] && (LY[i][1] === 'wind' || LY[i][1] === 'windp')) wiEbeneNeu();
 }
 function lop(i, v) {
+  // ── Erweiterung aus 07-analyse/120-wind-darstellung.js
+  if (LY[i] && (LY[i][1] === 'wind' || LY[i][1] === 'windp')) {
+    LY[i][3] = Math.max(0.05, Math.min(1, +v));
+    wiEbeneNeu();
+    return;
+  }
   // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
   if (LY[i][1] === 'clg') {
     LY[i][3] = v;

@@ -138,6 +138,7 @@ function wiPanel() {
     if (z.linien3d)
       h += `<label style="display:block;font-size:12px">Anzahl <b id="wiA">${z.anzahl}</b><input type="range" min="10" max="200" step="10" value="${z.anzahl}" style="width:100%" oninput="$('wiA').textContent=this.value" onchange="wiZSet('anzahl',+this.value)"></label>`;
     h += `<label class="ck"><input type="checkbox" ${z.linien ? 'checked' : ''} onchange="wiZSet('linien',this.checked)"> bodennah${drReal() ? ' (bewegt)' : ''}</label>`;
+    h += `<label class="ck"><input type="checkbox" ${z.bewegt !== false ? 'checked' : ''} onchange="wiZSet('bewegt',this.checked)"> Strömung animieren (Lichtpulse in Windrichtung)</label>`;
     h += `<div style="margin-top:10px;font-size:12px"><b>Statistik im Kreis</b></div>`;
     h += wiRingSvg(e.anteil, 'Boden');
     if (e.anteilDach.some((v) => v > 0)) h += wiRingSvg(e.anteilDach, 'Dächer');
