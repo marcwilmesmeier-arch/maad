@@ -95,15 +95,13 @@ function wiZeichnenInhalt() {
   if (S.tab !== 'Analyse') return;
   if (S.anT === 'em') {
     // Reiter „Emissionen“: Straßen, Belastung und Qualm (keine Windflächen/-linien)
-    WI.zModus = drReal();
     emZeichnen();
     return;
   }
   if (S.anT !== 'wi') return;
   if (e && S.wiZ.flaeche) wiFlaeche(e);
-  // Realistisch und Realistisch+: bewegte Strömungsstreifen statt statischer Stromlinien
-  WI.zModus = drReal();
-  if (e && S.wiZ.linien) (WI.zModus ? wdWind : (x) => wiStromlinien3D(x, true))(e);
+  // in allen Darstellungen dieselben (animierten) Stromlinien; Ergebnisse am besten lesbar im Weißmodell
+  if (e && S.wiZ.linien) wiStromlinien3D(e, true);
   if (e && S.wiZ.linien3d) wiStromlinien3D(e);
 }
 

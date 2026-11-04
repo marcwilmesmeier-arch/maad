@@ -210,9 +210,8 @@ function rr() {
     if (S.hlk && S.tab !== 'Analyse' && !S.hlw) hlClear(1);
     // Wind-Darstellung nur im Analyse-Reiter „Wind & Emissionen“
     WI_G.visible = S.tab === 'Analyse' && (S.anT === 'wi' || S.anT === 'em');
-    // Darstellung oder Reiter gewechselt: Einblendungen passend neu aufbauen
-    if (WI_G.visible && (WI.erg || EM.erg || WI.p) && (WI.zModus !== drReal() || WI.zReiter !== S.anT))
-      wiZeichnen();
+    // Reiter gewechselt: Einblendungen passend neu aufbauen
+    if (WI_G.visible && (WI.erg || EM.erg || WI.p) && WI.zReiter !== S.anT) wiZeichnen();
     envBuild();
     const R = $('pc'),
       b = S.sel;

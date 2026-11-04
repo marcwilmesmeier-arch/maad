@@ -196,6 +196,7 @@ const EM_KLASSEN = [
 /** Berechnen: zuerst der Wind im Analysebereich (falls noch nicht berechnet), dann die Ausbreitung. */
 function emStarten() {
   if (!WI.p) return;
+  if (S.dar !== 'wm') drSet('wm'); // Ergebnisse im Weißmodell zeigen (beste Übersicht)
   if (!WI.roh) {
     EM.nachWind = true;
     wiStarten();
