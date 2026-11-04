@@ -60,6 +60,7 @@ function newProjectReset() {
   S.bld.forEach((b) => b._g && b._g.parent && b._g.parent.remove(b._g));
   S.bld = [];
   S.variants = [];
+  S.analysen = [];
   S.hist = [];
   S.sel = null;
   S.selF = null;

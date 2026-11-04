@@ -40,7 +40,9 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   (Quelltext per `toString()`) und werden in `tests/wind.test.mjs` direkt aus der Quelldatei getestet. Einblendungen
   liegen in der Gruppe `WI_G` (nur im Reiter sichtbar, `userData.nurFarbe`); Stromlinien mit Lichtpulsen
   (`wiPulsMaterial`, Ebenen „Windlinien“/„Windlinien – Pulse“), bewegter Rauch (`150-wind-dynamisch.js`). „Berechnen“
-  schaltet auf das Weißmodell.
+  öffnet die Analyseansicht (`AV`, Weißmodell, Leiste unten; „Schließen“ stellt die Darstellung wieder her).
+  Gespeicherte Analysen (`S.analysen`, `160-analyse-ansicht-speichern.js`) hängen an einer Variante (`varId`), stehen
+  im Reiter „Varianten“ und werden mit dem Projekt gespeichert; „veraltet“ über den Vergleich mit `vSig()`.
   Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
   des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 

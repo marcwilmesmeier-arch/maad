@@ -135,8 +135,8 @@ function wiGitter() {
 /** Berechnung starten (Hintergrund-Thread). */
 function wiStarten() {
   if (!WI.p) return;
-  // Ergebnisse im Weißmodell zeigen: farbige Flächen und Linien sind dort am besten lesbar
-  if (S.dar !== 'wm') drSet('wm');
+  // Ergebnisse in der Analyseansicht (Weißmodell) zeigen: Flächen und Linien sind dort am besten lesbar
+  avAn();
   wiAbbrechen();
   const gt = wiGitter(),
     flussDurch = gt.nx / WI_U10,
