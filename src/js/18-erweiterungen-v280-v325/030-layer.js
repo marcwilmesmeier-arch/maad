@@ -17,9 +17,14 @@ function lyMApply(st) {
     Object.assign(S.lc, lcMig(st.lc || {}));
     if (ch.length) lcApplyAll(ch);
     st.ly.forEach(([k, v, o]) => {
-      if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
+      if (['nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
       const i = LY.findIndex((l) => l[1] === k);
       if (i < 0) return;
+      // CORINE (Boden und Gebäude) bleibt beim Wechsel der Darstellung so, wie es gerade ist
+      if (k === 'clc' || k === 'bclc') {
+        v = LY[i][2];
+        o = LY[i][3];
+      }
       LY[i][2] = v;
       LY[i][3] = o;
       if (!S.geo || !PK[k] || k === 'parcels' || k === 'bplan') {
