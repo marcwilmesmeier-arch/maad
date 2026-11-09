@@ -248,6 +248,15 @@ function scZeichnen() {
     sp.position.set(x, y1, z);
     sp.scale.set(0.034, 0.034, 1);
     sp.center.set(0.5, 0.15);
+    // feste Bildschirmgröße wirkt in three.js nur mit der Perspektivkamera; in 2D (Parallelprojektion) die Größe aus
+    // dem sichtbaren Ausschnitt bestimmen, damit der Marker gleich groß erscheint
+    sp.onBeforeRender = (r, s, cam) => {
+      if (cam.isOrthographicCamera) {
+        const k =
+          0.034 * (pc.projectionMatrix.elements[5] || 2.4) * 0.5 * ((cam.top - cam.bottom) / cam.zoom);
+        sp.scale.set(k, k, 1);
+      } else sp.scale.set(0.034, 0.034, 1);
+    };
     sp.renderOrder = 20;
     sp.raycast = () => {};
     SC_G.add(sp);
