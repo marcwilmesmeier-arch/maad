@@ -282,9 +282,10 @@ function fdDepthFx(g, b, V, ox, o) {
 // ======================================================================
 LY.push(['Gebäude nach Flächennutzung (CORINE)', 'bclc', 0, 1]);
 const BCL = { sig: '' };
+// Aktiv, sobald die CORINE-Bodenfläche sichtbar ist (Boden und Gebäude einheitlich) oder die Gebäude-Ebene an ist
 const bclOn = () => {
   const L = LY.find((l) => l[1] === 'bclc');
-  return !!(L && L[2]);
+  return !!(L && L[2]) || (typeof ovVis === 'function' && ovVis('clc'));
 };
 function bclIn(rs, x, z) {
   let c = false;
@@ -365,9 +366,15 @@ setInterval(() => {
   try {
     const m = GEO.mesh,
       it = (typeof OVI !== 'undefined' && OVI.clc) || [],
-      sg = [m && m.uuid, bclOn() ? 1 : 0, it.length, it._v || '', ovFuellAlpha('clc'), S.lc.terrain].join(
-        '|',
-      );
+      sg = [
+        m && m.uuid,
+        bclOn() ? 1 : 0,
+        S.dar,
+        it.length,
+        it._v || '',
+        ovFuellAlpha('clc'),
+        S.lc.terrain,
+      ].join('|');
     if (sg !== BCL.sig) {
       BCL.sig = sg;
       RFC.sig = '';

@@ -97,26 +97,36 @@ async function scLaden() {
       `);out tags geom;`;
   let j = null,
     letzter = null;
+  // mehrere Overpass-Server: bei Überlastung (429/504) oder Zeitüberschreitung den nächsten versuchen
   for (const ep of [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
   ]) {
     try {
       const ac = new AbortController(),
         to = setTimeout(() => ac.abort(), 45000);
       const r = await fetch(ep + '?data=' + encodeURIComponent(q), { signal: ac.signal });
       clearTimeout(to);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok)
+        throw new Error(
+          'HTTP ' +
+            r.status +
+            (r.status === 429 ? ' (überlastet)' : r.status === 504 ? ' (Zeitüberschreitung)' : ''),
+        );
       j = await r.json();
       break;
     } catch (e) {
-      letzter = e;
+      letzter = e.name === 'AbortError' ? new Error('keine Antwort nach 45 s') : e;
       logErr(e, 'scLaden');
     }
   }
   if (!j) {
     SC.st = 'fehler';
-    SC.fehler = 'OpenStreetMap (Overpass) nicht erreichbar: ' + ((letzter && letzter.message) || letzter);
+    SC.fehler =
+      'OpenStreetMap (Overpass) nicht erreichbar: ' +
+      ((letzter && letzter.message) || letzter) +
+      '. Die Server sind zeitweise überlastet – bitte in einer Minute erneut versuchen.';
     rr();
     return;
   }
