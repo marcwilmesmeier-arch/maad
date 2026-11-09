@@ -7,6 +7,7 @@ const OVL = {
   vsg: { n: 'Vogelschutzgebiete (Natura 2000)', col: '#8a5cc2' },
   hq: { n: 'Überschwemmungsrisiko (Fluss)', col: '#2f6fd0' },
   clc: { n: 'Flächennutzung (CORINE)', col: '#888888' },
+  scp: { n: 'Plätze', col: '#e8a17c' }, // Plätze aus Site & Context (07-analyse/170-site-context.js), Daten aus scLaden()
 };
 const OVD = {},
   OVI = {};
@@ -32,11 +33,12 @@ function ovPaint(k, items) {
 function ovFuellAlpha(k) {
   const L = LY.find((l) => l[1] === k),
     al = Math.max(0.05, Math.min(1, L ? L[3] : 0.7));
+  if (k === 'scp') return 0.85 * al; // Plätze (Site & Context) kräftig wie im Lageplan
   return (0.38 * al) / 0.7;
 }
 /* alle sichtbaren Flächen-Ebenen in EINE Zeichenfläche (Speicher), Deckkraft je Ebene aus dem Layer-Menü */
 function ovRepaint() {
-  const ks = ['clc', 'hq', 'ffh', 'vsg', 'nsg'].filter((k) => ovVis(k) && OVI[k]),
+  const ks = ['clc', 'hq', 'ffh', 'vsg', 'nsg', 'scp'].filter((k) => ovVis(k) && OVI[k]),
     sig =
       ks
         .map((k) => {

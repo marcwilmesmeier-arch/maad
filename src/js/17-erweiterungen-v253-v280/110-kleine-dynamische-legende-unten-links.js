@@ -1,6 +1,7 @@
 /* v274: kleine dynamische Legende unten links – zeigt nur die gerade eingeblendeten Analyseflächen:
    Einheiten (Färbung nach Flächenart/DIN 277/Nutzung/Geschoss), Abstandsflächen, Umwelt-Flächen (Naturschutz, Natura 2000, Hochwasser, CORINE-Klassen).
-   Neue Legendengruppe = Funktion in LGD (liefert null oder {t:Titel, r:[[Farbe,Text],…]}). */
+   Neue Legendengruppe = Funktion in LGD (liefert null oder {t:Titel, r:[[Farbe,Text,Klasse?,Zeichen?],…]};
+   Klasse „nr“ mit Zeichen = nummerierter Kreis). */
 const LGS = { o: true };
 try {
   LGS.o = localStorage.getItem('lot_lgd') !== '0';
@@ -91,7 +92,9 @@ const LGD = [
             .concat(r.length > 10 ? [['transparent', '… +' + (r.length - 10) + ' weitere']] : []),
         }
       : null;
-  },
+  }, // Site & Context (07-analyse/170-site-context.js)
+  () => scLegendeLm(),
+  () => scLegendePl(),
 ];
 function lgdHtml() {
   const gs = [];
@@ -126,7 +129,9 @@ function lgdHtml() {
                     (x[2]
                       ? ' class="' + x[2] + '" style="--c:' + x[0] + '"'
                       : ' style="background:' + x[0] + '"') +
-                    '></i><span>' +
+                    '>' +
+                    (x[3] ? esc(x[3]) : '') +
+                    '</i><span>' +
                     esc(x[1]) +
                     '</span></div>',
                 )
@@ -180,6 +185,7 @@ body.hpj #lgd{bottom:36px}
 #lgd .lgr i.ln{border-top:2px solid var(--c)}
 #lgd .lgr i.dash{border-top:2px dashed var(--c)}
 #lgd .lgr i.bd{border-top:4px solid var(--c)}
+#lgd .lgr i.nr{width:16px;height:16px;border-radius:50%;background:var(--c);box-shadow:none;color:#fff;font:700 9.5px/16px system-ui,sans-serif;font-style:normal;text-align:center}
 #lgd .lgr span{overflow-wrap:anywhere}
 body.anOn #lgd{display:none!important}
 @media(max-width:800px){#lgd{max-width:178px}}`;

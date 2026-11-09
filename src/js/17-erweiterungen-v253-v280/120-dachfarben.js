@@ -80,6 +80,12 @@ function rfUp() {
   } catch (e) {
     console.warn(e);
   }
+  // ── Erweiterung aus 07-analyse/170-site-context.js (danach): Landmark-Gebäude in Akzentfarbe
+  try {
+    scPaint();
+  } catch (e) {
+    logErr(e, 'rfUp');
+  }
   return r;
 }
 setInterval(() => {

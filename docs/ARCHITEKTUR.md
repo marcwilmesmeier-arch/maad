@@ -43,6 +43,10 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   öffnet die Analyseansicht (`AV`, Weißmodell, Leiste unten; „Schließen“ stellt die Darstellung wieder her).
   Gespeicherte Analysen (`S.analysen`, `160-analyse-ansicht-speichern.js`) hängen an einer Variante (`varId`), stehen
   im Reiter „Varianten“ und werden mit dem Projekt gespeichert; „veraltet“ über den Vergleich mit `vSig()`.
+- Site & Context (Analyse-Reiter `sc`, `07-analyse/170-site-context.js`): Landmarks und Plätze per Overpass aus OSM
+  (`scLaden`, gewichtet nach Wikidata/Wikipedia, Denkmal, Art). Landmark-Gebäude in Akzentfarbe über `scPaint()` (aus
+  `rfUp()`), Nummernmarker in `SC_G` (= `G.scl`, Ebene „Landmarks“), Plätze als Karten-Ebene `scp` im Geländebild,
+  Legende über `LGD`. Ergebnis wird mit dem Projekt gespeichert (`x.sc`).
   Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
   des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 

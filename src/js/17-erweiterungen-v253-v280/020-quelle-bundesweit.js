@@ -54,6 +54,8 @@ const envSave = () => {
 .ax .axt button span{max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .35s,opacity .25s}
 .ax .axt button.on span{max-width:120px;opacity:1}
 .ax .axt button svg{flex:none}
+.ax .axt.axt2{display:inline-flex;margin-top:-6px}
+.ax .axt.axt2 button,.ax .axt.axt2 button.on{flex:0 0 40px}
 .ax .axs{display:grid;grid-template-columns:34px 1fr;gap:0 4px;padding:12px 0;border-top:1px solid var(--ln)}
 .ax .axs:first-of-type{border-top:0}
 .ax .axs.cp{padding:6px 0;border-top:0}

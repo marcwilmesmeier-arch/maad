@@ -54,6 +54,7 @@ function projExtra(cam) {
     x.views = S.views;
     x.variants = S.variants;
     x.analysen = S.analysen;
+    x.sc = SC.lm.length || SC.pl.length ? { key: SC.key, lm: SC.lm, pl: SC.pl, wahl: S.sc } : null;
     x.meas = S.meas;
     x.areaN = S.areaN;
     x.fa = S.fa;
@@ -375,6 +376,7 @@ function projApplySet(x) {
   }
   if (x.variants) S.variants = cp(x.variants);
   S.analysen = x.analysen ? cp(x.analysen) : [];
+  scLadenAusProjekt(x.sc);
   if (x.fa && x.fa.length) S.fa = cp(x.fa);
   if (x.din) Object.assign(S.din, cp(x.din));
   if (x.gro) {

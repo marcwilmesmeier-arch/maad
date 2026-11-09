@@ -1581,6 +1581,9 @@ function lcol(k, v) {
       } else if (k === 'wind' || k === 'windp') {
         // ── Erweiterung aus 07-analyse/120-wind-darstellung.js
         wiEbeneNeu();
+      } else if (k === 'scl' || k === 'scp') {
+        // ── Erweiterung aus 07-analyse/170-site-context.js
+        scNeu();
       } else if (PK[k]) {
         if (S.geo && GEO.acc) {
           ctxPaint(GEO.acc);

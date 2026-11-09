@@ -115,3 +115,11 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   5 m Raster, bei 3 m Raster und großem Radius deutlich mehr). Emissionen werden noch nicht gespeichert.
 - „Anzeigen“ baut das Rechengitter aus der aktuellen Planung neu auf; passt es in der Größe nicht mehr (anderes
   Gelände), muss neu gerechnet werden. Bei veralteter Analyse liegen Gebäude und Strömung ggf. nicht mehr deckungsgleich.
+
+## Site & Context
+
+- Landmarks kommen allein aus OSM-Merkmalen; die Auswahl hängt von der Pflege vor Ort ab. Denkmallisten der Länder
+  sind noch nicht angebunden. Baujahre nur, wenn `start_date`/`construction_date` gepflegt ist.
+- Zuordnung Landmark → Umgebungsgebäude: Punkt im Grundriss bzw. Gebäudemitte in der OSM-Fläche. Bei abweichenden
+  Grundrissen (LoD2 vs. OSM) kann ein Gebäude fehlen oder ein Nachbar mitgefärbt werden.
+- Im Test nur mit nachgestellten OSM-Daten geprüft (Overpass in der Entwicklungsumgebung gesperrt).
