@@ -37,7 +37,7 @@ function anPanel(b) {
     '<div class="axt axt2" role="tablist">' +
     T2.map(
       ([k, n]) =>
-        `<button class="${S.anT === k ? 'on' : ''}" role="tab" aria-selected="${S.anT === k}" onclick="anTab('${k}')" title="${n}" aria-label="${n}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ANI[k]}</svg></button>`,
+        `<button class="${S.anT === k ? 'on' : ''}${k === 'sc' && (SC.lm.length || SC.pl.length) ? (scSichtbar() ? ' an' : ' aus') : ''}" role="tab" aria-selected="${S.anT === k}" onclick="anTab('${k}')" title="${n}${k === 'sc' && (SC.lm.length || SC.pl.length) ? ' – erneut klicken: Landmarks und Plätze ' + (scSichtbar() ? 'ausblenden' : 'einblenden') : ''}" aria-label="${n}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ANI[k]}</svg></button>`,
     ).join('') +
     '</div>';
   h +=

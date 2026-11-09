@@ -100,6 +100,12 @@ const VCX = [
   },
 ];
 S.zo = { m: 'b', bc: '#9db4cc', o: {} };
+// Ein-/Ausklappen des Menüs: zu bis zum Klick auf die Überschrift oder bis ein Gebäude ausgewählt wird
+const ZOK = { auf: false, sel: null };
+function zoAufZu() {
+  ZOK.auf = !ZOK.auf;
+  zoRender();
+}
 S.expl = { on: 0, gap: 5, cur: 0 };
 document
   .getElementById('cmp')
@@ -119,7 +125,10 @@ document
 const zoCss = document.createElement('style');
 zoCss.textContent = `#zol{position:absolute;left:10px;top:78px;width:272px;max-height:calc(100% - 270px);overflow:auto;padding:12px 14px 14px;z-index:19;font-size:12px;line-height:1.3;font-variant-numeric:tabular-nums}
 #zol{--zl:#e4e6e8;--zm:#7d8287;--zh:#e9f1f9}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #zol{--zl:#ffffff1f;--zm:#a5a299;--zh:#ffffff12}}
-#zol>b:first-child{display:block;font-size:14px;font-weight:600;letter-spacing:0}
+#zol>b:first-child{display:block;font-size:14px;font-weight:600;letter-spacing:0;cursor:pointer;user-select:none}
+#zol>b:first-child::after{content:'';display:inline-block;width:6px;height:6px;margin:0 0 3px 9px;border-right:1.6px solid var(--zm);border-bottom:1.6px solid var(--zm);transform:rotate(45deg);transition:transform .2s}
+#zol.zu>b:first-child::after{transform:rotate(-45deg);margin-bottom:1px}
+#zol.zu{padding-bottom:12px}#zol.zu>*:not(b:first-child){display:none}
 #zol .seg{display:flex;gap:2px;margin:10px 0 8px;padding:3px;border-radius:8px;background:color-mix(in srgb,var(--zm) 16%,transparent)}#zol .seg button{flex:1;border:1px solid transparent;background:transparent;border-radius:6px;padding:6px 4px;font:inherit;font-size:12px;cursor:pointer;color:var(--zm)}#zol .seg button.on{background:var(--pn,#fff);border-color:#5E7F92;color:var(--tx);font-weight:600;box-shadow:0 1px 3px #0002}
 #zol h5,#zol .bd{margin:12px 0 4px;padding-top:11px;border-top:1px solid var(--zl);font-size:13px;font-weight:600;color:var(--tx);text-transform:none;letter-spacing:0}
 #zol .r{display:flex;align-items:center;gap:8px;padding:5px 4px;min-height:18px}#zol .r i{width:12px;height:12px;border-radius:3px;border:1px solid #0003;flex:none}#zol .r span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#zol .r b{font-weight:400;white-space:nowrap}

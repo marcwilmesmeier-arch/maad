@@ -56,6 +56,8 @@ const envSave = () => {
 .ax .axt button svg{flex:none}
 .ax .axt.axt2{display:inline-flex;margin-top:-6px}
 .ax .axt.axt2 button,.ax .axt.axt2 button.on{flex:0 0 40px}
+.ax .axt.axt2 button.aus svg{opacity:.4}
+.ax .axt.axt2 button.an{background:linear-gradient(135deg,var(--pa2,#ececec),var(--pa3,#dcdcdc));color:var(--pa5,var(--g7,#5a5e65));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--pa4,#888) 75%,transparent)}
 .ax .axs{display:grid;grid-template-columns:34px 1fr;gap:0 4px;padding:12px 0;border-top:1px solid var(--ln)}
 .ax .axs:first-of-type{border-top:0}
 .ax .axs.cp{padding:6px 0;border-top:0}

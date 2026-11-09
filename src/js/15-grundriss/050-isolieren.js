@@ -178,6 +178,12 @@ function zoUnPaint() {
   });
 }
 function zoRender() {
+  // Ein-/Ausklappen: eine neu ausgewählte Planung klappt das Menü auf (ZOK, 040-bilanz.js)
+  const zs = S.sel && !S.sel.ex ? S.sel.id : null,
+    ze = $('zol');
+  if (zs && zs !== ZOK.sel) ZOK.auf = true;
+  ZOK.sel = zs;
+  if (ze) ze.classList.toggle('zu', !ZOK.auf);
   // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js
   const r = (() => {
     // ── Erweiterung aus 22-lod200-waende/070-nettogeschossflaeche.js
@@ -188,7 +194,7 @@ function zoRender() {
       const m = S.zo.m,
         P = zoScope(),
         one = P.length === 1 && S.sel === P[0];
-      let h = `<b>Gebäudemetrik</b><button class="zg ${FAP.open ? 'on' : ''}" title="Flächenarten und Nutzungen einstellen" aria-label="Optionen: Flächenarten" onclick="faToggle()"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4.5h5M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.2" cy="4.5" r="1.7"/><circle cx="6.2" cy="11.5" r="1.7"/></svg></button><div class="seg">${[
+      let h = `<b onclick="zoAufZu()" title="Ein-/ausklappen">Gebäudemetrik</b><button class="zg ${FAP.open ? 'on' : ''}" title="Flächenarten und Nutzungen einstellen" aria-label="Optionen: Flächenarten" onclick="faToggle()"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4.5h5M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.2" cy="4.5" r="1.7"/><circle cx="6.2" cy="11.5" r="1.7"/></svg></button><div class="seg">${[
         ['b', 'Gebäude', '<path d="M12 3l8 4v10l-8 4-8-4V7z"/><path d="M12 11v10M4 7l8 4 8-4"/>'],
         [
           'f',

@@ -164,6 +164,9 @@ function axDq() {
   return axDqUsed() + axDqEnv();
 }
 function anTab(t) {
+  // ── Erweiterung aus 07-analyse/170-site-context.js: erneuter Klick auf „Site & Context“ blendet Landmarks und
+  // Plätze aus bzw. wieder ein
+  if (t === 'sc' && S.anT === 'sc' && (SC.lm.length || SC.pl.length)) scSichtbar(!scSichtbar());
   S.anT = t;
   rr();
 }

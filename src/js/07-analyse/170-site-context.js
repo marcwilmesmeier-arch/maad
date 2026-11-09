@@ -292,7 +292,16 @@ function scPaint() {
   const L = LY.find((l) => l[1] === 'scl');
   if (!L || !L[2] || !SC.lm.length) return;
   const m = GEO.mesh;
-  if (!m || !m.geometry.attributes.color) return;
+  if (!m || !m.geometry.attributes.position) return;
+  if (!m.geometry.attributes.color) {
+    // ohne Dach-/CORINE-Farben gibt es noch keine Vertexfarben: weiß anlegen (Faktor 1 = Materialfarbe)
+    m.geometry.setAttribute(
+      'color',
+      new T.BufferAttribute(new Float32Array(m.geometry.attributes.position.count * 3).fill(1), 3),
+    );
+    m.material.vertexColors = true;
+    m.material.needsUpdate = true;
+  }
   if (SC.mesh !== m.uuid) {
     // Umgebung neu aufgebaut: Zuordnung und Marker neu bestimmen (färbt danach erneut)
     scNeu();
@@ -417,4 +426,13 @@ function scLadenAusProjekt(d) {
     if (GEO.mesh || n > 60) scZeichnen();
     else setTimeout(() => warte(n + 1), 1000);
   }, 0);
+}
+
+/** Landmarks und Plätze zusammen ein-/ausblenden (Ebenen „Landmarks“, „Plätze“); ohne Argument: sichtbar? */
+function scSichtbar(an) {
+  const ix = ['scl', 'scp'].map((k) => LY.findIndex((l) => l[1] === k)).filter((i) => i >= 0);
+  if (an === undefined) return ix.some((i) => LY[i][2]);
+  ix.forEach((i) => lvis(i, an ? 1 : 0));
+  scNeu();
+  return an;
 }
