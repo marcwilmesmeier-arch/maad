@@ -1114,6 +1114,8 @@ function lvis(i, v) {
   if (LY[i] && (LY[i][1] === 'wind' || LY[i][1] === 'windp')) wiEbeneNeu();
   // ── Erweiterung aus 07-analyse/170-site-context.js (danach): Landmark-Färbung folgt der Sichtbarkeit
   if (LY[i] && LY[i][1] === 'scl') scNeu();
+  // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js (danach)
+  if (LY[i] && LY[i][1] === 'erg') erNeu();
 }
 function lop(i, v) {
   // ── Erweiterung aus 07-analyse/120-wind-darstellung.js
@@ -1126,6 +1128,12 @@ function lop(i, v) {
   if (LY[i] && LY[i][1] === 'scp') {
     LY[i][3] = Math.max(0.05, Math.min(1, +v));
     if (S.geo) recomp();
+    return;
+  }
+  // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js: Bodenbild und Gebäudefarben
+  if (LY[i] && LY[i][1] === 'erg') {
+    LY[i][3] = Math.max(0.05, Math.min(1, +v));
+    erNeu();
     return;
   }
   // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js

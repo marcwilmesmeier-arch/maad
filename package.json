@@ -16,7 +16,7 @@
     "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs",
     "paket": "npm run build && node tools/paket.mjs",
     "vendor": "node tools/vendor.mjs",
-    "test:wind": "node --test tests/wind.test.mjs"
+    "test:wind": "node --test tests/wind.test.mjs tests/erreichbarkeit.test.mjs"
   },
   "devDependencies": {
     "@takram/three-atmosphere": "0.19.1",

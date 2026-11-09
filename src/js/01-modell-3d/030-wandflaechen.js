@@ -1584,6 +1584,9 @@ function lcol(k, v) {
       } else if (k === 'scl' || k === 'scp') {
         // ── Erweiterung aus 07-analyse/170-site-context.js
         scNeu();
+      } else if (k === 'erg' || k === 'erh') {
+        // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js
+        erNeu();
       } else if (PK[k]) {
         if (S.geo && GEO.acc) {
           ctxPaint(GEO.acc);

@@ -123,3 +123,11 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Zuordnung Landmark → Umgebungsgebäude: Punkt im Grundriss bzw. Gebäudemitte in der OSM-Fläche. Bei abweichenden
   Grundrissen (LoD2 vs. OSM) kann ein Gebäude fehlen oder ein Nachbar mitgefärbt werden.
 - Im Test nur mit nachgestellten OSM-Daten geprüft (Overpass in der Entwicklungsumgebung gesperrt).
+
+## Erreichbarkeit zu Fuß
+
+- Gehgeschwindigkeit fest 4,8 km/h, Ampeln/Steigungen nicht berücksichtigt; Wege ohne Fußverbot zählen (auch Straßen
+  ohne Gehweg-Erfassung). Abseits der Wege höchstens 40 m mit 70 % Tempo.
+- Ergebnis wird nicht mit dem Projekt gespeichert (Netz neu laden); Haltestellen gleicher Art und gleichen Namens
+  innerhalb 250 m werden zusammengefasst. Flughäfen nur mit IATA-Code im Umkreis von 60 km (Luftlinie).
+- Nur mit nachgestellten OSM-Daten im Browser geprüft (Overpass in der Entwicklungsumgebung gesperrt).

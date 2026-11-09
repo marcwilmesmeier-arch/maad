@@ -95,6 +95,9 @@ const LGD = [
   }, // Site & Context (07-analyse/170-site-context.js)
   () => scLegendeLm(),
   () => scLegendePl(),
+  // Erreichbarkeit (07-analyse/190-erreichbarkeit.js)
+  () => erLegendeZeit(),
+  () => erLegendeOepnv(),
 ];
 function lgdHtml() {
   const gs = [];

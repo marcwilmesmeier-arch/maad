@@ -167,6 +167,8 @@ function anTab(t) {
   // ── Erweiterung aus 07-analyse/170-site-context.js: erneuter Klick auf „Site & Context“ blendet Landmarks und
   // Plätze aus bzw. wieder ein
   if (t === 'sc' && S.anT === 'sc' && (SC.lm.length || SC.pl.length)) scSichtbar(!scSichtbar());
+  // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js: ebenso für „Erreichbarkeit“
+  if (t === 'er' && S.anT === 'er' && (ER.raster || ER.halte.length)) erSichtbar(!erSichtbar());
   S.anT = t;
   rr();
 }

@@ -47,6 +47,11 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   (`scLaden`, gewichtet nach Wikidata/Wikipedia, Denkmal, Art). Landmark-Gebäude in Akzentfarbe über `scPaint()` (aus
   `rfUp()`), Nummernmarker in `SC_G` (= `G.scl`, Ebene „Landmarks“), Plätze als Karten-Ebene `scp` im Geländebild,
   Legende über `LGD`. Ergebnis wird mit dem Projekt gespeichert (`x.sc`).
+- Erreichbarkeit (Analyse-Reiter `er`): Rechnung browserfrei in `180-erreichbarkeit-rechnen.js` (`erNetz`, `erZeiten`
+  ab allen Grundstücksecken, `erRaster` mit begrenztem Weg abseits des Netzes; Test `tests/erreichbarkeit.test.mjs`),
+  Abruf und Darstellung in `190-erreichbarkeit.js`: Bodenbild als Karten-Ebene `erg` (Bild-Element in `ovRepaint`),
+  Gebäude über `erPaint()` aus `rfUp()`, Haltestellen-Symbole in `ER_G` (= `G.erh`). Sprite-Größe in 2D über
+  `spriteFesteGroesse()` (170-site-context.js).
   Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
   des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 

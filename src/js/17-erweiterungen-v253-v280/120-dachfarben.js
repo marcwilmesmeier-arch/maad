@@ -80,6 +80,12 @@ function rfUp() {
   } catch (e) {
     console.warn(e);
   }
+  // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js (danach): Gebäude nach Gehzeit
+  try {
+    erPaint();
+  } catch (e) {
+    logErr(e, 'rfUp');
+  }
   // ── Erweiterung aus 07-analyse/170-site-context.js (danach): Landmark-Gebäude in Akzentfarbe
   try {
     scPaint();
