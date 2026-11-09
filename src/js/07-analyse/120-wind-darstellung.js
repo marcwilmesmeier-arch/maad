@@ -2,7 +2,7 @@
 // Kreisförmiger Analysebereich mit Farbbändern am Boden und auf Dächern (Komfort, Windverstärkung,
 // Verwirbelung), 3D-Stromlinien nach Wichtigkeit, bodennahe Stromlinien mit Pfeilen. Liegt knapp über dem Gelände, wirft und empfängt keine Schatten.
 
-S.wiZ = { art: 'komfort', linien: true, flaeche: true, linien3d: true, anzahl: 60 };
+S.wiZ = { art: 'komfort', linien: true, flaeche: true, linien3d: true, anzahl: 60, bewegt: true };
 const WI_G = new T.Group();
 WI_G.name = 'wind';
 sc.add(WI_G);
@@ -95,15 +95,13 @@ function wiZeichnenInhalt() {
   if (S.tab !== 'Analyse') return;
   if (S.anT === 'em') {
     // Reiter „Emissionen“: Straßen, Belastung und Qualm (keine Windflächen/-linien)
-    WI.zModus = drReal();
     emZeichnen();
     return;
   }
   if (S.anT !== 'wi') return;
   if (e && S.wiZ.flaeche) wiFlaeche(e);
-  // Realistisch und Realistisch+: bewegte Strömungsstreifen statt statischer Stromlinien
-  WI.zModus = drReal();
-  if (e && S.wiZ.linien) (WI.zModus ? wdWind : (x) => wiStromlinien3D(x, true))(e);
+  // in allen Darstellungen dieselben (animierten) Stromlinien; Ergebnisse am besten lesbar im Weißmodell
+  if (e && S.wiZ.linien) wiStromlinien3D(e, true);
   if (e && S.wiZ.linien3d) wiStromlinien3D(e);
 }
 
@@ -258,6 +256,66 @@ function wiDachFlaechen(gt, werte, pal) {
  * 3D-Stromlinien (wie Forma, Ansicht „Wichtigkeit“): viele Linien von der Einströmseite in verschiedenen Höhen
  * durch das mittlere Feld verfolgen und die mit der stärksten Ablenkung zeigen. Farbe nach Geschwindigkeit.
  */
+// Ebenen für die Stromlinien (Farbe, Sichtbarkeit, Deckkraft im Ebenen-Menü)
+// Deckkraft „Windlinien“ 0,3: animiert nur angedeutet (0,3 × 0,27 ≈ 0,08), ohne Animation kräftig (× 2,8 ≈ 0,85)
+LY.push(['Windlinien', 'wind', 1, 0.3], ['Windlinien – Pulse', 'windp', 1, 1]);
+S.lc.wind = '#1f338c';
+S.lc.windp = '#73bfff';
+const wiEbene = (k) => LY.find((l) => l[1] === k) || [0, k, 1, 1];
+let wiNeuT = 0;
+/** Stromlinien nach Änderung im Ebenen-Menü neu zeichnen (verzögert, Regler feuern laufend). */
+function wiEbeneNeu() {
+  clearTimeout(wiNeuT);
+  wiNeuT = setTimeout(() => {
+    if (WI.p) wiZeichnen();
+  }, 120);
+}
+
+// Bewegte Stromlinien: Lichtpulse laufen mit der berechneten Geschwindigkeit die Linie entlang (Kopf hell, Schweif
+// verblasst). Schnelle Stellen: Pulse eilen und ziehen sich auseinander; Stau und Wirbel: Pulse werden langsam.
+// periode: Abstand der Pulse in Laufzeit (s) – kurz, damit die Folge selbst den Verlauf als Linie zeichnet;
+// raffer: Zeitraffer der Bewegung; schweif: Anteil des Abstands, über den ein Puls ausläuft
+const WI_PULS = { periode: 1.4, raffer: 1.5, schweif: 0.7 };
+
+/**
+ * Linienmaterial um die Pulse erweitern: Attribut „zeit“ (Laufzeit in s), Uniform uZeit (Uhr, Zeitraffer).
+ * grund: Deckkraft der Linie, pulsA: Deckkraft der Pulse (aus den Ebenen „Windlinien“ und „Windlinien – Pulse“).
+ */
+function wiPulsMaterial(m, grund, pulsA) {
+  m.userData.grund = grund;
+  m.userData.pulsA = pulsA;
+  m.customProgramCacheKey = () => 'wiPuls';
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uZeit = { value: 0 };
+    sh.uniforms.uPeriode = { value: WI_PULS.periode };
+    sh.uniforms.uSchweif = { value: WI_PULS.schweif };
+    sh.uniforms.uGrund = { value: m.userData.grund };
+    sh.uniforms.uPulsA = { value: m.userData.pulsA };
+    sh.uniforms.uPulsC = { value: new T.Color(S.lc.windp || '#73bfff') };
+    m.userData.u = sh.uniforms;
+    sh.vertexShader = sh.vertexShader.replace(
+      'void main() {',
+      'attribute float zeit;\nvarying float vZeit;\nvoid main() {\n  vZeit = zeit;',
+    );
+    sh.fragmentShader = sh.fragmentShader
+      .replace(
+        'void main() {',
+        'uniform float uZeit;\nuniform float uPeriode;\nuniform float uSchweif;\nuniform float uGrund;\nuniform float uPulsA;\nuniform vec3 uPulsC;\nvarying float vZeit;\nvoid main() {',
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+  // Abstand hinter dem nächsten Pulskopf (0 = Kopf, wächst entlang des Schweifs gegen die Strömung)
+  float x = fract((uZeit - vZeit) / uPeriode) / uSchweif;
+  float k = x < 1.0 ? (1.0 - x) * (1.0 - x) : 0.0;
+  float p = k * uPulsA;
+  diffuseColor.rgb = mix(diffuseColor.rgb, uPulsC, p > 0.0 ? k : 0.0);
+  diffuseColor.a = max(uGrund * (1.0 - k), p);`,
+      );
+  };
+  return m;
+}
+
 function wiStromlinien3D(e, nah) {
   if (!WI.roh) return;
   const gt = e.gt,
@@ -337,10 +395,25 @@ function wiStromlinien3D(e, nah) {
   if (!nah) kand.sort((a, b) => b.w - a.w); // „Wichtigkeit“: stärkste Ablenkung zuerst
   const pos = [],
     farbe = [],
+    zeit = [], // Laufzeit des Windes bis zu diesem Punkt (s) – für die bewegten Lichtpulse
     col = new T.Color(),
-    vmax = WI_PAL.komfort.max;
+    vmax = WI_PAL.komfort.max,
+    eL = wiEbene('wind'),
+    eP = wiEbene('windp'),
+    bewegt = S.wiZ.bewegt !== false && !!eP[2],
+    cL = new T.Color(S.lc.wind || '#1f338c'),
+    cS = new T.Color(shade(S.lc.wind || '#1f338c', 0.7)); // schneller = dunkler/kräftiger
+  if (!eL[2] && !bewegt) return;
   for (const { pfad } of kand.slice(0, anzahl)) {
-    if (nah) {
+    // Laufzeit je Pfadpunkt: Schrittweite ½ Zelle durch örtliche Geschwindigkeit; Startversatz zufällig, damit die
+    // Pulse benachbarter Linien nicht im Gleichtakt laufen
+    const tp = [];
+    let t = zufall() * WI_PULS.periode;
+    for (let n = 0; n < pfad.length; n += 4) {
+      tp.push(t);
+      t += (0.4 * gt.dx) / Math.max(0.3, pfad[n + 3]);
+    }
+    if (nah && !bewegt) {
       // ein kleiner Pfeil in der Mitte der Linie (Flussrichtung)
       const m = (((pfad.length / 4) >> 1) - 1) * 4;
       if (m > 0) {
@@ -351,10 +424,11 @@ function wiStromlinien3D(e, nah) {
           dx = (x1 - x0) / l,
           dz = (z1 - z0) / l,
           L = 1.6;
-        col.setRGB(0.12, 0.2, 0.55);
+        col.copy(cL);
         for (const sgn of [1, -1]) {
           pos.push(x1 - dx * L - sgn * dz * L * 0.5, y, z1 - dz * L + sgn * dx * L * 0.5, x1, y, z1);
           farbe.push(col.r, col.g, col.b, col.r, col.g, col.b);
+          zeit.push(0, 0);
         }
       }
     }
@@ -362,19 +436,29 @@ function wiStromlinien3D(e, nah) {
       for (const o of [0, 4]) {
         const [x, z] = gt.welt(pfad[n + o] - 0.5, pfad[n + o + 1] - 0.5);
         pos.push(x, gh(x, z) + pfad[n + o + 2] * gt.dx, z);
-        // dunkelblau, schneller = kräftiger
-        col.setRGB(0.12, 0.2, 0.55).lerp(new T.Color(0.25, 0.1, 0.75), Math.min(1, pfad[n + o + 3] / vmax));
+        // Ebenenfarbe, schneller = kräftiger
+        col.copy(cL).lerp(cS, Math.min(1, pfad[n + o + 3] / vmax));
         farbe.push(col.r, col.g, col.b);
+        zeit.push(tp[(n + o) / 4]);
       }
     }
   }
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new T.Float32BufferAttribute(farbe, 3));
-  const l = new T.LineSegments(
-    g,
-    new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }),
-  );
+  g.setAttribute('zeit', new T.Float32BufferAttribute(zeit, 1));
+  const m = new T.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: bewegt ? 1 : Math.min(1, 2.8 * eL[3]),
+  });
+  if (bewegt) wiPulsMaterial(m, eL[2] ? 0.27 * eL[3] : 0, eP[3]);
+  const l = new T.LineSegments(g, m);
+  if (bewegt)
+    l.onBeforeRender = () => {
+      if (m.userData.u)
+        m.userData.u.uZeit.value = ((performance.now() / 1000) * WI_PULS.raffer) % WI_PULS.periode; // klein halten (float-Genauigkeit)
+    };
   l.raycast = () => {};
   l.renderOrder = 3;
   WI_G.add(l);

@@ -196,6 +196,7 @@ const EM_KLASSEN = [
 /** Berechnen: zuerst der Wind im Analysebereich (falls noch nicht berechnet), dann die Ausbreitung. */
 function emStarten() {
   if (!WI.p) return;
+  avAn(); // Ergebnisse in der Analyseansicht (Weißmodell) zeigen
   if (!WI.roh) {
     EM.nachWind = true;
     wiStarten();

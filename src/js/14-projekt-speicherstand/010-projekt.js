@@ -53,6 +53,7 @@ function projExtra(cam) {
     x.lod3On = S.lod3On;
     x.views = S.views;
     x.variants = S.variants;
+    x.analysen = S.analysen;
     x.meas = S.meas;
     x.areaN = S.areaN;
     x.fa = S.fa;
@@ -373,6 +374,7 @@ function projApplySet(x) {
     vwRenderIf();
   }
   if (x.variants) S.variants = cp(x.variants);
+  S.analysen = x.analysen ? cp(x.analysen) : [];
   if (x.fa && x.fa.length) S.fa = cp(x.fa);
   if (x.din) Object.assign(S.din, cp(x.din));
   if (x.gro) {

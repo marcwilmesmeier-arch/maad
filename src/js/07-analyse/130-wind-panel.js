@@ -122,6 +122,10 @@ function wiPanel() {
   h += '</div>';
   if (e && WI.st !== 'rechnet') {
     h += `<div class="card"><b>Ergebnis</b> <span class="dmu">(${WI.dauer} s, Wind aus ${WI_ROSE16[Math.round(e.r / 22.5) % 16]}, ${e.v10} m/s)</span>`;
+    {
+      const v = S.variants.find((x) => vAct(x));
+      h += `<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="sm" onclick="anSpeichern()">Ergebnis speichern</button><span class="dmu">${v ? 'unter Variante „' + esc(v.name) + '“' : 'ohne Variante (erst Variante speichern, um zuzuordnen)'}</span></div>`;
+    }
     h += `<div style="display:flex;gap:4px;margin:8px 0">${[
       ['komfort', 'Komfort'],
       ['verst', 'Verstärkung'],
@@ -137,7 +141,8 @@ function wiPanel() {
     h += `<div style="margin-top:10px;font-size:12px"><b>Stromlinien</b></div><label class="ck"><input type="checkbox" ${z.linien3d ? 'checked' : ''} onchange="wiZSet('linien3d',this.checked)"> 3D – nach Wichtigkeit (stärkste Ablenkung)</label>`;
     if (z.linien3d)
       h += `<label style="display:block;font-size:12px">Anzahl <b id="wiA">${z.anzahl}</b><input type="range" min="10" max="200" step="10" value="${z.anzahl}" style="width:100%" oninput="$('wiA').textContent=this.value" onchange="wiZSet('anzahl',+this.value)"></label>`;
-    h += `<label class="ck"><input type="checkbox" ${z.linien ? 'checked' : ''} onchange="wiZSet('linien',this.checked)"> bodennah${drReal() ? ' (bewegt)' : ''}</label>`;
+    h += `<label class="ck"><input type="checkbox" ${z.linien ? 'checked' : ''} onchange="wiZSet('linien',this.checked)"> bodennah</label>`;
+    h += `<label class="ck"><input type="checkbox" ${z.bewegt !== false ? 'checked' : ''} onchange="wiZSet('bewegt',this.checked)"> Strömung animieren (Lichtpulse in Windrichtung)</label>`;
     h += `<div style="margin-top:10px;font-size:12px"><b>Statistik im Kreis</b></div>`;
     h += wiRingSvg(e.anteil, 'Boden');
     if (e.anteilDach.some((v) => v > 0)) h += wiRingSvg(e.anteilDach, 'Dächer');
@@ -171,6 +176,7 @@ function wiZSet(k, v) {
 /** Fortschritt aktualisieren, ohne das ganze Panel neu zu zeichnen. */
 function wiPanelAuf() {
   const b = $('wiFort');
+  avLeiste();
   if (WI.st === 'rechnet' && b) b.style.width = Math.round(WI.anteil * 100) + '%';
   else if (S.tab === 'Analyse' && (S.anT === 'wi' || S.anT === 'em')) rr();
 }

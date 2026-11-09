@@ -210,9 +210,9 @@ function rr() {
     if (S.hlk && S.tab !== 'Analyse' && !S.hlw) hlClear(1);
     // Wind-Darstellung nur im Analyse-Reiter „Wind & Emissionen“
     WI_G.visible = S.tab === 'Analyse' && (S.anT === 'wi' || S.anT === 'em');
-    // Darstellung oder Reiter gewechselt: Einblendungen passend neu aufbauen
-    if (WI_G.visible && (WI.erg || EM.erg || WI.p) && (WI.zModus !== drReal() || WI.zReiter !== S.anT))
-      wiZeichnen();
+    if (AV.an && !WI_G.visible) avAus(); // Analyse-Reiter verlassen: Analyseansicht schließen
+    // Reiter gewechselt: Einblendungen passend neu aufbauen
+    if (WI_G.visible && (WI.erg || EM.erg || WI.p) && WI.zReiter !== S.anT) wiZeichnen();
     envBuild();
     const R = $('pc'),
       b = S.sel;
@@ -269,7 +269,8 @@ function rr() {
     } else if (S.tab === 'Varianten') {
       h =
         `<h4>Varianten</h4><button class="pri" onclick="sv()">Aktuellen Stand speichern</button>` +
-          S.variants.map(vCard).join('') || '';
+        S.variants.map((v, i) => vCard(v, i) + anListe(v.id)).join('') +
+        anListeOhne();
     } else
       h = `<h4>Excel-Export</h4><div class="card">Analysedaten (Kennwerte, Geschosse, bemaßte Abwicklungen, Dach- und Terrassenflächen) als Excel – Spalten und Überschriften frei wählbar, je Gebäude oder gesamt.<button class="pri" style="margin-top:8px" onclick="xlOpen()">Analysedaten als Excel …</button></div><h4>IFC-Export</h4><div class="card">IFC4 mit Projektstruktur (Projekt › Standort › Grundstück › Gebäude › Geschoss), Klassen-Mapping je Bauteilkategorie (Gelände, Umgebungsgebäude, Bäume, Flächen, Grundstücke, Planungsgebäude), Georeferenz, Property-Sets, Mengen und Farben – unabhängig von den Sichtbarkeiten im Projekt.<button class="pri" style="margin-top:8px" onclick="ifcOpen()">IFC exportieren …</button></div><h4>GeoJSON-Export</h4><textarea readonly>${JSON.stringify({ type: 'FeatureCollection', project: (S.project && S.project.name) || 'maad Demo', features: S.bld.map((x) => ({ type: 'Feature', properties: { id: x.id, name: x.name, use: x.use, levels: x.levels, roof: x.roof }, geometry: { type: 'Polygon', coordinates: [x.fp.concat([x.fp[0]])] } })) }, null, 1)}</textarea><button class="pri" style="margin:8px 0" onclick="planSave()">Planung als Datei sichern (.lotplan)</button><div style="color:var(--mu)">Koordinaten lokal in Metern. PNG/PDF/DXF/GLB: Exportmodul vorgesehen.</div>`;
     R.innerHTML = h;

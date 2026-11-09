@@ -108,3 +108,10 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   DOM5. Der WCS verlangt beim Ausschnitt die Achsen E/N, beim Skalieren x/y (`sax`).
 - LoD2 BW kommt aus demselben Portal (`/data/lod2/…_2_bw.zip`, E ungerade → `versatz: [1, 0]` in `CG.bw`), ebenfalls
   nur über den Proxy. Schlägt der Abruf fehl, greift „Gebäude Deutschland“ (Grundriss + Höhe, ohne Dachformen).
+
+## Analyseansicht und gespeicherte Analysen
+
+- Gespeichert wird nur die Windanalyse (Feld als 16 Bit, gzip, Base64 im Projekt: ca. 160 KB bei 200 m Bereich und
+  5 m Raster, bei 3 m Raster und großem Radius deutlich mehr). Emissionen werden noch nicht gespeichert.
+- „Anzeigen“ baut das Rechengitter aus der aktuellen Planung neu auf; passt es in der Größe nicht mehr (anderes
+  Gelände), muss neu gerechnet werden. Bei veralteter Analyse liegen Gebäude und Strömung ggf. nicht mehr deckungsgleich.
