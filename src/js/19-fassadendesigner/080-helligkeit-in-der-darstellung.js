@@ -276,7 +276,9 @@ function fdDepthFx(g, b, V, ox, o) {
 
 // ======================================================================
 // Gebäude nach Flächennutzung (CORINE): Umgebungsgebäude (Kontextmodell) übernehmen die CLC-Farbe der Fläche, auf der sie stehen – für die Übersicht.
-// Layer „Gebäude nach Flächennutzung (CORINE)“; Dachfarben-Layer (geneigt/flach) behalten ihre Farbe, wenn sie eingeschaltet sind.
+// Gleiche Mischung wie am Boden: CLC-Farbe mit der Füll-Deckkraft der Ebene „Flächennutzung (CORINE)“ über der
+// Geländefarbe; überschreibt das ganze Gebäude (auch Dachfarben), damit es genau wie die Fläche darunter aussieht.
+// Layer „Gebäude nach Flächennutzung (CORINE)“.
 // ======================================================================
 LY.push(['Gebäude nach Flächennutzung (CORINE)', 'bclc', 0, 1]);
 const BCL = { sig: '' };
@@ -327,7 +329,9 @@ function bclPaint() {
   const a = col.array,
     b0 = m.material.color,
     R = GEO.ranges || [],
-    C = new T.Color();
+    C = new T.Color(),
+    G0 = new T.Color(S.lc.terrain || '#f6f5f1'), // Grund wie am Boden
+    al = ovFuellAlpha('clc');
   for (const r of R) {
     let sx = 0,
       sz = 0,
@@ -341,17 +345,16 @@ function bclPaint() {
     const o = bclCode(sx / k, sz / k);
     if (!o || !o.c) continue;
     C.set(o.c);
+    // Ergebnis = Geländefarbe · (1 − al) + CLC-Farbe · al; als Faktor auf die Materialfarbe (Vertexfarbe)
     const q = [
-      Math.min(3, C.r / Math.max(b0.r, 0.05)),
-      Math.min(3, C.g / Math.max(b0.g, 0.05)),
-      Math.min(3, C.b / Math.max(b0.b, 0.05)),
+      Math.min(3, (G0.r * (1 - al) + C.r * al) / Math.max(b0.r, 0.05)),
+      Math.min(3, (G0.g * (1 - al) + C.g * al) / Math.max(b0.g, 0.05)),
+      Math.min(3, (G0.b * (1 - al) + C.b * al) / Math.max(b0.b, 0.05)),
     ];
     for (let i = r.s * 3; i < r.e * 3; i++) {
-      if (a[i * 3] === 1 && a[i * 3 + 1] === 1 && a[i * 3 + 2] === 1) {
-        a[i * 3] = q[0];
-        a[i * 3 + 1] = q[1];
-        a[i * 3 + 2] = q[2];
-      }
+      a[i * 3] = q[0];
+      a[i * 3 + 1] = q[1];
+      a[i * 3 + 2] = q[2];
     }
   }
   col.needsUpdate = true;
@@ -362,7 +365,9 @@ setInterval(() => {
   try {
     const m = GEO.mesh,
       it = (typeof OVI !== 'undefined' && OVI.clc) || [],
-      sg = [m && m.uuid, bclOn() ? 1 : 0, it.length, it._v || ''].join('|');
+      sg = [m && m.uuid, bclOn() ? 1 : 0, it.length, it._v || '', ovFuellAlpha('clc'), S.lc.terrain].join(
+        '|',
+      );
     if (sg !== BCL.sig) {
       BCL.sig = sg;
       RFC.sig = '';

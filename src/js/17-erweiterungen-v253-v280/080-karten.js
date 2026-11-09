@@ -28,6 +28,12 @@ function ovClear(k) {
 function ovPaint(k, items) {
   OVI[k] = items;
 }
+/** Deckkraft der Flächenfüllung einer Karten-Ebene (aus der Ebenen-Deckkraft) – auch für die Gebäude nach CORINE. */
+function ovFuellAlpha(k) {
+  const L = LY.find((l) => l[1] === k),
+    al = Math.max(0.05, Math.min(1, L ? L[3] : 0.7));
+  return (0.38 * al) / 0.7;
+}
 /* alle sichtbaren Flächen-Ebenen in EINE Zeichenfläche (Speicher), Deckkraft je Ebene aus dem Layer-Menü */
 function ovRepaint() {
   const ks = ['clc', 'hq', 'ffh', 'vsg', 'nsg'].filter((k) => ovVis(k) && OVI[k]),
@@ -71,7 +77,7 @@ function ovRepaint() {
           r.forEach(([a, b], i) => (i ? x.lineTo(X(a), X(b)) : x.moveTo(X(a), X(b))));
           x.closePath();
         }
-        x.globalAlpha = (0.38 * al) / 0.7;
+        x.globalAlpha = ovFuellAlpha(k);
         x.fill('evenodd');
         x.globalAlpha = Math.min(1, (0.95 * al) / 0.7);
         x.stroke();
