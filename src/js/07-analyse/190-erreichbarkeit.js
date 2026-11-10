@@ -250,12 +250,12 @@ function erZeichnen() {
     }
   }
   const h = GEO.size / 2,
-    marker = (x, z, tex, k) => {
+    marker = (x, z, tex, k, farbe = SYM.farbe) => {
       const y0 = gh(x, z),
         y1 = y0 + 7,
         ln = new T.Line(
           new T.BufferGeometry().setFromPoints([new T.Vector3(x, y0, z), new T.Vector3(x, y1, z)]),
-          new T.LineBasicMaterial({ color: SYM.farbe }),
+          new T.LineBasicMaterial({ color: farbe }),
         );
       ln.raycast = () => {};
       ER_G.add(ln);
@@ -269,10 +269,10 @@ function erZeichnen() {
       sp.raycast = () => {};
       ER_G.add(sp);
     };
-  // Start: Fußabdrücke in der Mitte des Grundstücks
+  // Start: Ortssymbol (Context & Structure) in der Mitte des Grundstücks
   if (r) {
     const st = cen(erStart());
-    marker(st[0], st[1], symTextur('fuss'), 0.026);
+    marker(st[0], st[1], symbTextur('kon:ort'), 0.026, symbBib('kon:ort').g.farbe);
   }
   for (const s of ER.halte) {
     if (Math.abs(s.p[0]) > h || Math.abs(s.p[1]) > h) continue;
@@ -406,7 +406,7 @@ function erLegendeZeit() {
         SYM.farbe,
         'Start (' + (gs && !gs.project ? 'Grundstück' : 'Projektmitte') + ')',
         'svg',
-        symSvg('fuss', 16),
+        symbSvg('kon:ort', 16),
       ],
     ].concat(erBaender().map((t, i) => [ER_BAND[i], 'bis ' + t + ' min'])),
   };

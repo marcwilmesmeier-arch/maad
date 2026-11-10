@@ -709,3 +709,32 @@ function symbFormen(key, cx, cy, r, w) {
     });
   return o;
 }
+
+const SYMB_TEX = {};
+/** Bibliothekssymbol („gruppe:name“) als Canvas-Textur für 3D-Marker, in den Farben seiner Gruppe. */
+function symbTextur(key) {
+  if (SYMB_TEX[key]) return SYMB_TEX[key];
+  const s = symbBib(key),
+    N = 128,
+    c = document.createElement('canvas');
+  c.width = c.height = N;
+  const x = c.getContext('2d');
+  x.scale(N / 24, N / 24);
+  x.beginPath();
+  x.arc(12, 12, 10.6, 0, Math.PI * 2);
+  x.fillStyle = s ? s.g.hell : '#fff';
+  x.fill();
+  x.lineWidth = 1.1;
+  x.strokeStyle = s ? s.g.farbe : '#888';
+  x.stroke();
+  if (s && s.d) {
+    x.lineWidth = 1.6;
+    x.lineCap = 'round';
+    x.lineJoin = 'round';
+    x.stroke(new Path2D(s.d));
+  }
+  const t = new T.CanvasTexture(c);
+  t.anisotropy = 4;
+  SYMB_TEX[key] = t;
+  return t;
+}
