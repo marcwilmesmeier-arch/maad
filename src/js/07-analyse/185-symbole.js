@@ -4,14 +4,14 @@
 
 const SYM = {
   farbe: '#6b8b67', // Linie und Glyphe (Grün der Gruppe „Mobility & Access“)
-  hell: '#eef2ea', // Füllung des Kreises
+  hell: '#dde7d8', // Füllung des Kreises: leichtes Salbeigrün wie in der Vorlage
   glyph: {
     // zwei Fußabdrücke (Sohle + Ferse), versetzt
     fuss: 'M9.4 5.9c.9 0 1.5 1.1 1.5 2.5s-.6 2.6-1.5 2.6-1.5-1.2-1.5-2.6.6-2.5 1.5-2.5zM9.6 12.3c.7 0 1.1.6 1.1 1.3s-.4 1.3-1.1 1.3-1.1-.6-1.1-1.3.4-1.3 1.1-1.3zM14.4 9.3c.9 0 1.5 1.1 1.5 2.5s-.6 2.6-1.5 2.6-1.5-1.2-1.5-2.6.6-2.5 1.5-2.5zM14.6 15.7c.7 0 1.1.6 1.1 1.3s-.4 1.3-1.1 1.3-1.1-.6-1.1-1.3.4-1.3 1.1-1.3z',
     // Bus von vorn: Aufbau, Frontscheibe, Scheinwerfer, Räder
     bus: 'M8 6.4h8a1.5 1.5 0 0 1 1.5 1.5v8.6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7.9A1.5 1.5 0 0 1 8 6.4zM6.5 12.6h11M8.6 8.9h6.8M9.1 15.1h.01M14.9 15.1h.01M8.7 17.5v1.4M15.3 17.5v1.4',
-    // Straßenbahn: Wagen mit Fensterband, Stromabnehmer, Fahrwerk
-    tram: 'M7 9.2h10a1 1 0 0 1 1 1v5.8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-5.8a1 1 0 0 1 1-1zM8.4 11.2h7.2v2.4H8.4zM10.8 11.2v2.4M13.2 11.2v2.4M12 9.2V7.4M9.6 5.8L12 7.4l2.4-1.6M8.2 17l-.9 1.4M15.8 17l.9 1.4',
+    // Straßenbahn: Wagen mit Fensterband, Stromabnehmer, Schiene darunter
+    tram: 'M7 9.2h10a1 1 0 0 1 1 1v5.8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-5.8a1 1 0 0 1 1-1zM8.4 11.2h7.2v2.4H8.4zM10.8 11.2v2.4M13.2 11.2v2.4M12 9.2V7.4M9.6 5.8L12 7.4l2.4-1.6M6.6 18.6h10.8',
     // Bahn: Gleis mit Schwellen
     bahn: 'M10 5.4v13.2M14 5.4v13.2M8.4 7.4h7.2M8.4 10.4h7.2M8.4 13.4h7.2M8.4 16.4h7.2',
     // U-Bahn und S-Bahn: Buchstabe im gleichen Strich
