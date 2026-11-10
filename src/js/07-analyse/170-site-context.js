@@ -329,7 +329,7 @@ function scZeichnen() {
     sp.position.set(x, y1, z);
     sp.scale.set(0.034, 0.034, 1);
     sp.center.set(0.5, 0.15);
-    spriteFesteGroesse(sp, 0.034);
+    spriteFesteGroesse(sp, 0.017); // halbe frühere Größe (0,034): Übersicht bleibt frei, Zahl lesbar
     sp.renderOrder = 20;
     sp.raycast = () => {};
     SC_G.add(sp);
