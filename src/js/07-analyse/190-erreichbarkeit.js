@@ -17,13 +17,14 @@ const ER = {
 };
 S.er = { tMax: 15, v: 80 }; // v: Gehgeschwindigkeit m/min (4,8 km/h)
 const ER_BAND = ['#86b6e2', '#a9cbec', '#c9def3', '#e0ecf8']; // ≤5, ≤10, ≤15, ≤20 min (helle Blautöne)
+// g: Symbol aus dem Satz „Mobility & Access“ (185-symbole.js), einheitlich in Salbeigrün
 const ER_TYP = {
-  bf: { z: 'Bf', c: '#a8323a', n: 'Bahnhof' },
-  s: { z: 'S', c: '#2e8b57', n: 'S-Bahn' },
-  u: { z: 'U', c: '#1f5fa8', n: 'U-Bahn' },
-  tram: { z: 'T', c: '#b0602f', n: 'Straßenbahn' },
-  bus: { z: 'H', c: '#4c6b3c', n: 'Bus' },
-  flug: { z: '✈', c: '#5d5d7a', n: 'Flughafen' },
+  bf: { g: 'bahn', n: 'Bahnhof' },
+  s: { g: 's', n: 'S-Bahn' },
+  u: { g: 'u', n: 'U-Bahn' },
+  tram: { g: 'tram', n: 'Straßenbahn' },
+  bus: { g: 'bus', n: 'Bus' },
+  flug: { g: 'flug', n: 'Flughafen' },
 };
 LY.push(['Erreichbarkeit zu Fuß', 'erg', 1, 1], ['ÖPNV-Haltestellen', 'erh', 1, 1]);
 const ER_G = new T.Group();
@@ -248,34 +249,34 @@ function erZeichnen() {
       o.material.dispose();
     }
   }
-  const h = GEO.size / 2;
+  const h = GEO.size / 2,
+    marker = (x, z, tex, k) => {
+      const y0 = gh(x, z),
+        y1 = y0 + 7,
+        ln = new T.Line(
+          new T.BufferGeometry().setFromPoints([new T.Vector3(x, y0, z), new T.Vector3(x, y1, z)]),
+          new T.LineBasicMaterial({ color: SYM.farbe }),
+        );
+      ln.raycast = () => {};
+      ER_G.add(ln);
+      const sp = new T.Sprite(
+        new T.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false, transparent: true }),
+      );
+      sp.position.set(x, y1, z);
+      sp.center.set(0.5, 0.2);
+      spriteFesteGroesse(sp, k);
+      sp.renderOrder = 19;
+      sp.raycast = () => {};
+      ER_G.add(sp);
+    };
+  // Start: Fußabdrücke in der Mitte des Grundstücks
+  if (r) {
+    const st = cen(erStart());
+    marker(st[0], st[1], symTextur('fuss'), 0.026);
+  }
   for (const s of ER.halte) {
     if (Math.abs(s.p[0]) > h || Math.abs(s.p[1]) > h) continue;
-    const y0 = gh(s.p[0], s.p[1]),
-      y1 = y0 + 7;
-    const ln = new T.Line(
-      new T.BufferGeometry().setFromPoints([
-        new T.Vector3(s.p[0], y0, s.p[1]),
-        new T.Vector3(s.p[0], y1, s.p[1]),
-      ]),
-      new T.LineBasicMaterial({ color: ER_TYP[s.typ].c }),
-    );
-    ln.raycast = () => {};
-    ER_G.add(ln);
-    const sp = new T.Sprite(
-      new T.SpriteMaterial({
-        map: erSymbol(s.typ),
-        depthTest: false,
-        sizeAttenuation: false,
-        transparent: true,
-      }),
-    );
-    sp.position.set(s.p[0], y1, s.p[1]);
-    sp.center.set(0.5, 0.2);
-    spriteFesteGroesse(sp, 0.022);
-    sp.renderOrder = 19;
-    sp.raycast = () => {};
-    ER_G.add(sp);
+    marker(s.p[0], s.p[1], symTextur(ER_TYP[s.typ].g), 0.022);
   }
   try {
     if (S.geo) recomp();
@@ -284,30 +285,6 @@ function erZeichnen() {
   }
   RFC.sig = '';
   rfUp();
-}
-const ER_SYM = {};
-/** Rundes, einfarbiges Symbol mit weißem Kürzel (je Art einmal erzeugt). */
-function erSymbol(typ) {
-  if (ER_SYM[typ]) return ER_SYM[typ];
-  const d = ER_TYP[typ],
-    c = document.createElement('canvas'),
-    N = 96;
-  c.width = c.height = N;
-  const x = c.getContext('2d');
-  x.fillStyle = d.c;
-  x.beginPath();
-  x.arc(N / 2, N / 2, N / 2 - 5, 0, Math.PI * 2);
-  x.fill();
-  x.lineWidth = 5;
-  x.strokeStyle = '#ffffff';
-  x.stroke();
-  x.fillStyle = '#ffffff';
-  x.font = `700 ${d.z.length > 1 ? 36 : 50}px system-ui, sans-serif`;
-  x.textAlign = 'center';
-  x.textBaseline = 'middle';
-  x.fillText(d.z, N / 2, N / 2 + 3);
-  ER_SYM[typ] = new T.CanvasTexture(c);
-  return ER_SYM[typ];
 }
 /** Gebäude nach Gehzeit einfärben (gleiche Mischung wie der Boden; aus rfUp(), vor den Landmarks). */
 function erPaint() {
@@ -408,12 +385,12 @@ function erPanel() {
         .slice(0, 14)
         .map(
           (s) =>
-            `<div class="kv"><span><i style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${ER_TYP[s.typ].c};color:#fff;font:700 9px/16px system-ui;text-align:center;font-style:normal;margin-right:6px">${ER_TYP[s.typ].z}</i>${esc(s.name)}</span><b>${Math.max(1, Math.round(s.t))} min</b></div>`,
+            `<div class="kv"><span style="display:flex;gap:6px;align-items:center">${symSvg(ER_TYP[s.typ].g, 18)}${esc(s.name)}</span><b>${Math.max(1, Math.round(s.t))} min</b></div>`,
         )
         .join('')
     : '<div class="dmu">Keine Haltestelle in Gehweite.</div>';
   if (ER.flug.length)
-    h += `<div style="margin-top:8px;font-size:12px"><b>Flughäfen</b></div>${ER.flug.map((f) => `<div class="kv"><span>${esc(f.name)}${f.iata ? ' (' + esc(f.iata) + ')' : ''}</span><b style="white-space:nowrap;margin-left:8px">${Math.round(f.km)} km Luftlinie</b></div>`).join('')}`;
+    h += `<div style="margin-top:8px;font-size:12px"><b>Flughäfen</b></div>${ER.flug.map((f) => `<div class="kv"><span style="display:flex;gap:6px;align-items:center">${symSvg('flug', 18)}${esc(f.name)}${f.iata ? ' (' + esc(f.iata) + ')' : ''}</span><b style="white-space:nowrap;margin-left:8px">${Math.round(f.km)} km Luftlinie</b></div>`).join('')}`;
   h += `<div class="dmu" style="margin-top:6px">Farben und Sichtbarkeit im Ebenen-Menü („Erreichbarkeit zu Fuß“, „ÖPNV-Haltestellen“). Daten © OpenStreetMap-Mitwirkende, ODbL.</div></div>`;
   return h;
 }
@@ -421,7 +398,18 @@ function erPanel() {
 /** Legendengruppen (eingetragen in LGD, 17-…/110-kleine-dynamische-legende-unten-links.js). */
 function erLegendeZeit() {
   if (!ER.raster || !ovVis('erg')) return null;
-  return { t: 'Erreichbarkeit zu Fuß', r: erBaender().map((t, i) => [ER_BAND[i], 'bis ' + t + ' min']) };
+  const gs = axSites();
+  return {
+    t: 'Erreichbarkeit zu Fuß',
+    r: [
+      [
+        SYM.farbe,
+        'Start (' + (gs && !gs.project ? 'Grundstück' : 'Projektmitte') + ')',
+        'svg',
+        symSvg('fuss', 16),
+      ],
+    ].concat(erBaender().map((t, i) => [ER_BAND[i], 'bis ' + t + ' min'])),
+  };
 }
 function erLegendeOepnv() {
   const L = LY.find((l) => l[1] === 'erh'),
@@ -432,6 +420,6 @@ function erLegendeOepnv() {
   );
   const r = Object.keys(ER_TYP)
     .filter((k) => da.has(k))
-    .map((k) => [ER_TYP[k].c, ER_TYP[k].n, 'nr', ER_TYP[k].z]);
+    .map((k) => [SYM.farbe, ER_TYP[k].n, 'svg', symSvg(ER_TYP[k].g, 16)]);
   return r.length ? { t: 'ÖPNV', r } : null;
 }

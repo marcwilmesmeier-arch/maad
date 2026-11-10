@@ -1,7 +1,7 @@
 /* v274: kleine dynamische Legende unten links – zeigt nur die gerade eingeblendeten Analyseflächen:
    Einheiten (Färbung nach Flächenart/DIN 277/Nutzung/Geschoss), Abstandsflächen, Umwelt-Flächen (Naturschutz, Natura 2000, Hochwasser, CORINE-Klassen).
    Neue Legendengruppe = Funktion in LGD (liefert null oder {t:Titel, r:[[Farbe,Text,Klasse?,Zeichen?],…]};
-   Klasse „nr“ mit Zeichen = nummerierter Kreis). */
+   Klasse „nr“ mit Zeichen = nummerierter Kreis, Klasse „svg“ mit Zeichen = Symbol als SVG). */
 const LGS = { o: true };
 try {
   LGS.o = localStorage.getItem('lot_lgd') !== '0';
@@ -133,7 +133,8 @@ function lgdHtml() {
                       ? ' class="' + x[2] + '" style="--c:' + x[0] + '"'
                       : ' style="background:' + x[0] + '"') +
                     '>' +
-                    (x[3] ? esc(x[3]) : '') +
+                    // Klasse „svg“: Zeichen ist ein Symbol aus maad selbst (185-symbole.js), daher ungefiltert
+                    (x[3] ? (x[2] === 'svg' ? x[3] : esc(x[3])) : '') +
                     '</i><span>' +
                     esc(x[1]) +
                     '</span></div>',
@@ -188,6 +189,7 @@ body.hpj #lgd{bottom:36px}
 #lgd .lgr i.ln{border-top:2px solid var(--c)}
 #lgd .lgr i.dash{border-top:2px dashed var(--c)}
 #lgd .lgr i.bd{border-top:4px solid var(--c)}
+#lgd .lgr i.svg{width:16px;height:16px;border-radius:0;box-shadow:none;background:none;display:flex}
 #lgd .lgr i.nr{width:16px;height:16px;border-radius:50%;background:var(--c);box-shadow:none;color:#fff;font:700 9.5px/16px system-ui,sans-serif;font-style:normal;text-align:center}
 #lgd .lgr span{overflow-wrap:anywhere}
 body.anOn #lgd{display:none!important}
