@@ -334,6 +334,11 @@ function anProp(k, val) {
   a[k] = val;
   anTouch();
 }
+/** Symbolgruppe auf-/zugeklappt merken. */
+function anSymGruppe(g, auf) {
+  AN.symOffen = AN.symOffen || {};
+  AN.symOffen[g] = !!auf;
+}
 function anSymSel(s) {
   AN.sym = s;
   const a = AN.sel && anOk().find((q) => q.id === AN.sel);
@@ -409,14 +414,44 @@ function anBarUpd() {
         ? `<label><input type="checkbox" ${a.b ? 'checked' : ''} onchange="anProp('b',this.checked?1:0)"> fett</label><label><input type="checkbox" ${a.bg ? 'checked' : ''} onchange="anProp('bg',this.checked?1:0)"> weißer Grund</label>`
         : '') +
       `</div>`;
-  if (AN.tool === 'sym' || (a && a.k === 'sym'))
+  if (AN.tool === 'sym' || (a && a.k === 'sym')) {
+    const akt = a && a.k === 'sym' ? a.sy : AN.sym,
+      gAkt = String(akt).includes(':') ? String(akt).split(':')[0] : 'allg',
+      offen = (g) => (AN.symOffen && g in AN.symOffen ? AN.symOffen[g] : g === gAkt),
+      gruppe = (g, titel, farbe, inhalt, raster) =>
+        `<details class="ansb" ${offen(g) ? 'open' : ''} ontoggle="anSymGruppe('${g}',this.open)"><summary style="color:${farbe}">${titel}</summary><div class="${raster ? 'ansr' : 'ansl'}">${inhalt}</div></details>`;
+    // Symbole in einklappbaren Gruppen: „Allgemein“ und die Bibliothek wie auf der Symboltafel (186-symbole-bibliothek.js)
     h +=
-      `<div class="anr">` +
-      ANSY.map(
-        ([k, l]) =>
-          `<button class="sm${(a && a.k === 'sym' ? a.sy : AN.sym) === k ? ' on' : ''}" onclick="anSymSel('${k}')">${l}</button>`,
+      `<div class="anr ansg"><b>Symbole</b>` +
+      gruppe(
+        'allg',
+        'Allgemein',
+        'var(--tx)',
+        ANSY.map(
+          ([k, l]) => `<button class="sm${akt === k ? ' on' : ''}" onclick="anSymSel('${k}')">${l}</button>`,
+        ).join(''),
+        false,
+      ) +
+      SYMB.map((G) =>
+        gruppe(
+          G.k,
+          esc(G.n),
+          G.farbe,
+          G.s
+            .map(
+              ([k, l]) =>
+                `<button class="ansi${akt === G.k + ':' + k ? ' on' : ''}" title="${esc(l)}" aria-label="${esc(l)}" onclick="anSymSel('${G.k}:${k}')">${symbSvg(G.k + ':' + k, 26)}</button>`,
+            )
+            .join('') +
+            SYMB_FUELL.map(
+              ([f, l]) =>
+                `<button class="ansi${akt === G.k + ':f:' + f ? ' on' : ''}" title="${esc(l)}" aria-label="${esc(l)}" onclick="anSymSel('${G.k}:f:${f}')">${symbSvg(G.k + ':f:' + f, 26)}</button>`,
+            ).join(''),
+          true,
+        ),
       ).join('') +
       `</div>`;
+  }
   if (a)
     h += `<div class="anr"><button class="sm" style="color:var(--wa)" onclick="anDelSel()">Auswahl löschen (Entf)</button><small>${v.anns.length} Anmerkungen · bleibt mit dem Modell verankert</small></div>`;
   b.innerHTML = h;

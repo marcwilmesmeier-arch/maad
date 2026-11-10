@@ -41,6 +41,8 @@ function anOk() {
 }
 // Symbole als Polygone/Linien/Text (Einheitskreis r), alles in Ausgabeeinheiten
 function anSym(name, cx, cy, S, c, w, u, txt) {
+  // Symbolbibliothek (186-symbole-bibliothek.js): Schlüssel „gruppe:name“, eigene Gruppenfarben
+  if (String(name).includes(':')) return symbFormen(name, cx, cy, S / 2, w);
   const r = S / 2,
     o = [],
     ring = (rr, fill, st) => {

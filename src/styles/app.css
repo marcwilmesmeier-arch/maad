@@ -2640,3 +2640,48 @@ body.hpj #ic {
     overflow-x: auto;
   }
 }
+/* Symbole im Beschriften-Werkzeug: einklappbare Gruppen wie auf der Symboltafel (Reihenfolge der Tafel; so viele je
+   Reihe, wie in die Leiste passen) */
+#anbar .ansg {
+  display: block;
+}
+#anbar .ansg > b {
+  display: block;
+  margin: 4px 0 2px;
+}
+#anbar .ansb > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 5px 0 3px;
+  user-select: none;
+}
+#anbar .ansl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+#anbar .ansr {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 30px);
+  gap: 2px;
+}
+#anbar .ansi {
+  width: 30px;
+  height: 30px;
+  padding: 1px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#anbar .ansi:hover {
+  border-color: #0002;
+}
+#anbar .ansi.on {
+  border-color: #1d1d1b;
+  background: #fff;
+}

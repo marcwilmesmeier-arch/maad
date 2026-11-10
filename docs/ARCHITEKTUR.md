@@ -52,6 +52,10 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Abruf und Darstellung in `190-erreichbarkeit.js`: Bodenbild als Karten-Ebene `erg` (Bild-Element in `ovRepaint`),
   Gebäude über `erPaint()` aus `rfUp()`, Haltestellen-Symbole in `ER_G` (= `G.erh`). Sprite-Größe in 2D über
   `spriteFesteGroesse()` (170-site-context.js).
+- Symbole: `185-symbole.js` (Satz „Mobility & Access“ für Erreichbarkeit: SVG, Glyphe, Canvas-Textur) und
+  `186-symbole-bibliothek.js` (120 Symbole in vier Gruppen wie auf der Symboltafel, je 24 Symbole + 6 Füllungen;
+  Schlüssel „gruppe:name“ bzw. „gruppe:f:art“). `symPfadLinien()` zerlegt SVG-Pfade in Linienzüge, damit
+  `anSym()` sie wie die übrigen Beschriftungen in Ansicht, Layout und PDF als Vektor ausgibt.
   Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
   des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 
