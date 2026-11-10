@@ -56,6 +56,11 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `186-symbole-bibliothek.js` (120 Symbole in vier Gruppen wie auf der Symboltafel, je 24 Symbole + 6 Füllungen;
   Schlüssel „gruppe:name“ bzw. „gruppe:f:art“). `symPfadLinien()` zerlegt SVG-Pfade in Linienzüge, damit
   `anSym()` sie wie die übrigen Beschriftungen in Ansicht, Layout und PDF als Vektor ausgibt.
+- Sonnenstunden (Analyse-Reiter `so`, `07-analyse/200-sonnenstunden.js`): je Zeitschritt ein Tiefenbild aus
+  Sonnenrichtung (`soTiefenbild`, Parallelprojektion, `MeshDepthMaterial` in Float-Rendertarget, Auslesen auf die CPU),
+  Schattentest je Messpunkt (`soZaehlen`). Messpunkte: Außenflächen der Planungsgebäude (unterteilt, Innen-/Unterseiten
+  und Untergeschosse entfernt; Haut in `SO_G` = `G.son`) und Boden im Umkreis (Karten-Ebene `son`, Bild mit Bereich
+  `it.b` in `ovRepaint`). Analysepunkte (`SO.punkte`) mit Zeitfenstern.
   Analysebereich ist ein Kreis (Radius, platziert wie in Forma), gerechnet wird im Quadrat mit 40 m Rand. Windklima
   des Standorts (`125-windklima.js`, Bright Sky/DWD) bestimmt die Länge der Sektoren der Windrose und die Vorwahl.
 

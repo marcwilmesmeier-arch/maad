@@ -169,6 +169,8 @@ function anTab(t) {
   if (t === 'sc' && S.anT === 'sc' && (SC.lm.length || SC.pl.length)) scSichtbar(!scSichtbar());
   // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js: ebenso für „Erreichbarkeit“
   if (t === 'er' && S.anT === 'er' && (ER.raster || ER.halte.length)) erSichtbar(!erSichtbar());
+  // ── Erweiterung aus 07-analyse/200-sonnenstunden.js: ebenso für „Sonnenstunden“
+  if (t === 'so' && S.anT === 'so' && SO.erg) soSichtbar(!soSichtbar());
   S.anT = t;
   rr();
 }

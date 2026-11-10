@@ -148,3 +148,11 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Neue Animationen außerhalb von `WI_G` müssen `neuZeichnen()` aufrufen oder in `rdAnimiert()` ergänzt werden, sonst
   laufen sie im Leerlauf nur mit 4 Bildern/s.
 - In der Entwicklungsumgebung (Software-Rendering, ca. 1 Bild/s) nicht messbar; Gewinn nur auf echter Hardware.
+
+## Sonnenstunden
+
+- Je Zeitschritt ein Tiefenbild 2048² (Float) mit Auslesen auf die CPU: auf echter Grafikkarte wenige Sekunden, in
+  der Entwicklungsumgebung (Software-Rendering) ca. 2 Minuten. Schneller wäre eine Auswertung ganz auf der GPU.
+- Astronomisch mögliche Besonnung ohne Bewölkung und Atmosphäre; Bäume werfen vollen Schatten (kein Laub-Transmissionsgrad).
+- Ergebnis und Analysepunkte werden nicht mit dem Projekt gespeichert. Umgebungsgebäude werden nicht eingefärbt (nur
+  Planung und Boden, gewünscht so).

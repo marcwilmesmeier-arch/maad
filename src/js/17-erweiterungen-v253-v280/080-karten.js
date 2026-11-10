@@ -9,6 +9,7 @@ const OVL = {
   clc: { n: 'Flächennutzung (CORINE)', col: '#888888' },
   scp: { n: 'Plätze', col: '#e8a17c' }, // Plätze aus Site & Context (07-analyse/170-site-context.js), Daten aus scLaden()
   erg: { n: 'Erreichbarkeit zu Fuß', col: '#8dbbe6' }, // Rasterbild aus erZeichnen() (07-analyse/190-erreichbarkeit.js)
+  son: { n: 'Sonnenstunden', col: '#b8477a' }, // Rasterbild aus soZeichnen() (07-analyse/200-sonnenstunden.js)
 };
 const OVD = {},
   OVI = {};
@@ -36,11 +37,12 @@ function ovFuellAlpha(k) {
     al = Math.max(0.05, Math.min(1, L ? L[3] : 0.7));
   if (k === 'scp') return 0.85 * al; // Plätze (Site & Context) kräftig wie im Lageplan
   if (k === 'erg') return 0.8 * al; // Erreichbarkeit: helle Blautöne gut sichtbar
+  if (k === 'son') return 0.85 * al; // Sonnenstunden: Heatmap kräftig
   return (0.38 * al) / 0.7;
 }
 /* alle sichtbaren Flächen-Ebenen in EINE Zeichenfläche (Speicher), Deckkraft je Ebene aus dem Layer-Menü */
 function ovRepaint() {
-  const ks = ['erg', 'clc', 'hq', 'ffh', 'vsg', 'nsg', 'scp'].filter((k) => ovVis(k) && OVI[k]),
+  const ks = ['erg', 'son', 'clc', 'hq', 'ffh', 'vsg', 'nsg', 'scp'].filter((k) => ovVis(k) && OVI[k]),
     sig =
       ks
         .map((k) => {
@@ -77,7 +79,9 @@ function ovRepaint() {
       if (it.t === 'img') {
         // Rasterbild über den ganzen Ausschnitt (Erreichbarkeit)
         x.globalAlpha = ovFuellAlpha(k);
-        x.drawImage(it.cv, 0, 0, W, W);
+        if (it.b)
+          x.drawImage(it.cv, X(it.b[0]), X(it.b[1]), X(it.b[2]) - X(it.b[0]), X(it.b[3]) - X(it.b[1]));
+        else x.drawImage(it.cv, 0, 0, W, W); // b: Bereich [x0, z0, x1, z1] in Metern, sonst ganzer Ausschnitt
         continue;
       }
       if (it.c) x.strokeStyle = x.fillStyle = it.c;

@@ -17,6 +17,9 @@ const SYM = {
     // U-Bahn und S-Bahn: Buchstabe im gleichen Strich
     u: 'M9.4 7.2v5.9a2.6 2.6 0 0 0 5.2 0V7.2',
     s: 'M14.6 8.4c-.6-.9-1.6-1.3-2.6-1.3-1.6 0-2.7.9-2.7 2.2 0 2.9 5.6 1.9 5.6 5 0 1.4-1.2 2.5-2.9 2.5-1.2 0-2.3-.5-2.9-1.4',
+    // Sonne (für den Reiter „Sonnenstunden“, wie in „Landscape & Climate“)
+    sonne_glyphe:
+      'M12 12m-2.4 0a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0M12 6.4v1.4M12 16.2v1.4M6.4 12h1.4M16.2 12h1.4M8 8l1 1M15 15l1 1M8 16l1-1M15 9l1-1',
     // Flugzeug von oben
     flug: 'M12 5.4c.6 0 1 .5 1 1.2v3.9l5 2.8v1.4l-5-1.3v3l1.6 1.2v1.1L12 18l-2.6.7v-1.1l1.6-1.2v-3l-5 1.3v-1.4l5-2.8V6.6c0-.7.4-1.2 1-1.2z',
   },

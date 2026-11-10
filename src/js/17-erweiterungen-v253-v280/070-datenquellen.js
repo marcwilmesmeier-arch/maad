@@ -12,6 +12,7 @@ const ANI = {
   wi: '<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>',
   em: '<path d="M4 20h16"/><path d="M7 20v-5h4v5"/><path d="M8 11c0-2 2-2 2-4s-2-2-2-4"/><path d="M13 12c0-2 2-2 2-4s-2-2-2-4"/>',
   sc: '<path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/><path d="M3 21h18"/>',
+  so: symGlyphe('sonne_glyphe'), // Sonne aus „Landscape & Climate“ (186-symbole-bibliothek.js)
   er: symGlyphe('fuss'), // Fußabdrücke aus dem Symbolsatz „Mobility & Access“ (185-symbole.js)
 };
 function anPanel(b) {
@@ -25,6 +26,7 @@ function anPanel(b) {
     T2 = [
       ['sc', 'Site & Context'],
       ['er', 'Erreichbarkeit'],
+      ['so', 'Sonnenstunden'],
     ]; // zweite Reihe: nur Symbol; erneuter Klick blendet die Darstellung aus/ein
   if (!T.concat(T2).some((t) => t[0] === S.anT)) S.anT = 'ue';
   let h = '<div class="ax">';
@@ -40,8 +42,15 @@ function anPanel(b) {
     '</div>' +
     '<div class="axt axt2" role="tablist">' +
     T2.map(([k, n]) => {
-      const da = k === 'sc' ? SC.lm.length || SC.pl.length : k === 'er' ? ER.raster || ER.halte.length : 0,
-        an = da && (k === 'sc' ? scSichtbar() : erSichtbar());
+      const da =
+          k === 'sc'
+            ? SC.lm.length || SC.pl.length
+            : k === 'er'
+              ? ER.raster || ER.halte.length
+              : k === 'so'
+                ? SO.erg
+                : 0,
+        an = da && (k === 'sc' ? scSichtbar() : k === 'er' ? erSichtbar() : soSichtbar());
       return `<button class="${S.anT === k ? 'on' : ''}${da ? (an ? ' an' : ' aus') : ''}" role="tab" aria-selected="${S.anT === k}" onclick="anTab('${k}')" title="${n}${da ? ' – erneut klicken: Darstellung ' + (an ? 'ausblenden' : 'einblenden') : ''}" aria-label="${n}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ANI[k]}</svg></button>`;
     }).join('') +
     '</div>';
@@ -56,6 +65,8 @@ function anPanel(b) {
             ? scPanel()
             : S.anT === 'er'
               ? erPanel()
-              : axUe(b);
+              : S.anT === 'so'
+                ? soPanel()
+                : axUe(b);
   return h + '</div>';
 }

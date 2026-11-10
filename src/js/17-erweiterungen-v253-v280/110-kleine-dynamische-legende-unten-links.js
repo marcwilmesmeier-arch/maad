@@ -98,6 +98,8 @@ const LGD = [
   // Erreichbarkeit (07-analyse/190-erreichbarkeit.js)
   () => erLegendeZeit(),
   () => erLegendeOepnv(),
+  // Sonnenstunden (07-analyse/200-sonnenstunden.js)
+  () => soLegende(),
 ];
 function lgdHtml() {
   const gs = [];
