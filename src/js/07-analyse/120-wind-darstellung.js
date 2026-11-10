@@ -454,6 +454,7 @@ function wiStromlinien3D(e, nah) {
   });
   if (bewegt) wiPulsMaterial(m, eL[2] ? 0.27 * eL[3] : 0, eP[3]);
   const l = new T.LineSegments(g, m);
+  l.userData.anim = bewegt; // Pulse laufen: durchgehend zeichnen (Zeichnen bei Bedarf, 020-ansichten.js)
   if (bewegt)
     l.onBeforeRender = () => {
       if (m.userData.u)

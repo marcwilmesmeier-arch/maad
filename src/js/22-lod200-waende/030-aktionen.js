@@ -277,6 +277,7 @@ function l2Run() {
             m.emissive.copy(it.mat.emissive);
           }
     }
+    neuZeichnen(); // Pulsieren sichtbar machen (Zeichnen bei Bedarf)
     if (live) requestAnimationFrame(st);
     else L2AN = 0;
   };

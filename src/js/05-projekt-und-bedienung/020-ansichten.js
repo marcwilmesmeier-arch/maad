@@ -160,6 +160,49 @@ function camLocked() {
   const v = anView();
   return !!(v && v.locked);
 }
+// ---- Zeichnen bei Bedarf: Die Szene wird nur neu gerendert, wenn sich etwas ändert (Kamera, Fenstergröße, Eingaben,
+// Panel, laufende Animationen). Sonst bleibt das letzte Bild stehen – im Leerlauf sonst volle Last für ein
+// unverändertes Bild. Absicherung: auch ohne erkannten Anlass 4 Bilder je Sekunde. Realistisch und Realistisch+
+// (Himmel, Wolken, Wasser) zeichnen weiter durchgehend. Andere Stellen melden Änderungen mit neuZeichnen().
+const ZBB = { bis: 0, letzt: 0, sig: '', n: 0, aus: 0 };
+function neuZeichnen(ms = 300) {
+  ZBB.bis = Math.max(ZBB.bis, performance.now() + ms);
+}
+['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'resize'].forEach((t) =>
+  window.addEventListener(t, () => neuZeichnen(t === 'pointermove' ? 400 : 1200), {
+    passive: true,
+    capture: true,
+  }),
+);
+/** Bewegte Einblendungen (Windpulse, Qualm, Pulsieren): Objekt mit userData.anim in einer sichtbaren Gruppe. */
+function rdAnimiert() {
+  for (const g of [WI_G]) if (g.visible && g.children.some((o) => o.visible && o.userData.anim)) return true;
+  return false;
+}
+function rdNoetig(cm) {
+  const now = performance.now();
+  if (now < ZBB.bis || drReal() || rdAnimiert()) return true;
+  const e = cm.matrixWorld.elements,
+    p = cm.projectionMatrix.elements,
+    sig =
+      cm.uuid +
+      '|' +
+      ren.domElement.width +
+      'x' +
+      ren.domElement.height +
+      '|' +
+      e.join(',') +
+      '|' +
+      p[0] +
+      ',' +
+      p[5];
+  if (sig !== ZBB.sig) {
+    ZBB.sig = sig;
+    ZBB.bis = now + 300; // nach einer Kamerabewegung noch kurz weiterzeichnen (Schatten, Detailbäume)
+    return true;
+  }
+  return now - ZBB.letzt > 250;
+}
 function loop() {
   vwStep();
   if (GEO.t2d) GEO.t2d.visible = !S.m3;
@@ -190,7 +233,12 @@ function loop() {
   }
   // Während der Himmel für Realistisch+ berechnet wird, nicht rendern: die Berechnung läuft nur in
   // Leerlaufphasen des Browsers (requestIdleCallback) und käme sonst kaum voran.
-  if (ATM.st !== 'laedt') mkRender(sc, act());
+  const cm = act();
+  if (ATM.st !== 'laedt' && rdNoetig(cm)) {
+    mkRender(sc, cm);
+    ZBB.letzt = performance.now();
+    ZBB.n++;
+  } else ZBB.aus++;
   requestAnimationFrame(loop);
 }
 // Erster Frame erst nach dem Laden des ganzen Skripts: loop() liest Zustände späterer Dateien (DR, IDLE …)

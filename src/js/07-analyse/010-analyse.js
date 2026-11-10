@@ -199,6 +199,7 @@ function go(t) {
 }
 const kv = (a, b, c) => `<div class="kv"><span>${a}</span><b class="${c || ''}">${b}</b></div>`;
 function rr() {
+  neuZeichnen(); // Panel-Änderungen ändern meist auch die Szene
   // ── Erweiterung aus 28-erweiterungen-v486-v519/080-panel.js
   const R = $('pc');
   if (S.tab === 'Import') {

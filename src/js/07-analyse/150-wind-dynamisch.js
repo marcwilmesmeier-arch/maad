@@ -164,6 +164,7 @@ function wdQualm() {
   // gestaffelt vorrechnen, damit der Qualm sofort ausgebildet ist
   for (let n = 0; n < N; n++) alt[n] = Math.random() * leben;
   for (let t = 0; t < 40; t++) schritt(0.5);
+  p.userData.anim = true; // bewegter Qualm: durchgehend zeichnen
   p.onBeforeRender = (r, scn, cam) => {
     // Punktgröße in Pixeln: Höhe des Bildes / (2·tan(Blickwinkel/2))
     const h = r.getDrawingBufferSize(v3).y;

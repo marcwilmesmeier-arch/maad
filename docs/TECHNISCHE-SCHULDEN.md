@@ -140,3 +140,11 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Overpass (`overpassAbruf`): Server gestaffelt (nach 8 s zusätzlich der nächste, bei Fehler sofort), erste Antwort
   gilt. Site & Context je Standort gespeichert (`maad.sc.v1.*`); „Neu laden“ ruft immer neu ab.
 - Noch offen: Zwischenspeicher für LoD2, Gelände und die übrigen Kontextdaten; Zeitmessung je Quelle im Ladebericht.
+
+## Zeichnen bei Bedarf
+
+- `loop()` rendert nur bei Anlass (`rdNoetig`: Kamera/Fenstergröße geändert, Eingaben, `rr()`, `neuZeichnen()`,
+  Objekte mit `userData.anim` in `WI_G`), sonst höchstens 4 Bilder/s; Realistisch und Realistisch+ durchgehend.
+  Neue Animationen außerhalb von `WI_G` müssen `neuZeichnen()` aufrufen oder in `rdAnimiert()` ergänzt werden, sonst
+  laufen sie im Leerlauf nur mit 4 Bildern/s.
+- In der Entwicklungsumgebung (Software-Rendering, ca. 1 Bild/s) nicht messbar; Gewinn nur auf echter Hardware.
