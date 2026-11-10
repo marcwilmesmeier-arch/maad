@@ -155,7 +155,7 @@ function erRechnen() {
     z = erZeiten(netz, st, S.er.v, S.er.tMax),
     h = GEO.size / 2,
     zelle = Math.max(2, GEO.size / 500);
-  ER.raster = erRaster(netz, z, h, zelle, S.er.v, 40, S.er.tMax);
+  ER.raster = erRaster(netz, z, h, zelle, S.er.v, 120, S.er.tMax); // bis 120 m abseits der Wege (Höfe, Blockinneres)
   ER.zugang = z.zugang;
   // Gehzeit je Haltestelle: nächster Netzknoten + Reststrecke
   for (const s of ER.halte) {
@@ -196,19 +196,43 @@ function erZeitAn(x, z) {
 function erZeichnen() {
   const r = ER.raster;
   if (r) {
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = r.W;
+    // Bodenbild in voller Auflösung des Geländebilds: Gehzeit zwischen den Rasterzellen bilinear interpolieren und
+    // erst dann in Bänder teilen – die Bandgrenzen werden so glatte Linien statt Treppen
+    const Wo = Math.min(2048, Math.max(r.W, Math.round(GEO.size / 0.6))),
+      cv = document.createElement('canvas');
+    cv.width = cv.height = Wo;
     const x = cv.getContext('2d'),
-      img = x.createImageData(r.W, r.W),
+      img = x.createImageData(Wo, Wo),
       C = ER_BAND.map((c) => [
         parseInt(c.slice(1, 3), 16),
         parseInt(c.slice(3, 5), 16),
         parseInt(c.slice(5, 7), 16),
-      ]);
-    for (let c = 0; c < r.t.length; c++) {
-      const b = erBand(r.t[c]);
-      if (b < 0) continue;
-      img.data.set([C[b][0], C[b][1], C[b][2], 255], c * 4);
+      ]),
+      aus = S.er.tMax + 3, // nicht erreicht: knapp jenseits des letzten Bands (glatter Rand)
+      T0 = (i, j) => {
+        const v = r.t[Math.min(r.W - 1, Math.max(0, j)) * r.W + Math.min(r.W - 1, Math.max(0, i))];
+        return v <= S.er.tMax ? v : aus;
+      },
+      k = r.W / Wo;
+    for (let py = 0; py < Wo; py++) {
+      const v = (py + 0.5) * k - 0.5,
+        j = Math.floor(v),
+        fy = v - j;
+      for (let px = 0; px < Wo; px++) {
+        const u = (px + 0.5) * k - 0.5,
+          i = Math.floor(u),
+          fx = u - i,
+          t =
+            (T0(i, j) * (1 - fx) + T0(i + 1, j) * fx) * (1 - fy) +
+            (T0(i, j + 1) * (1 - fx) + T0(i + 1, j + 1) * fx) * fy,
+          b = erBand(t);
+        if (b < 0) continue;
+        const o = (py * Wo + px) * 4;
+        img.data[o] = C[b][0];
+        img.data[o + 1] = C[b][1];
+        img.data[o + 2] = C[b][2];
+        img.data[o + 3] = 255;
+      }
     }
     x.putImageData(img, 0, 0);
     const it = [{ t: 'img', cv }];

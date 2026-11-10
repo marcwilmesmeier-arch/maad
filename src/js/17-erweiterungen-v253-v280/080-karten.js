@@ -77,9 +77,7 @@ function ovRepaint() {
       if (it.t === 'img') {
         // Rasterbild über den ganzen Ausschnitt (Erreichbarkeit)
         x.globalAlpha = ovFuellAlpha(k);
-        x.imageSmoothingEnabled = false;
         x.drawImage(it.cv, 0, 0, W, W);
-        x.imageSmoothingEnabled = true;
         continue;
       }
       if (it.c) x.strokeStyle = x.fillStyle = it.c;

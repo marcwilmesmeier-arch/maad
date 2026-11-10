@@ -127,7 +127,7 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 ## Erreichbarkeit zu Fuß
 
 - Gehgeschwindigkeit fest 4,8 km/h, Ampeln/Steigungen nicht berücksichtigt; Wege ohne Fußverbot zählen (auch Straßen
-  ohne Gehweg-Erfassung). Abseits der Wege höchstens 40 m mit 70 % Tempo.
+  ohne Gehweg-Erfassung). Abseits der Wege höchstens 120 m mit 70 % Tempo (Blockinneres, Höfe); Zeiten entlang jeder Wegstrecke eingetragen.
 - Ergebnis wird nicht mit dem Projekt gespeichert (Netz neu laden); Haltestellen gleicher Art und gleichen Namens
   innerhalb 250 m werden zusammengefasst. Flughäfen nur mit IATA-Code im Umkreis von 60 km (Luftlinie).
 - Nur mit nachgestellten OSM-Daten im Browser geprüft (Overpass in der Entwicklungsumgebung gesperrt).

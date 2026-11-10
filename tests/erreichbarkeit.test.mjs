@@ -79,3 +79,46 @@ test('mehrere Startpunkte (Grundstücksecken): jeweils der nächste zählt', () 
   assert.ok(Math.abs(bei(0, 0) - 3.75) < 1e-9, 'Mitte: 300 m vom nächsten Start');
   assert.equal(z.zugang, 0);
 });
+
+test('lange Strecke ohne Zwischenknoten: Zeiten auch in der Mitte der Strecke', () => {
+  // zwei Knoten 600 m auseinander, Start am linken Ende
+  const n = erNetz([
+      {
+        ids: [1, 2],
+        pts: [
+          [-300, 0],
+          [300, 0],
+        ],
+      },
+    ]),
+    z = erZeiten(n, [-300, 0], 80, 15),
+    r = erRaster(n, z, 400, 4, 80, 30, 15),
+    zelle = (x, zz) => r.t[Math.floor((zz + 400) / 4) * r.W + Math.floor((x + 400) / 4)];
+  assert.ok(Math.abs(zelle(2, 1) - 3.75) < 0.1, 'Mitte: 300 m = 3,75 min');
+  assert.ok(isFinite(zelle(2, 20)), '20 m neben der Strecke erreicht');
+});
+
+test('Raster ohne Löcher: im 200-m-Straßengitter mit 120 m abseits wird jede Zelle erreicht', () => {
+  const wege = [];
+  let id = 1;
+  const ids = new Map(),
+    nid = (x, z) => {
+      const k = x + ',' + z;
+      if (!ids.has(k)) ids.set(k, id++);
+      return ids.get(k);
+    };
+  for (let a = -600; a <= 600; a += 200) {
+    const h = [],
+      v = [];
+    for (let c = -600; c <= 600; c += 200) {
+      h.push([c, a]);
+      v.push([a, c]);
+    }
+    wege.push({ ids: h.map((q) => nid(...q)), pts: h });
+    wege.push({ ids: v.map((q) => nid(...q)), pts: v });
+  }
+  const n = erNetz(wege),
+    z = erZeiten(n, [[40, -40]], 80, 15),
+    r = erRaster(n, z, 300, 2, 80, 120, 15);
+  assert.equal(r.t.filter((t) => t === Infinity).length, 0);
+});

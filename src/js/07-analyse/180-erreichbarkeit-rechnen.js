@@ -147,21 +147,42 @@ function erZeiten(netz, start, v, tMax) {
  */
 function erRaster(netz, zeiten, h, zelle, v, abseits, tMax) {
   const W = Math.ceil((2 * h) / zelle),
-    t = new Float32Array(W * W).fill(Infinity),
-    rest = new Float32Array(W * W), // noch erlaubte Strecke abseits der Wege (m)
+    // doppelte Genauigkeit: mit Float32 wäre der gespeicherte Wert kleiner als der in der Warteschlange, die Zelle
+    // gälte als veraltet und würde übersprungen (Löcher im Raster)
+    t = new Float64Array(W * W).fill(Infinity),
+    weg = new Float64Array(W * W).fill(Infinity), // Abstand zum nächsten Weg (m)
     hp = erHeap(),
     va = v * 0.7;
+  const setze = (x, z, tz) => {
+    const ci = Math.floor((x + h) / zelle),
+      cj = Math.floor((z + h) / zelle);
+    if (ci < 0 || cj < 0 || ci >= W || cj >= W) return;
+    const c = cj * W + ci;
+    weg[c] = 0;
+    if (tz < t[c]) {
+      t[c] = tz;
+      hp.push(tz, c);
+    }
+  };
+  // Zeiten entlang jeder Wegstrecke eintragen (nicht nur an den Knoten: auf langen geraden Straßen liegen diese oft
+  // über 100 m auseinander): Zeit an der Stelle s = min(t_i + s/v, t_j + (L − s)/v)
   for (let i = 0; i < netz.x.length; i++) {
     const ti = zeiten.t[i];
     if (!(ti <= tMax)) continue;
-    const ci = Math.floor((netz.x[i] + h) / zelle),
-      cj = Math.floor((netz.z[i] + h) / zelle);
-    if (ci < 0 || cj < 0 || ci >= W || cj >= W) continue;
-    const c = cj * W + ci;
-    if (ti < t[c]) {
-      t[c] = ti;
-      rest[c] = abseits;
-      hp.push(ti, c);
+    setze(netz.x[i], netz.z[i], ti);
+    const N = netz.nb[i],
+      L = netz.len[i];
+    for (let k = 0; k < N.length; k++) {
+      const j = N[k];
+      if (j < i && zeiten.t[j] <= tMax) continue; // jede Strecke einmal (von beiden Enden erreicht)
+      const tj = zeiten.t[j],
+        n = Math.ceil(L[k] / (zelle * 0.5));
+      for (let s = 1; s < n; s++) {
+        const f = s / n,
+          tz = Math.min(ti + (f * L[k]) / v, tj + ((1 - f) * L[k]) / v);
+        if (tz <= tMax)
+          setze(netz.x[i] + (netz.x[j] - netz.x[i]) * f, netz.z[i] + (netz.z[j] - netz.z[i]) * f, tz);
+      }
     }
   }
   const D = [
@@ -174,6 +195,35 @@ function erRaster(netz, zeiten, h, zelle, v, abseits, tMax) {
     [-1, 1, Math.SQRT2],
     [-1, -1, Math.SQRT2],
   ];
+  // Abstand jeder Zelle zum nächsten Weg (Chamfer-Abstand, zwei Durchgänge); begehbar ist, was höchstens `abseits`
+  // Meter entfernt liegt. Getrennt von der Zeit, damit ein schneller Pfad mit viel Strecke abseits nicht einen
+  // langsameren mit weniger Strecke abseits verdrängt (sonst Löcher in der Blockmitte).
+  const d1 = zelle,
+    d2 = zelle * Math.SQRT2;
+  for (let j = 0; j < W; j++)
+    for (let i = 0; i < W; i++) {
+      const c = j * W + i;
+      let d = weg[c];
+      if (i > 0) d = Math.min(d, weg[c - 1] + d1);
+      if (j > 0) {
+        d = Math.min(d, weg[c - W] + d1);
+        if (i > 0) d = Math.min(d, weg[c - W - 1] + d2);
+        if (i < W - 1) d = Math.min(d, weg[c - W + 1] + d2);
+      }
+      weg[c] = d;
+    }
+  for (let j = W - 1; j >= 0; j--)
+    for (let i = W - 1; i >= 0; i--) {
+      const c = j * W + i;
+      let d = weg[c];
+      if (i < W - 1) d = Math.min(d, weg[c + 1] + d1);
+      if (j < W - 1) {
+        d = Math.min(d, weg[c + W] + d1);
+        if (i < W - 1) d = Math.min(d, weg[c + W + 1] + d2);
+        if (i > 0) d = Math.min(d, weg[c + W - 1] + d2);
+      }
+      weg[c] = d;
+    }
   while (hp.n) {
     const [tc, c] = hp.pop();
     if (tc > t[c]) continue;
@@ -183,14 +233,11 @@ function erRaster(netz, zeiten, h, zelle, v, abseits, tMax) {
       const ni = ci + di,
         nj = cj + dj;
       if (ni < 0 || nj < 0 || ni >= W || nj >= W) continue;
-      const m = f * zelle,
-        r = rest[c] - m;
-      if (r < 0) continue;
-      const nc = nj * W + ni,
-        tn = tc + m / va;
+      const nc = nj * W + ni;
+      if (weg[nc] > abseits) continue;
+      const tn = tc + (f * zelle) / va;
       if (tn < t[nc] && tn <= tMax) {
         t[nc] = tn;
-        rest[nc] = r;
         hp.push(tn, nc);
       }
     }
