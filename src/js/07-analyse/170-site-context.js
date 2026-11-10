@@ -67,8 +67,103 @@ function scFlaeche(ring) {
   return Math.abs(a / 2);
 }
 
-/** Landmarks und Plätze im Projektausschnitt laden (Overpass, im Browser). */
-async function scLaden() {
+/**
+ * Overpass-Abfrage mit gestaffelten Servern: antwortet der erste nicht binnen 8 s, wird zusätzlich der nächste
+ * gefragt (nach 16 s der dritte); die erste gültige Antwort gilt, die übrigen werden abgebrochen.
+ */
+async function overpassAbruf(q, ort) {
+  const EP = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.private.coffee/api/interpreter',
+    ],
+    acs = EP.map(() => new AbortController()),
+    fehler = [];
+  let fertig = false;
+  const eins = async (i) => {
+    const to = setTimeout(() => acs[i].abort(), 60000);
+    try {
+      const r = await fetch(EP[i] + '?data=' + encodeURIComponent(q), { signal: acs[i].signal });
+      if (!r.ok)
+        throw new Error(
+          'HTTP ' +
+            r.status +
+            (r.status === 429 ? ' (überlastet)' : r.status === 504 ? ' (Zeitüberschreitung)' : ''),
+        );
+      const j = await r.json();
+      if (j.remark && /runtime error/i.test(j.remark) && !(j.elements || []).length)
+        throw new Error(j.remark);
+      return j;
+    } catch (e) {
+      if (!fertig) {
+        fehler.push(e.name === 'AbortError' ? 'keine Antwort nach 60 s' : e.message);
+        logErr(e, ort);
+      }
+      throw e;
+    } finally {
+      clearTimeout(to);
+    }
+  };
+  return new Promise((ok, nein) => {
+    let naechster = 0,
+      offen = 0;
+    const uhren = [],
+      ende = () => uhren.forEach(clearTimeout),
+      start = () => {
+        if (fertig || naechster >= EP.length) return;
+        const i = naechster++;
+        offen++;
+        if (naechster < EP.length) uhren.push(setTimeout(start, 8000)); // keine Antwort binnen 8 s: nächster dazu
+        eins(i).then(
+          (j) => {
+            if (fertig) return;
+            fertig = true;
+            ende();
+            acs.forEach((a, k) => k !== i && a.abort());
+            ok(j);
+          },
+          () => {
+            offen--;
+            if (fertig) return;
+            if (naechster < EP.length)
+              start(); // gescheitert: sofort den nächsten
+            else if (!offen) {
+              ende();
+              nein(
+                new Error(
+                  'OpenStreetMap (Overpass) nicht erreichbar: ' +
+                    (fehler[fehler.length - 1] || 'keine Antwort') +
+                    '. Die Server sind zeitweise überlastet – bitte in einer Minute erneut versuchen.',
+                ),
+              );
+            }
+          },
+        );
+      };
+    start();
+  });
+}
+
+/** Landmarks und Plätze im Projektausschnitt laden (Overpass, im Browser); gespeichertes Ergebnis zuerst. */
+async function scLaden(neu) {
+  const sk = 'maad.sc.v1.' + ovKey();
+  if (!neu && S.geo) {
+    try {
+      const t = localStorage.getItem(sk);
+      if (t) {
+        const d = JSON.parse(t);
+        SC.lm = d.lm || [];
+        SC.pl = d.pl || [];
+        SC.key = ovKey();
+        SC.st = 'fertig';
+        scZeichnen();
+        rr();
+        return;
+      }
+    } catch (e) {
+      logErr(e, 'scLaden');
+    }
+  }
   if (!S.geo) {
     SC.st = 'fehler';
     SC.fehler = 'Nur mit geladenem Projektstandort (nicht in der Demo).';
@@ -95,43 +190,29 @@ async function scLaden() {
       `nwr["name"]["place"="square"](${bb});` +
       `way["name"]["highway"="pedestrian"]["area"="yes"](${bb});` +
       `);out tags geom;`;
-  let j = null,
-    letzter = null;
-  // mehrere Overpass-Server: bei Überlastung (429/504) oder Zeitüberschreitung den nächsten versuchen
-  for (const ep of [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-  ]) {
-    try {
-      const ac = new AbortController(),
-        to = setTimeout(() => ac.abort(), 45000);
-      const r = await fetch(ep + '?data=' + encodeURIComponent(q), { signal: ac.signal });
-      clearTimeout(to);
-      if (!r.ok)
-        throw new Error(
-          'HTTP ' +
-            r.status +
-            (r.status === 429 ? ' (überlastet)' : r.status === 504 ? ' (Zeitüberschreitung)' : ''),
-        );
-      j = await r.json();
-      break;
-    } catch (e) {
-      letzter = e.name === 'AbortError' ? new Error('keine Antwort nach 45 s') : e;
-      logErr(e, 'scLaden');
-    }
-  }
-  if (!j) {
+  let j = null;
+  try {
+    j = await overpassAbruf(q, 'scLaden');
+  } catch (e) {
     SC.st = 'fehler';
-    SC.fehler =
-      'OpenStreetMap (Overpass) nicht erreichbar: ' +
-      ((letzter && letzter.message) || letzter) +
-      '. Die Server sind zeitweise überlastet – bitte in einer Minute erneut versuchen.';
+    SC.fehler = e.message;
     rr();
     return;
   }
   scAuswerten(j.elements || [], lon0, lat0);
   SC.key = ovKey();
+  try {
+    const t = JSON.stringify({ lm: SC.lm, pl: SC.pl }),
+      idx = JSON.parse(localStorage.getItem('maad.sc.v1.liste') || '[]').filter((x) => x !== sk);
+    if (t.length < 1.5e6) {
+      idx.push(sk);
+      while (idx.length > 8) localStorage.removeItem(idx.shift()); // höchstens 8 Standorte
+      localStorage.setItem(sk, t);
+      localStorage.setItem('maad.sc.v1.liste', JSON.stringify(idx));
+    }
+  } catch (e) {
+    logErr(e, 'scLaden');
+  }
   SC.st = 'fertig';
   scZeichnen();
   rr();
@@ -377,7 +458,7 @@ function scKennzahlen() {
 /** Inhalt des Reiters „Site & Context“. */
 function scPanel() {
   let h = `<div class="card"><b>Site &amp; Context</b><div class="dmu" style="margin:4px 0 8px">Landmarks, Plätze und wichtige Gebäude im Projektausschnitt aus OpenStreetMap. Landmarks werden im Modell eingefärbt und nummeriert, die Liste steht in der Legende.</div>`;
-  h += `<button class="pri" style="width:100%" ${SC.st === 'laedt' ? 'disabled' : ''} onclick="scLaden()">${SC.st === 'laedt' ? 'Lädt …' : SC.lm.length ? 'Neu laden' : 'Landmarks laden'}</button>`;
+  h += `<button class="pri" style="width:100%" ${SC.st === 'laedt' ? 'disabled' : ''} onclick="scLaden(${SC.lm.length || SC.pl.length ? 'true' : ''})">${SC.st === 'laedt' ? 'Lädt …' : SC.lm.length ? 'Neu laden' : 'Landmarks laden'}</button>`;
   if (SC.st === 'fehler') h += `<div class="dmu" style="color:#b00;margin-top:6px">${esc(SC.fehler)}</div>`;
   if (SC.lm.length && SC.key && SC.key !== ovKey())
     h += `<div class="dmu" style="color:#b56a00;margin-top:6px">Ausschnitt geändert – neu laden.</div>`;

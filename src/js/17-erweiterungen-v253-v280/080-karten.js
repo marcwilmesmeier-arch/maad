@@ -109,6 +109,85 @@ const ovRings = (g, cv) => {
   pg.forEach((p) => out.push({ t: 'a', r: p.map((r) => r.map(cv)) }));
   return out;
 };
+// ---- CORINE schlank: Flächen auf den Ausschnitt zuschneiden, vereinfachen und je Standort im Browser speichern.
+// Der BKG-Dienst liefert jede berührte Fläche vollständig (Stadtflächen mit Zehntausenden Punkten).
+/** Ring an einem achsparallelen Quadrat [-h, h]² zuschneiden (Sutherland-Hodgman). */
+function ovZuschnitt(ring, h) {
+  let r = ring;
+  for (const [ax, s] of [
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+  ]) {
+    const innen = (p) => s * p[ax] <= h,
+      o = [];
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i],
+        b = r[(i + 1) % r.length];
+      if (innen(a)) o.push(a);
+      if (innen(a) !== innen(b)) {
+        const t = (s * h - a[ax]) / (b[ax] - a[ax]);
+        o.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      }
+    }
+    r = o;
+    if (r.length < 3) return [];
+  }
+  return r;
+}
+/** Linienzug vereinfachen (Douglas-Peucker, Toleranz tol in m). */
+function ovVereinfachen(p, tol) {
+  if (p.length < 5) return p;
+  const keep = new Uint8Array(p.length),
+    st = [[0, p.length - 1]];
+  keep[0] = keep[p.length - 1] = 1;
+  while (st.length) {
+    const [a, b] = st.pop();
+    let dm = 0,
+      im = -1;
+    const dx = p[b][0] - p[a][0],
+      dz = p[b][1] - p[a][1],
+      L = Math.hypot(dx, dz) || 1e-9;
+    for (let i = a + 1; i < b; i++) {
+      const d = Math.abs(dx * (p[a][1] - p[i][1]) - dz * (p[a][0] - p[i][0])) / L;
+      if (d > dm) {
+        dm = d;
+        im = i;
+      }
+    }
+    if (dm > tol) {
+      keep[im] = 1;
+      st.push([a, im], [im, b]);
+    }
+  }
+  return p.filter((_, i) => keep[i]);
+}
+const OV_SP = 'maad.clc.v1.';
+function ovSpeicherLesen(k) {
+  if (k !== 'clc') return null;
+  try {
+    const t = localStorage.getItem(OV_SP + ovKey());
+    return t ? JSON.parse(t) : null;
+  } catch (e) {
+    logErr(e, 'ovSpeicherLesen');
+    return null;
+  }
+}
+function ovSpeicherSchreiben(k, items) {
+  if (k !== 'clc') return;
+  try {
+    const t = JSON.stringify(items.map((o) => ({ t: o.t, c: o.c, cd: o.cd, r: o.r }))),
+      idx = JSON.parse(localStorage.getItem(OV_SP + 'liste') || '[]').filter((x) => x !== ovKey());
+    if (t.length > 1.5e6) return; // zu groß für den Browserspeicher
+    idx.push(ovKey());
+    while (idx.length > 8) localStorage.removeItem(OV_SP + idx.shift()); // höchstens 8 Standorte
+    localStorage.setItem(OV_SP + ovKey(), t);
+    localStorage.setItem(OV_SP + 'liste', JSON.stringify(idx));
+  } catch (e) {
+    logErr(e, 'ovSpeicherSchreiben');
+  }
+}
 async function ovFetchWfs(k) {
   const c = envCfg(k);
   if (!c || !c.url || !c.type)
@@ -125,6 +204,16 @@ async function ovFetchWfs(k) {
       if (k === 'clc') {
         o.c = clcCol(cd);
         o.cd = cd;
+        // auf den Ausschnitt (+ 20 m) zuschneiden und vereinfachen, Koordinaten auf 0,1 m runden
+        o.r = o.r
+          .map((r) =>
+            ovVereinfachen(ovZuschnitt(r, h + 20), 0.8).map((p) => [
+              Math.round(p[0] * 10) / 10,
+              Math.round(p[1] * 10) / 10,
+            ]),
+          )
+          .filter((r) => r.length > 2);
+        if (!o.r.length) return;
       }
       items.push(o);
     });
@@ -216,6 +305,19 @@ async function ovLoad(k) {
   }
   const key = ovKey();
   if (OVD[k] && OVD[k].key === key && OVD[k].st !== 'err') return;
+  // gespeichert (gleicher Standort und Ausschnitt): sofort zeichnen, ohne Abruf
+  const gesp = ovSpeicherLesen(k);
+  if (gesp && gesp.length) {
+    ovPaint(k, gesp);
+    OVD[k] = { key, st: 'ok', n: gesp.length, t: Date.now(), gespeichert: 1 };
+    try {
+      if (S.geo) ovRc();
+      rr();
+    } catch (e) {
+      logErr(e, 'ovLoad');
+    }
+    return;
+  }
   OVD[k] = { key, st: 'busy' };
   try {
     rr();
@@ -226,6 +328,7 @@ async function ovLoad(k) {
     const r = await (k === 'hq' ? ovFetchHq() : ovFetchWfs(k));
     if (!OVD[k] || OVD[k].key !== key) return;
     ovPaint(k, r.items);
+    ovSpeicherSchreiben(k, r.items);
     OVD[k] = { key, st: 'ok', n: r.n, t: Date.now() };
   } catch (e) {
     ovClear(k);

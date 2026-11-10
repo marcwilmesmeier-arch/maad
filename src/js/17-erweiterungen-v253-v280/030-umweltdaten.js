@@ -16,11 +16,16 @@ function axErr(e, u, viaP) {
     return 'Abruf von ' + h + ' blockiert (CORS) und kein Proxy-Weg';
   return m;
 }
+// Dienste, die Browser-Abrufe per CORS immer ablehnen: gleich über den Proxy (spart je Anfrage einen Fehlversuch)
+const ENV_PROXY_ZUERST = /sgx\.geodatenzentrum\.de/;
 async function envFetch(u) {
   let last = null,
     lu = u;
   const vs = [u];
-  if (GEO.proxy && typeof viaProxy === 'function') vs.push(viaProxy(u));
+  if (GEO.proxy && typeof viaProxy === 'function') {
+    if (ENV_PROXY_ZUERST.test(u)) vs.unshift(viaProxy(u));
+    else vs.push(viaProxy(u));
+  }
   for (const x of vs) {
     try {
       const ac = new AbortController(),
@@ -42,6 +47,7 @@ async function envFetch(u) {
       last = e;
       lu = x === u ? u : u;
       last._p = x !== u;
+      if (e && e._http && x !== u && vs[vs.length - 1] !== x) continue; // Proxy-Fehler: noch direkt versuchen
       if (e && e._http) break;
     }
   }
@@ -312,6 +318,47 @@ async function wfsTypes(c) {
   return r;
 }
 async function wfsFeatures(c, bb) {
+  // Datentyp und funktionierendes Format je Dienst im Browser merken: spart GetCapabilities und Formatversuche
+  const mk = 'maad.wfsfmt.' + c.url;
+  let memo = null;
+  try {
+    memo = JSON.parse(localStorage.getItem(mk) || 'null');
+  } catch (e) {
+    logErr(e, 'wfsFeatures');
+  }
+  if (memo && memo.type && (c.type === 'auto' || c.type === memo.type)) {
+    const m = Object.assign({}, c, { type: memo.type, fmt: memo.fmt });
+    try {
+      let u = envUrl(m, bb);
+      if (!memo.fmt) u = u.replace(/&outputFormat=[^&]*/, ''); // ohne Formatangabe (GML)
+      const f = await envFetch(u),
+        t = f.trim();
+      if (t[0] === '{') {
+        const j = JSON.parse(t);
+        if (j.features) return j.features;
+      } else if (t[0] === '<') {
+        const g = gmlToFeatures(t);
+        if (g) return g;
+      }
+    } catch (e) {
+      logErr(e, 'wfsFeatures');
+    }
+    try {
+      localStorage.removeItem(mk); // gemerkte Angabe passt nicht mehr: normal ermitteln
+    } catch (e) {
+      logErr(e, 'wfsFeatures');
+    }
+  }
+  const r = await wfsFeaturesErmitteln(c, bb);
+  try {
+    if (r._typ) localStorage.setItem(mk, JSON.stringify({ type: r._typ, fmt: r._fmt }));
+  } catch (e) {
+    logErr(e, 'wfsFeatures');
+  }
+  return r;
+}
+/** wfsFeatures() ohne Merken: Datentyp ggf. aus GetCapabilities, Formate der Reihe nach. */
+async function wfsFeaturesErmitteln(c, bb) {
   let cc = c;
   if (c.type === 'auto') {
     const ty = await wfsTypes(c),
@@ -345,6 +392,14 @@ async function wfsFeatures0(c, bb) {
     snip = '';
   const tried = new Set();
   const one = async (f) => {
+    const r = await one0(f);
+    if (r) {
+      r._typ = c.type;
+      r._fmt = f === '-' ? '' : f;
+    }
+    return r;
+  };
+  const one0 = async (f) => {
     tried.add(f);
     let u = envUrl(Object.assign({}, c, { fmt: f }), bb);
     if (f === '-') u = u.replace(/&outputFormat=[^&]*/, '');

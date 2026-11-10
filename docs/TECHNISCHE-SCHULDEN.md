@@ -131,3 +131,12 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Ergebnis wird nicht mit dem Projekt gespeichert (Netz neu laden); Haltestellen gleicher Art und gleichen Namens
   innerhalb 250 m werden zusammengefasst. Flughäfen nur mit IATA-Code im Umkreis von 60 km (Luftlinie).
 - Nur mit nachgestellten OSM-Daten im Browser geprüft (Overpass in der Entwicklungsumgebung gesperrt).
+
+## Ladezeiten CORINE und Site & Context
+
+- CORINE: BKG-Dienst gleich über den Proxy; Datentyp und Format je Dienst gemerkt (`maad.wfsfmt.*`); Flächen auf den
+  Ausschnitt zugeschnitten und vereinfacht (0,8 m) und je Standort im Browser gespeichert (`maad.clc.v1.*`, höchstens
+  8 Standorte, je höchstens 1,5 MB). Ändert der BKG seine Daten, bleibt der Speicher bis zum Löschen der Browserdaten.
+- Overpass (`overpassAbruf`): Server gestaffelt (nach 8 s zusätzlich der nächste, bei Fehler sofort), erste Antwort
+  gilt. Site & Context je Standort gespeichert (`maad.sc.v1.*`); „Neu laden“ ruft immer neu ab.
+- Noch offen: Zwischenspeicher für LoD2, Gelände und die übrigen Kontextdaten; Zeitmessung je Quelle im Ladebericht.

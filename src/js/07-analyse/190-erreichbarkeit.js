@@ -88,37 +88,12 @@ async function erLaden() {
       `node["railway"~"^(station|halt|tram_stop|subway_entrance)$"](${bb});nwr["public_transport"="station"](${bb});` +
       `);out tags center qt;` +
       `nwr["aeroway"="aerodrome"]["iata"](around:60000,${GEO.lat.toFixed(6)},${GEO.lon.toFixed(6)});out tags center qt;`;
-  let j = null,
-    letzter = null;
-  for (const ep of [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-  ]) {
-    try {
-      const ac = new AbortController(),
-        to = setTimeout(() => ac.abort(), 60000);
-      const r = await fetch(ep + '?data=' + encodeURIComponent(q), { signal: ac.signal });
-      clearTimeout(to);
-      if (!r.ok)
-        throw new Error(
-          'HTTP ' +
-            r.status +
-            (r.status === 429 ? ' (überlastet)' : r.status === 504 ? ' (Zeitüberschreitung)' : ''),
-        );
-      j = await r.json();
-      break;
-    } catch (e) {
-      letzter = e.name === 'AbortError' ? new Error('keine Antwort nach 60 s') : e;
-      logErr(e, 'erLaden');
-    }
-  }
-  if (!j) {
+  let j = null;
+  try {
+    j = await overpassAbruf(q, 'erLaden');
+  } catch (e) {
     ER.st = 'fehler';
-    ER.fehler =
-      'OpenStreetMap (Overpass) nicht erreichbar: ' +
-      ((letzter && letzter.message) || letzter) +
-      '. Die Server sind zeitweise überlastet – bitte in einer Minute erneut versuchen.';
+    ER.fehler = e.message;
     rr();
     return;
   }
