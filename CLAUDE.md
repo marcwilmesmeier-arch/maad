@@ -29,6 +29,8 @@ npm run vergleich -- <alt.html>   # Verhalten alt/neu vergleichen (bei Umbauten,
 node tools/umbenennen.mjs <alt> <neu> [--auch-strings]   # globalen Namen sicher umbenennen
 npm run vendor                    # Bibliotheken für „Realistisch“ neu bündeln (nur nach Versionswechsel)
 node tools/bildvergleich.mjs <alt.html>   # Aussehen alt/neu pixelweise vergleichen (Grafikänderungen)
+npm run pw -- open dist/maad.html # maad im Browser steuern (Playwright CLI): snapshot, click e12, eval "S.dar",
+npm run pw -- screenshot          #   screenshot, console, close … – Anleitung: .claude/skills/playwright-cli
 ```
 
 Ohne installierten Browser: `npx playwright install chromium` oder `CHROMIUM_PATH=/pfad/zu/chrome npm test`.
