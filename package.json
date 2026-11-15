@@ -16,9 +16,11 @@
     "start": "node --disable-warning=ExperimentalWarning server/src/server.mjs",
     "paket": "npm run build && node tools/paket.mjs",
     "vendor": "node tools/vendor.mjs",
+    "pw": "node tools/pw.mjs",
     "test:wind": "node --test tests/wind.test.mjs tests/erreichbarkeit.test.mjs"
   },
   "devDependencies": {
+    "@playwright/cli": "0.1.23",
     "@takram/three-atmosphere": "0.19.1",
     "@takram/three-clouds": "0.7.6",
     "@takram/three-geospatial": "0.9.1",
