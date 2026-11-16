@@ -66,6 +66,8 @@ function okOpen(k, reiter) {
 }
 function okReiter(r) {
   if (r === 'gr') OK.zurueck = null;
+  OK.gzel = [];
+  OK.glin = null;
   OK.reiter = r;
   OK.go = null;
   okRender();
@@ -85,10 +87,17 @@ function okInit() {
   d.addEventListener('keydown', (e) => {
     if (/INPUT|SELECT/.test(e.target.tagName)) return;
     if (e.key === 'Escape') {
-      if (OK.feld != null) {
-        OK.feld = null;
+      // Gruppen: Teilen-Werkzeug → Auswählen → Auswahl aufheben; sonst schließen
+      if (OK.reiter === 'gr' && OK.gwz !== 'sel') okGrWz('sel');
+      else if (OK.reiter === 'gr' && (OK.go || OK.glin || OK.gzel.length)) {
+        OK.go = null;
+        OK.glin = null;
+        OK.gzel = [];
         okRender();
       } else okClose();
+      e.preventDefault();
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && OK.reiter === 'gr') {
+      okGrEntf();
       e.preventDefault();
     }
   });
@@ -222,6 +231,8 @@ function okRender() {
     if (e) e.classList.toggle('on', OK.reiter === r);
   });
   // ── Erweiterung aus 19-fassadendesigner/098-konfigurator-gruppen.js
+  const wz = okE('okGwz');
+  if (wz) wz.style.display = OK.reiter === 'gr' ? 'flex' : 'none';
   if (OK.reiter === 'gr') {
     okGrRender();
     okGrZeichnen();

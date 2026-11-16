@@ -1,8 +1,11 @@
 // ======================= ÖFFNUNGSGRUPPEN (wie in Forma) =======================
 // Eine Gruppe ist ein Fassadenabschnitt fester Länge (z. B. 6 m) und Höhe (Geschoss), in dem Öffnungen aus dem Katalog
-// sitzen: S.oeg = [{ k, n, l, h, oe: [{ id, t, x, v }], rs: [{ id, x, v, b, h, d }] }] (x = linke Kante, v = Unterkante
-// über dem Fußboden). rs = Rücksprünge: Rechtecke mit Tiefe d (m; positiv = Fassade springt zurück, negativ = Vorsprung),
-// z. B. ein vertieftes Feld neben dem Fenster oder ein gerader Versprung über die ganze Gruppe.
+// sitzen: S.oeg = [{ k, n, l, h, t, oe: [{ id, t, x, v }], xs, ys, fe: [{ p, d, t }] }] (x = linke Kante, v = Unterkante
+// über dem Fußboden). Die Wandfläche der Gruppe ist durch Teilungslinien in Felder geteilt (xs senkrecht, ys waagerecht);
+// jedes Feld kann eine Tiefe d (m; positiv = Rücksprung, negativ = Vorsprung), einen Verlauf k ('g' gleichmäßig,
+// 'l' links tief/rechts bündig, 'r' rechts tief/links bündig – schräger Rücksprung) und ein Material t (Fassadentyp)
+// haben – gemerkt über einen Punkt p im Feld wie bei den Fassadenfeldern. t der Gruppe = Material aller übrigen Felder.
+// Nebeneinanderliegende Felder mit gleicher Einstellung bilden ein Rechteck (eine durchgehende Schräge).
 // Angelegt und bearbeitet im Konfigurator (Reiter „Gruppen“), gespeichert mit dem Projekt.
 // An der Fassade stehen nur Verweise: b.fd[Ansicht].gr = [{ id, g, u, v }] (u = linke Kante, v = Geschossboden).
 // Die Öffnungen daraus erzeugt oeListe() (q = Kennung des Verweises) – eine geänderte Gruppe ändert alle Stellen.
@@ -49,9 +52,11 @@ const OEG0 = [
       { id: 'a', t: 'f1', x: 0.9, v: 0.9 },
       { id: 'b', t: 'f1', x: 3.6, v: 0.9 },
     ],
-    rs: [
-      { id: 'r1', x: 1.91, v: 0.75, b: 1.2, h: 1.685, d: 0.05 },
-      { id: 'r2', x: 4.61, v: 0.75, b: 1.2, h: 1.685, d: 0.05 },
+    xs: [1.91, 3.11, 4.61, 5.81],
+    ys: [0.75, 2.435],
+    fe: [
+      { p: [2.51, 1.59], d: 0.05, t: '' },
+      { p: [5.21, 1.59], d: 0.05, t: '' },
     ],
   },
 ];
@@ -91,34 +96,124 @@ function oegOeffnungen(b, V) {
   });
   return R;
 }
-/** Rücksprünge aller Gruppenverweise einer Ansicht: { u0, u1, v0, v1, d, id, gi }. */
-function oegRuecksprunge(b, V) {
+/** Teilungen einer Gruppe (sortiert, mit Rändern). */
+function oegTeilung(G) {
+  const r = (L, m) =>
+    [0, m, ...(L || []).filter((x) => x > 0.005 && x < m - 0.005)]
+      .sort((a, c) => a - c)
+      .filter((x, i, A) => !i || x - A[i - 1] > 0.005);
+  return { xs: r(G.xs, G.l), ys: r(G.ys, G.h) };
+}
+/** Felder der Gruppe (Raster aus den Teilungen) mit Tiefe d und Material t (eigenes, sonst das der Gruppe). */
+function oegZellen(G) {
+  const { xs, ys } = oegTeilung(G),
+    Z = [];
+  for (let j = 0; j < ys.length - 1; j++)
+    for (let i = 0; i < xs.length - 1; i++)
+      Z.push({ i, j, x0: xs[i], x1: xs[i + 1], y0: ys[j], y1: ys[j + 1], d: 0, k: 'g', t: '' });
+  (G.fe || []).forEach((f) => {
+    const z = Z.find((c) => f.p[0] > c.x0 && f.p[0] < c.x1 && f.p[1] > c.y0 && f.p[1] < c.y1);
+    if (z) {
+      z.d = f.d || 0;
+      z.k = f.k === 'l' || f.k === 'r' ? f.k : 'g';
+      z.t = f.t || '';
+    }
+  });
+  return Z;
+}
+/**
+ * Flächen der Gruppe mit Tiefe oder Material als zusammengefasste Rechtecke (gleiche Tiefe und gleiches Material
+ * nebeneinander/übereinander werden zu einem Rechteck – keine Seitenflächen zwischen ihnen).
+ */
+function oegFlaechenG(G) {
+  const Z = oegZellen(G).map((z) => ({ ...z, t: z.t || G.t || '' })),
+    key = (z) => z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t,
+    zeilen = [];
+  // waagerecht zusammenfassen
+  const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
+  for (let j = 0; j < nj; j++) {
+    const Zj = Z.filter((z) => z.j === j).sort((a, c) => a.i - c.i);
+    let cur = null;
+    Zj.forEach((z) => {
+      if (cur && key(cur) === key(z) && Math.abs(cur.x1 - z.x0) < 1e-6) cur.x1 = z.x1;
+      else {
+        cur = { x0: z.x0, x1: z.x1, y0: z.y0, y1: z.y1, d: z.d, k: z.d ? z.k : 'g', t: z.t };
+        zeilen.push(cur);
+      }
+    });
+  }
+  // senkrecht zusammenfassen (gleiche Spannweite)
+  const R = [];
+  zeilen
+    .sort((a, c) => a.y0 - c.y0)
+    .forEach((s) => {
+      const o = R.find(
+        (r) =>
+          key(r) === key(s) &&
+          Math.abs(r.x0 - s.x0) < 1e-6 &&
+          Math.abs(r.x1 - s.x1) < 1e-6 &&
+          Math.abs(r.y1 - s.y0) < 1e-6,
+      );
+      if (o) o.y1 = s.y1;
+      else R.push({ ...s });
+    });
+  // Tiefe an der linken und rechten Kante (schräg: eine Seite bündig)
+  R.forEach((r) => {
+    r.dl = r.k === 'r' ? 0 : r.d;
+    r.dr = r.k === 'l' ? 0 : r.d;
+  });
+  return R.filter((r) => r.d || r.t);
+}
+/** Flächen aller Gruppenverweise einer Ansicht (Tiefe und/oder Material): { u0, u1, v0, v1, d, t, id, gi }. */
+function oegFlaechen(b, V) {
   const R = [];
   (oegDaten(b, V.key) || []).forEach((I) => {
     const G = oegG(I.g);
-    if (!G || !G.rs) return;
-    G.rs.forEach((r) =>
+    if (!G) return;
+    oegFlaechenG(G).forEach((r, k) =>
       R.push({
-        u0: I.u + r.x,
-        u1: I.u + r.x + r.b,
-        v0: I.v + r.v,
-        v1: I.v + r.v + r.h,
+        u0: I.u + r.x0,
+        u1: I.u + r.x1,
+        v0: I.v + r.y0,
+        v1: I.v + r.y1,
         d: r.d,
-        id: I.id + ':' + r.id,
+        dl: r.dl,
+        dr: r.dr,
+        t: r.t,
+        id: I.id + ':f' + k,
         gi: I,
       }),
     );
   });
   return R;
 }
+/** Rücksprünge und Vorsprünge (Flächen mit Tiefe) aller Gruppenverweise einer Ansicht. */
+function oegRuecksprunge(b, V) {
+  return oegFlaechen(b, V).filter((r) => r.d);
+}
 /** Rücksprung in der Ansicht zeichnen: zurückspringend dunkler, vorspringend heller, Schattenkante oben/links. */
-function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an) {
+function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k) {
   const x0 = X(u0),
     x1 = X(u1),
     y0 = Y(v1),
     y1 = Y(v0);
   g.save();
-  g.fillStyle = d > 0 ? 'rgba(30,41,59,0.16)' : 'rgba(255,255,255,0.45)';
+  if (farbe) {
+    g.fillStyle = farbe;
+    g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  if (!d) {
+    g.restore();
+    return;
+  }
+  const ton = d > 0 ? 'rgba(30,41,59,0.2)' : 'rgba(255,255,255,0.5)';
+  if (k === 'l' || k === 'r') {
+    // schräg: Schattierung läuft zur bündigen Seite aus
+    const gr = g.createLinearGradient(x0, 0, x1, 0);
+    gr.addColorStop(k === 'l' ? 0 : 1, ton);
+    gr.addColorStop(k === 'l' ? 1 : 0, 'rgba(0,0,0,0)');
+    g.fillStyle = gr;
+  } else g.fillStyle = ton;
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   g.strokeStyle = d > 0 ? 'rgba(30,41,59,0.55)' : 'rgba(30,41,59,0.35)';
   g.lineWidth = an ? 2 : 1;
@@ -142,7 +237,21 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an) {
 }
 function oegRueckZeichnen(g, b, V, ox) {
   const X = (u) => fdSX(u + ox);
-  oegRuecksprunge(b, V).forEach((r) => oegRueckZeichneEins(g, X, fdSY, r.u0, r.u1, r.v0, r.v1, r.d, false));
+  oegFlaechen(b, V).forEach((r) =>
+    oegRueckZeichneEins(
+      g,
+      X,
+      fdSY,
+      r.u0,
+      r.u1,
+      r.v0,
+      r.v1,
+      r.d,
+      false,
+      r.t ? fdT(r.t).c : null,
+      r.dl === r.dr ? 'g' : r.dl ? 'l' : 'r',
+    ),
+  );
 }
 /** Gruppenverweis unter dem Punkt (Rechteck der Gruppe). */
 function oegTreffer(b, V, u, v) {
@@ -377,8 +486,8 @@ function oegSymbol(G, w = 44, h = 22) {
     ox = (w - G.l * k) / 2,
     oy = h - (h - G.h * k) / 2;
   let s = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect x="${ox}" y="${oy - G.h * k}" width="${G.l * k}" height="${G.h * k}" fill="#e4e2dd" stroke="#94a3b8" stroke-width=".8"/>`;
-  (G.rs || []).forEach((r) => {
-    s += `<rect x="${ox + r.x * k}" y="${oy - (r.v + r.h) * k}" width="${r.b * k}" height="${r.h * k}" fill="${r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
+  oegFlaechenG(G).forEach((r) => {
+    s += `<rect x="${ox + r.x0 * k}" y="${oy - r.y1 * k}" width="${(r.x1 - r.x0) * k}" height="${(r.y1 - r.y0) * k}" fill="${r.t ? fdT(r.t).c : r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
   });
   G.oe.forEach((q) => {
     const T = oeT(q.t);
@@ -436,15 +545,28 @@ function oegPruefen(L) {
     oe: (Array.isArray(G.oe) ? G.oe : [])
       .filter((q) => q && q.t)
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
-    rs: (Array.isArray(G.rs) ? G.rs : [])
-      .filter((r) => r && +r.b > 0 && +r.h > 0)
-      .map((r, i) => ({
-        id: String(r.id || 'r' + i),
-        x: +r.x || 0,
-        v: +r.v || 0,
-        b: +r.b,
-        h: +r.h,
-        d: Math.max(-1, Math.min(1, +r.d || 0)),
-      })),
+    t: S.ft.some((x) => x.k === G.t) ? G.t : '',
+    ...oegFelderPruefen(G),
   }));
+}
+/** Teilungen und Felder prüfen; frühere Rücksprung-Rechtecke (rs) in Teilungen und Felder übernehmen. */
+function oegFelderPruefen(G) {
+  const zahl = (L) => (Array.isArray(L) ? L.map(Number).filter((x) => isFinite(x)) : []),
+    xs = zahl(G.xs),
+    ys = zahl(G.ys),
+    fe = (Array.isArray(G.fe) ? G.fe : [])
+      .filter((f) => f && Array.isArray(f.p))
+      .map((f) => ({
+        p: [+f.p[0] || 0, +f.p[1] || 0],
+        d: Math.max(-1, Math.min(1, +f.d || 0)),
+        k: f.k === 'l' || f.k === 'r' ? f.k : 'g',
+        t: String(f.t || ''),
+      }));
+  (Array.isArray(G.rs) ? G.rs : []).forEach((r) => {
+    if (!r || !(+r.b > 0) || !(+r.h > 0)) return;
+    xs.push(+r.x, +r.x + +r.b);
+    ys.push(+r.v, +r.v + +r.h);
+    fe.push({ p: [+r.x + r.b / 2, +r.v + r.h / 2], d: Math.max(-1, Math.min(1, +r.d || 0)), t: '' });
+  });
+  return { xs, ys, fe };
 }

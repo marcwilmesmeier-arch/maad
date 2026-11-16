@@ -1,7 +1,8 @@
 // ======================= FASSADENTYPEN IM 3D-MODELL =======================
 // Jedes Feld mit Fassadentyp (nicht „ohne Typ“) wird ab LOD 200 als farbige Fläche 4 cm vor die Außenwand gelegt
 // (in LOD 100 nur Auswertung, keine Farbe im Modell), mit ausgesparten Öffnungen, die Laibungen bis zum Fensterrahmen in
-// derselben Farbe; Rücksprünge/Vorsprünge der Öffnungsgruppen mit Fläche in ihrer Tiefe und umlaufenden Seiten. Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
+// derselben Farbe. Felder der Öffnungsgruppen mit eigenem Material und/oder Tiefe (auch schräg): Fläche in ihrer Tiefe,
+// Seitenflächen nur an Kanten mit Tiefenunterschied (gestuft, L-förmig, schräg). Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
 // LOD-200-Ansicht, 22-lod200-waende/030-aktionen.js): neu gebaut wird nur ein Gebäude, dessen Fassade sich geändert hat.
 
 const FT3 = { g: new T.Group(), bau: new Map() };
@@ -10,7 +11,74 @@ sc.add(FT3.g);
 G.fdt = FT3.g;
 LY.push(['Fassadentypen', 'fdt', 1, 1]);
 
-/** Farbige Flächen eines Gebäudes (Gruppe) aus seinen Fassadenfeldern. */
+/**
+ * Vereinigung achsparalleler Rechtecke {u0,u1,v0,v1} als Ringe (Umrisse). Aneinanderstoßende Aussparungen werden so zu
+ * einer – sonst bricht die Zerlegung der Fassadenfläche (Löcher dürfen sich nicht berühren).
+ */
+function ftVereinigung(R) {
+  if (!R.length) return [];
+  const xs = [...new Set(R.flatMap((r) => [r.u0, r.u1]))].sort((a, c) => a - c),
+    ys = [...new Set(R.flatMap((r) => [r.v0, r.v1]))].sort((a, c) => a - c),
+    nx = xs.length - 1,
+    ny = ys.length - 1,
+    voll = (i, j) =>
+      i >= 0 &&
+      j >= 0 &&
+      i < nx &&
+      j < ny &&
+      R.some((r) => {
+        const cu = (xs[i] + xs[i + 1]) / 2,
+          cv = (ys[j] + ys[j + 1]) / 2;
+        return cu > r.u0 && cu < r.u1 && cv > r.v0 && cv < r.v1;
+      }),
+    V = [];
+  for (let j = 0; j < ny; j++) {
+    const z = [];
+    for (let i = 0; i < nx; i++) z.push(voll(i, j));
+    V.push(z);
+  }
+  const an = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && V[j][i],
+    K = new Map(),
+    kante = (a, b) => K.set(a[0] + ',' + a[1], { a, b });
+  // gerichtete Randkanten (gegen den Uhrzeigersinn um die belegte Fläche)
+  for (let j = 0; j < ny; j++)
+    for (let i = 0; i < nx; i++) {
+      if (!V[j][i]) continue;
+      const x0 = xs[i],
+        x1 = xs[i + 1],
+        y0 = ys[j],
+        y1 = ys[j + 1];
+      if (!an(i, j - 1)) kante([x0, y0], [x1, y0]);
+      if (!an(i + 1, j)) kante([x1, y0], [x1, y1]);
+      if (!an(i, j + 1)) kante([x1, y1], [x0, y1]);
+      if (!an(i - 1, j)) kante([x0, y1], [x0, y0]);
+    }
+  const ringe = [];
+  while (K.size) {
+    const [k0, e0] = K.entries().next().value;
+    K.delete(k0);
+    const ring = [e0.a];
+    let e = e0,
+      n = 0;
+    while (n++ < 10000) {
+      const k = e.b[0] + ',' + e.b[1],
+        f = K.get(k);
+      if (!f) break;
+      K.delete(k);
+      ring.push(e.b);
+      e = f;
+    }
+    // gerade Zwischenpunkte entfernen
+    const R2 = ring.filter((p, i) => {
+      const a = ring[(i + ring.length - 1) % ring.length],
+        c = ring[(i + 1) % ring.length];
+      return Math.abs((p[0] - a[0]) * (c[1] - p[1]) - (p[1] - a[1]) * (c[0] - p[0])) > 1e-9;
+    });
+    if (R2.length >= 3) ringe.push(R2);
+  }
+  return ringe;
+}
+/** Farbige Flächen eines Gebäudes (Gruppe) aus seinen Fassadenfeldern und den Feldern der Öffnungsgruppen. */
 function ftBauen(b) {
   const g = new T.Group(),
     farben = new Map(),
@@ -19,14 +87,16 @@ function ftBauen(b) {
   for (let i = 0; i < u; i++) ugH += b.levels[i].h;
   const base = b._y + ugH,
     VOR = 0.04, // Abstand der Farbfläche vor der Wand
-    e = 0.003; // Seitenflächen leicht in die Öffnung gerückt
+    e = 0.003, // Seitenflächen leicht zur offenen Seite gerückt
+    ov = (d) => (d > 0 ? d - 0.01 : d - VOR), // Lage der Farbfläche zu einer Wandfläche in Tiefe d
+    farbePos = (c) => {
+      let pos = farben.get(c);
+      if (!pos) farben.set(c, (pos = []));
+      return pos;
+    };
   fdViews(b).forEach((V) => {
-    const F = fdFaces(b, V).filter((f) => f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t));
-    if (!F.length) return;
     const O = oeListe(b, V),
-      RS = oegRuecksprunge(b, V).filter((r) => r.d),
-      // Umrechnung Ansicht → Welt je Wandstück, senkrecht zur tatsächlichen Wand (d = Tiefe nach innen)
-      stueck = (uu, vv) => V.pcs.find((p) => p.ring && inP([uu, vv], p.ring)),
+      M = oegFlaechen(b, V),
       nw = (pc) => {
         let nx = -pc.dz,
           nz = pc.dx;
@@ -41,93 +111,151 @@ function ftBauen(b) {
           n = nw(pc);
         return [pc.ax + pc.dx * s - n[0] * d, base + vv, pc.az + pc.dz * s - n[1] * d];
       },
-      // Rechteck als Ring, um k nach innen gerückt (aneinanderstoßende Aussparungen brächen die Zerlegung)
-      ring = (x, k = 0) => [
-        [x.u0 + k, x.v0 + k],
-        [x.u0 + k, x.v1 - k],
-        [x.u1 - k, x.v1 - k],
-        [x.u1 - k, x.v0 + k],
-      ];
-    F.forEach((f) => {
-      let pos = farben.get(fdT(f.t).c);
-      if (!pos) farben.set(fdT(f.t).c, (pos = []));
-      const innen = (uu, vv) => grInFace(f, uu, vv),
-        drinnen = (x) =>
-          innen(x.u0 + 0.01, x.v0 + 0.01) &&
-          innen(x.u1 - 0.01, x.v0 + 0.01) &&
-          innen(x.u1 - 0.01, x.v1 - 0.01) &&
-          innen(x.u0 + 0.01, x.v1 - 0.01),
-        R = RS.filter(drinnen),
-        inR = (x) =>
-          R.find(
-            (r) => x.u0 >= r.u0 - 1e-3 && x.u1 <= r.u1 + 1e-3 && x.v0 >= r.v0 - 1e-3 && x.v1 <= r.v1 + 1e-3,
-          ),
-        Od = O.filter(drinnen),
-        // Fläche (Außenring mit Löchern) in Tiefe d auf alle Wandstücke legen
-        flaeche = (aussenR, lochR, d) => {
-          const aussen = aussenR.map((q) => new T.Vector2(q[0], q[1])),
-            holes = lochR.map((h) => h.map((q) => new T.Vector2(q[0], q[1]))),
-            alle = aussen.concat(...holes),
-            tr = T.ShapeUtils.triangulateShape(
-              aussen.map((v) => v.clone()),
-              holes.map((h) => h.map((v) => v.clone())),
+      stueck = (uu, vv) => V.pcs.find((p) => p.ring && inP([uu, vv], p.ring)),
+      dAt = (m, uu) => (m ? m.dl + ((m.dr - m.dl) * (uu - m.u0)) / (m.u1 - m.u0 || 1) : 0),
+      innerhalb = (m, uu, vv) => uu > m.u0 && uu < m.u1 && vv > m.v0 && vv < m.v1,
+      // Fläche (Außenring mit Löchern) auf alle Wandstücke legen; Tiefe je Punkt aus tiefe(u)
+      flaeche = (pos, aussenR, lochR, tiefe) => {
+        const aussen = aussenR.map((q) => new T.Vector2(q[0], q[1])),
+          holes = lochR.map((h) => h.map((q) => new T.Vector2(q[0], q[1]))),
+          alle = aussen.concat(...holes),
+          tr = T.ShapeUtils.triangulateShape(
+            aussen.map((v) => v.clone()),
+            holes.map((h) => h.map((v) => v.clone())),
+          );
+        V.pcs.forEach((pc) => {
+          for (const [i, j, k] of tr) {
+            const poly = fdClip(
+              [alle[i], alle[j], alle[k]].map((v) => [v.x, v.y]),
+              pc.ring,
             );
-          V.pcs.forEach((pc) => {
-            for (const [i, j, k] of tr) {
-              const poly = fdClip(
-                [alle[i], alle[j], alle[k]].map((v) => [v.x, v.y]),
-                pc.ring,
-              );
-              if (poly.length < 3) continue;
-              const P3 = poly.map((q) => P(pc, q[0], q[1], d));
-              for (let m = 1; m < P3.length - 1; m++) pos.push(...P3[0], ...P3[m], ...P3[m + 1]);
-            }
-          });
-        },
-        // Seitenfläche entlang der Kante a–b von Tiefe d0 bis d1
-        seite = (a, c, d0, d1) => {
-          const pc = stueck((a[0] + c[0]) / 2, (a[1] + c[1]) / 2) || stueck(a[0], a[1]);
-          if (!pc) return;
-          const A0 = P(pc, a[0], a[1], d0),
-            B0 = P(pc, c[0], c[1], d0),
-            B1 = P(pc, c[0], c[1], d1),
-            A1 = P(pc, a[0], a[1], d1);
-          pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1);
-        },
-        rahmen = (x, d0, d1, k, unten) => {
-          const u0 = x.u0 + k,
-            u1 = x.u1 - k,
-            v0 = x.v0 + k,
-            v1 = x.v1 - k;
-          seite([u0, v0], [u0, v1], d0, d1);
-          seite([u1, v0], [u1, v1], d0, d1);
-          seite([u0, v1], [u1, v1], d0, d1);
-          if (unten) seite([u0, v0], [u1, v0], d0, d1);
-        };
-      // Hauptfläche: ohne Fenster außerhalb von Rücksprüngen und ohne die Rücksprünge selbst
-      flaeche(
-        f.o,
-        f.h.concat(
-          Od.filter((x) => !inR(x)).map((x) => ring(x)),
-          R.map((r) => ring(r, 0.002)),
-        ),
-        -VOR,
-      );
-      // Rücksprünge: Fläche in ihrer Tiefe (ohne die Fenster darin) und umlaufende Seitenflächen
-      R.forEach((r) => {
+            if (poly.length < 3) continue;
+            const P3 = poly.map((q) => P(pc, q[0], q[1], tiefe(q[0])));
+            for (let m = 1; m < P3.length - 1; m++) pos.push(...P3[0], ...P3[m], ...P3[m + 1]);
+          }
+        });
+      },
+      // senkrechte Fläche entlang der Kante a–c, je Endpunkt von Tiefe d0 bis d1, um (du, dv) verschoben
+      seite = (pos, a, c, d0a, d1a, d0c, d1c, du, dv) => {
+        const pc = stueck((a[0] + c[0]) / 2 - du * 2, (a[1] + c[1]) / 2 - dv * 2) || stueck(a[0], a[1]);
+        if (!pc) return;
+        const A0 = P(pc, a[0] + du, a[1] + dv, d0a),
+          C0 = P(pc, c[0] + du, c[1] + dv, d0c),
+          C1 = P(pc, c[0] + du, c[1] + dv, d1c),
+          A1 = P(pc, a[0] + du, a[1] + dv, d1a);
+        pos.push(...A0, ...C0, ...C1, ...A0, ...C1, ...A1);
+      };
+    fdFaces(b, V).forEach((f) => {
+      const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? fdT(f.t).c : null,
+        imFeld = (x) => grInFace(f, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2),
+        Mf = M.filter(imFeld),
+        Of = O.filter(imFeld),
+        inR = (x) => Mf.find((m) => innerhalb(m, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2)),
+        farbeVon = (m) => (m && m.t ? fdT(m.t).c : fc);
+      if (!fc && !Mf.some((m) => m.t)) return;
+      // Hauptfläche ohne Gruppenfelder und ohne Fenster außerhalb davon (Aussparungen vereinigt)
+      if (fc)
         flaeche(
-          ring(r),
-          Od.filter((x) => inR(x) === r).map((x) => ring(x, 0.002)),
-          r.d - (r.d > 0 ? 0.01 : VOR),
+          farbePos(fc),
+          f.o,
+          f.h.concat(ftVereinigung(Mf.concat(Of.filter((x) => !inR(x))))),
+          () => -VOR,
         );
-        rahmen(r, r.d > 0 ? -VOR : 0, r.d > 0 ? r.d : r.d - VOR, r.d > 0 ? e : -e, true);
+      Mf.forEach((m) => {
+        const col = farbeVon(m);
+        // Feldfläche in ihrer (ggf. schrägen) Tiefe, ohne die Fenster darin
+        if (col) {
+          const L = Of.filter((x) => inR(x) === m).map((x) => ({ t0: x.u0, t1: x.u1, y0: x.v0, y1: x.v1 }));
+          oeRechteckOhne(m.u0, m.u1, m.v0, m.v1, L).forEach(([a, c, ya, yb]) =>
+            flaeche(
+              farbePos(col),
+              [
+                [a, ya],
+                [c, ya],
+                [c, yb],
+                [a, yb],
+              ],
+              [],
+              (uu) => ov(dAt(m, uu)),
+            ),
+          );
+        }
+        if (!m.dl && !m.dr) return;
+        // Seitenflächen an den Kanten mit Tiefenunterschied (auch gestuft und schräg); Teilstücke an allen
+        // Feldgrenzen, damit wechselnde Nachbarn richtig erfasst werden
+        const kanten = [
+          [[m.u0, m.v0], [m.u0, m.v1], -1, 0],
+          [[m.u1, m.v0], [m.u1, m.v1], 1, 0],
+          [[m.u0, m.v0], [m.u1, m.v0], 0, -1],
+          [[m.u0, m.v1], [m.u1, m.v1], 0, 1],
+        ];
+        kanten.forEach(([A, C, nu, nv]) => {
+          const senk = nu !== 0,
+            stellen = [
+              ...new Set(
+                [senk ? A[1] : A[0], senk ? C[1] : C[0]].concat(
+                  Mf.concat(Of).flatMap((x) => (senk ? [x.v0, x.v1] : [x.u0, x.u1])),
+                ),
+              ),
+            ]
+              .filter((s) => s >= (senk ? A[1] : A[0]) - 1e-9 && s <= (senk ? C[1] : C[0]) + 1e-9)
+              .sort((p, q) => p - q);
+          for (let i = 0; i < stellen.length - 1; i++) {
+            const s0 = stellen[i],
+              s1 = stellen[i + 1];
+            if (s1 - s0 < 1e-4) continue;
+            const pa = senk ? [A[0], s0] : [s0, A[1]],
+              pc2 = senk ? [A[0], s1] : [s1, A[1]],
+              mu = (pa[0] + pc2[0]) / 2 + nu * 0.002,
+              mv = (pa[1] + pc2[1]) / 2 + nv * 0.002;
+            // außen liegt ein Fenster: dessen Laibung deckt die Kante ab
+            if (Of.some((x) => mu > x.u0 && mu < x.u1 && mv > x.v0 && mv < x.v1)) continue;
+            const n = Mf.find((q) => q !== m && innerhalb(q, mu, mv)) || null,
+              dInA = dAt(m, pa[0]),
+              dInC = dAt(m, pc2[0]),
+              dOutA = dAt(n, pa[0]),
+              dOutC = dAt(n, pc2[0]),
+              mIn = (dInA + dInC) / 2,
+              mOut = (dOutA + dOutC) / 2;
+            if (Math.abs(dInA - dOutA) < 0.002 && Math.abs(dInC - dOutC) < 0.002) continue;
+            // nur einmal je Kante: das tiefer liegende Feld zeichnet (außen kein Gruppenfeld: dieses Feld)
+            if (n && mOut > mIn) continue;
+            const col = mIn < mOut ? farbeVon(m) : farbeVon(n);
+            if (!col) continue;
+            // zur offenen (tieferen) Seite rücken
+            const r = mIn > mOut ? -1 : 1;
+            seite(
+              farbePos(col),
+              pa,
+              pc2,
+              ov(Math.min(dInA, dOutA)),
+              Math.max(dInA, dOutA),
+              ov(Math.min(dInC, dOutC)),
+              Math.max(dInC, dOutC),
+              nu * e * r,
+              nv * e * r,
+            );
+          }
+        });
       });
       // Laibungen der Fenster: von der (ggf. versetzten) Außenfläche bis hinter den Rahmen
-      Od.forEach((x) => {
-        const rs = inR(x),
-          d0 = (rs ? rs.d : 0) - VOR,
-          tief = (rs ? rs.d : 0) + Math.max(0.05, x.T.et || 0.12) + 0.1;
-        rahmen(x, d0, tief, e, !oeTuer(x.T) && x.T.br > 0.05);
+      Of.forEach((x) => {
+        const m = inR(x),
+          col = farbeVon(m);
+        if (!col) return;
+        const um = (x.u0 + x.u1) / 2,
+          dm = dAt(m, um),
+          d0 = ov(dm),
+          tief = dm + Math.max(0.05, x.T.et || 0.12) + 0.1,
+          pos = farbePos(col),
+          u0 = x.u0 + e,
+          u1 = x.u1 - e,
+          v0 = x.v0 + e,
+          v1 = x.v1 - e;
+        seite(pos, [u0, v0], [u0, v1], d0, tief, d0, tief, 0, 0);
+        seite(pos, [u1, v0], [u1, v1], d0, tief, d0, tief, 0, 0);
+        seite(pos, [u0, v1], [u1, v1], d0, tief, d0, tief, 0, 0);
+        if (!oeTuer(x.T) && x.T.br > 0.05) seite(pos, [u0, v0], [u1, v0], d0, tief, d0, tief, 0, 0);
       });
     });
   });

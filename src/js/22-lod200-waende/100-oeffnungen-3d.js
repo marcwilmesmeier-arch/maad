@@ -48,7 +48,18 @@ function oeWelt(b) {
           const s = (uu - pc.ua) / pc.dot;
           return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
         };
-        L.push({ p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, y1: base + x.v1, r: x.d, n: V.n, id: x.id });
+        // rl/rr = Tiefe an der Kante bei p0 bzw. p1 (schräger Rücksprung: eine Seite 0)
+        L.push({
+          p0: W(x.u0),
+          p1: W(x.u1),
+          y0: base + x.v0,
+          y1: base + x.v1,
+          r: x.d,
+          rl: x.dl,
+          rr: x.dr,
+          n: V.n,
+          id: x.id,
+        });
       }),
     );
   }
@@ -139,10 +150,14 @@ function oeWandOeffnungen(e) {
     if (y1 - y0 < 0.05) return;
     const A = oeWandAchse(e, o.n),
       t0 = o.p0[0] * A.d[0] + o.p0[1] * A.d[1],
-      t1 = o.p1[0] * A.d[0] + o.p1[1] * A.d[1];
+      t1 = o.p1[0] * A.d[0] + o.p1[1] * A.d[1],
+      dreh = t1 < t0;
     R.push({
       t0: Math.min(t0, t1),
       t1: Math.max(t0, t1),
+      // Tiefe am Anfang/Ende der Wandachse (bei umgekehrter Richtung getauscht)
+      ra: o.r ? (dreh ? o.rr : o.rl) : 0,
+      re: o.r ? (dreh ? o.rl : o.rr) : 0,
       y0,
       y1,
       T: o.T,
@@ -157,14 +172,14 @@ function oeWandOeffnungen(e) {
     const tm = (o.t0 + o.t1) / 2,
       ym = (o.y0 + o.y1) / 2,
       rs = R.find((q) => q.r && q.t0 <= tm && q.t1 >= tm && q.y0 <= ym && q.y1 >= ym);
-    o.rk = rs ? rs.r : 0;
+    o.rk = rs ? oeTiefeBei(rs, tm) : 0;
   });
   return R;
 }
 /** Kennung für den Neuaufbau einer Wand in l2Sync (ändert sich mit ihren Öffnungen). */
 function oeWandSig(e) {
   const O = oeWandOeffnungen(e);
-  return O.length ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T || o.r, o.rk || 0]) : 0;
+  return O.length ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T || [o.ra, o.re], o.rk || 0]) : 0;
 }
 /** Vieleck auf den Achsbereich t ∈ [a, c] beschneiden (Sutherland-Hodgman, zwei Halbebenen). */
 function oeSchneide(P, d, a, c) {
@@ -255,16 +270,31 @@ function oeRuecksprungKoerper(O) {
   const R = [];
   O.filter((o) => o.r).forEach((rs) => {
     const A = rs.A,
-      s0 = rs.r > 0 ? A.sI : A.sA,
-      s1 = rs.r > 0 ? A.sA - rs.r : A.sA - rs.r;
-    if (s1 - s0 < 0.01) return;
-    const P = (t, s) => [A.d[0] * t + A.n[0] * s, A.d[1] * t + A.n[1] * s],
+      zurueck = Math.max(rs.ra, rs.re) > 0,
+      P = (t, s) => [A.d[0] * t + A.n[0] * s, A.d[1] * t + A.n[1] * s],
       L = O.filter((o) => !o.r && o.t1 > rs.t0 && o.t0 < rs.t1 && o.y1 > rs.y0 && o.y0 < rs.y1);
-    oeRechteckOhne(rs.t0, rs.t1, rs.y0, rs.y1, L).forEach(([a, c, ya, yb]) =>
-      R.push([{ o: [P(a, s0), P(c, s0), P(c, s1), P(a, s1)], h: [] }, ya, yb]),
-    );
+    oeRechteckOhne(rs.t0, rs.t1, rs.y0, rs.y1, L).forEach(([a, c, ya, yb]) => {
+      // Rücksprung: von der Wandinnenseite bis zur (ggf. schrägen) zurückversetzten Fläche; Vorsprung: von der
+      // Außenfläche bis zur vorstehenden Fläche
+      const da = oeTiefeBei(rs, a),
+        dc = oeTiefeBei(rs, c),
+        s0 = zurueck ? A.sI : A.sA,
+        Q = [P(a, s0), P(c, s0), P(c, A.sA - dc), P(a, A.sA - da)].filter(
+          (q, i, X) =>
+            Math.hypot(
+              q[0] - X[(i + X.length - 1) % X.length][0],
+              q[1] - X[(i + X.length - 1) % X.length][1],
+            ) > 1e-4,
+        );
+      if (Q.length >= 3) R.push([{ o: Q, h: [] }, ya, yb]);
+    });
   });
   return R;
+}
+/** Tiefe eines (ggf. schrägen) Rücksprungs an der Achsstelle t. */
+function oeTiefeBei(rs, t) {
+  const k = rs.t1 - rs.t0 > 1e-6 ? Math.max(0, Math.min(1, (t - rs.t0) / (rs.t1 - rs.t0))) : 0;
+  return rs.ra + (rs.re - rs.ra) * k;
 }
 /** Rahmen, Glas bzw. Türblatt der Öffnungen einer Wand (Gruppe relativ zur Wandunterkante). */
 function oeKoerper(O) {

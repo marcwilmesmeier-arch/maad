@@ -40,7 +40,8 @@ function fdSnap(V, p, shift, mode, Fx) {
     s = fdVP().s,
     tol = 12 / s,
     tg = 9 / s,
-    LE = fdLevEdges(b, V),
+    // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Außenkanten und Ecken der Öffnungen fangen
+    LE = fdLevEdges(b, V).concat(oeFangKanten(b, V)),
     ed = F._ed.concat(LE),
     vt = F._vt.concat(LE.map((e) => [e[0], e[1]]).concat(LE.map((e) => [e[2], e[3]]))),
     res = { x: p.x, z: p.z, t: null, gd: [], arc: null },

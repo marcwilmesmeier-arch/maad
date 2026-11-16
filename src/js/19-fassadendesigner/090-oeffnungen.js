@@ -200,6 +200,19 @@ function oeListe(b, V) {
     oegOeffnungen(b, V),
   );
 }
+/** Außenkanten aller Öffnungen einer Ansicht als Strecken [u0, v0, u1, v1] (Fang beim Teilen). */
+function oeFangKanten(b, V) {
+  const R = [];
+  oeListe(b, V).forEach((x) =>
+    R.push(
+      [x.u0, x.v0, x.u1, x.v0],
+      [x.u1, x.v0, x.u1, x.v1],
+      [x.u1, x.v1, x.u0, x.v1],
+      [x.u0, x.v1, x.u0, x.v0],
+    ),
+  );
+  return R;
+}
 /** Unterkante des Geschosses, in dem die Höhe v liegt (Ansichtskoordinate). */
 function oeGeschossBasis(b, v) {
   const B = fdStoreys(b);

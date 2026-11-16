@@ -1,13 +1,24 @@
 // ======================= KONFIGURATOR: REITER „GRUPPEN“ =======================
-// Öffnungsgruppen anlegen: Länge und Höhe festlegen, Öffnungen aus dem Katalog hinzufügen und in der Ansicht ziehen
-// (Raster 5 cm, Brüstung rastet auf die Vorgabe des Typs bzw. den Fußboden ein), gleichmäßig verteilen.
+// Öffnungsgruppen anlegen: Länge, Höhe und Material festlegen, Öffnungen aus dem Katalog hinzufügen und in der Ansicht
+// ziehen (Raster 5 cm, Brüstung rastet ein), gleichmäßig verteilen. Wandfläche zeichnerisch teilen (Werkzeuge
+// „Senkrecht“/„Waagerecht“ oder „An Fenstern teilen“), Felder wählen (Umschalt = mehrere) und als Rücksprung/Vorsprung
+// (Tiefe) bzw. mit eigenem Material festlegen.
 // Aufgerufen aus okRender/okZeichnen/okDown/okMove/okUp (095-konfigurator.js), wenn OK.reiter === 'gr'.
 
 const okGr = () => oegG(OK.g);
-const okGrRs = () => {
+// Werkzeug in der Gruppenansicht: 'sel' Auswählen, 'x' senkrecht teilen, 'y' waagerecht teilen
+OK.gwz = 'sel';
+OK.gzel = []; // gewählte Felder (Mittelpunkte)
+OK.glin = null; // gewählte Teilungslinie { a: 'x'|'y', v }
+/** Gewählte Felder der aktuellen Gruppe. */
+function okGrZellenWahl() {
   const G = okGr();
-  return G && G.rs ? G.rs.find((r) => r.id === OK.gr) || null : null;
-};
+  if (!G) return [];
+  const Z = oegZellen(G);
+  return OK.gzel
+    .map((p) => Z.find((z) => p[0] > z.x0 && p[0] < z.x1 && p[1] > z.y0 && p[1] < z.y1))
+    .filter(Boolean);
+}
 const okGrOe = () => {
   const G = okGr();
   return G ? G.oe.find((q) => q.id === OK.go) || null : null;
@@ -57,47 +68,81 @@ function okGrOeNeu(t) {
   OK.go = id;
   oeAktualisieren();
 }
-/** Rücksprung hinzufügen: neben der gewählten (sonst ersten) Öffnung, gleiche Höhe ±15 cm, 5 cm tief. */
-function okGrRsNeu() {
+/** Werkzeug der Gruppenansicht wählen. */
+function okGrWz(w) {
+  OK.gwz = w;
+  OK.gvor = null;
+  okGrRender();
+  okGrZeichnen();
+}
+/** Teilungslinien an allen Fensterkanten (senkrecht) und an Brüstung/Sturz (waagerecht). */
+function okGrTeilenFenster() {
   const G = okGr();
   if (!G) return;
-  G.rs = G.rs || [];
-  const q = okGrOe() || G.oe[0],
-    T = q && oeT(q.t),
-    id = 'r' + Date.now().toString(36),
-    r = q
-      ? { id, x: q.x + T.b, v: Math.max(0, q.v - 0.15), b: 1.2, h: T.h + 0.3, d: 0.05 }
-      : { id, x: 0, v: 0, b: G.l, h: G.h, d: 0.05 };
-  r.b = Math.max(0.2, Math.min(r.b, G.l - r.x));
-  G.rs.push(r);
-  OK.gr = id;
-  OK.go = null;
+  G.xs = G.xs || [];
+  G.ys = G.ys || [];
+  G.oe.forEach((q) => {
+    const T = oeT(q.t);
+    G.xs.push(q.x, q.x + T.b);
+    if (q.v > 0.005) G.ys.push(q.v);
+    G.ys.push(q.v + T.h);
+  });
+  const t = oegTeilung(G);
+  G.xs = t.xs.slice(1, -1);
+  G.ys = t.ys.slice(1, -1);
+  OK.gzel = [];
   oeAktualisieren();
 }
-/** Gewählten Rücksprung ändern (x, v, b, h in m; d Tiefe in cm, negativ = Vorsprung). */
-function okGrRsSet(f, v) {
-  const r = okGrRs(),
-    n = +String(v).replace(',', '.');
-  if (!r || !isFinite(n)) return;
-  if (f === 'd') r.d = Math.max(-100, Math.min(100, n)) / 100;
-  else if (f === 'b' || f === 'h') r[f] = Math.max(0.05, n);
-  else if (f === 'x' || f === 'v') r[f] = n;
-  oeAktualisieren();
-}
-/** Rücksprung über die ganze Gruppe (gerader Fassadenversprung). */
-function okGrRsGanz() {
-  const G = okGr(),
-    r = okGrRs();
-  if (!G || !r) return;
-  Object.assign(r, { x: 0, v: 0, b: G.l, h: G.h });
-  oeAktualisieren();
-}
-function okGrRsLoeschen() {
+function okGrTeilungZurueck() {
   const G = okGr();
-  if (!G || !G.rs) return;
-  G.rs = G.rs.filter((r) => r.id !== OK.gr);
-  OK.gr = null;
+  if (!G) return;
+  G.xs = [];
+  G.ys = [];
+  G.fe = [];
+  OK.gzel = [];
+  OK.glin = null;
   oeAktualisieren();
+}
+function okGrLinieLoeschen() {
+  const G = okGr(),
+    l = OK.glin;
+  if (!G || !l) return;
+  const k = l.a === 'x' ? 'xs' : 'ys';
+  G[k] = (G[k] || []).filter((x) => Math.abs(x - l.v) > 0.004);
+  OK.glin = null;
+  OK.gzel = [];
+  oeAktualisieren();
+}
+/** Gewählte Felder ändern: d Tiefe in cm (positiv Rücksprung, negativ Vorsprung), t Material ('' = wie Gruppe). */
+function okGrFeldSet(f, v) {
+  const G = okGr(),
+    Z = okGrZellenWahl();
+  if (!G || !Z.length) return;
+  G.fe = G.fe || [];
+  Z.forEach((z) => {
+    let e = G.fe.find((q) => q.p[0] > z.x0 && q.p[0] < z.x1 && q.p[1] > z.y0 && q.p[1] < z.y1);
+    if (!e) G.fe.push((e = { p: [(z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2], d: 0, k: 'g', t: '' }));
+    if (f === 'k') e.k = v === 'l' || v === 'r' ? v : 'g';
+    if (f === 'd') {
+      const n = +String(v).replace(',', '.');
+      if (isFinite(n)) e.d = Math.max(-100, Math.min(100, n)) / 100;
+    }
+    if (f === 't') e.t = S.ft.some((x) => x.k === v) ? v : '';
+  });
+  G.fe = G.fe.filter((e) => e.d || e.t);
+  oeAktualisieren();
+}
+/** Material der ganzen Gruppe. */
+function okGrMaterial(v) {
+  const G = okGr();
+  if (!G) return;
+  G.t = S.ft.some((x) => x.k === v) ? v : '';
+  oeAktualisieren();
+}
+/** Entf im Reiter „Gruppen“: Linie, sonst Öffnung entfernen. */
+function okGrEntf() {
+  if (OK.glin) okGrLinieLoeschen();
+  else if (OK.go) okGrOeLoeschen();
 }
 /** Wie oft ein Öffnungstyp vorkommt: frei gesetzt und über Gruppen (je Verweis). */
 function oeTypZahl(k) {
@@ -241,7 +286,11 @@ function okGrRender() {
         .join(''),
     q = okGrOe();
   let h = `<h4>Gruppe</h4><div class="okg"><span>Name</span><input type="text" value="${esc(G.n)}" onchange="okGrSet('n',this.value)">
-<span>Länge (m)</span>${z('l', G.l)}<span>Höhe (m)</span>${z('h', G.h)}</div>
+<span>Länge (m)</span>${z('l', G.l)}<span>Höhe (m)</span>${z('h', G.h)}
+<span>Material</span><select onchange="okGrMaterial(this.value)" title="Fassadentyp der ganzen Gruppe (einzelne Felder können abweichen)"><option value="" ${!G.t ? 'selected' : ''}>— wie Fassade —</option>${S.ft
+    .filter((x) => !x.df)
+    .map((x) => `<option value="${x.k}" ${x.k === G.t ? 'selected' : ''}>${esc(x.n)}</option>`)
+    .join('')}</select></div>
 <h4>Öffnungen</h4><div class="okg"><select onchange="okE('okGrT').dataset.t=this.value">${opt(S.oet[0] && S.oet[0].k)}</select><button id="okGrT" onclick="okGrOeNeu(this.dataset.t||'${S.oet[0] ? S.oet[0].k : ''}')">Hinzufügen</button></div>
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
   if (q) {
@@ -256,15 +305,35 @@ function okGrRender() {
 <div class="okb"><button onclick="okGrOeBearbeiten()" title="Typ im Reiter „Fenster & Türen“ öffnen – Maße, Rahmenfarbe, Aufteilung">Bearbeiten</button><button onclick="okGrOeEigen()" title="Kopie des Typs nur für diese Öffnung anlegen und bearbeiten – andere Stellen bleiben unverändert">Als eigenen Typ bearbeiten</button></div>
 <div class="mu" style="margin-top:6px">${n > 1 ? `„${esc(T.n)}“ sitzt ${n}× im Projekt – „Bearbeiten“ ändert alle Stellen.` : 'Änderungen am Typ gelten für alle Stellen dieses Typs.'}</div>`;
   }
-  const r = okGrRs();
-  h += `<h4>Rücksprünge</h4><div class="okb"><button onclick="okGrRsNeu()" title="Vertieftes Feld, z. B. neben dem Fenster; negative Tiefe = Vorsprung">+ Rücksprung</button></div>`;
-  if (r)
-    h += `<div class="okg" style="margin-top:6px"><span>Tiefe (cm, − = Vorsprung)</span><input type="number" step="1" value="${Math.round(r.d * 1000) / 10}" onchange="okGrRsSet('d',this.value)">
-<span>Breite (m)</span>${z('b', r.b, 'okGrRsSet')}<span>Höhe (m)</span>${z('h', r.h, 'okGrRsSet')}
-<span>Abstand links (m)</span>${z('x', r.x, 'okGrRsSet')}<span>Unterkante (m)</span>${z('v', r.v, 'okGrRsSet')}</div>
-<div class="okb"><button onclick="okGrRsGanz()" title="Über Länge und Höhe der Gruppe – gerader Fassadenversprung">Ganze Gruppe</button><button onclick="okGrRsLoeschen()">Entfernen</button></div>`;
-  if (!q && !r)
-    h += `<div class="mu" style="margin-top:6px">Öffnung oder Rücksprung in der Ansicht anklicken und ziehen; Kanten rasten an den Fenstern ein.</div>`;
+  // Flächen: Teilung, gewählte Felder (Tiefe, Material), gewählte Linie
+  const Z = okGrZellenWahl(),
+    mat = (cur, leer) =>
+      `<option value="" ${!cur ? 'selected' : ''}>${leer}</option>` +
+      S.ft
+        .filter((x) => !x.df)
+        .map((x) => `<option value="${x.k}" ${x.k === cur ? 'selected' : ''}>${esc(x.n)}</option>`)
+        .join('');
+  h += `<h4>Flächen</h4><div class="okb"><button onclick="okGrTeilenFenster()" title="Teilungslinien an allen Fensterkanten, an Brüstung und Sturz">An Fenstern teilen</button>${(G.xs && G.xs.length) || (G.ys && G.ys.length) ? '<button onclick="okGrTeilungZurueck()" title="Alle Teilungen und Feldeinstellungen entfernen">Teilung zurücksetzen</button>' : ''}</div>`;
+  if (Z.length) {
+    const d0 = Z[0].d,
+      t0 = Z[0].t,
+      gleichD = Z.every((z) => z.d === d0),
+      gleichT = Z.every((z) => z.t === t0),
+      a = Z.reduce((s, z) => s + (z.x1 - z.x0) * (z.y1 - z.y0), 0);
+    h += `<div class="mu" style="margin-top:8px">${Z.length === 1 ? 'Feld' : Z.length + ' Felder'} · ${fdFmt(a)} m²</div><div class="okg" style="margin-top:4px"><span>Tiefe (cm)</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig">
+<span>Verlauf</span><select onchange="okGrFeldSet('k',this.value)" title="Schräg: eine Seite springt zurück, die andere bleibt bündig">${[
+      ['g', 'gleichmäßig'],
+      ['l', 'schräg – links tief'],
+      ['r', 'schräg – rechts tief'],
+    ]
+      .map(([k, n]) => `<option value="${k}" ${Z.every((z) => z.k === k) ? 'selected' : ''}>${n}</option>`)
+      .join('')}</select>
+<span>Material</span><select onchange="okGrFeldSet('t',this.value)">${gleichT ? mat(t0, '— wie Gruppe —') : '<option value="" selected>gemischt</option>' + mat(null, '— wie Gruppe —').replace(/selected/g, '')}</select></div>
+<div class="okb"><button onclick="okGrFeldSet('d',-5)">−5 cm vor</button><button onclick="okGrFeldSet('d',0)">bündig</button><button onclick="okGrFeldSet('d',5)">5 cm zurück</button></div>`;
+  } else if (OK.glin)
+    h += `<div class="okb" style="margin-top:8px"><span class="mu">${OK.glin.a === 'x' ? 'Senkrechte' : 'Waagerechte'} Teilung bei ${fdFmt(OK.glin.v)} m</span><button onclick="okGrLinieLoeschen()">Entfernen</button></div>`;
+  else
+    h += `<div class="mu" style="margin-top:8px">Mit den Werkzeugen über der Ansicht teilen, dann Feld anklicken (Umschalt = mehrere) und Tiefe oder Material festlegen.</div>`;
   h += `<div class="okb" style="margin-top:14px"><button onclick="okGrSetzen()">Im Fassadendesigner setzen</button><button onclick="okGrKopie()">Kopie</button><button onclick="okGrLoeschen()">Löschen</button></div>
 <div class="mu" style="margin-top:6px">${zahl[G.k] ? zahl[G.k] + '× gesetzt – ' : ''}Änderungen gelten für alle Stellen, an denen die Gruppe sitzt.</div>`;
   R.innerHTML = h;
@@ -321,20 +390,80 @@ function okGrZeichnen() {
   g.moveTo(P.X(-0.6), P.Y(0));
   g.lineTo(P.X(G.l + 0.6), P.Y(0));
   g.stroke();
-  (G.rs || []).forEach((r) => {
-    oegRueckZeichneEins(g, P.X, P.Y, r.x, r.x + r.b, r.v, r.v + r.h, r.d, r.id === OK.gr);
-    if (r.b * P.s > 40) {
-      g.fillStyle = '#475569';
+  // Felder: Material (eigenes oder der Gruppe) und Tiefe, Tiefenangabe
+  if (G.t) {
+    g.fillStyle = fdT(G.t).c;
+    g.fillRect(P.X(0), P.Y(G.h), G.l * P.s, G.h * P.s);
+  }
+  oegFlaechenG(G).forEach((r) => {
+    oegRueckZeichneEins(g, P.X, P.Y, r.x0, r.x1, r.y0, r.y1, r.d, false, r.t ? fdT(r.t).c : null, r.k);
+    if (r.d && (r.x1 - r.x0) * P.s > 40) {
+      g.fillStyle = '#334155';
       g.font = '10px system-ui,sans-serif';
       g.textAlign = 'right';
       g.textBaseline = 'top';
       g.fillText(
         (r.d > 0 ? '−' : '+') + Math.round(Math.abs(r.d) * 100) + ' cm',
-        P.X(r.x + r.b) - 4,
-        P.Y(r.v + r.h) + 4,
+        P.X(r.x1) - 4,
+        P.Y(r.y1) + 4,
       );
     }
   });
+  // Teilungslinien
+  const tl = oegTeilung(G);
+  g.save();
+  g.setLineDash([4, 3]);
+  g.lineWidth = 1;
+  tl.xs.slice(1, -1).forEach((x) => {
+    const an = OK.glin && OK.glin.a === 'x' && Math.abs(OK.glin.v - x) < 0.004;
+    g.strokeStyle = an ? '#1f6fd1' : '#475569';
+    g.lineWidth = an ? 2.5 : 1;
+    g.beginPath();
+    g.moveTo(P.X(x), P.Y(0));
+    g.lineTo(P.X(x), P.Y(G.h));
+    g.stroke();
+  });
+  tl.ys.slice(1, -1).forEach((y) => {
+    const an = OK.glin && OK.glin.a === 'y' && Math.abs(OK.glin.v - y) < 0.004;
+    g.strokeStyle = an ? '#1f6fd1' : '#475569';
+    g.lineWidth = an ? 2.5 : 1;
+    g.beginPath();
+    g.moveTo(P.X(0), P.Y(y));
+    g.lineTo(P.X(G.l), P.Y(y));
+    g.stroke();
+  });
+  g.restore();
+  // gewählte Felder
+  okGrZellenWahl().forEach((z) => {
+    g.fillStyle = 'rgba(31,111,209,0.18)';
+    g.fillRect(P.X(z.x0), P.Y(z.y1), (z.x1 - z.x0) * P.s, (z.y1 - z.y0) * P.s);
+    g.strokeStyle = '#1f6fd1';
+    g.lineWidth = 2;
+    g.strokeRect(P.X(z.x0) + 1, P.Y(z.y1) + 1, (z.x1 - z.x0) * P.s - 2, (z.y1 - z.y0) * P.s - 2);
+  });
+  // Vorschau der neuen Teilungslinie
+  if (OK.gvor) {
+    g.strokeStyle = '#1f6fd1';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    if (OK.gvor.a === 'x') {
+      g.moveTo(P.X(OK.gvor.v), P.Y(0));
+      g.lineTo(P.X(OK.gvor.v), P.Y(G.h));
+    } else {
+      g.moveTo(P.X(0), P.Y(OK.gvor.v));
+      g.lineTo(P.X(G.l), P.Y(OK.gvor.v));
+    }
+    g.stroke();
+    g.fillStyle = '#1f6fd1';
+    g.font = '11px system-ui,sans-serif';
+    g.textAlign = 'left';
+    g.textBaseline = 'bottom';
+    g.fillText(
+      fdFmt(OK.gvor.v) + ' m',
+      OK.gvor.a === 'x' ? P.X(OK.gvor.v) + 4 : P.X(0) + 4,
+      OK.gvor.a === 'x' ? P.Y(G.h) - 4 : P.Y(OK.gvor.v) - 3,
+    );
+  }
   G.oe.forEach((q) => {
     const T = oeT(q.t);
     oeZeichneEine(g, P.X, P.Y, q.x, q.x + T.b, q.v, T, { sel: q.id === OK.go });
@@ -373,7 +502,44 @@ function okGrZeichnen() {
   const hint = okE('okHint');
   if (hint)
     hint.textContent =
-      'Öffnung oder Rücksprung anklicken und ziehen (Umschalt: ohne Einrasten) · gestrichelt: Länge der Gruppe';
+      OK.gwz === 'x' || OK.gwz === 'y'
+        ? 'Klick = Teilungslinie setzen (rastet an Fensterkanten ein, Umschalt = frei) · Esc = zurück zu „Auswählen“'
+        : 'Öffnung ziehen · Feld anklicken (Umschalt = mehrere) · Linie anklicken + Entf = entfernen · gestrichelt: Länge der Gruppe';
+  // Werkzeugleiste über der Ansicht
+  let wz = okE('okGwz');
+  if (!wz) {
+    wz = document.createElement('div');
+    wz.id = 'okGwz';
+    wz.style.cssText =
+      'position:absolute;left:10px;top:10px;display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--pn,#fff) 92%,transparent);box-shadow:0 2px 10px #0002;z-index:2';
+    okE('okCw').appendChild(wz);
+  }
+  wz.style.display = 'flex';
+  const wzh = [
+    ['sel', 'Auswählen'],
+    ['x', 'Senkrecht teilen'],
+    ['y', 'Waagerecht teilen'],
+  ]
+    .map(([k, n]) => `<button class="${OK.gwz === k ? 'on' : ''}" onclick="okGrWz('${k}')">${n}</button>`)
+    .join('');
+  if (wz.innerHTML !== wzh) wz.innerHTML = wzh;
+}
+/** Fangwert für eine Teilungslinie: Fensterkanten (Umschalt = frei), sonst Raster 5 cm. */
+function okGrFang(G, a, v, frei) {
+  if (frei) return Math.round(v * 1000) / 1000;
+  const P = okGrAnsicht(),
+    tol = P ? 10 / P.s : 0.12, // 10 Bildpunkte
+    K = [];
+  G.oe.forEach((q) => {
+    const T = oeT(q.t);
+    if (a === 'x') K.push(q.x, q.x + T.b);
+    else K.push(q.v, q.v + T.h);
+  });
+  let best = null;
+  K.forEach((k) => {
+    if (Math.abs(k - v) < tol && (best === null || Math.abs(k - v) < Math.abs(best - v))) best = k;
+  });
+  return best !== null ? best : Math.round(v / OE_RASTER) * OE_RASTER;
 }
 function okGrDown(e) {
   const P = okGrAnsicht(),
@@ -381,26 +547,56 @@ function okGrDown(e) {
   if (!P || !G) return;
   const [px, py] = okPos(e),
     x = P.iX(px),
-    y = P.iY(py),
-    q = G.oe
-      .slice()
-      .reverse()
-      .find((q) => {
-        const T = oeT(q.t);
-        return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
-      }),
-    r = q
-      ? null
-      : (G.rs || [])
-          .slice()
-          .reverse()
-          .find((r) => x >= r.x && x <= r.x + r.b && y >= r.v && y <= r.v + r.h);
+    y = P.iY(py);
+  // Teilungslinie setzen
+  if (OK.gwz === 'x' || OK.gwz === 'y') {
+    const a = OK.gwz,
+      m = a === 'x' ? G.l : G.h,
+      v = okGrFang(G, a, a === 'x' ? x : y, e.shiftKey);
+    if (v > 0.005 && v < m - 0.005) {
+      const k = a === 'x' ? 'xs' : 'ys';
+      G[k] = (G[k] || []).concat(v);
+      OK.gzel = [];
+      oeAktualisieren();
+    }
+    return;
+  }
+  const q = G.oe
+    .slice()
+    .reverse()
+    .find((q) => {
+      const T = oeT(q.t);
+      return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
+    });
   OK.go = q ? q.id : null;
-  OK.gr = r ? r.id : null;
-  const z = q || r;
-  if (z) {
-    OK.gzug = { dx: z.x - x, dv: z.v - y };
+  OK.glin = null;
+  if (q) {
+    OK.gzel = [];
+    OK.gzug = { dx: q.x - x, dv: q.v - y };
     okE('okCv').setPointerCapture(e.pointerId);
+  } else {
+    // Teilungslinie (6 px) oder Feld
+    const tl = oegTeilung(G),
+      tol = 6 / P.s,
+      lx = y >= 0 && y <= G.h ? tl.xs.slice(1, -1).find((v) => Math.abs(v - x) < tol) : undefined,
+      ly = x >= 0 && x <= G.l ? tl.ys.slice(1, -1).find((v) => Math.abs(v - y) < tol) : undefined;
+    if (lx !== undefined) {
+      OK.glin = { a: 'x', v: lx };
+      OK.gzel = [];
+    } else if (ly !== undefined) {
+      OK.glin = { a: 'y', v: ly };
+      OK.gzel = [];
+    } else if (x > 0 && x < G.l && y > 0 && y < G.h) {
+      const z = oegZellen(G).find((c) => x > c.x0 && x < c.x1 && y > c.y0 && y < c.y1),
+        p = z && [(z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2];
+      if (p) {
+        const i = OK.gzel.findIndex((q) => q[0] > z.x0 && q[0] < z.x1 && q[1] > z.y0 && q[1] < z.y1);
+        if (e.shiftKey) {
+          if (i >= 0) OK.gzel.splice(i, 1);
+          else OK.gzel.push(p);
+        } else OK.gzel = [p];
+      }
+    } else OK.gzel = [];
   }
   okGrRender();
   okGrZeichnen();
@@ -409,56 +605,56 @@ function okGrMove(e) {
   const P = okGrAnsicht(),
     G = okGr(),
     q = okGrOe(),
-    rs = okGrRs(),
     z = OK.gzug;
   if (!P || !G) return;
-  const [px, py] = okPos(e);
-  if (!z || (!q && !rs)) {
-    const x = P.iX(px),
-      y = P.iY(py),
-      an =
-        G.oe.some((o) => x >= o.x && x <= o.x + oeT(o.t).b && y >= o.v && y <= o.v + oeT(o.t).h) ||
-        (G.rs || []).some((r) => x >= r.x && x <= r.x + r.b && y >= r.v && y <= r.v + r.h);
+  const [px, py] = okPos(e),
+    x = P.iX(px),
+    y = P.iY(py);
+  if (OK.gwz === 'x' || OK.gwz === 'y') {
+    const a = OK.gwz;
+    OK.gvor = { a, v: okGrFang(G, a, a === 'x' ? x : y, e.shiftKey) };
+    e.currentTarget.style.cursor = a === 'x' ? 'col-resize' : 'row-resize';
+    okGrZeichnen();
+    return;
+  }
+  if (!z || !q) {
+    const an = G.oe.some((o) => x >= o.x && x <= o.x + oeT(o.t).b && y >= o.v && y <= o.v + oeT(o.t).h);
     e.currentTarget.style.cursor = an ? 'move' : '';
     return;
   }
-  const r = (v) => Math.round(v / OE_RASTER) * OE_RASTER;
-  let x = P.iX(px) + z.dx,
-    v = P.iY(py) + z.dv;
-  if (q) {
-    const T = oeT(q.t);
-    if (!e.shiftKey) {
-      x = r(x);
-      v = Math.abs(v - T.br) < 0.3 ? T.br : Math.abs(v) < 0.3 ? 0 : r(v);
-    }
-    q.x = Math.round(x * 1000) / 1000;
-    q.v = Math.max(0, Math.round(v * 1000) / 1000);
-  } else {
-    // Rücksprung: Kanten rasten an Fensterkanten und an den Gruppenrändern ein
-    if (!e.shiftKey) {
-      const tol = 0.12,
-        kx = [0, G.l],
-        kv = [0, G.h];
-      G.oe.forEach((o) => {
-        const T = oeT(o.t);
-        kx.push(o.x, o.x + T.b);
-        kv.push(o.v, o.v + T.h);
-      });
-      const fang = (a, w, K) => {
-        let best = null;
-        K.forEach((k) =>
-          [k - a, k - (a + w)].forEach((dd) => {
-            if (Math.abs(dd) < tol && (best === null || Math.abs(dd) < Math.abs(best))) best = dd;
-          }),
-        );
-        return best === null ? r(a) : a + best;
-      };
-      x = fang(x, rs.b, kx);
-      v = fang(v, rs.h, kv);
-    }
-    rs.x = Math.round(x * 1000) / 1000;
-    rs.v = Math.max(0, Math.round(v * 1000) / 1000);
+  const T = oeT(q.t),
+    r = (v) => Math.round(v / OE_RASTER) * OE_RASTER;
+  let nx = x + z.dx,
+    nv = y + z.dv;
+  if (!e.shiftKey) {
+    // Kanten rasten an den Außenkanten der anderen Öffnungen, an Teilungslinien und Gruppenrändern ein (10 px),
+    // sonst Raster; Brüstung auf die Vorgabe des Typs bzw. den Boden
+    const tol = 10 / P.s,
+      tl = oegTeilung(G),
+      kx = tl.xs.slice(),
+      kv = tl.ys.slice();
+    G.oe.forEach((o) => {
+      if (o === q) return;
+      const U = oeT(o.t);
+      kx.push(o.x, o.x + U.b);
+      kv.push(o.v, o.v + U.h);
+    });
+    const fang = (a, w, K) => {
+      let best = null;
+      K.forEach((k) =>
+        [k - a, k - (a + w)].forEach((dd) => {
+          if (Math.abs(dd) < tol && (best === null || Math.abs(dd) < Math.abs(best))) best = dd;
+        }),
+      );
+      return best;
+    };
+    const fx = fang(nx, T.b, kx),
+      fv = fang(nv, T.h, kv);
+    nx = fx !== null ? nx + fx : r(nx);
+    nv = Math.abs(nv - T.br) < 0.3 ? T.br : Math.abs(nv) < 0.3 ? 0 : fv !== null ? nv + fv : r(nv);
   }
+  q.x = Math.round(nx * 1000) / 1000;
+  q.v = Math.max(0, Math.round(nv * 1000) / 1000);
   okGrZeichnen();
 }
 function okGrUp() {

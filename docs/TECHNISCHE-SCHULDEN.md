@@ -174,7 +174,9 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Öffnungsgruppen: „Felder füllen“ legt feste Verweise an; ändert sich danach die Feldbreite, wird nicht automatisch
   neu verteilt (erneut füllen). Gruppen über mehrere Geschosse (z. B. zweigeschossige Achsen) noch nicht vorgesehen.
 - Rücksprünge nur in Öffnungsgruppen (nicht frei an der Fassade); über Wand- oder Geschossgrenzen hinweg wird je Wand
-  getrennt gerechnet. Ohne Fassadentyp bleiben die Seitenflächen grau (Wandfarbe).
+  getrennt gerechnet. Ohne Fassadentyp/Material bleiben die Seitenflächen grau (Wandfarbe).
+- Teilungen in Gruppen nur als durchgehende senkrechte/waagerechte Linien (Raster); Teilfelder entstehen durch
+  Auswahl mehrerer Felder. Schräger Verlauf nur waagerecht (links/rechts), nicht oben/unten.
 
 ## Tests
 

@@ -165,7 +165,7 @@ function l2MeshOrig(e) {
         for (let i = n0; i < g.children.length; i++) g.children[i].position.y = ya;
       };
       // Löcher: Öffnungen und Rücksprünge; Vorsprünge lassen die Wand unverändert
-      const loecher = O.filter((o) => !o.r || o.r > 0);
+      const loecher = O.filter((o) => !o.r || Math.max(o.ra, o.re) > 0);
       if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
       else e.quads.forEach((q) => add({ o: q, h: [] }));
       oeRuecksprungKoerper(O).forEach(stueck);
