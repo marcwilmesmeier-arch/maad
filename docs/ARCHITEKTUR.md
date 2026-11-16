@@ -50,7 +50,9 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `oeListe(b, V)` – dort kommen später automatisch platzierte Öffnungsgruppen dazu. 3D nur ab LOD 200
   (`22-lod200-waende/100-oeffnungen-3d.js`): `oeWelt` rechnet in Weltkoordinaten um, `oeWandOeffnungen` ordnet jede
   Öffnung genau einer Außenwand zu, `oeWandTeilen` teilt die Wand in Streifen (echte Laibungen), `oeKoerper` baut Rahmen,
-  Glas (weiß, 80 % durchsichtig), Paneele und Sprossen (keine Fensterbank). Die Wandableitung (`l2Els`) ignoriert `oe`/`gr`.
+  Glas (weiß, 80 % durchsichtig), Paneele und Sprossen (keine Fensterbank). Grundriss LOD 200: `oeGrundriss` (aus
+  `l2Draw`) mit derselben Zuordnung – geschnittene Öffnungen (Schnitthöhe `S.gro.sh`) ausgespart mit Laibung,
+  Rahmen, Glas bzw. Türblatt mit Aufschlag, höhere gestrichelt; Rück-/Vorsprünge ändern die Wandkontur. Die Wandableitung (`l2Els`) ignoriert `oe`/`gr`.
 - Öffnungsgruppen (`097-oeffnungsgruppen.js`, Konfigurator-Reiter `098-konfigurator-gruppen.js`): Bibliothek `S.oeg`
   (Länge, Höhe, Öffnungen mit Lage), an der Fassade nur Verweise `b.fd[Ansicht].gr = [{id, g, u, v}]`. `oeListe`
   erzeugt daraus die Öffnungen (q = Verweis) – eine geänderte Gruppe ändert alle Stellen. Fassadendesigner: Werkzeug

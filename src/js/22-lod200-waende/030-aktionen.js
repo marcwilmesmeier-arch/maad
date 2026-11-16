@@ -497,6 +497,12 @@ function l2Draw() {
     }
   }
   x.globalAlpha = 1;
+  // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen und Rück-/Vorsprünge im Schnitt
+  try {
+    oeGrundriss(x, wl, blk ? '#111' : '#bdbdbd');
+  } catch (err) {
+    logErr(err, 'l2Draw>oeGrundriss');
+  }
   wl.forEach((e) => {
     if (!isSel(e)) return;
     x.strokeStyle = '#3b7bd8';

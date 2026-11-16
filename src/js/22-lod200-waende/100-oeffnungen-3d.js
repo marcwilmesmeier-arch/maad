@@ -387,3 +387,130 @@ function oeKoerper(O) {
   });
   return g;
 }
+
+// ---- Grundriss (LOD 200): Öffnungen und Rück-/Vorsprünge im Schnitt
+/**
+ * Öffnungen der Außenwände im Grundriss zeichnen – gleiche Zuordnung wie im 3D-Modell (oeWandOeffnungen).
+ * Geschnittene Öffnungen (Schnitthöhe des Grundrisses S.gro.sh über dem Fußboden innerhalb): Wand ausgespart, Laibungen, Rahmen mit Glas bzw. Türblatt mit
+ * Aufschlag; höher liegende Öffnungen gestrichelt. Rück-/Vorsprünge in Schnitthöhe ändern die Wandkontur.
+ * @param {CanvasRenderingContext2D} x  Zeichenfläche des Grundrisses (Weltkoordinaten über grTf)
+ * @param {object[]} wl  Wände des Geschosses (l2Els)
+ * @param {string} wandFarbe  Füllfarbe der Wände (für Vorsprünge)
+ */
+function oeGrundriss(x, wl, wandFarbe) {
+  const zug = (pts) => {
+    x.beginPath();
+    pts.forEach((p, i) => {
+      const [X, Y] = grTf(p[0], p[1]);
+      i ? x.lineTo(X, Y) : x.moveTo(X, Y);
+    });
+  };
+  wl.forEach((e) => {
+    if (e.kind !== 'AW') return;
+    const O = oeWandOeffnungen(e);
+    if (!O.length) return;
+    const A = O[0].A,
+      P = (t, s) => [A.d[0] * t + A.n[0] * s, A.d[1] * t + A.n[1] * s],
+      sh = +S.gro.sh || 1.2,
+      imSchnitt = (o) => o.y0 <= sh && o.y1 >= sh;
+    x.save();
+    x.globalAlpha = 1;
+    x.setLineDash([]);
+    // Rück-/Vorsprünge in Schnitthöhe: Außenkontur versetzen
+    O.filter((o) => o.r && imSchnitt(o)).forEach((o) => {
+      const a = [o.t0, A.sA - oeTiefeBei(o, o.t0)],
+        c = [o.t1, A.sA - oeTiefeBei(o, o.t1)],
+        flaeche = [P(o.t0, A.sA), P(o.t1, A.sA), P(c[0], c[1]), P(a[0], a[1])];
+      if (Math.max(o.ra, o.re) > 0) {
+        x.globalCompositeOperation = 'destination-out';
+        zug(flaeche);
+        x.closePath();
+        x.fill();
+        x.globalCompositeOperation = 'source-over';
+      } else {
+        x.fillStyle = wandFarbe;
+        zug(flaeche);
+        x.closePath();
+        x.fill();
+      }
+      x.strokeStyle = '#111';
+      x.lineWidth = 1.6;
+      zug([P(o.t0, A.sA), P(a[0], a[1]), P(c[0], c[1]), P(o.t1, A.sA)]);
+      x.stroke();
+    });
+    O.filter((o) => !o.r).forEach((o) => {
+      const T = o.T,
+        sAo = A.sA - (o.rk || 0),
+        sV = sAo - Math.min(T.et, Math.max(0, sAo - A.sI - 0.08)),
+        sH = sV - 0.08,
+        t0 = o.t0,
+        t1 = o.t1;
+      if (!imSchnitt(o)) {
+        // über der Schnittebene: gestrichelter Umriss
+        x.strokeStyle = '#333';
+        x.lineWidth = 1;
+        x.setLineDash([4, 3]);
+        zug([P(t0, A.sI), P(t1, A.sI), P(t1, sAo), P(t0, sAo)]);
+        x.closePath();
+        x.stroke();
+        x.setLineDash([]);
+        return;
+      }
+      // Wand aussparen (von innen bis zur ggf. versetzten Außenfläche)
+      x.globalCompositeOperation = 'destination-out';
+      zug([P(t0, A.sI - 0.01), P(t1, A.sI - 0.01), P(t1, sAo + 0.01), P(t0, sAo + 0.01)]);
+      x.closePath();
+      x.fill();
+      x.globalCompositeOperation = 'source-over';
+      // Laibungen
+      x.strokeStyle = '#111';
+      x.lineWidth = 1.6;
+      zug([P(t0, A.sI), P(t0, sAo)]);
+      x.stroke();
+      zug([P(t1, A.sI), P(t1, sAo)]);
+      x.stroke();
+      // Rahmen
+      x.strokeStyle = '#222';
+      x.lineWidth = 1;
+      zug([P(t0, sH), P(t1, sH), P(t1, sV), P(t0, sV)]);
+      x.closePath();
+      x.stroke();
+      if (oeTuer(T)) {
+        // Türblatt nach innen mit Aufschlag (Viertelkreis)
+        const b = t1 - t0,
+          h0 = P(t0, sH),
+          [HX, HY] = grTf(h0[0], h0[1]),
+          e1 = P(t0, sH - b),
+          [EX, EY] = grTf(e1[0], e1[1]),
+          z1 = P(t1, sH),
+          [ZX, ZY] = grTf(z1[0], z1[1]),
+          r = Math.hypot(EX - HX, EY - HY);
+        x.lineWidth = 1.2;
+        x.beginPath();
+        x.moveTo(HX, HY);
+        x.lineTo(EX, EY);
+        x.stroke();
+        x.lineWidth = 0.8;
+        x.setLineDash([3, 2]);
+        x.beginPath();
+        const w0 = Math.atan2(EY - HY, EX - HX),
+          w1 = Math.atan2(ZY - HY, ZX - HX);
+        let dw = w1 - w0;
+        while (dw > Math.PI) dw -= 2 * Math.PI;
+        while (dw < -Math.PI) dw += 2 * Math.PI;
+        x.arc(HX, HY, r, w0, w1, dw < 0);
+        x.stroke();
+        x.setLineDash([]);
+      } else {
+        // Glas: zwei feine Linien in der Rahmenmitte
+        const sm = (sH + sV) / 2;
+        x.lineWidth = 0.7;
+        zug([P(t0, sm - 0.012), P(t1, sm - 0.012)]);
+        x.stroke();
+        zug([P(t0, sm + 0.012), P(t1, sm + 0.012)]);
+        x.stroke();
+      }
+    });
+    x.restore();
+  });
+}
