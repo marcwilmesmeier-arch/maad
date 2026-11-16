@@ -1,7 +1,7 @@
 // ======================= KONFIGURATOR: FENSTER UND TÜREN =======================
 // Eigenes Fenster (über dem Fassadendesigner): Katalog der Öffnungstypen links, große Ansicht in der Mitte, Eigenschaften
-// rechts. Einteilung direkt in der Ansicht: Flügel anklicken (Öffnungsart, Anschlag, Füllung), Pfosten und Riegel ziehen
-// (Flügelbreiten, Oberlicht, Unterlicht). Der Katalog (S.oet) gilt für das ganze Projekt; der Fassadendesigner setzt die
+// rechts – bewusst nur das Nötigste (Name, Maße, Brüstung, Rahmenfarbe, Aufteilung). Aufteilung direkt in der Ansicht:
+// Pfosten und Riegel ziehen (Flügelbreiten, Oberlicht, Unterlicht). Der Katalog (S.oet) gilt für das ganze Projekt; der Fassadendesigner setzt die
 // Typen nur. Für weitere Bibliotheken (Öffnungsgruppen, Fassaden) ist die Reiterleiste vorgesehen (OK.reiter).
 
 const OK = { open: false, reiter: 'oe', k: null, feld: null, zug: null, hover: null };
@@ -140,26 +140,6 @@ function okSet(f, v) {
   }
   oeAktualisieren();
 }
-/** Eigenschaft des gewählten Feldes ändern (Flügel: oa, an, fu, b = Breite in m; Oberlicht: oa; Unterlicht: fu). */
-function okFeldSet(f, v) {
-  const T = okTyp(),
-    i = OK.feld;
-  if (!T || i == null) return;
-  if (i === 'ol') {
-    if (f === 'oa' && OE_OEFFNUNG[v]) T.olOa = v;
-  } else if (i === 'ul') {
-    if (f === 'fu' && OE_FUELL[v]) T.ulFu = v;
-  } else {
-    const SP = okSpSicher(T),
-      c = SP[i];
-    if (!c) return;
-    if (f === 'oa' && OE_OEFFNUNG[v]) c.oa = v;
-    if (f === 'an') c.an = v === 'r' ? 'r' : 'l';
-    if (f === 'fu' && OE_FUELL[v]) c.fu = v;
-    if (f === 'b') okBreite(T, i, +String(v).replace(',', '.'));
-  }
-  oeAktualisieren();
-}
 /** Breite des Flügels i (m) setzen; der rechte Nachbar (beim letzten der linke) gleicht aus. */
 function okBreite(T, i, w) {
   const L = oeAufteilung(T),
@@ -259,46 +239,22 @@ function okRender() {
     T &&
     !(R.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName))
   ) {
+    // bewusst schlicht: Name, Maße, Brüstung, Rahmenfarbe und die Aufteilung
     const z = (f, v, st, tt) =>
         `<input type="number" step="${st || 0.01}" value="${+(+v).toFixed(3)}" ${tt ? `title="${tt}"` : ''} onchange="okSet('${f}',this.value)">`,
-      sel = (on, obj, cur) =>
-        `<select onchange="${on}">${Object.keys(obj)
-          .map((k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${obj[k]}</option>`)
-          .join('')}</select>`,
-      A = oeAufteilung(T),
-      glas = A.felder
-        .filter((f) => f.fu === 'g' && T.a !== 'to')
-        .reduce((s, f) => s + (f.x1 - f.x0) * (f.y1 - f.y0), 0),
       SP = oeSpalten(T),
-      sr = T.sr || [0, 0];
-    let h = `<h4>Allgemein</h4><div class="okg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="okSet('n',this.value)">
-<span>Art</span>${sel("okSet('a',this.value)", OE_ARTEN, T.a)}
+      tuer = oeTuer(T);
+    let h = `<h4>Typ</h4><div class="okg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="okSet('n',this.value)">
 <span>Breite (m)</span>${z('b', T.b)}<span>Höhe (m)</span>${z('h', T.h)}
-<span>Brüstung beim Setzen (m)</span>${z('br', T.br, 0.01, 'Vorgabe: Abstand Unterkante zum Fußboden des Geschosses')}
-<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)">
-<span>Profilbreite (m)</span>${z('pb', T.pb)}<span>Einbautiefe von außen (m)</span>${z('et', T.et)}</div>
-<h4>Einteilung</h4><div class="okg"><span>Flügel</span><span style="display:flex;gap:4px;align-items:center"><button onclick="okFluegel(-1)" title="Flügel entfernen">−</button><b style="flex:1;text-align:center">${SP.length}</b><button onclick="okFluegel(1)" title="Flügel hinzufügen">+</button></span>
-<span>Oberlicht (m, 0 = ohne)</span>${z('ol', T.ol || 0)}<span>Unterlicht (m, 0 = ohne)</span>${z('ul', T.ul || 0)}
-<span>Sprossen waagerecht</span>${z('sr0', sr[0], 1)}<span>Sprossen senkrecht</span>${z('sr1', sr[1], 1)}</div>
-<div class="okb"><button onclick="okGleich()" title="Alle Flügel gleich breit">Flügel gleich verteilen</button></div>`;
-    const F = OK.feld != null && A.felder.find((f) => f.i === OK.feld);
-    if (F) {
-      const name = F.i === 'ol' ? 'Oberlicht' : F.i === 'ul' ? 'Unterlicht' : 'Flügel ' + (F.i + 1);
-      h += `<h4>${name} · ${fdFmt(F.x1 - F.x0)} × ${fdFmt(F.y1 - F.y0)} m</h4><div class="okg">`;
-      if (typeof F.i === 'number') {
-        h += `<span>Breite (m)</span><input type="number" step="0.01" value="${+(F.x1 - F.x0).toFixed(3)}" onchange="okFeldSet('b',this.value)" ${SP.length < 2 ? 'disabled' : ''}>
-<span>Öffnungsart</span>${sel("okFeldSet('oa',this.value)", OE_OEFFNUNG, F.oa)}
-<span>Anschlag</span>${sel("okFeldSet('an',this.value)", { l: 'links', r: 'rechts' }, F.an)}
-<span>Füllung</span>${sel("okFeldSet('fu',this.value)", OE_FUELL, F.fu)}`;
-      } else if (F.i === 'ol')
-        h += `<span>Öffnungsart</span>${sel("okFeldSet('oa',this.value)", { f: 'Fest', k: 'Kipp' }, F.oa)}`;
-      else h += `<span>Füllung</span>${sel("okFeldSet('fu',this.value)", OE_FUELL, F.fu)}`;
-      h += '</div>';
-    } else
-      h += `<div class="mu" style="margin-top:6px">Feld in der Ansicht anklicken, um Öffnungsart, Anschlag und Füllung einzustellen.</div>`;
-    h += `<h4>Kennwerte</h4><div class="okg"><span>Fläche</span><b style="text-align:right">${fdFmt(T.b * T.h)} m²</b><span>Glasfläche</span><b style="text-align:right">${fdFmt(glas)} m²</b><span>Glasanteil</span><b style="text-align:right">${Math.round((glas / (T.b * T.h)) * 100)} %</b><span>Im Projekt gesetzt</span><b style="text-align:right">${zahl[T.k] || 0}×</b></div>
-<div class="okb"><button onclick="okSetzen()" title="Typ im Fassadendesigner setzen">Im Fassadendesigner setzen</button><button onclick="okKopie()">Kopie</button>${S.oet.length > 1 ? '<button onclick="okLoeschen()">Löschen</button>' : ''}</div>
-<div class="mu" style="margin-top:6px">Änderungen gelten für alle gesetzten Öffnungen dieses Typs.</div>`;
+${tuer ? '' : `<span>Brüstung (m)</span>${z('br', T.br, 0.01, 'Abstand Unterkante zum Fußboden des Geschosses beim Setzen')}`}
+<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)"></div>`;
+    if (T.a !== 'to')
+      h += `<h4>Aufteilung</h4><div class="okg"><span>Flügel</span><span style="display:flex;gap:4px;align-items:center"><button onclick="okFluegel(-1)" title="Flügel entfernen">−</button><b style="flex:1;text-align:center">${SP.length}</b><button onclick="okFluegel(1)" title="Flügel hinzufügen">+</button></span>
+<span>Oberlicht (m, 0 = ohne)</span>${z('ol', T.ol || 0)}${tuer ? '' : `<span>Unterlicht (m, 0 = ohne)</span>${z('ul', T.ul || 0)}`}</div>
+<div class="okb">${SP.length > 1 ? '<button onclick="okGleich()" title="Alle Flügel gleich breit">Gleich verteilen</button>' : ''}</div>
+<div class="mu" style="margin-top:6px">Flügelbreiten, Oberlicht und Unterlicht in der Ansicht an den blauen Linien ziehen.</div>`;
+    h += `<div class="okb" style="margin-top:14px"><button onclick="okSetzen()" title="Typ im Fassadendesigner setzen">Im Fassadendesigner setzen</button><button onclick="okKopie()">Kopie</button>${S.oet.length > 1 ? '<button onclick="okLoeschen()">Löschen</button>' : ''}</div>
+<div class="mu" style="margin-top:6px">${zahl[T.k] ? zahl[T.k] + '× gesetzt – ' : ''}Änderungen gelten für alle gesetzten Öffnungen dieses Typs.</div>`;
     R.innerHTML = h;
   }
   okZeichnen();
@@ -406,9 +362,7 @@ function okZeichnen() {
     g.fillText('Brüstung beim Setzen ' + fdFmt(T.br) + ' m', P.X(0), P.Y(0) + 66);
   }
   const hint = okE('okHint');
-  if (hint)
-    hint.textContent =
-      'Feld anklicken: Öffnungsart, Anschlag, Füllung · Pfosten/Riegel (blau) ziehen: Flügelbreite, Oberlicht, Unterlicht · Ansicht von außen';
+  if (hint) hint.textContent = 'Blaue Linien ziehen: Flügelbreite, Oberlicht, Unterlicht · Ansicht von außen';
 }
 /** Ziehbare Stege: Pfosten zwischen Flügeln (art 'x') und Riegel von Oberlicht/Unterlicht (art 'y'). */
 function okGriffe(T) {
@@ -450,11 +404,6 @@ function okDown(e) {
     okE('okCv').setPointerCapture(e.pointerId);
     return;
   }
-  const x = P.iX(px),
-    y = P.iY(py),
-    f = oeAufteilung(T).felder.find((f) => x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1);
-  OK.feld = f ? f.i : null;
-  okRender();
 }
 function okMove(e) {
   const T = okTyp(),
@@ -465,7 +414,7 @@ function okMove(e) {
   if (!z) {
     const q = okGriffAn(T, P, px, py),
       id = q ? q.id : null;
-    e.currentTarget.style.cursor = q ? (q.art === 'x' ? 'ew-resize' : 'ns-resize') : 'pointer';
+    e.currentTarget.style.cursor = q ? (q.art === 'x' ? 'ew-resize' : 'ns-resize') : '';
     if (id !== OK.hover) {
       OK.hover = id;
       okZeichnen();

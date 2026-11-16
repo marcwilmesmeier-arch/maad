@@ -163,3 +163,12 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   der Generator Erschließung und Kerne genauer – Generator bleibt entfernt).
 - Realistisch+-Wasser: Tiefenversatz behebt das Durchstechen des Geländes; im Software-Rendering nicht an echten
   Wasserflächen geprüft – Abnahme im Browser des Nutzers.
+
+## Öffnungen (Fenster und Türen)
+
+- LOD 300 zeigt noch keine Öffnungen (Schichtenaufbau `l2MeshL` ohne Ausschnitte).
+- Öffnungen hängen am Schlüssel der Ansicht (`b.fd[N]`); ändert sich die Gliederung der Ansichten (z. B. neue
+  Gebäudeform), können sie einer anderen Ansicht zufallen – wie Schnittlinien und Fassadentypen.
+- Öffnungen über die Wandhöhe hinaus (in die Decke) werden in 3D auf die Wandhöhe gestaucht.
+- Gebäudemetrik: Fassadenfläche noch brutto (ohne Abzug der Öffnungen).
+- Öffnungsgruppen (Module fester Länge, automatisch platziert) folgen.

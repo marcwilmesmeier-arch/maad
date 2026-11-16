@@ -176,7 +176,8 @@ function oeAufteilung(T) {
   return { pb, stege, felder };
 }
 /** Füllfarbe eines Feldes in der Ansicht. */
-const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? '#b9a891' : '#cfe1ee');
+// Glas weiß, 80 % durchsichtig (wie im 3D-Modell)
+const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? '#b9a891' : 'rgba(255,255,255,0.2)');
 
 /** Gespeicherte Öffnungen einer Ansicht (Liste wird bei Bedarf angelegt). */
 function oeDaten(b, vk, mk) {
@@ -426,7 +427,7 @@ function oeUp() {
 }
 
 // ---- Zeichnen (aus 040-fang.js)
-/** Eine Öffnung in Ansichtsdarstellung: Rahmen, Glas bzw. Paneel, Einteilung, Sprossen, Öffnungssymbole. */
+/** Eine Öffnung in Ansichtsdarstellung: Rahmen, Glas bzw. Paneel, Einteilung, Sprossen (ohne Öffnungssymbole). */
 function oeZeichneEine(g, X, Y, u0, u1, v0, T, o) {
   const A = oeAufteilung(T),
     x0 = X(u0),
@@ -476,42 +477,6 @@ function oeZeichneEine(g, X, Y, u0, u1, v0, T, o) {
         g.lineTo(xx, fy + hf);
       }
       g.stroke();
-    }
-    // Öffnungssymbol: Spitze zur Bandseite (Dreh), zur Unterkante (Kipp); Schiebe: Pfeil
-    if (w > 6 && hf > 6) {
-      g.strokeStyle = '#3b3f44';
-      g.lineWidth = 0.8;
-      if (f.oa === 'd' || f.oa === 'dk' || f.oa === 'k') {
-        g.setLineDash([3, 2]);
-        g.beginPath();
-        if (f.oa !== 'k') {
-          const ax = f.an === 'r' ? fx + w : fx,
-            bx = f.an === 'r' ? fx : fx + w;
-          g.moveTo(bx, fy);
-          g.lineTo(ax, fy + hf / 2);
-          g.lineTo(bx, fy + hf);
-        }
-        if (f.oa !== 'd') {
-          g.moveTo(fx, fy);
-          g.lineTo(fx + w / 2, fy + hf);
-          g.lineTo(fx + w, fy);
-        }
-        g.stroke();
-        g.setLineDash([]);
-      } else if (f.oa === 's' && w > 10) {
-        const y = fy + hf / 2,
-          r = f.an === 'r' ? -1 : 1,
-          xa = fx + w * (r > 0 ? 0.3 : 0.7),
-          xe = fx + w * (r > 0 ? 0.7 : 0.3);
-        g.lineWidth = 1;
-        g.beginPath();
-        g.moveTo(xa, y);
-        g.lineTo(xe, y);
-        g.lineTo(xe - 5 * r, y - 4);
-        g.moveTo(xe, y);
-        g.lineTo(xe - 5 * r, y + 4);
-        g.stroke();
-      }
     }
     if (o.feld === f.i) {
       g.strokeStyle = '#1f6fd1';

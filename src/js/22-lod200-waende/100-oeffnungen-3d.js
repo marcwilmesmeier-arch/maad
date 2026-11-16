@@ -269,9 +269,9 @@ function oeKoerper(O) {
       m = new T.Mesh(
         ge,
         new T.MeshLambertMaterial({
-          color: new T.Color(glas ? '#9fc0d8' : farbe),
+          color: new T.Color(glas ? '#ffffff' : farbe),
           transparent: glas,
-          opacity: glas ? 0.55 : 1,
+          opacity: glas ? 0.2 : 1, // Glas weiß, 80 % durchsichtig
           side: T.DoubleSide,
         }),
       );

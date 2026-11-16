@@ -41,6 +41,14 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   m Anteil % je Flächenart, s Zielgröße m² je Flächenart} wird mit dem Projekt gespeichert (ältere Projekte: aus
   `S.gen.cat.Wohnen` des früheren Generators). Ist aus den Grundriss-Einheiten, ohne Einheiten Schätzung aus BGF
   Wohnen × 75 %.
+- Öffnungen (Fenster, Türen): Katalog `S.oet` (`19-fassadendesigner/090-oeffnungen.js`, mit dem Projekt gespeichert),
+  bearbeitet im Konfigurator (`095-konfigurator.js`, eigenes Fenster: Name, Maße, Brüstung, Rahmenfarbe, Aufteilung).
+  Einteilung einheitlich über `oeAufteilung(T)` (Stege und Felder) für Ansicht, Symbol und 3D. Gesetzte Öffnungen in
+  `b.fd[Ansicht].oe = [{id, t, u, v, q}]` (Ansichtskoordinaten; q = Herkunft, heute 'frei'); alle Verbraucher lesen über
+  `oeListe(b, V)` – dort kommen später automatisch platzierte Öffnungsgruppen dazu. 3D nur ab LOD 200
+  (`22-lod200-waende/100-oeffnungen-3d.js`): `oeWelt` rechnet in Weltkoordinaten um, `oeWandOeffnungen` ordnet jede
+  Öffnung genau einer Außenwand zu, `oeWandTeilen` teilt die Wand in Streifen (echte Laibungen), `oeKoerper` baut Rahmen,
+  Glas (weiß, 80 % durchsichtig), Paneele, Sprossen und Fensterbank. Die Wandableitung (`l2Els`) ignoriert `oe`.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 - Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
   Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker
