@@ -196,3 +196,14 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Steht ein Bestandsgebäude unter dem Neubau, bietet die Kontextleiste „Bestand ausblenden“ an. Es wird nicht
   automatisch ausgeblendet.
 - Linien der Hervorhebung sind 1 px breit (WebGL-Linien), dickere Kanten bräuchten Linien als Flächen.
+- Schneiden verwirft die Wandflächen-Teile (`patches`) beider Teile und die von Hand gesetzten Öffnungen/Schnitte
+  des zweiten Teils (`fd`). Der erste Teil behält `fd`, dessen Ansichten sich verschoben haben können. Die
+  Gebäudekonfiguration (`fk`) wird übernommen und neu platziert.
+- Abweichungen der Fassadengruppen aus der Kontextleiste haben eine eigene Ausrichtung (`auA`). In der Karte „Fassade“
+  im Panel wird sie angezeigt, aber nicht bearbeitet.
+- Ausgerundete Ecken sind Polygonzüge (Segmente ca. 11°). Abstandsflächen werden je Segment gezeichnet (Strahlen an
+  der Rundung), Wandflächen, Fassadenansichten und Ziehen & Schieben sehen viele kurze Wände. Ein echter Bogen-Typ
+  im Grundriss fehlt noch.
+- Ecke verschieben: keine Zahleneingabe für den genauen Abstand, Fang nur auf die Richtungen der angrenzenden Wände.
+- Die alten Kugelgriffe (`hc`, `handle`, `patchKnob`) sind im Modellier-Modus ausgeblendet, ihr Code ist aber noch
+  vorhanden und sollte entfernt werden, sobald sicher ist, dass er nicht mehr gebraucht wird.

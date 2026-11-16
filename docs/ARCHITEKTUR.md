@@ -260,3 +260,18 @@ läuft wie bisher im Browser.
   Bild. Der Inhalt wird nur neu gebaut, wenn sich die Auswahl ändert.
 - Farben der Hervorhebung stehen in `SKC`, Orange und damit unabhängig von der Nutzungsfarbe. Kanten liegen obenauf.
   Ein ganz gewähltes Gebäude ist nur leicht getönt.
+- Fassadengruppen aus der Kontextleiste (`skKlGruppen`): Am Gebäude ist es die Grundeinstellung (`b.fk.st`, eine
+  Zeile für alle Geschosse). Geschoss, Wand und Flucht bekommen eine eigene Anordnung als Abweichung
+  (`b.fk.ab['Seite|Geschoss']` mit Rhythmus als Liste, Ausrichtung in `b.fk.auA` mit demselben Schlüssel, ausgewertet
+  in `fkAusr`). Abweichungen bleiben bestehen, wenn sich die Grundeinstellung ändert. Das Fenster ist `#fkWahl` des
+  Gebäudekonfigurators (`fkWahlEl`).
+- Schneiden (`skx`, Modus `SK.schnitt` des Werkzeugs Teilen): Der Schnitt läuft senkrecht zur angeklickten Wand rund
+  ums Gebäude (Fassade, Dach, Fassade). `skSchnittDo` teilt jedes Geschoss mit `szSplitPoly` und legt den zweiten Teil
+  als eigenes Gebäude an (`skCloneB`).
+- Seitenecken (`26-modellier-modus/150-ecken.js`): Im Auswahl-Werkzeug ist ein Klick nahe einer senkrechten Ecke der
+  Eintrag `{ b, j, ek }`. `skEckGruppe` bildet daraus die Konturflucht über alle Geschosse. Eine gewählte Ecke
+  anfassen und ziehen ist der Vorgang `SK.op.kind === 'e'` (Fang auf die Richtungen der angrenzenden Wände).
+  `skEckRunden(r)` ersetzt die Ecke durch einen Bogen.
+- Nach jeder abgeschlossenen Aktion (Ziehen, Verschieben, Teilen, Schneiden, Ecke) ruft maad `skNachAktion(b)` auf:
+  zurück ins Auswahl-Werkzeug, das Gebäude bleibt gewählt. Die alten weißen Kugelgriffe, die weiße Hover-Kontur und
+  der Fang-Marker sind im Auswahl-Werkzeug ausgeblendet.

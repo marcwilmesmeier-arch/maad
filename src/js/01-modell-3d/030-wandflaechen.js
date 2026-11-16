@@ -1226,8 +1226,11 @@ function placeHc() {
           : 4 * mpp(),
       ),
     );
+    // Modellier-Modus aktiv: alte weiße Griffe und Hover-Kontur aus (ersetzt durch Hervorhebung und Ziehen & Schieben)
+    const mod = skAct();
     const hv = S.hv,
       okv =
+        !mod &&
         hv &&
         S.m3 &&
         S.bld.includes(hv.b) &&
@@ -1258,7 +1261,7 @@ function placeHc() {
       }
     }
     const hb = S.hb,
-      okb = hb && S.m3 && S.bld.includes(hb) && (S.tool === 'v' || S.tool === 'b');
+      okb = !mod && hb && S.m3 && S.bld.includes(hb) && (S.tool === 'v' || S.tool === 'b');
     handle.visible = !!okb;
     if (okb) {
       const fi = fInfo({ b: hb, k: hb.levels.length - 1, t: 'top' });
@@ -1268,9 +1271,10 @@ function placeHc() {
       );
     }
     const h = S.hov,
-      ok = h && S.m3 && S.bld.includes(h.b) && h.b.levels[h.k] && (S.tool === 'v' || S.tool === 'b');
+      ok = !mod && h && S.m3 && S.bld.includes(h.b) && h.b.levels[h.k] && (S.tool === 'v' || S.tool === 'b');
     hc.visible = !!ok;
-    if (patchKnob()) return;
+    if (!mod && patchKnob()) return;
+    if (mod) S.hcP = false;
     if (!ok) return;
     const fi = fInfo(h);
     if (h.t === 'wall') {

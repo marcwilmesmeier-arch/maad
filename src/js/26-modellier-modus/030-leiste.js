@@ -1,5 +1,7 @@
 // ---- Leiste
 function skTool(t) {
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js
+  SK.schnitt = false;
   // ── Erweiterung aus 27-skizze/040-skizzenmodus.js
   sofReset();
   SOF.re = null;
@@ -171,7 +173,10 @@ function skOpStart(en, e) {
   }
   if (op.top) {
     const last = b.levels.length - 1;
-    op.storeys = en.j === last && !(e && e.altKey) && (!SK.sel.length || skWhole(b) || !skHas(en));
+    op.storeys =
+      en.j === last &&
+      !(e && e.altKey) &&
+      (!SK.sel.length || skWhole(b) || !skHas(en) || SK.sel.filter((x) => x.b === b).length === 1);
     op.lv0 = b.levels.slice();
     op.v0 = JSON.stringify(b.voids || []);
     op.pat0 = (b.patches || []).slice();
@@ -367,6 +372,8 @@ function skOpEnd(ok) {
       logErr(e, 'skOpEnd');
     }
   }
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: nach der Aktion zurück zur Auswahl, Gebäude bleibt gewählt
+  if (ok && op && op.b && !op.kind && Math.abs(op.d || 0) > 1e-6) skNachAktion(op.b);
   return r;
 }
 // skOpEnd() ohne die Erweiterungen darüber – wird von skOpEnd() gezielt aufgerufen

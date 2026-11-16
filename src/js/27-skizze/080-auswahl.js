@@ -41,7 +41,7 @@ const SKX = { pend: null, back: 0 };
         !SK.op
       ) {
         const en = skHit(e);
-        if (en && skHas(en) && !skWhole(en.b) && SK.sel.length <= 6)
+        if (en && en.ek == null && skHas(en) && !skWhole(en.b) && SK.sel.length <= 6)
           SKX.pend = { x: e.clientX, y: e.clientY, en, id: e.pointerId };
       }
     } catch (e) {

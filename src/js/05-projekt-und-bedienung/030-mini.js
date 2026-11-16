@@ -506,8 +506,8 @@ function hover(e) {
     }
   })();
   try {
-    if (skAct() && SK.tool !== 'l' && !SK.op && !SK.win) skInferHover(e);
-    else if (!skAct() || SK.tool === 'l') {
+    if (skAct() && SK.tool !== 'l' && SK.tool !== 's' && !SK.op && !SK.win) skInferHover(e);
+    else if (!skAct() || SK.tool === 'l' || SK.tool === 's') {
       skMkEl().style.display = 'none';
       if (SK.tool === 'l' && SK.lh) skTip(SK.lh.lab ? 'Fang: ' + SK.lh.lab : '', e);
       else skTip('', null);

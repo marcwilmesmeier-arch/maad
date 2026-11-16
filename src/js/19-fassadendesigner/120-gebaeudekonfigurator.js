@@ -4,12 +4,13 @@
 // kombinieren (Liste, z. B. ['g1', 'g2'] = A–B–A–B …; wiederholt über das Feld). Ausrichtung je Zeile in b.fk.au
 // ('l' linksbündig, 'm' mittig = Rest gleichmäßig an beiden Enden, 'r' rechtsbündig), je Gebäudeseite in b.fk.auS
 // (Vorrang vor der Zeile; auch im Fassadendesigner beim Werkzeug „Gruppe“ einstellbar), Abweichungen je Seite (Ansicht), je Geschoss oder
-// je Seite und Geschoss (b.fk.ab = { 'Ansicht|Geschoss': Gruppe, 'Ansicht|*': …, '*|Geschoss': … }; '' = keine).
+// je Seite und Geschoss (b.fk.ab = { 'Ansicht|Geschoss': Gruppe oder Rhythmus, 'Ansicht|*': …, '*|Geschoss': … }; '' = keine;
+// Ausrichtung dieser eigenen Anordnungen in b.fk.auA mit demselben Schlüssel, gesetzt aus der Kontextleiste im Modell).
 // fkSync() platziert die Gruppen automatisch in allen Fassadenfeldern aller Ansichten (Verweise mit a: 1 in
 // b.fd[Ansicht].gr – gleiche Daten wie im Fassadendesigner, daher in Ansicht, 3D und Grundriss sichtbar). Von Hand
 // verschobene oder getauschte Verweise verlieren a und bleiben bei der nächsten Platzierung erhalten.
 
-const FK = { wahl: null }; // geöffnete Gruppenauswahl { bid, i }
+const FK = { wahl: null, kl: null }; // geöffnete Gruppenauswahl { bid, i } bzw. aus der Kontextleiste
 const FKCSS = `.fk .fkz{display:flex;align-items:center;gap:8px;padding:4px 0}
 .fk .fkz .fkl{width:52px;flex:none;font-size:11px;color:var(--mu)}
 .fk .fkz .fkb{flex:none;border:1px solid var(--ln);border-radius:6px;background:var(--bg,#fff);padding:2px;cursor:pointer;line-height:0}
@@ -44,8 +45,12 @@ function fkGeschosse(b) {
     u = ugN(b);
   return B.slice(0, -1).map((v0, j) => ({ j, name: lname(b, u + j), v0, v1: B[j + 1] }));
 }
-/** Ausrichtung für Seite vk und Geschoss j: Seite → Zeile des Stapels → mittig. */
+/** Ausrichtung für Seite vk und Geschoss j: eigene Anordnung → Seite → Zeile des Stapels → mittig. */
 function fkAusr(fk, vk, j) {
+  // eigene Anordnung (Abweichung) mit Ausrichtung: Seite+Geschoss → Seite → Geschoss
+  const A = fk.auA || {},
+    ka = [vk + '|' + j, vk + '|*', '*|' + j].find((q) => fk.ab && q in fk.ab && q in A);
+  if (ka) return A[ka];
   const s = fk.auS && fk.auS[vk];
   if (s) return s;
   return (fk.au || [])[Math.min(j, Math.max(0, (fk.st || []).length - 1))] || 'm';
@@ -206,24 +211,7 @@ function fkWahlAuf(i, s = 0, el) {
     GS = fkGeschosse(b),
     leer =
       '<svg width="56" height="30"><rect x="1" y="1" width="54" height="28" fill="#f4f3f0" stroke="#cbd5e1"/></svg>';
-  let w = document.getElementById('fkWahl');
-  if (!w) {
-    w = document.createElement('div');
-    w.id = 'fkWahl';
-    document.body.appendChild(w);
-    // Klick daneben bzw. Esc schließt
-    document.addEventListener(
-      'pointerdown',
-      (e) => {
-        const f = document.getElementById('fkWahl');
-        if (f && f.style.display !== 'none' && !f.contains(e.target) && !e.target.closest('.fkb')) fkWahlZu();
-      },
-      true,
-    );
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && FK.wahl) fkWahlZu();
-    });
-  }
+  const w = fkWahlEl();
   const zeile = GS[i] ? GS[i].name : 'oberste Zeile';
   w.innerHTML = `<div class="fkwh"><b>Gruppe wählen</b><span class="mu">${esc(zeile)}${R.length > 1 || s >= R.length ? ' · Rhythmus ' + (s + 1) : ''}</span><button onclick="fkWahlZu()" title="Schließen (Esc)">×</button></div><div class="fkg">${S.oeg
     .map(
@@ -242,9 +230,44 @@ function fkWahlAuf(i, s = 0, el) {
   w.style.top = Math.max(10, Math.min(window.innerHeight - bh - 10, r.top - 20)) + 'px';
   rr();
 }
+/** Fenster der Gruppenauswahl (einmal angelegt; Klick daneben bzw. Esc schließt). Auch für die Kontextleiste. */
+function fkWahlEl() {
+  fkCssSicher();
+  let w = document.getElementById('fkWahl');
+  if (!w) {
+    w = document.createElement('div');
+    w.id = 'fkWahl';
+    document.body.appendChild(w);
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        const f = document.getElementById('fkWahl');
+        if (f && f.style.display !== 'none' && !f.contains(e.target) && !e.target.closest('.fkb')) fkWahlZu();
+      },
+      true,
+    );
+    document.addEventListener('keydown', (e) => {
+      const f = document.getElementById('fkWahl');
+      if (e.key === 'Escape' && f && f.style.display !== 'none') fkWahlZu();
+    });
+  }
+  return w;
+}
+function fkCssSicher() {
+  if (document.getElementById('fkCss')) return;
+  const s = document.createElement('style');
+  s.id = 'fkCss';
+  s.textContent = FKCSS;
+  document.head.appendChild(s);
+}
 function fkWahlZu() {
   const w = document.getElementById('fkWahl');
   if (w) w.style.display = 'none';
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js
+  if (FK.kl) {
+    FK.kl = null;
+    SK.ver++;
+  }
   if (FK.wahl) {
     FK.wahl = null;
     rr();
@@ -256,8 +279,10 @@ function fkAbweichung(vk, j, k) {
   fkAendern((fk) => {
     fk.ab = fk.ab || {};
     const key = vk + '|' + j;
-    if (k === null) delete fk.ab[key];
-    else fk.ab[key] = oegG(k) ? k : '';
+    if (k === null) {
+      delete fk.ab[key];
+      if (fk.auA) delete fk.auA[key];
+    } else fk.ab[key] = oegG(k) ? k : '';
   });
 }
 function fkAbweichungAusFormular() {
@@ -269,12 +294,7 @@ function fkAbweichungAusFormular() {
 
 // ---- Karte im Gebäudepanel (aus 07-analyse/010-analyse.js)
 function fkCard(b) {
-  if (!document.getElementById('fkCss')) {
-    const s = document.createElement('style');
-    s.id = 'fkCss';
-    s.textContent = FKCSS;
-    document.head.appendChild(s);
-  }
+  fkCssSicher();
   let V = [],
     GS = [];
   try {
@@ -341,7 +361,7 @@ function fkCard(b) {
     h += keys
       .map((k) => {
         const [vk, j] = k.split('|');
-        return `<div class="fkz"><span class="fkn">${esc(seite(vk))} · ${esc(gesch(j))}: <b>${esc(name(ab[k]))}</b></span><button class="fkx" onclick="fkAbweichung('${vk}','${j}',null)" title="Abweichung entfernen">×</button></div>`;
+        return `<div class="fkz"><span class="fkn">${esc(seite(vk))} · ${esc(gesch(j))}: <b>${esc(fkReihe(ab[k]).map(name).join(' – ') || name(''))}</b></span><button class="fkx" onclick="fkAbweichung('${vk}','${j}',null)" title="Abweichung entfernen">×</button></div>`;
       })
       .join('');
   if (st.length)

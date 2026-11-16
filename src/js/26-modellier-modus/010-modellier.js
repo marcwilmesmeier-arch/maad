@@ -102,6 +102,8 @@ function skZ(b, j) {
   return z;
 }
 function skKey(e) {
+  // ── Erweiterung aus 26-modellier-modus/150-ecken.js
+  if (e.ek != null) return e.b.id + '|' + e.j + '|e' + e.ek;
   // ── Erweiterung aus 26-modellier-modus/060-dach-bearbeiten.js
   if (e.face != null) return e.b.id + '|' + e.j + '|f' + e.face;
   if (e.vd != null) return e.b.id + '|v' + e.vd + '|' + (e.floor ? 'b' : e.i);
@@ -125,6 +127,8 @@ function skValidBasis(e) {
   const b = e.b;
   if (!b || b.ex || !S.bld.includes(b) || !b.levels[e.j]) return false;
   if (e.top) return true;
+  // ── Erweiterung aus 26-modellier-modus/150-ecken.js
+  if (e.ek != null) return e.ek < lf(b, b.levels[e.j]).length;
   return e.i < lf(b, b.levels[e.j]).length;
 }
 // Außennormale einer Wandkante (x,z)
@@ -187,7 +191,10 @@ function skHit(e) {
   const ny = hit.face.normal.y;
   if (k != null && Math.abs(ny) < 0.3) {
     const i = mdlEdge(b, k, hit.point);
-    return i < 0 ? null : { b, j: k, i };
+    if (i < 0) return null;
+    // ── Erweiterung aus 26-modellier-modus/150-ecken.js: nahe einer Seitenecke = Ecke (nur im Auswahl-Werkzeug)
+    const ek = SK.tool === 's' ? skEckeBei(b, k, i, hit.point) : null;
+    return ek != null ? { b, j: k, ek } : { b, j: k, i };
   }
   if (o.userData.roof) return { b, j: b.levels.length - 1, top: 1 };
   if (k != null && ny > 0.7) return { b, j: k, top: 1 };
@@ -317,6 +324,11 @@ function skInfoBasis() {
   const bs = new Set(SK.sel.map((e) => e.b));
   let ar = 0,
     nt = 0;
+  const ne = SK.sel.filter((e) => e.ek != null).length;
+  if (ne)
+    return (
+      'Seitenecke · ' + ne + ' Geschoss' + (ne === 1 ? '' : 'e') + ' · anfassen und ziehen = Ecke verschieben'
+    );
   SK.sel.forEach((e) => {
     if (e.top) {
       nt++;
@@ -328,16 +340,12 @@ function skInfoBasis() {
     ar += Math.hypot(q[0] - p[0], q[1] - p[1]) * e.b.levels[e.j].h;
   });
   return (
-    n -
-    nt +
-    ' Wandfläche' +
-    (n - nt === 1 ? '' : 'n') +
-    (nt ? ' · ' + nt + ' Dachfläche' + (nt === 1 ? '' : 'n') : '') +
+    (n - nt ? n - nt + ' Wandfläche' + (n - nt === 1 ? '' : 'n') + (nt ? ' · ' : '') : '') +
+    (nt ? nt + ' Dachfläche' + (nt === 1 ? '' : 'n') : '') +
     ' · ' +
     bs.size +
-    ' Gebäude · ' +
-    ar.toFixed(1).replace('.', ',') +
-    ' m² Fassade'
+    ' Gebäude' +
+    (ar ? ' · ' + ar.toFixed(1).replace('.', ',') + ' m² Fassade' : '')
   );
 }
 function skSync() {

@@ -293,8 +293,13 @@ function skMMouse(e) {
   }
 }
 function skMEnd(c) {
+  const op = SK.op,
+    moved = op && op.kind === 'm' && Math.hypot(op.dx, op.dz, op.dy) > 1e-6;
   // ── Erweiterung aus 26-modellier-modus/050-stufe-4.js
   skMEndBasis.apply(this, arguments);
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: nach der Aktion zurück zur Auswahl
+  if (c && moved)
+    skNachAktion(op.copy && op.clones && op.clones[0] ? op.clones[0] : op.bs[0].b, $('hud').textContent);
   try {
     skIfOff();
   } catch (e) {
@@ -452,15 +457,28 @@ function skMKeys(e) {
   return false;
 }
 SK.opDown = function (e) {
-  return SK.tool === 'm' ? skMDown(e) : SK.tool === 'p' ? SK.opDownP(e) : false;
+  // Ecke ziehen (Auswahl-Werkzeug): 26-modellier-modus/150-ecken.js
+  return SK.tool === 'm'
+    ? skMDown(e)
+    : SK.tool === 'p'
+      ? SK.opDownP(e)
+      : SK.tool === 's'
+        ? skEckDown(e)
+        : false;
 };
 SK.opMove = function (e) {
+  if (SK.op && SK.op.kind === 'e') return skEckMove(e);
   return SK.op && SK.op.kind === 'm' ? skMMove(e) : SK.opMoveP(e);
 };
 SK.opUp = function (e) {
+  if (SK.op && SK.op.kind === 'e') return skEckUp(e);
   return SK.op && SK.op.kind === 'm' ? skMUp(e) : SK.opUpP(e);
 };
 SK.opEsc = function () {
+  if (SK.op && SK.op.kind === 'e') {
+    skEckEnde(false);
+    return true;
+  }
   if (SK.op && SK.op.kind === 'm') {
     skMEnd(false);
     try {

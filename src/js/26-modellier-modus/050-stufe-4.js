@@ -95,6 +95,11 @@ function skLnDraw() {
     SKLN.visible = false;
     return;
   }
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: Schneiden rund ums Gebäude
+  if (SK.schnitt) {
+    skSchnittVorschau(lh);
+    return;
+  }
   const b = lh.en.b,
     tg = skSplitTargets(lh),
     pos = [];
@@ -131,6 +136,8 @@ function skLnDraw() {
   }
 }
 function skSplitDo(lh) {
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js
+  if (SK.schnitt) return skSchnittDo(lh);
   const tg = skSplitTargets(lh),
     b = lh.en.b;
   if (!tg.length) {
@@ -163,12 +170,15 @@ function skSplitDo(lh) {
   skSync();
   SK.lh = null;
   SKLN.visible = false;
-  $('hud').textContent =
+  // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: zurück zur Auswahl, Gebäude bleibt gewählt
+  skNachAktion(
+    b,
     'Fläche in ' +
-    tg.length +
-    ' Geschoss' +
-    (tg.length === 1 ? '' : 'en') +
-    ' geteilt – mit Ziehen & Schieben (P) einzelne Teile ziehen';
+      tg.length +
+      ' Geschoss' +
+      (tg.length === 1 ? '' : 'en') +
+      ' geteilt – Teilfläche anklicken und ziehen',
+  );
   return true;
 }
 function skLDown(e) {

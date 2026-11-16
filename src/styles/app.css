@@ -2809,3 +2809,56 @@ body.hpj #ic {
   border: 1px solid var(--ln);
   border-radius: 6px;
 }
+#skkl button.skkon {
+  background: #f07a1222;
+}
+#fkWahl .skga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+#fkWahl .skgr {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#fkWahl .skgp {
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  background: var(--bg, #fff);
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+  min-width: 26px;
+  min-height: 26px;
+  font-size: 14px;
+}
+#fkWahl .skgp.on {
+  border-color: #f07a12;
+  box-shadow: 0 0 0 2px #f07a1233;
+}
+#fkWahl .skgau {
+  display: flex;
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#fkWahl .skgau button {
+  border: 0;
+  background: transparent;
+  padding: 3px 7px;
+  cursor: pointer;
+  color: var(--mu);
+}
+#fkWahl .skgau button.on {
+  background: #5e7f92;
+  color: #fff;
+}
+#skkl.kompakt button span {
+  display: none;
+}
+#skkl.kompakt button {
+  padding: 6px 8px;
+}

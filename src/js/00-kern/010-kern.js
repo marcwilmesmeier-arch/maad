@@ -82,6 +82,12 @@ const BA = [
     x: '✂',
   },
   {
+    k: 'skx',
+    n: 'Schneiden',
+    t: 'Gebäude schneiden – Schnitt rund ums Gebäude (Fassade, Dach, Fassade) in zwei Baukörper: Wand anklicken · Fang Mitte und Ecken · Zahl + Enter = Abstand',
+    p: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M12 2v20" stroke-dasharray="2.5 2"/>',
+  },
+  {
     k: 'ed',
     n: 'Kontur bearbeiten',
     t: 'Kontur des Gebäudes bearbeiten – Punkte und Kanten ziehen, Kante anklicken = Länge eingeben, Doppelklick auf Kante = Punkt einfügen',

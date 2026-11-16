@@ -26,6 +26,11 @@ function skQuadsBasis(ents, col, op, line) {
       f = lf(b, l),
       z0 = skZ(b, e.j),
       z1 = z0 + l.h;
+    // ── Erweiterung aus 26-modellier-modus/150-ecken.js: Ecke als schmale Streifen entlang beider Wände
+    if (e.ek != null) {
+      skEckeQuads(f, e.ek, z0, z1, pos, lp, line);
+      return;
+    }
     if (e.top) {
       const pts = f.map((p) => new T.Vector2(p[0], p[1])),
         tr = T.ShapeUtils.triangulateShape(pts, []);
@@ -356,6 +361,12 @@ addEventListener(
       const t = e.target || {};
       if (/INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable) return;
       if (e.key === 'Escape') {
+        // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: offene Gruppenauswahl zuerst schließen
+        if (FK.kl || FK.wahl) {
+          fkWahlZu();
+          e.stopImmediatePropagation();
+          return;
+        }
         if (SK.opEsc && SK.opEsc()) {
           e.stopImmediatePropagation();
           return;
