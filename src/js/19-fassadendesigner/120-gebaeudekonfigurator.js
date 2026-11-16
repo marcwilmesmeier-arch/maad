@@ -23,6 +23,12 @@ const FKCSS = `.fk .fkz{display:flex;align-items:center;gap:8px;padding:4px 0}
 .fk .fkg div{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1px solid var(--ln);border-radius:8px;cursor:pointer;font-size:10.5px;text-align:center;line-height:1.2}
 .fk .fkg div:hover{border-color:#5E7F92}.fk .fkg div.on{border-color:#1f6fd1;background:#1f6fd114}
 .fk select{width:100%}
+#fkWahl{position:fixed;z-index:70;width:300px;max-height:min(520px,calc(100vh - 40px));overflow:auto;padding:10px;border:1px solid var(--ln);border-radius:12px;background:var(--pn,#fff);color:var(--tx);box-shadow:0 12px 40px #0003;font:12px/1.35 system-ui,'Segoe UI',sans-serif}
+#fkWahl .fkwh{display:flex;align-items:center;gap:6px;margin-bottom:8px}#fkWahl .fkwh b{flex:1;font-size:13px}
+#fkWahl .fkwh button{border:0;background:none;cursor:pointer;font-size:16px;color:var(--mu)}
+#fkWahl .fkg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+#fkWahl .fkg div{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1px solid var(--ln);border-radius:8px;cursor:pointer;font-size:10.5px;text-align:center;line-height:1.2}
+#fkWahl .fkg div:hover{border-color:#5E7F92}#fkWahl .fkg div.on{border-color:#1f6fd1;background:#1f6fd114}
 .fk .fka{display:flex;flex:none;border:1px solid var(--ln);border-radius:6px;overflow:hidden}
 .fk .fka button{border:0;background:transparent;padding:2px 5px;cursor:pointer;font-size:11px;color:var(--mu)}
 .fk .fka button.on{background:#5E7F92;color:#fff}`;
@@ -146,6 +152,8 @@ function fkAendern(fn) {
   if (!b) return;
   hist();
   fn(fkDaten(b, true), b);
+  const w = document.getElementById('fkWahl');
+  if (w) w.style.display = 'none';
   FK.wahl = null;
   rr();
 }
@@ -180,12 +188,67 @@ function fkAusrichtung(i, a) {
     fk.au[i] = a === 'l' || a === 'r' ? a : 'm';
   });
 }
-/** Gruppenauswahl für Platz s der Zeile i öffnen/schließen (s = Länge der Folge: neue Gruppe anhängen). */
-function fkWahlAuf(i, s = 0) {
+/**
+ * Gruppenauswahl für Platz s der Zeile i als eigenes Fenster neben der angeklickten Vorschau öffnen bzw. schließen
+ * (s = Länge der Folge: neue Gruppe anhängen). Schließt mit ×, Esc oder Klick daneben.
+ */
+function fkWahlAuf(i, s = 0, el) {
   const b = S.sel;
-  FK.wahl =
-    FK.wahl && FK.wahl.i === i && FK.wahl.s === s && FK.wahl.bid === b.id ? null : { bid: b.id, i, s };
+  if (!b) return;
+  if (FK.wahl && FK.wahl.i === i && FK.wahl.s === s && FK.wahl.bid === b.id) {
+    fkWahlZu();
+    return;
+  }
+  FK.wahl = { bid: b.id, i, s };
+  const fk = fkDaten(b) || { st: [] },
+    R = fkReihe(fk.st[i]),
+    cur = R[s],
+    GS = fkGeschosse(b),
+    leer =
+      '<svg width="56" height="30"><rect x="1" y="1" width="54" height="28" fill="#f4f3f0" stroke="#cbd5e1"/></svg>';
+  let w = document.getElementById('fkWahl');
+  if (!w) {
+    w = document.createElement('div');
+    w.id = 'fkWahl';
+    document.body.appendChild(w);
+    // Klick daneben bzw. Esc schließt
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        const f = document.getElementById('fkWahl');
+        if (f && f.style.display !== 'none' && !f.contains(e.target) && !e.target.closest('.fkb')) fkWahlZu();
+      },
+      true,
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && FK.wahl) fkWahlZu();
+    });
+  }
+  const zeile = GS[i] ? GS[i].name : 'oberste Zeile';
+  w.innerHTML = `<div class="fkwh"><b>Gruppe wählen</b><span class="mu">${esc(zeile)}${R.length > 1 || s >= R.length ? ' · Rhythmus ' + (s + 1) : ''}</span><button onclick="fkWahlZu()" title="Schließen (Esc)">×</button></div><div class="fkg">${S.oeg
+    .map(
+      (G) =>
+        `<div class="${G.k === cur ? 'on' : ''}" onclick="fkSetze(${i},'${G.k}',${s})">${oegSymbol(G, 56, 30)}${esc(G.n)}</div>`,
+    )
+    .join(
+      '',
+    )}${s < R.length ? `<div onclick="fkSetze(${i},'',${s})">${leer}${R.length > 1 ? 'Aus Rhythmus entfernen' : 'Keine'}</div>` : ''}<div onclick="fkWahlZu();okOpen(null,'gr')" title="Gruppen im Konfigurator anlegen">${leer}+ Gruppe …</div></div>`;
+  w.style.display = 'block';
+  // links neben der Vorschau (Panel liegt rechts), im Bildschirm halten
+  const r = el ? el.getBoundingClientRect() : { left: window.innerWidth - 360, top: 120, bottom: 150 },
+    bw = 300,
+    bh = Math.min(w.scrollHeight, window.innerHeight - 40);
+  w.style.left = Math.max(10, r.left - bw - 12) + 'px';
+  w.style.top = Math.max(10, Math.min(window.innerHeight - bh - 10, r.top - 20)) + 'px';
   rr();
+}
+function fkWahlZu() {
+  const w = document.getElementById('fkWahl');
+  if (w) w.style.display = 'none';
+  if (FK.wahl) {
+    FK.wahl = null;
+    rr();
+  }
 }
 /** Abweichung festlegen (Seite vk oder '*', Geschoss j oder '*'; k Gruppe, '' keine, null = Abweichung entfernen). */
 function fkAbweichung(vk, j, k) {
@@ -239,8 +302,8 @@ function fkCard(b) {
         w = FK.wahl && FK.wahl.bid === b.id && FK.wahl.i === i ? FK.wahl : null,
         // im Rhythmus kleinere Vorschau, damit mehrere Gruppen in eine Zeile passen
         bild = (k, s) =>
-          `<button class="fkb${w && w.s === s ? ' on' : ''}" onclick="fkWahlAuf(${i},${s})" title="${s === 0 ? 'Gruppe wählen' : 'Gruppe im Rhythmus wählen'}">${R.length > 1 ? sym(k, 34, 20) : sym(k)}</button>`;
-      let h = `<div class="fkz"><span class="fkl">${esc(lab)}</span><span style="display:flex;gap:3px;align-items:center;flex:none">${(R.length ? R : ['']).map((k, s) => bild(k, s)).join('')}${R.length ? `<button class="fkb" style="padding:4px 7px;line-height:1" onclick="fkWahlAuf(${i},${R.length})" title="Weitere Gruppe kombinieren (Rhythmus)">+</button>` : ''}</span><span class="fkn" title="${esc(R.map(name).join(' – '))}">${esc(R.length > 1 ? R.length + ' Gruppen im Wechsel' : name(R[0]))}</span><span class="fka">${[
+          `<button class="fkb${w && w.s === s ? ' on' : ''}" onclick="fkWahlAuf(${i},${s},this)" title="${s === 0 ? 'Gruppe wählen' : 'Gruppe im Rhythmus wählen'}">${R.length > 1 ? sym(k, 34, 20) : sym(k)}</button>`;
+      let h = `<div class="fkz"><span class="fkl">${esc(lab)}</span><span style="display:flex;gap:3px;align-items:center;flex:none">${(R.length ? R : ['']).map((k, s) => bild(k, s)).join('')}${R.length ? `<button class="fkb" style="padding:4px 7px;line-height:1" onclick="fkWahlAuf(${i},${R.length},this)" title="Weitere Gruppe kombinieren (Rhythmus)">+</button>` : ''}</span><span class="fkn" title="${esc(R.map(name).join(' – '))}">${esc(R.length > 1 ? R.length + ' Gruppen im Wechsel' : name(R[0]))}</span><span class="fka">${[
         ['l', '⇤', 'linksbündig'],
         ['m', '↔', 'mittig (Rest an beiden Enden)'],
         ['r', '⇥', 'rechtsbündig'],
@@ -252,17 +315,6 @@ function fkCard(b) {
         .join(
           '',
         )}</span><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
-      if (w) {
-        const cur = R[w.s];
-        h += `<div class="fkg">${S.oeg
-          .map(
-            (G) =>
-              `<div class="${G.k === cur ? 'on' : ''}" onclick="fkSetze(${i},'${G.k}',${w.s})">${oegSymbol(G, 56, 30)}${esc(G.n)}</div>`,
-          )
-          .join(
-            '',
-          )}${w.s < R.length ? `<div onclick="fkSetze(${i},'',${w.s})">${sym('')}${R.length > 1 ? 'Aus Rhythmus entfernen' : 'Keine'}</div>` : ''}<div onclick="okOpen(null,'gr')" title="Gruppen im Konfigurator anlegen">${sym('')}+ Gruppe …</div></div>`;
-      }
       return h;
     };
   let h = `<h4>Fassade</h4><div class="card fk"><div class="mu" style="font-size:11px;margin-bottom:6px">Öffnungsgruppen je Geschoss, ab Erdgeschoss – die oberste Zeile gilt für alle Geschosse darüber. Wird in allen Ansichten platziert.</div>`;
