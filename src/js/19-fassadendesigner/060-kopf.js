@@ -32,6 +32,8 @@ function fdTick(force) {
     S.oeg,
     FDS.gi,
     FDS.grT,
+    FDS.grAu,
+    b.fk || 0,
     S.bld.map((x) => x.id + x.name),
   ]);
   if (force || ps !== FDS.ps) {
@@ -95,7 +97,18 @@ function fdChrome(b, V, cur, F) {
       h = `<span class="mu">Setzen</span><select onchange="oeTypWahl(this.value)">${S.oet.map((x) => `<option value="${x.k}" ${x.k === FDS.oeT ? 'selected' : ''}>${esc(x.n)} · ${fdFmt(x.b)} × ${fdFmt(x.h)}</option>`).join('')}</select><button class="bt" onclick="okOpen(FDS.oeT,'oe')">Konfigurator …</button>`;
     } else if (FDS.tool === 'gr') {
       if (!FDS.grT || !oegG(FDS.grT)) FDS.grT = S.oeg.length ? S.oeg[0].k : null;
-      h = `<span class="mu">Setzen</span><select onchange="oegWahl(this.value)">${S.oeg.map((G) => `<option value="${G.k}" ${G.k === FDS.grT ? 'selected' : ''}>${esc(G.n)} · ${fdFmt(G.l)} m</option>`).join('')}</select>${FDS.sel.length ? '<button class="bt pri" onclick="oegFuellen()">Gewählte Felder füllen</button>' : ''}<button class="bt" onclick="okOpen(null,'gr')">Konfigurator …</button>`;
+      h = `<span class="mu">Setzen</span><select onchange="oegWahl(this.value)">${S.oeg.map((G) => `<option value="${G.k}" ${G.k === FDS.grT ? 'selected' : ''}>${esc(G.n)} · ${fdFmt(G.l)} m</option>`).join('')}</select><div class="seg" title="Ausrichtung der Gruppen auf dieser Seite (Füllen und Gebäudekonfigurator)">${[
+        ['l', '⇤ links'],
+        ['m', '↔ mittig'],
+        ['r', '⇥ rechts'],
+      ]
+        .map(
+          ([k, n]) =>
+            `<button class="${oegAusr(b, cur) === k ? 'on' : ''}" onclick="oegAusrSetzen('${k}')">${n}</button>`,
+        )
+        .join(
+          '',
+        )}</div>${FDS.sel.length ? '<button class="bt pri" onclick="oegFuellen()">Gewählte Felder füllen</button>' : ''}<button class="bt" onclick="okOpen(null,'gr')">Konfigurator …</button>`;
     }
     if (op.innerHTML !== h) op.innerHTML = h;
   }

@@ -1,6 +1,9 @@
 // ======================= GEBÄUDEKONFIGURATOR: FASSADENGRUPPEN JE GESCHOSS (wie in Forma/Spacio) =======================
 // Karte „Fassade“ im Gebäudepanel (Planen): Stapel von Öffnungsgruppen ab dem Erdgeschoss (b.fk.st, Index = Geschoss
-// über Gelände; die oberste Zeile gilt für alle Geschosse darüber), Abweichungen je Seite (Ansicht), je Geschoss oder
+// über Gelände; die oberste Zeile gilt für alle Geschosse darüber). Eine Zeile kann mehrere Gruppen als Rhythmus
+// kombinieren (Liste, z. B. ['g1', 'g2'] = A–B–A–B …; wiederholt über das Feld). Ausrichtung je Zeile in b.fk.au
+// ('l' linksbündig, 'm' mittig = Rest gleichmäßig an beiden Enden, 'r' rechtsbündig), je Gebäudeseite in b.fk.auS
+// (Vorrang vor der Zeile; auch im Fassadendesigner beim Werkzeug „Gruppe“ einstellbar), Abweichungen je Seite (Ansicht), je Geschoss oder
 // je Seite und Geschoss (b.fk.ab = { 'Ansicht|Geschoss': Gruppe, 'Ansicht|*': …, '*|Geschoss': … }; '' = keine).
 // fkSync() platziert die Gruppen automatisch in allen Fassadenfeldern aller Ansichten (Verweise mit a: 1 in
 // b.fd[Ansicht].gr – gleiche Daten wie im Fassadendesigner, daher in Ansicht, 3D und Grundriss sichtbar). Von Hand
@@ -19,7 +22,10 @@ const FKCSS = `.fk .fkz{display:flex;align-items:center;gap:8px;padding:4px 0}
 .fk .fkg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:6px 0;padding:8px;border:1px solid var(--ln);border-radius:10px;background:var(--pn,#fff);box-shadow:0 6px 20px #0002}
 .fk .fkg div{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1px solid var(--ln);border-radius:8px;cursor:pointer;font-size:10.5px;text-align:center;line-height:1.2}
 .fk .fkg div:hover{border-color:#5E7F92}.fk .fkg div.on{border-color:#1f6fd1;background:#1f6fd114}
-.fk select{width:100%}`;
+.fk select{width:100%}
+.fk .fka{display:flex;flex:none;border:1px solid var(--ln);border-radius:6px;overflow:hidden}
+.fk .fka button{border:0;background:transparent;padding:2px 5px;cursor:pointer;font-size:11px;color:var(--mu)}
+.fk .fka button.on{background:#5E7F92;color:#fff}`;
 
 /** Konfiguration eines Gebäudes (wird bei Bedarf angelegt). */
 function fkDaten(b, mk) {
@@ -32,7 +38,24 @@ function fkGeschosse(b) {
     u = ugN(b);
   return B.slice(0, -1).map((v0, j) => ({ j, name: lname(b, u + j), v0, v1: B[j + 1] }));
 }
-/** Gruppe für Ansicht vk und Geschoss j: Abweichung Seite+Geschoss → Seite → Geschoss → Stapel. */
+/** Ausrichtung für Seite vk und Geschoss j: Seite → Zeile des Stapels → mittig. */
+function fkAusr(fk, vk, j) {
+  const s = fk.auS && fk.auS[vk];
+  if (s) return s;
+  return (fk.au || [])[Math.min(j, Math.max(0, (fk.st || []).length - 1))] || 'm';
+}
+/** Ausrichtung je Gebäudeseite setzen ('' = wie Zeile). */
+function fkAusrSeite(b, vk, a) {
+  hist();
+  const fk = fkDaten(b, true);
+  fk.auS = fk.auS || {};
+  if (a === 'l' || a === 'm' || a === 'r') fk.auS[vk] = a;
+  else delete fk.auS[vk];
+  rr();
+}
+/** Eintrag als Liste von Gruppenschlüsseln (eine Gruppe oder Rhythmus mehrerer). */
+const fkReihe = (x) => (Array.isArray(x) ? x.filter(Boolean) : x ? [x] : []);
+/** Gruppe(n) für Ansicht vk und Geschoss j: Abweichung Seite+Geschoss → Seite → Geschoss → Stapel. */
 function fkGruppe(fk, vk, j) {
   const ab = fk.ab || {},
     k = [vk + '|' + j, vk + '|*', '*|' + j].find((q) => q in ab);
@@ -68,9 +91,12 @@ function fkAnwenden(b) {
     L.splice(0, L.length, ...hand);
     fdFaces(b, V).forEach((f) =>
       GS.forEach((gs) => {
-        const G = oegG(fkGruppe(fk, V.key, gs.j));
-        if (!G) return;
-        const r = fdBandU(f, gs.v0 + 0.05, Math.min(gs.v1, gs.v0 + G.h) - 0.05);
+        const R = fkReihe(fkGruppe(fk, V.key, gs.j))
+          .map(oegG)
+          .filter(Boolean);
+        if (!R.length) return;
+        const hMin = Math.min(...R.map((G) => G.h)),
+          r = fdBandU(f, gs.v0 + 0.05, Math.min(gs.v1, gs.v0 + hMin) - 0.05);
         if (!r || !grInFace(f, (r[0] + r[1]) / 2, gs.v0 + 0.5)) return;
         const [a, c] = r;
         // Bereiche mit von Hand gesetzten Gruppen bleiben unberührt
@@ -82,9 +108,22 @@ function fkAnwenden(b) {
           })
         )
           return;
-        const n = Math.floor((c - a + 1e-6) / G.l),
-          s = a + (c - a - n * G.l) / 2;
-        for (let i = 0; i < n; i++) L.push({ id: oegNeuId(), g: G.k, u: s + i * G.l, v: gs.v0, a: 1 });
+        // Rhythmus wiederholen, solange die nächste Gruppe noch passt; Rest gleichmäßig an beiden Enden
+        const folge = [];
+        let lang = 0;
+        for (let i = 0; i < 500; i++) {
+          const G = R[i % R.length];
+          if (lang + G.l > c - a + 1e-6) break;
+          folge.push(G);
+          lang += G.l;
+        }
+        const au = fkAusr(fk, V.key, gs.j),
+          rest = c - a - lang;
+        let u = au === 'l' ? a : au === 'r' ? a + rest : a + rest / 2;
+        folge.forEach((G) => {
+          L.push({ id: oegNeuId(), g: G.k, u, v: gs.v0, a: 1 });
+          u += G.l;
+        });
       }),
     );
     if (!L.length) {
@@ -110,26 +149,42 @@ function fkAendern(fn) {
   FK.wahl = null;
   rr();
 }
-/** Zeile i des Stapels auf Gruppe k setzen ('' = keine). */
-function fkSetze(i, k) {
+/** Platz s (Rhythmus) der Zeile i auf Gruppe k setzen; '' entfernt den Platz (bzw. „keine“, wenn es der letzte ist). */
+function fkSetze(i, k, s = 0) {
   fkAendern((fk) => {
-    fk.st[i] = oegG(k) ? k : '';
+    const R = fkReihe(fk.st[i]);
+    if (oegG(k)) R[s] = k;
+    else R.splice(s, 1);
+    fk.st[i] = R.length > 1 ? R : R[0] || '';
   });
 }
 /** Zeile über Zeile i einfügen (gleiche Gruppe), bzw. erste Zeile anlegen. */
 function fkNeu(i) {
   fkAendern((fk) => {
     const k = fk.st.length ? fk.st[Math.max(0, Math.min(i, fk.st.length - 1))] : S.oeg[0] ? S.oeg[0].k : '';
-    fk.st.splice(i + 1, 0, k);
+    fk.st.splice(i + 1, 0, Array.isArray(k) ? k.slice() : k);
+    fk.au = fk.au || [];
+    fk.au.splice(i + 1, 0, fk.au[i] || 'm');
   });
 }
 function fkLoeschen(i) {
-  fkAendern((fk) => fk.st.splice(i, 1));
+  fkAendern((fk) => {
+    fk.st.splice(i, 1);
+    if (fk.au) fk.au.splice(i, 1);
+  });
 }
-/** Gruppenauswahl für Zeile i öffnen/schließen. */
-function fkWahlAuf(i) {
+/** Ausrichtung der Zeile i: 'l' links, 'm' mittig, 'r' rechts. */
+function fkAusrichtung(i, a) {
+  fkAendern((fk) => {
+    fk.au = fk.au || [];
+    fk.au[i] = a === 'l' || a === 'r' ? a : 'm';
+  });
+}
+/** Gruppenauswahl für Platz s der Zeile i öffnen/schließen (s = Länge der Folge: neue Gruppe anhängen). */
+function fkWahlAuf(i, s = 0) {
   const b = S.sel;
-  FK.wahl = FK.wahl && FK.wahl.i === i && FK.wahl.bid === b.id ? null : { bid: b.id, i };
+  FK.wahl =
+    FK.wahl && FK.wahl.i === i && FK.wahl.s === s && FK.wahl.bid === b.id ? null : { bid: b.id, i, s };
   rr();
 }
 /** Abweichung festlegen (Seite vk oder '*', Geschoss j oder '*'; k Gruppe, '' keine, null = Abweichung entfernen). */
@@ -169,28 +224,45 @@ function fkCard(b) {
   const fk = fkDaten(b) || { st: [], ab: {} },
     st = fk.st,
     name = (k) => (oegG(k) ? oegG(k).n : '— keine —'),
-    sym = (k) =>
+    sym = (k, w = 56, hh = 30) =>
       oegG(k)
-        ? oegSymbol(oegG(k), 56, 30)
-        : '<svg width="56" height="30"><rect x="1" y="1" width="54" height="28" fill="#f4f3f0" stroke="#cbd5e1"/></svg>',
+        ? oegSymbol(oegG(k), w, hh)
+        : `<svg width="${w}" height="${hh}"><rect x="1" y="1" width="${w - 2}" height="${hh - 2}" fill="#f4f3f0" stroke="#cbd5e1"/></svg>`,
     zeile = (i) => {
       const bis = i === st.length - 1,
+        R = fkReihe(st[i]),
         lab = GS[i]
           ? bis && i < GS.length - 1
             ? 'ab ' + GS[i].name
             : GS[i].name
           : 'ab ' + (GS[GS.length - 1] || {}).name,
-        offen = FK.wahl && FK.wahl.bid === b.id && FK.wahl.i === i;
-      let h = `<div class="fkz"><span class="fkl">${esc(lab)}</span><button class="fkb${offen ? ' on' : ''}" onclick="fkWahlAuf(${i})" title="Gruppe wählen">${sym(st[i])}</button><span class="fkn">${esc(name(st[i]))}</span><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
-      if (offen)
+        w = FK.wahl && FK.wahl.bid === b.id && FK.wahl.i === i ? FK.wahl : null,
+        // im Rhythmus kleinere Vorschau, damit mehrere Gruppen in eine Zeile passen
+        bild = (k, s) =>
+          `<button class="fkb${w && w.s === s ? ' on' : ''}" onclick="fkWahlAuf(${i},${s})" title="${s === 0 ? 'Gruppe wählen' : 'Gruppe im Rhythmus wählen'}">${R.length > 1 ? sym(k, 34, 20) : sym(k)}</button>`;
+      let h = `<div class="fkz"><span class="fkl">${esc(lab)}</span><span style="display:flex;gap:3px;align-items:center;flex:none">${(R.length ? R : ['']).map((k, s) => bild(k, s)).join('')}${R.length ? `<button class="fkb" style="padding:4px 7px;line-height:1" onclick="fkWahlAuf(${i},${R.length})" title="Weitere Gruppe kombinieren (Rhythmus)">+</button>` : ''}</span><span class="fkn" title="${esc(R.map(name).join(' – '))}">${esc(R.length > 1 ? R.length + ' Gruppen im Wechsel' : name(R[0]))}</span><span class="fka">${[
+        ['l', '⇤', 'linksbündig'],
+        ['m', '↔', 'mittig (Rest an beiden Enden)'],
+        ['r', '⇥', 'rechtsbündig'],
+      ]
+        .map(
+          ([k, z, tt]) =>
+            `<button class="${((fk.au || [])[i] || 'm') === k ? 'on' : ''}" onclick="fkAusrichtung(${i},'${k}')" title="${tt}">${z}</button>`,
+        )
+        .join(
+          '',
+        )}</span><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
+      if (w) {
+        const cur = R[w.s];
         h += `<div class="fkg">${S.oeg
           .map(
             (G) =>
-              `<div class="${G.k === st[i] ? 'on' : ''}" onclick="fkSetze(${i},'${G.k}')">${oegSymbol(G, 56, 30)}${esc(G.n)}</div>`,
+              `<div class="${G.k === cur ? 'on' : ''}" onclick="fkSetze(${i},'${G.k}',${w.s})">${oegSymbol(G, 56, 30)}${esc(G.n)}</div>`,
           )
           .join(
             '',
-          )}<div class="${!st[i] ? 'on' : ''}" onclick="fkSetze(${i},'')">${sym('')}Keine</div><div onclick="okOpen(null,'gr')" title="Gruppen im Konfigurator anlegen">${sym('')}+ Gruppe …</div></div>`;
+          )}${w.s < R.length ? `<div onclick="fkSetze(${i},'',${w.s})">${sym('')}${R.length > 1 ? 'Aus Rhythmus entfernen' : 'Keine'}</div>` : ''}<div onclick="okOpen(null,'gr')" title="Gruppen im Konfigurator anlegen">${sym('')}+ Gruppe …</div></div>`;
+      }
       return h;
     };
   let h = `<h4>Fassade</h4><div class="card fk"><div class="mu" style="font-size:11px;margin-bottom:6px">Öffnungsgruppen je Geschoss, ab Erdgeschoss – die oberste Zeile gilt für alle Geschosse darüber. Wird in allen Ansichten platziert.</div>`;
@@ -220,6 +292,23 @@ function fkCard(b) {
         return `<div class="fkz"><span class="fkn">${esc(seite(vk))} · ${esc(gesch(j))}: <b>${esc(name(ab[k]))}</b></span><button class="fkx" onclick="fkAbweichung('${vk}','${j}',null)" title="Abweichung entfernen">×</button></div>`;
       })
       .join('');
+  if (st.length)
+    h +=
+      `<div class="mu" style="font-size:11px;margin:10px 0 4px">Ausrichtung je Seite</div>` +
+      V.map((v) => {
+        const cur = (fk.auS || {})[v.key] || '';
+        return `<div class="fkz"><span class="fkn">${esc(v.name.replace('Ansicht ', ''))}</span><span class="fka">${[
+          ['', 'wie Zeile', 'Ausrichtung der Zeile'],
+          ['l', '⇤', 'linksbündig'],
+          ['m', '↔', 'mittig'],
+          ['r', '⇥', 'rechtsbündig'],
+        ]
+          .map(
+            ([k, z, tt]) =>
+              `<button class="${cur === k ? 'on' : ''}" onclick="fkAusrSeite(S.sel,'${v.key}','${k}')" title="${tt}">${z}</button>`,
+          )
+          .join('')}</span></div>`;
+      }).join('');
   h += `<div style="display:flex;gap:4px;margin-top:8px"><button class="sm" style="flex:1" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner</button><button class="sm" style="flex:1" onclick="okOpen(null,'gr')">Gruppen …</button></div></div>`;
   return h;
 }

@@ -329,13 +329,38 @@ function oegFuellen() {
             m = L[i].u + (H ? H.l : 0) / 2;
           if (Math.abs(L[i].v - v0) < 0.01 && m >= a && m <= c) L.splice(i, 1);
         }
-        const s = a + (c - a - k * G.l) / 2;
+        const au = oegAusr(b, V),
+          rest = c - a - k * G.l,
+          s = au === 'l' ? a : au === 'r' ? a + rest : a + rest / 2;
         for (let i = 0; i < k; i++) L.push({ id: oegNeuId(), g: G.k, u: s + i * G.l, v: v0 });
         n += k;
       }
     });
   });
   fdNote(n ? `${n}× „${G.n}“ gesetzt.` : `Felder zu schmal für „${G.n}“ (${fdFmt(G.l)} m).`);
+}
+/** Ausrichtung beim Füllen dieser Seite: Einstellung der Seite im Gebäudekonfigurator, sonst die zuletzt gewählte. */
+function oegAusr(b, V) {
+  const s = b && V && b.fk && b.fk.auS && b.fk.auS[V.key];
+  return s || FDS.grAu || 'm';
+}
+/** Ausrichtung im Fassadendesigner wählen: gilt fürs Füllen und – bei Gebäudekonfiguration – für diese Seite. */
+function oegAusrSetzen(a) {
+  const b = fdB(),
+    V = fdCurV();
+  FDS.grAu = a;
+  if (b && V && b.fk) {
+    hist();
+    b.fk.auS = b.fk.auS || {};
+    b.fk.auS[V.key] = a;
+  }
+  FDS.ps = '';
+  fdTick(true);
+  try {
+    rr();
+  } catch (e) {
+    logErr(e, 'oegAusrSetzen');
+  }
 }
 /** Gewählten Verweis auf eine andere Gruppe umstellen (alle = alle Verweise dieser Gruppe in der Ansicht). */
 function oegTauschen(k, alle) {
