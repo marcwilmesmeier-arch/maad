@@ -2,7 +2,8 @@
 // Die Öffnungen des Fassadendesigners (oeListe, 19-fassadendesigner/090-oeffnungen.js) werden in Weltkoordinaten
 // umgerechnet und den Außenwänden zugeordnet (gleiche Lage, gleiche Höhe). Die Wand wird entlang ihrer Achse in Streifen
 // geteilt: neben den Öffnungen voll, im Bereich einer Öffnung nur Brüstung und Sturz – so entstehen echte Laibungen.
-// In die Öffnung kommen Rahmen mit Flügelteilung, Glas bzw. Türblatt und außen eine Fensterbank.
+// In die Öffnung kommen Rahmen und Einteilung (oeAufteilung, wie in der Ansicht), Glas mit Sprossen bzw. Paneel und
+// außen eine Fensterbank.
 // Nur in LOD 200 (l2MeshOrig); LOD 100 zeigt keine Öffnungen.
 
 /** Öffnungen eines Gebäudes in Weltkoordinaten (zwischengespeichert, solange sich Form und Öffnungen nicht ändern). */
@@ -130,9 +131,7 @@ function oeWandOeffnungen(e) {
 /** Kennung für den Neuaufbau einer Wand in l2Sync (ändert sich mit ihren Öffnungen). */
 function oeWandSig(e) {
   const O = oeWandOeffnungen(e);
-  return O.length
-    ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T.k, o.T.b, o.T.h, o.T.fl, o.T.ol, o.T.et, o.T.rf, o.T.a])
-    : 0;
+  return O.length ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T]) : 0;
 }
 /** Vieleck auf den Achsbereich t ∈ [a, c] beschneiden (Sutherland-Hodgman, zwei Halbebenen). */
 function oeSchneide(P, d, a, c) {
@@ -225,41 +224,42 @@ function oeKoerper(O) {
   O.forEach((o) => {
     const T_ = o.T,
       A = o.A,
-      pb = Math.min(T_.pb, (o.t1 - o.t0) / 4, (o.y1 - o.y0) / 4),
       tief = 0.08,
       sV = A.sA - Math.min(T_.et, Math.max(0, A.sA - A.sI - tief)),
       sH = sV - tief,
+      sm = (sH + sV) / 2,
       R = feld(T_.rf),
-      { t0, t1, y0 } = o,
-      y1 = o.y1;
-    // Blendrahmen
-    quader(R, A, t0, t0 + pb, y0, y1, sH, sV);
-    quader(R, A, t1 - pb, t1, y0, y1, sH, sV);
-    quader(R, A, t0 + pb, t1 - pb, y1 - pb, y1, sH, sV);
-    if (T_.a !== 'tu' && T_.a !== 'to') quader(R, A, t0 + pb, t1 - pb, y0, y0 + pb, sH, sV);
-    // Oberlicht (Kämpfer) und Flügel
-    const ol = T_.ol > 0 && T_.a !== 'to' && o.voll ? Math.min(T_.ol, y1 - y0 - 3 * pb) : 0,
-      yk = y1 - pb - ol;
-    if (ol > 0) quader(R, A, t0 + pb, t1 - pb, yk - pb, yk, sH, sV);
-    const n = T_.a === 'to' ? 1 : Math.max(1, T_.fl),
-      w = (t1 - t0 - pb * (n + 1)) / n,
-      fu = T_.a === 'tu' || T_.a === 'to' ? y0 : y0 + pb,
-      fo = ol > 0 ? yk - pb : y1 - pb;
-    for (let i = 1; i < n; i++) {
-      const tm = t0 + pb + i * (w + pb);
-      quader(R, A, tm - pb, tm, fu, fo, sH, sV);
-    }
-    const sm = (sH + sV) / 2,
-      fuell = T_.a === 'tu' ? feld('#b9a891') : T_.a === 'to' ? feld('#c6cbd0') : feld('glas');
-    for (let i = 0; i < n; i++) {
-      const fa = t0 + pb + i * (w + pb);
-      if (T_.a === 'tu' || T_.a === 'to') quader(fuell, A, fa, fa + w, fu, fo, sm - 0.025, sm + 0.025);
-      else quader(fuell, A, fa, fa + w, fu, fo, sm - 0.005, sm + 0.005);
-    }
-    if (ol > 0) quader(feld('glas'), A, t0 + pb, t1 - pb, yk, y1 - pb, sm - 0.005, sm + 0.005);
+      L = oeAufteilung(T_),
+      // Öffnung oben von der Wand abgeschnitten (über die Geschosshöhe): Einteilung senkrecht stauchen
+      ky = Math.min(1, (o.y1 - o.y0) / T_.h),
+      Tt = (x) => o.t0 + x * ((o.t1 - o.t0) / T_.b),
+      Yy = (y) => o.y0 + y * ky;
+    L.stege.forEach(([a, c, d, e]) => quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), sH, sV));
+    L.felder.forEach((f) => {
+      const x0 = Tt(f.x0),
+        x1 = Tt(f.x1),
+        y0 = Yy(f.y0),
+        y1 = Yy(f.y1);
+      if (T_.a === 'to' || f.fu === 'p')
+        quader(feld(T_.a === 'to' ? '#c6cbd0' : '#b9a891'), A, x0, x1, y0, y1, sm - 0.025, sm + 0.025);
+      else {
+        quader(feld('glas'), A, x0, x1, y0, y1, sm - 0.005, sm + 0.005);
+        // Sprossen vor dem Glas
+        const sr = f.sr || [0, 0],
+          sb = 0.025;
+        for (let i = 1; i <= sr[0]; i++) {
+          const y = y0 + ((y1 - y0) * i) / (sr[0] + 1);
+          quader(R, A, x0, x1, y - sb / 2, y + sb / 2, sm, sV);
+        }
+        for (let i = 1; i <= sr[1]; i++) {
+          const x = x0 + ((x1 - x0) * i) / (sr[1] + 1);
+          quader(R, A, x - sb / 2, x + sb / 2, y0, y1, sm, sV);
+        }
+      }
+    });
     // Fensterbank außen
-    if (y0 > 0.05 && T_.a === 'fe')
-      quader(feld('#c9c6bf'), A, t0 - 0.02, t1 + 0.02, y0 - 0.03, y0, sV, A.sA + 0.05);
+    if (o.y0 > 0.05 && T_.a === 'fe')
+      quader(feld('#c9c6bf'), A, o.t0 - 0.02, o.t1 + 0.02, o.y0 - 0.03, o.y0, sV, A.sA + 0.05);
   });
   teile.forEach((pos, farbe) => {
     const ge = new T.BufferGeometry();

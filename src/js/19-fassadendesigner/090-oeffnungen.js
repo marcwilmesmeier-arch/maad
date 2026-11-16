@@ -1,6 +1,7 @@
 // ======================= ÖFFNUNGEN: FENSTER UND TÜREN (Fassadendesigner) =======================
-// 1. Öffnungstypen (S.oet): Katalog mit Art, Maßen, Brüstung, Teilung, Öffnungsart und Rahmen – im Fassadendesigner
-//    unter „Öffnungen → Typen bearbeiten“ einstellbar (Konfigurator), mit dem Projekt gespeichert.
+// 1. Öffnungstypen (S.oet): Katalog mit Art, Maßen, Brüstung, Einteilung (Flügel mit Breite, Öffnungsart, Anschlag und
+//    Füllung; Oberlicht, Unterlicht, Sprossen) und Rahmen – bearbeitet im Konfigurator (095-konfigurator.js), mit dem
+//    Projekt gespeichert. oeAufteilung() rechnet die Einteilung für Ansicht, Symbol und 3D einheitlich aus.
 // 2. Öffnungen je Gebäude und Ansicht in b.fd[Ansicht].oe = [{ id, t, u, v, q }] (Ansichtskoordinaten wie die Felder):
 //    u = Mitte der Öffnung entlang der Ansicht, v = Unterkante über dem Gebäudesockel (oberirdisch), q = Herkunft.
 //    Heute nur q = 'frei' (von Hand gesetzt). Später platziert ein Konfigurator Öffnungsgruppen automatisch: deren
@@ -10,8 +11,10 @@
 
 const OE_ARTEN = { fe: 'Fenster', ft: 'Fenstertür', tu: 'Tür', fv: 'Festverglasung', to: 'Tor' };
 const OE_OEFFNUNG = { dk: 'Dreh-Kipp', d: 'Dreh', k: 'Kipp', f: 'Fest', s: 'Schiebe' };
-// k Schlüssel, n Name, a Art, b Breite, h Höhe, br Brüstung (Vorgabe beim Setzen), fl Flügel, ol Oberlicht (Höhe, 0 =
-// ohne), oa Öffnungsart, rf Rahmenfarbe, pb Profilbreite, et Einbautiefe von der Außenseite (alle Maße in m)
+// k Schlüssel, n Name, a Art, b Breite, h Höhe, br Brüstung (Vorgabe beim Setzen), rf Rahmenfarbe, pb Profilbreite,
+// et Einbautiefe von der Außenseite (alle Maße in m). Einteilung: sp Flügel [{ w Anteil, oa Öffnungsart, an Anschlag
+// 'l'/'r', fu Füllung 'g' Glas / 'p' Paneel }], ol Oberlicht (Höhe, 0 = ohne) mit olOa, ul Unterlicht mit ulFu,
+// sr Sprossen [waagerecht, senkrecht] je Flügel. Ältere Typen ohne sp: fl (Anzahl) und oa (für alle Flügel).
 const OET0 = [
   {
     k: 'f1',
@@ -115,6 +118,65 @@ const OET0 = [
 S.oet = JSON.parse(JSON.stringify(OET0));
 const oeT = (k) => S.oet.find((t) => t.k === k) || S.oet[0];
 const OE_RASTER = 0.05; // Fangraster beim Setzen und Verschieben (m)
+const OE_FUELL = { g: 'Glas', p: 'Paneel' };
+const oeTuer = (T) => T.a === 'tu' || T.a === 'to';
+
+/** Flügel eines Typs (aus sp oder, bei älteren Typen, aus Anzahl fl und Öffnungsart oa). */
+function oeSpalten(T) {
+  if (Array.isArray(T.sp) && T.sp.length) return T.sp;
+  const n = T.a === 'to' ? 1 : Math.max(1, Math.round(T.fl || 1));
+  return Array.from({ length: n }, (_, i) => ({
+    w: 1,
+    oa: T.oa || 'f',
+    an: n === 1 ? (T.a === 'tu' ? 'r' : 'l') : i < n / 2 ? 'l' : 'r',
+    fu: oeTuer(T) ? 'p' : 'g',
+  }));
+}
+/**
+ * Einteilung eines Typs in lokalen Maßen (m, Ursprung unten links): Stege (Rahmen, Pfosten, Riegel) und Felder.
+ * Felder: { x0, x1, y0, y1, oa, an, fu, i (Flügelnummer oder 'ol'/'ul'), sr (Sprossen) }.
+ */
+function oeAufteilung(T) {
+  const b = T.b,
+    h = T.h,
+    pb = Math.max(0.02, Math.min(T.pb || 0.07, b / 6, h / 6)),
+    stege = [],
+    felder = [],
+    tuer = oeTuer(T);
+  stege.push([0, pb, 0, h], [b - pb, b, 0, h], [pb, b - pb, h - pb, h]);
+  if (!tuer) stege.push([pb, b - pb, 0, pb]);
+  let yb = tuer ? 0 : pb,
+    yt = h - pb;
+  const ul = T.ul > 0 && T.a !== 'to' ? Math.min(T.ul, yt - yb - 0.3 - pb) : 0;
+  if (ul > 0.05) {
+    felder.push({ x0: pb, x1: b - pb, y0: yb, y1: yb + ul, oa: 'f', an: 'l', fu: T.ulFu || 'p', i: 'ul' });
+    stege.push([pb, b - pb, yb + ul, yb + ul + pb]);
+    yb += ul + pb;
+  }
+  const ol = T.ol > 0 && T.a !== 'to' ? Math.min(T.ol, yt - yb - 0.3 - pb) : 0;
+  if (ol > 0.05) {
+    felder.push({ x0: pb, x1: b - pb, y0: yt - ol, y1: yt, oa: T.olOa || 'f', an: 'l', fu: 'g', i: 'ol' });
+    stege.push([pb, b - pb, yt - ol - pb, yt - ol]);
+    yt -= ol + pb;
+  }
+  const SP = oeSpalten(T),
+    n = SP.length,
+    innen = b - 2 * pb - (n - 1) * pb,
+    sw = SP.reduce((s, c) => s + (c.w > 0 ? c.w : 1), 0) || 1;
+  let x = pb;
+  SP.forEach((c, i) => {
+    const w = (innen * (c.w > 0 ? c.w : 1)) / sw;
+    felder.push({ x0: x, x1: x + w, y0: yb, y1: yt, oa: c.oa, an: c.an, fu: c.fu || 'g', i, sr: T.sr });
+    x += w;
+    if (i < n - 1) {
+      stege.push([x, x + pb, yb, yt]);
+      x += pb;
+    }
+  });
+  return { pb, stege, felder };
+}
+/** Füllfarbe eines Feldes in der Ansicht. */
+const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? '#b9a891' : '#cfe1ee');
 
 /** Gespeicherte Öffnungen einer Ansicht (Liste wird bei Bedarf angelegt). */
 function oeDaten(b, vk, mk) {
@@ -242,31 +304,16 @@ function oeTypWahl(k) {
   fdTick(true);
 }
 // ---- Konfigurator: Öffnungstypen
-function oeTypSet(k, f, v) {
-  const T = S.oet.find((t) => t.k === k);
-  if (!T) return;
-  hist();
-  if (f === 'n' || f === 'a' || f === 'oa' || f === 'rf') T[f] = String(v).slice(0, 60);
-  else {
-    const n = +String(v).replace(',', '.');
-    if (!isFinite(n)) return;
-    const lim = {
-      b: [0.3, 8],
-      h: [0.3, 6],
-      br: [0, 3],
-      fl: [1, 6],
-      ol: [0, 1.5],
-      pb: [0.03, 0.2],
-      et: [0, 0.4],
-    }[f];
-    if (!lim) return;
-    T[f] =
-      f === 'fl' ? Math.round(Math.max(lim[0], Math.min(lim[1], n))) : Math.max(lim[0], Math.min(lim[1], n));
-    if (f === 'ol' || f === 'h') T.ol = Math.min(T.ol, Math.max(0, T.h - 0.5));
-  }
+/** Fassadendesigner und Konfigurator nach einer Änderung am Katalog neu zeichnen. */
+function oeAktualisieren() {
   FDS.ps = '';
   FDS.dirty = 1;
-  fdTick(true);
+  try {
+    if (FDS.open) fdTick(true);
+    okRender();
+  } catch (e) {
+    logErr(e, 'oeAktualisieren');
+  }
 }
 function oeTypNeu() {
   const v = oeT(FDS.oeT),
@@ -274,8 +321,7 @@ function oeTypNeu() {
   hist();
   S.oet.push({ ...JSON.parse(JSON.stringify(v)), k, n: v.n + ' (Kopie)' });
   FDS.oeT = k;
-  FDS.ps = '';
-  fdTick(true);
+  oeAktualisieren();
 }
 function oeTypLoeschen(k) {
   if (S.oet.length < 2) return;
@@ -294,8 +340,7 @@ function oeTypLoeschen(k) {
     }),
   );
   if (FDS.oeT === k) FDS.oeT = S.oet[0].k;
-  FDS.ps = '';
-  fdTick(true);
+  oeAktualisieren();
 }
 
 // ---- Eingabe (aus 050-eingabe.js)
@@ -381,77 +426,99 @@ function oeUp() {
 }
 
 // ---- Zeichnen (aus 040-fang.js)
-/** Eine Öffnung in Ansichtsdarstellung: Rahmen, Glas bzw. Türblatt, Flügelteilung, Öffnungssymbole. */
+/** Eine Öffnung in Ansichtsdarstellung: Rahmen, Glas bzw. Paneel, Einteilung, Sprossen, Öffnungssymbole. */
 function oeZeichneEine(g, X, Y, u0, u1, v0, T, o) {
-  const s = Math.abs(X(1) - X(0)),
+  const A = oeAufteilung(T),
     x0 = X(u0),
     x1 = X(u1),
     yb = Y(v0),
     yt = Y(v0 + T.h),
-    pb = Math.max(1, T.pb * s);
+    PX = (x) => X(u0 + x),
+    PY = (y) => Y(v0 + y);
   g.save();
   g.globalAlpha = o.alpha || 1;
   g.fillStyle = T.rf;
-  g.fillRect(x0, yt, x1 - x0, yb - yt);
-  const glas = T.a === 'tu' ? '#b9a891' : T.a === 'to' ? '#c6cbd0' : '#cfe1ee',
-    oy = T.ol > 0 && T.a !== 'to' ? T.ol * s : 0,
-    n = T.a === 'to' ? 1 : Math.max(1, T.fl),
-    w = (x1 - x0 - pb * (n + 1)) / n,
-    hf = yb - yt - pb * (oy ? 3 : 2) - oy;
-  // Oberlicht
-  if (oy) {
-    g.fillStyle = '#d7e6f1';
-    g.fillRect(x0 + pb, yt + pb, x1 - x0 - 2 * pb, oy);
-  }
-  for (let i = 0; i < n; i++) {
-    const fx = x0 + pb + i * (w + pb),
-      fy = yt + pb + (oy ? oy + pb : 0);
-    g.fillStyle = glas;
+  A.stege.forEach(([a, c, d, e]) => g.fillRect(PX(a), PY(e), PX(c) - PX(a), PY(d) - PY(e)));
+  A.felder.forEach((f) => {
+    const fx = PX(f.x0),
+      fy = PY(f.y1),
+      w = PX(f.x1) - fx,
+      hf = PY(f.y0) - fy;
+    g.fillStyle = oeFeldFarbe(T, f);
     g.fillRect(fx, fy, w, hf);
+    g.strokeStyle = T.rf;
+    g.lineWidth = 0.6;
+    g.strokeRect(fx, fy, w, hf);
     if (T.a === 'to') {
+      const k = Math.max(2, Math.floor(T.h / 0.5));
       g.strokeStyle = '#8f969d';
       g.lineWidth = 1;
-      for (let k = 1; k < Math.floor(T.h / 0.5); k++) {
-        const y = fy + (hf * k) / Math.floor(T.h / 0.5);
+      for (let i = 1; i < k; i++) {
         g.beginPath();
-        g.moveTo(fx, y);
-        g.lineTo(fx + w, y);
+        g.moveTo(fx, fy + (hf * i) / k);
+        g.lineTo(fx + w, fy + (hf * i) / k);
         g.stroke();
       }
     }
-    // Öffnungssymbol: Spitze zur Bandseite (Dreh), zur Unterkante (Kipp)
-    if ((T.oa === 'd' || T.oa === 'dk' || T.oa === 'k') && w > 6 && hf > 6) {
-      const links = n === 1 ? T.a !== 'tu' : i < n / 2;
-      g.strokeStyle = '#3b3f44';
-      g.lineWidth = 0.8;
-      g.setLineDash([3, 2]);
+    // Sprossen
+    if (f.sr && f.fu === 'g' && (f.sr[0] > 0 || f.sr[1] > 0)) {
+      g.strokeStyle = T.rf;
+      g.lineWidth = Math.max(1, Math.abs(X(0.025) - X(0)));
       g.beginPath();
-      if (T.oa !== 'k') {
-        const ax = links ? fx : fx + w,
-          bx = links ? fx + w : fx;
-        g.moveTo(bx, fy);
-        g.lineTo(ax, fy + hf / 2);
-        g.lineTo(bx, fy + hf);
+      for (let i = 1; i <= f.sr[0]; i++) {
+        const y = fy + (hf * i) / (f.sr[0] + 1);
+        g.moveTo(fx, y);
+        g.lineTo(fx + w, y);
       }
-      if (T.oa !== 'd') {
-        g.moveTo(fx, fy);
-        g.lineTo(fx + w / 2, fy + hf);
-        g.lineTo(fx + w, fy);
+      for (let i = 1; i <= f.sr[1]; i++) {
+        const xx = fx + (w * i) / (f.sr[1] + 1);
+        g.moveTo(xx, fy);
+        g.lineTo(xx, fy + hf);
       }
-      g.stroke();
-      g.setLineDash([]);
-    } else if (T.oa === 's' && w > 10) {
-      g.strokeStyle = '#3b3f44';
-      g.lineWidth = 1;
-      const y = fy + hf / 2,
-        r = i % 2 ? -1 : 1;
-      g.beginPath();
-      g.moveTo(fx + w * 0.3, y);
-      g.lineTo(fx + w * 0.7, y);
-      g.lineTo(fx + w * 0.7 - 5 * r, y - 4);
       g.stroke();
     }
-  }
+    // Öffnungssymbol: Spitze zur Bandseite (Dreh), zur Unterkante (Kipp); Schiebe: Pfeil
+    if (w > 6 && hf > 6) {
+      g.strokeStyle = '#3b3f44';
+      g.lineWidth = 0.8;
+      if (f.oa === 'd' || f.oa === 'dk' || f.oa === 'k') {
+        g.setLineDash([3, 2]);
+        g.beginPath();
+        if (f.oa !== 'k') {
+          const ax = f.an === 'r' ? fx + w : fx,
+            bx = f.an === 'r' ? fx : fx + w;
+          g.moveTo(bx, fy);
+          g.lineTo(ax, fy + hf / 2);
+          g.lineTo(bx, fy + hf);
+        }
+        if (f.oa !== 'd') {
+          g.moveTo(fx, fy);
+          g.lineTo(fx + w / 2, fy + hf);
+          g.lineTo(fx + w, fy);
+        }
+        g.stroke();
+        g.setLineDash([]);
+      } else if (f.oa === 's' && w > 10) {
+        const y = fy + hf / 2,
+          r = f.an === 'r' ? -1 : 1,
+          xa = fx + w * (r > 0 ? 0.3 : 0.7),
+          xe = fx + w * (r > 0 ? 0.7 : 0.3);
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(xa, y);
+        g.lineTo(xe, y);
+        g.lineTo(xe - 5 * r, y - 4);
+        g.moveTo(xe, y);
+        g.lineTo(xe - 5 * r, y + 4);
+        g.stroke();
+      }
+    }
+    if (o.feld === f.i) {
+      g.strokeStyle = '#1f6fd1';
+      g.lineWidth = 2.5;
+      g.strokeRect(fx + 1, fy + 1, w - 2, hf - 2);
+    }
+  });
   if (o.sel) {
     g.strokeStyle = '#1f6fd1';
     g.lineWidth = 2.5;
@@ -509,20 +576,20 @@ const OECSS = `#fdDock input[type=number]{border:1px solid var(--ln,#dcdcdc);bor
 #fdDock .oeg input[type=number],#fdDock .oeg select,#fdDock .oeg input[type=text]{width:100%}
 #fdDock .oeg input[type=color]{width:100%;height:24px;padding:0;border:1px solid var(--ln,#dcdcdc);border-radius:4px;background:none}
 #fdDock .ft svg{flex:none}`;
-/** Kleines Symbol des Typs für Listen. */
-function oeSymbol(T) {
-  const w = 22,
-    h = 18,
+/** Kleines Symbol des Typs für Listen (Einteilung wie in der Ansicht). */
+function oeSymbol(T, w = 22, h = 18) {
+  const A = oeAufteilung(T),
     k = Math.min(w / T.b, h / T.h),
-    bw = T.b * k,
-    bh = T.h * k,
-    x = (w - bw) / 2,
-    y = h - bh,
-    n = T.a === 'to' ? 1 : Math.max(1, T.fl),
-    fill = T.a === 'tu' ? '#b9a891' : T.a === 'to' ? '#c6cbd0' : '#cfe1ee';
-  let s = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${fill}" stroke="${T.rf}" stroke-width="1.6"/>`;
-  for (let i = 1; i < n; i++)
-    s += `<line x1="${x + (bw * i) / n}" y1="${y}" x2="${x + (bw * i) / n}" y2="${h}" stroke="${T.rf}" stroke-width="1"/>`;
+    ox = (w - T.b * k) / 2,
+    X = (x) => ox + x * k,
+    Y = (y) => h - y * k;
+  let s = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`;
+  A.felder.forEach((f) => {
+    s += `<rect x="${X(f.x0)}" y="${Y(f.y1)}" width="${(f.x1 - f.x0) * k}" height="${(f.y1 - f.y0) * k}" fill="${oeFeldFarbe(T, f)}"/>`;
+  });
+  A.stege.forEach(([a, c, d, e]) => {
+    s += `<rect x="${X(a)}" y="${Y(e)}" width="${Math.max(0.8, (c - a) * k)}" height="${Math.max(0.8, (e - d) * k)}" fill="${T.rf}"/>`;
+  });
   return s + '</svg>';
 }
 /** Abschnitt „Öffnungen“ der Seitenleiste: Typen zum Setzen, Konfigurator, gewählte Öffnung, Bilanz. */
@@ -543,25 +610,7 @@ function oePanelHtml(b, V) {
     ),
   );
   let h = `<h4>Öffnungen ${FDS.tool === 'oe' ? '· Typ wählen, in die Ansicht klicken' : ''}</h4>`;
-  if (FDS.oeMng) {
-    const T = oeT(FDS.oeT),
-      ts = (f, v, lim) =>
-        `<input type="number" step="${lim || 0.01}" value="${+(+v).toFixed(3)}" onchange="oeTypSet('${T.k}','${f}',this.value)">`;
-    h += `<div class="fe"><select style="flex:1" onchange="FDS.oeT=this.value;FDS.ps='';fdTick(true)">${S.oet.map((t) => `<option value="${t.k}" ${t.k === T.k ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select></div>
-<div class="oeg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="oeTypSet('${T.k}','n',this.value)">
-<span>Art</span><select onchange="oeTypSet('${T.k}','a',this.value)">${Object.keys(OE_ARTEN)
-      .map((k) => `<option value="${k}" ${T.a === k ? 'selected' : ''}>${OE_ARTEN[k]}</option>`)
-      .join('')}</select>
-<span>Breite (m)</span>${ts('b', T.b)}<span>Höhe (m)</span>${ts('h', T.h)}<span>Brüstung (m)</span>${ts('br', T.br)}
-<span>Flügel</span>${ts('fl', T.fl, 1)}<span>Oberlicht (m, 0 = ohne)</span>${ts('ol', T.ol)}
-<span>Öffnungsart</span><select onchange="oeTypSet('${T.k}','oa',this.value)">${Object.keys(OE_OEFFNUNG)
-      .map((k) => `<option value="${k}" ${T.oa === k ? 'selected' : ''}>${OE_OEFFNUNG[k]}</option>`)
-      .join('')}</select>
-<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="oeTypSet('${T.k}','rf',this.value)">
-<span>Profilbreite (m)</span>${ts('pb', T.pb)}<span>Einbautiefe von außen (m)</span>${ts('et', T.et)}</div>
-<div class="mu">Fläche ${fdFmt(T.b * T.h)} m² · ${zahl[T.k] || 0}× im Projekt. Änderungen gelten für alle Öffnungen dieses Typs.</div>
-<div style="margin-top:6px"><button onclick="oeTypNeu()">+ Kopie als neuer Typ</button> ${S.oet.length > 1 ? `<button onclick="oeTypLoeschen('${T.k}')">Typ löschen</button>` : ''} <button onclick="FDS.oeMng=false;FDS.ps='';fdTick(true)">Fertig</button></div>`;
-  } else {
+  {
     h +=
       S.oet
         .map(
@@ -569,7 +618,7 @@ function oePanelHtml(b, V) {
             `<div class="ft${FDS.tool === 'oe' && FDS.oeT === t.k ? ' on' : ''}" onclick="oeTypWahl('${t.k}')" title="Zum Setzen wählen – dann in die Ansicht klicken (Shift: ohne Einrasten)">${oeSymbol(t)}<span>${esc(t.n)} <span class="mu">${fdFmt(t.b)} × ${fdFmt(t.h)}</span></span><b>${zahl[t.k] ? zahl[t.k] + '×' : ''}</b></div>`,
         )
         .join('') +
-      `<button style="margin-top:6px" onclick="FDS.oeMng=true;FDS.ps='';fdTick(true)">Typen bearbeiten …</button>`;
+      `<button style="margin-top:6px" onclick="okOpen()" title="Fenster und Türen im Konfigurator anlegen und bearbeiten">Konfigurator …</button>`;
   }
   const o = V && oeGewaehlt();
   if (o) {
@@ -613,6 +662,18 @@ function oeTypenPruefen(L) {
     if (!OE_ARTEN[o.a]) o.a = 'fe';
     if (!OE_OEFFNUNG[o.oa]) o.oa = 'f';
     if (!/^#[0-9a-f]{6}$/i.test(o.rf)) o.rf = v.rf;
+    o.sp = Array.isArray(o.sp)
+      ? o.sp.slice(0, 8).map((c) => ({
+          w: isFinite(+c.w) && +c.w > 0 ? +c.w : 1,
+          oa: OE_OEFFNUNG[c.oa] ? c.oa : 'f',
+          an: c.an === 'r' ? 'r' : 'l',
+          fu: c.fu === 'p' ? 'p' : 'g',
+        }))
+      : undefined;
+    ['ul'].forEach((k) => (o[k] = isFinite(+o[k]) ? +o[k] : 0));
+    o.sr = Array.isArray(o.sr)
+      ? [Math.max(0, Math.min(6, +o.sr[0] || 0)), Math.max(0, Math.min(6, +o.sr[1] || 0))]
+      : [0, 0];
     return o;
   });
 }
