@@ -368,6 +368,8 @@ function fdDrawView(g, b, V, ox, o) {
       g.setLineDash([]);
     });
   }
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  oeZeichnen(g, b, V, ox, o);
   if (o.lab) {
     const s = fdVP().s;
     F.forEach((f, i) => {
@@ -447,6 +449,8 @@ function fdCvDraw() {
   const V = fdVw(b, FDS.vk);
   if (!V) return;
   fdDrawView(g, b, V, 0, { lab: true, sel: FDS.sel, selCut: FDS.selCut });
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  oeVorschau(g, b, V);
   // Maße
   g.fillStyle = '#334155';
   g.font = '11px system-ui,sans-serif';

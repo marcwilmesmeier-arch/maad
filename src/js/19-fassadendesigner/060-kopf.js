@@ -26,6 +26,9 @@ function fdTick(force) {
     FDS.tool,
     FDS.mng,
     S.ft,
+    S.oet,
+    FDS.oe,
+    FDS.oeT,
     S.bld.map((x) => x.id + x.name),
   ]);
   if (force || ps !== FDS.ps) {
@@ -55,6 +58,7 @@ function fdChrome(b, V, cur, F) {
     ['fdTl', 'line'],
     ['fdTr', 'rect'],
     ['fdTg', 'st'],
+    ['fdTo', 'oe'],
   ].forEach(([id, t]) => {
     const e = fdE(id);
     if (e) e.classList.toggle('on', FDS.tool === t);
@@ -78,6 +82,9 @@ function fdChrome(b, V, cur, F) {
   const tf = new Set(FDS.sel.map((i) => F[i] && F[i].t).filter(Boolean)),
     one = FDS.sel.length === 1 && F[FDS.sel[0]] ? F[FDS.sel[0]] : null;
   let h = '';
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Öffnungen oben, solange gesetzt oder gewählt wird
+  const oeOben = FDS.tool === 'oe' || !!FDS.oe;
+  if (oeOben) h += oePanelHtml(b, cur);
   h += `<h4>Fassadentyp ${cur ? (FDS.sel.length ? 'für ' + FDS.sel.length + (FDS.sel.length === 1 ? ' Feld' : ' Felder') : '(Feld wählen)') : ''}</h4>`;
   if (FDS.mng) {
     h +=
@@ -109,6 +116,7 @@ function fdChrome(b, V, cur, F) {
       h += `<div class="fe" style="margin-top:6px"><span class="mu">Name</span><input type="text" style="flex:1" value="${esc(one.n)}" placeholder="F${one.idx}" onchange="fdRename(this.value)"></div>`;
     h += `<div style="margin-top:6px"><button onclick="fdClearView()" title="Alle Schnittlinien und Typen dieser Ansicht entfernen">Ansicht zurücksetzen</button></div>`;
   }
+  if (!oeOben) h += oePanelHtml(b, cur);
   h +=
     `<h4>Bilanz Fassade · ${esc(b.name || b.id)}</h4>` +
     S.ft

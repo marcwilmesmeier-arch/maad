@@ -155,8 +155,18 @@ function l2MeshOrig(e) {
     );
     ln.raycast = () => {};
     g.add(ln);
-  } else if (e.quads) e.quads.forEach((q) => add({ o: q, h: [] }));
-  else e.faces.forEach((f) => add(f));
+  } else if (e.quads) {
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Außenwand mit Öffnungen in Stücke teilen
+    const O = oeWandOeffnungen(e);
+    if (O.length) {
+      oeWandTeilen(e, O).forEach(([f, ya, yb]) => {
+        const n0 = g.children.length;
+        add(f, yb - ya);
+        for (let i = n0; i < g.children.length; i++) g.children[i].position.y = ya;
+      });
+      g.add(oeKoerper(O));
+    } else e.quads.forEach((q) => add({ o: q, h: [] }));
+  } else e.faces.forEach((f) => add(f));
   if (e.quads2) {
     const n0 = g.children.length;
     e.quads2.forEach((q) => add({ o: q, h: [] }, e.hTop));
@@ -171,7 +181,8 @@ function l2MeshOrig(e) {
 }
 function l2Sync() {
   const bs = S.bld.filter((b) => !b.ex && b._y != null),
-    sig = bs.map((b) => b.id + '|' + l2Els(b).k).join('#') + (l23() ? l2mSig() : '');
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen (nicht Teil der Wandableitung)
+    sig = bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') + (l23() ? l2mSig() : '');
   if (sig !== L2SIG) {
     L2SIG = sig;
     const seen = new Set(),
@@ -189,6 +200,8 @@ function l2Sync() {
             e.T.id,
             S.lod,
             l23() ? l2mSig() : 0,
+            // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js
+            l23() ? 0 : oeWandSig(e),
           ]).replace(/(\d+\.\d{3})\d+/g, '$1'),
           old = L2I.get(e.id);
         seen.add(e.id);

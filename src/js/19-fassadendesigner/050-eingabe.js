@@ -329,6 +329,10 @@ function fdDown(e) {
   const V = fdVw(b, FDS.vk);
   if (!V) return;
   const p = { x: fdWU(x), z: fdWV(y) };
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Öffnungen wählen, ziehen, setzen
+  if ((FDS.tool === 'sel' && !(FDS.selCut != null && fdEdHit(V, FDS.selCut, p))) || FDS.tool === 'oe') {
+    if (oeDown(b, V, p, e)) return;
+  }
   if (FDS.tool === 'sel') {
     if (FDS.selCut != null) {
       const hd = fdEdHit(V, FDS.selCut, p);
@@ -397,6 +401,8 @@ function fdCvMove(e) {
   const V = FDS.vk === '*' ? null : fdVw(b, FDS.vk);
   if (!V) return;
   const p = { x: fdWU(x), z: fdWV(y) };
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  if (!FDS.ed && oeMove(b, V, p, e)) return;
   if (FDS.ed) {
     const ed = FDS.ed;
     if (!ed.moved && Math.hypot(e.clientX - ed.px, e.clientY - ed.py) < 4) return;
@@ -427,6 +433,8 @@ function fdCvMove(e) {
   FDS.dirty = 1;
 }
 function fdUp(e) {
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  if (oeUp()) return;
   const b = fdB();
   if (FDS.ed) {
     const ed = FDS.ed;
@@ -476,6 +484,8 @@ function fdKey(e) {
     } else if (FDS.pts.length || FDS.rect) {
       FDS.pts = [];
       FDS.rect = null;
+    } else if (FDS.oe) {
+      FDS.oe = null;
     } else if (FDS.sel.length || FDS.selCut != null) {
       FDS.sel = [];
       FDS.selCut = null;
@@ -490,6 +500,7 @@ function fdKey(e) {
   else if (k === 'l' || k === 'L') fdTool('line');
   else if (k === 'r' || k === 'R') fdTool('rect');
   else if (k === 'g' || k === 'G') fdTool('st');
+  else if (k === 'o' || k === 'O') fdTool('oe');
   else if (k === 'f' || k === 'F') fdFit();
   else if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) {
     e.preventDefault();

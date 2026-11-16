@@ -39,6 +39,7 @@ function newProjectReset() {
   // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js
   try {
     S.ft = JSON.parse(JSON.stringify(FT0));
+    S.oet = JSON.parse(JSON.stringify(OET0));
     if (FDS.open) fdClose();
   } catch (e) {
     logErr(e, 'newProjectReset');

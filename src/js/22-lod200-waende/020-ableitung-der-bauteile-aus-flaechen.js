@@ -33,7 +33,8 @@ function l2GeoStufe1(b) {
     '|' +
     ((b.l2 && b.l2.r) || '') +
     '|' +
-    JSON.stringify(b.fd || 0) +
+    // Öffnungen (fd[..].oe) ändern die Wandableitung nicht – nur die Wandkörper (100-oeffnungen-3d.js)
+    JSON.stringify(b.fd || 0, (k, v) => (k === 'oe' ? undefined : v)) +
     JSON.stringify(S.ft.map((t) => t.k + t.n)) +
     (l23()
       ? '|d' + JSON.stringify([b._l2ref || 0, (b.l2 && b.l2.rw) || 0, (b.l2 && b.l2.cn) || 0])

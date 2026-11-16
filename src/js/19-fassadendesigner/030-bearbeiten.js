@@ -163,7 +163,10 @@ function fdClearView() {
   if (!b || !V) return;
   fdEdit((b) => {
     if (b.fd) {
-      delete b.fd[V.key];
+      // Öffnungen bleiben erhalten (eigene Liste, siehe 090-oeffnungen.js)
+      const oe = b.fd[V.key] && b.fd[V.key].oe;
+      if (oe && oe.length) b.fd[V.key] = { cuts: [], units: [], oe };
+      else delete b.fd[V.key];
       if (!Object.keys(b.fd).length) delete b.fd;
     }
     V._f = null;
@@ -205,7 +208,7 @@ const FDCSS = `#fdDock{position:fixed;left:70px;top:56px;width:min(1240px,calc(1
 #fdDock .sum{border-top:1px solid var(--ln,#dcdcdc);margin-top:6px;padding-top:4px;font-weight:600}`;
 function fdBody() {
   return `<div class="fh" id="fdHd"><b>Fassadendesigner</b><select id="fdBld" onchange="fdPick(this.value)" title="Gebäude"></select>
-<button id="fdTs" onclick="fdTool('sel')" title="Felder und Schnittlinien wählen (V)">Wählen</button><button id="fdTl" onclick="fdTool('line')" title="Linie: Ansichtsfläche trennen – Endpunkte rasten an Rand und Schnittlinien ein (L)">Linie trennen</button><button id="fdTr" onclick="fdTool('rect')" title="Rechteck: Feld herausschneiden, z. B. für Fensterband oder Sockel (R)">Rechteck</button><button id="fdTg" onclick="fdTool('st')" title="Geschoss: Fläche einer Flucht über ein Geschoss direkt wählen – ohne Trennlinie zu zeichnen (G)">Geschoss</button>
+<button id="fdTs" onclick="fdTool('sel')" title="Felder und Schnittlinien wählen (V)">Wählen</button><button id="fdTl" onclick="fdTool('line')" title="Linie: Ansichtsfläche trennen – Endpunkte rasten an Rand und Schnittlinien ein (L)">Linie trennen</button><button id="fdTr" onclick="fdTool('rect')" title="Rechteck: Feld herausschneiden, z. B. für Fensterband oder Sockel (R)">Rechteck</button><button id="fdTg" onclick="fdTool('st')" title="Geschoss: Fläche einer Flucht über ein Geschoss direkt wählen – ohne Trennlinie zu zeichnen (G)">Geschoss</button><button id="fdTo" onclick="fdTool('oe')" title="Öffnung: Fenster oder Tür aus dem Konfigurator setzen (O)">Öffnung</button>
 <button onclick="fdMerge()" title="Gewählte, aneinandergrenzende Felder zusammenlegen">Zusammenlegen</button><button onclick="fdDelSel()" title="Gewählte Schnittlinie löschen (Entf)">Linie löschen</button><button onclick="fdFit()" title="Ansicht einpassen (F)">⤢</button><button onclick="L2CF.fd()" title="Bauteilkonfigurator für die Außenwand dieses Gebäudes">⚙ Außenwand</button>
 <span class="gr"></span><span class="mu" id="fdInfo"></span><button onclick="fdClose()" title="Schließen">✕</button></div>
 <div class="fm"><div class="fv" id="fdVs"></div><div class="fc" id="fdCw"><canvas id="fdCv"></canvas><div class="fhint" id="fdHint"></div></div><div class="fs" id="fdPn"></div></div>`;
@@ -293,6 +296,7 @@ function fdPick(id) {
 }
 function fdTool(t) {
   FDS.tool = t;
+  FDS.oeVor = null;
   FDS.pts = [];
   FDS.rect = null;
   FDS.dirty = 1;
@@ -311,7 +315,9 @@ function fdView(k) {
   fdFit();
 }
 function fdDelSel() {
-  if (FDS.selCut != null) fdDelCut(FDS.selCut);
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  if (FDS.oe) oeLoeschen();
+  else if (FDS.selCut != null) fdDelCut(FDS.selCut);
   else fdNote('Zuerst eine Schnittlinie wählen (Werkzeug „Wählen“, auf die Linie klicken).');
 }
 // Bildschirm ↔ Welt
