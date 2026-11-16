@@ -99,6 +99,40 @@ function okGrRsLoeschen() {
   OK.gr = null;
   oeAktualisieren();
 }
+/** Wie oft ein Öffnungstyp vorkommt: frei gesetzt und über Gruppen (je Verweis). */
+function oeTypZahl(k) {
+  let n = 0;
+  S.bld.forEach((b) =>
+    Object.values(b.fd || {}).forEach((d) => {
+      ((d && d.oe) || []).forEach((o) => (n += o.t === k ? 1 : 0));
+      ((d && d.gr) || []).forEach((I) => {
+        const G = oegG(I.g);
+        if (G) n += G.oe.filter((q) => q.t === k).length;
+      });
+    }),
+  );
+  return n;
+}
+/** Gewählte Öffnung der Gruppe bekommt eine eigene Kopie ihres Typs (Änderungen wirken nur hier). */
+function okGrOeEigen() {
+  const G = okGr(),
+    q = okGrOe();
+  if (!G || !q) return;
+  const T = oeT(q.t),
+    k = 'u' + Date.now().toString(36);
+  S.oet.push({ ...JSON.parse(JSON.stringify(T)), k, n: T.n + ' · ' + G.n });
+  q.t = k;
+  OK.k = k;
+  okGrOeBearbeiten();
+}
+/** Typ der gewählten Öffnung im Reiter „Fenster & Türen“ öffnen; dort führt „Zurück zur Gruppe“ hierher zurück. */
+function okGrOeBearbeiten() {
+  const q = okGrOe();
+  if (!q) return;
+  OK.k = q.t;
+  OK.zurueck = OK.g;
+  okReiter('oe');
+}
 function okGrOeLoeschen() {
   const G = okGr();
   if (!G) return;
@@ -210,10 +244,18 @@ function okGrRender() {
 <span>Länge (m)</span>${z('l', G.l)}<span>Höhe (m)</span>${z('h', G.h)}</div>
 <h4>Öffnungen</h4><div class="okg"><select onchange="okE('okGrT').dataset.t=this.value">${opt(S.oet[0] && S.oet[0].k)}</select><button id="okGrT" onclick="okGrOeNeu(this.dataset.t||'${S.oet[0] ? S.oet[0].k : ''}')">Hinzufügen</button></div>
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
-  if (q)
+  if (q) {
+    // gewählte Öffnung: Lage in der Gruppe und der Typ selbst (Maße, Rahmenfarbe, Aufteilung)
+    const T = oeT(q.t),
+      n = oeTypZahl(T.k);
+    OK.k = T.k;
     h += `<h4>Gewählte Öffnung</h4><div class="okg"><span>Typ</span><select onchange="okGrOeSet('t',this.value)">${opt(q.t)}</select>
+<span class="mu">Breite (m)</span><input type="number" value="${+T.b.toFixed(3)}" disabled title="Maße über „Bearbeiten“ ändern"><span class="mu">Höhe (m)</span><input type="number" value="${+T.h.toFixed(3)}" disabled title="Maße über „Bearbeiten“ ändern">
 <span>Abstand links (m)</span>${z('x', q.x, 'okGrOeSet')}<span>Brüstung (m)</span>${z('v', q.v, 'okGrOeSet')}</div>
-<div class="okb"><button onclick="okGrOeLoeschen()">Entfernen</button></div>`;
+<div class="okb"><button onclick="okGrOeLoeschen()">Entfernen</button></div>
+<div class="okb"><button onclick="okGrOeBearbeiten()" title="Typ im Reiter „Fenster & Türen“ öffnen – Maße, Rahmenfarbe, Aufteilung">Bearbeiten</button><button onclick="okGrOeEigen()" title="Kopie des Typs nur für diese Öffnung anlegen und bearbeiten – andere Stellen bleiben unverändert">Als eigenen Typ bearbeiten</button></div>
+<div class="mu" style="margin-top:6px">${n > 1 ? `„${esc(T.n)}“ sitzt ${n}× im Projekt – „Bearbeiten“ ändert alle Stellen.` : 'Änderungen am Typ gelten für alle Stellen dieses Typs.'}</div>`;
+  }
   const r = okGrRs();
   h += `<h4>Rücksprünge</h4><div class="okb"><button onclick="okGrRsNeu()" title="Vertieftes Feld, z. B. neben dem Fenster; negative Tiefe = Vorsprung">+ Rücksprung</button></div>`;
   if (r)

@@ -13,7 +13,7 @@ const OKCSS = `#okDock{position:fixed;left:110px;top:70px;width:min(1120px,calc(
 #okDock button{border:1px solid var(--ln,#dcdcdc);background:var(--pn,#E9EDEF);border-radius:6px;padding:4px 9px;cursor:pointer}
 #okDock button:hover{filter:brightness(.97)}#okDock button.on{background:#5E7F92;border-color:#5E7F92;color:#fff}
 #okDock select,#okDock input[type=text],#okDock input[type=number]{border:1px solid var(--ln,#dcdcdc);border-radius:5px;padding:3px 6px;background:var(--pn,#E9EDEF);min-width:0;width:100%}
-#okDock input[type=number]{text-align:right}
+#okDock input[type=number]{text-align:right}#okDock input:disabled{opacity:.55;background:transparent;cursor:not-allowed}
 #okDock input[type=color]{width:100%;height:26px;padding:0;border:1px solid var(--ln,#dcdcdc);border-radius:4px;background:none}
 #okDock .okm{flex:1;display:flex;min-height:0}
 #okDock .okl{width:230px;background:var(--pn,#E9EDEF);border-right:1px solid var(--ln,#dcdcdc);overflow:auto;padding:6px}
@@ -65,6 +65,7 @@ function okOpen(k, reiter) {
   }
 }
 function okReiter(r) {
+  if (r === 'gr') OK.zurueck = null;
   OK.reiter = r;
   OK.go = null;
   okRender();
@@ -256,25 +257,38 @@ function okRender() {
     T &&
     !(R.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName))
   ) {
-    // bewusst schlicht: Name, Maße, Brüstung, Rahmenfarbe und die Aufteilung
-    const z = (f, v, st, tt) =>
-        `<input type="number" step="${st || 0.01}" value="${+(+v).toFixed(3)}" ${tt ? `title="${tt}"` : ''} onchange="okSet('${f}',this.value)">`,
-      SP = oeSpalten(T),
-      tuer = oeTuer(T);
-    let h = `<h4>Typ</h4><div class="okg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="okSet('n',this.value)">
-<span>Breite (m)</span>${z('b', T.b)}<span>Höhe (m)</span>${z('h', T.h)}
-${tuer ? '' : `<span>Brüstung (m)</span>${z('br', T.br, 0.01, 'Abstand Unterkante zum Fußboden des Geschosses beim Setzen')}`}
-<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)"></div>`;
-    if (T.a !== 'to')
-      h += `<h4>Aufteilung</h4><div class="okg"><span>Flügel</span><span style="display:flex;gap:4px;align-items:center"><button onclick="okFluegel(-1)" title="Flügel entfernen">−</button><b style="flex:1;text-align:center">${SP.length}</b><button onclick="okFluegel(1)" title="Flügel hinzufügen">+</button></span>
-<span>Oberlicht (m, 0 = ohne)</span>${z('ol', T.ol || 0)}${tuer ? '' : `<span>Unterlicht (m, 0 = ohne)</span>${z('ul', T.ul || 0)}`}</div>
-<div class="okb">${SP.length > 1 ? '<button onclick="okGleich()" title="Alle Flügel gleich breit">Gleich verteilen</button>' : ''}</div>
-<div class="mu" style="margin-top:6px">Flügelbreiten, Oberlicht und Unterlicht in der Ansicht an den blauen Linien ziehen.</div>`;
+    let h =
+      (OK.zurueck && oegG(OK.zurueck)
+        ? `<div class="okb" style="margin:0 0 8px"><button onclick="OK.reiter='gr';OK.g=OK.zurueck;OK.zurueck=null;okRender()" title="Zurück zur Gruppe">← Zurück zu „${esc(oegG(OK.zurueck).n)}“</button></div>`
+        : '') +
+      okTypFelderHtml(T) +
+      (T.a !== 'to'
+        ? `<div class="mu" style="margin-top:6px">Flügelbreiten, Oberlicht und Unterlicht in der Ansicht an den blauen Linien ziehen.</div>`
+        : '');
     h += `<div class="okb" style="margin-top:14px"><button onclick="okSetzen()" title="Typ im Fassadendesigner setzen">Im Fassadendesigner setzen</button><button onclick="okKopie()">Kopie</button>${S.oet.length > 1 ? '<button onclick="okLoeschen()">Löschen</button>' : ''}</div>
 <div class="mu" style="margin-top:6px">${zahl[T.k] ? zahl[T.k] + '× gesetzt – ' : ''}Änderungen gelten für alle gesetzten Öffnungen dieses Typs.</div>`;
     R.innerHTML = h;
   }
   okZeichnen();
+}
+/**
+ * Eingaben eines Öffnungstyps (bewusst schlicht: Name, Maße, Brüstung, Rahmenfarbe, Aufteilung) – im Reiter
+ * „Fenster & Türen“ und für die gewählte Öffnung im Reiter „Gruppen“. Wirken auf okTyp() (OK.k).
+ */
+function okTypFelderHtml(T, titel = 'Typ') {
+  const z = (f, v, st, tt) =>
+      `<input type="number" step="${st || 0.01}" value="${+(+v).toFixed(3)}" ${tt ? `title="${tt}"` : ''} onchange="okSet('${f}',this.value)">`,
+    SP = oeSpalten(T),
+    tuer = oeTuer(T);
+  let h = `<h4>${titel}</h4><div class="okg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="okSet('n',this.value)">
+<span>Breite (m)</span>${z('b', T.b)}<span>Höhe (m)</span>${z('h', T.h)}
+${tuer ? '' : `<span>Brüstung (m)</span>${z('br', T.br, 0.01, 'Abstand Unterkante zum Fußboden des Geschosses beim Setzen')}`}
+<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)"></div>`;
+  if (T.a !== 'to')
+    h += `<h4>Aufteilung</h4><div class="okg"><span>Flügel</span><span style="display:flex;gap:4px;align-items:center"><button onclick="okFluegel(-1)" title="Flügel entfernen">−</button><b style="flex:1;text-align:center">${SP.length}</b><button onclick="okFluegel(1)" title="Flügel hinzufügen">+</button></span>
+<span>Oberlicht (m, 0 = ohne)</span>${z('ol', T.ol || 0)}${tuer ? '' : `<span>Unterlicht (m, 0 = ohne)</span>${z('ul', T.ul || 0)}`}</div>
+<div class="okb">${SP.length > 1 ? '<button onclick="okGleich()" title="Alle Flügel gleich breit">Gleich verteilen</button>' : ''}</div>`;
+  return h;
 }
 /** Maßstab der Ansicht: Typ mittig mit Rand für Maßketten. */
 function okAnsicht() {
