@@ -315,8 +315,9 @@ function oegSymbol(G, w = 44, h = 22) {
   return s + '</svg>';
 }
 
-// ---- Seitenleiste (aus 090-oeffnungen.js)
-function oegPanelHtml(b, V) {
+// ---- Inspektor und Bibliothek (aus 060-kopf.js)
+/** Bibliothek beim Werkzeug „Gruppe“: Gruppe wählen, setzen oder gewählte Felder füllen. */
+function oegBibliothekHtml() {
   if (!FDS.grT || !oegG(FDS.grT)) FDS.grT = S.oeg.length ? S.oeg[0].k : null;
   const zahl = {};
   S.bld.forEach((x) =>
@@ -324,24 +325,34 @@ function oegPanelHtml(b, V) {
       ((d && d.gr) || []).forEach((I) => (zahl[I.g] = (zahl[I.g] || 0) + 1)),
     ),
   );
-  let h = `<h4>Gruppen ${FDS.tool === 'gr' ? '· wählen, in die Ansicht klicken' : ''}</h4>`;
-  h += S.oeg
-    .map(
-      (G) =>
-        `<div class="ft${FDS.tool === 'gr' && FDS.grT === G.k ? ' on' : ''}" onclick="oegWahl('${G.k}')" title="Zum Setzen wählen – dann in die Ansicht klicken (Shift: ohne Einrasten)">${oegSymbol(G)}<span>${esc(G.n)} <span class="mu">${fdFmt(G.l)} m</span></span><b>${zahl[G.k] ? zahl[G.k] + '×' : ''}</b></div>`,
-    )
-    .join('');
-  h += `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button onclick="oegFuellen()" title="Gewählte Felder je Geschoss mit der gewählten Gruppe füllen – Rest gleichmäßig an den Enden">Gewählte Felder füllen</button><button onclick="okOpen(null,'gr')" title="Gruppen im Konfigurator anlegen und bearbeiten">Konfigurator …</button></div>`;
-  const I = V && oegGewaehlt();
-  if (I) {
-    const opt = S.oeg
-      .map((G) => `<option value="${G.k}" ${G.k === I.g ? 'selected' : ''}>${esc(G.n)}</option>`)
-      .join('');
-    h += `<h4>Gewählte Gruppe</h4><div class="oeg"><span>Gruppe</span><select onchange="oegTauschen(this.value)">${opt}</select>
-<span>Alle gleichen in dieser Ansicht</span><select onchange="if(this.value)oegTauschen(this.value,true)"><option value="">tauschen gegen …</option>${opt}</select></div>
-<div><button onclick="oegLoeschen()" title="Gruppe von der Fassade entfernen (Entf)">Entfernen</button></div>`;
-  }
-  return h;
+  return (
+    `<h4>Gruppen</h4>` +
+    (S.oeg.length
+      ? S.oeg
+          .map(
+            (G) =>
+              `<div class="li${FDS.grT === G.k ? ' on' : ''}" onclick="oegWahl('${G.k}')" title="Wählen – dann in die Ansicht klicken (Umschalt: ohne Einrasten)">${oegSymbol(G, 48, 26)}<span>${esc(G.n)}<small>${fdFmt(G.l)} m · ${G.oe.length} Öffnung${G.oe.length === 1 ? '' : 'en'}${zahl[G.k] ? ' · ' + zahl[G.k] + '× gesetzt' : ''}</small></span></div>`,
+          )
+          .join('')
+      : '<div class="leer">Noch keine Gruppe – im Konfigurator anlegen.</div>') +
+    `<div class="row"><button class="bt" onclick="okOpen(null,'gr')">Konfigurator …</button></div>
+<div class="leer" style="margin-top:10px">Einzeln: in die Ansicht klicken.<br>Ganze Felder: mit „Auswählen“ Felder wählen, dann oben „Gewählte Felder füllen“ – je Geschoss, Rest gleichmäßig an den Enden.</div>`
+  );
+}
+/** Inspektor der gewählten Gruppe: tauschen, bearbeiten, entfernen. */
+function oegInspektorHtml(b, V) {
+  const I = oegGewaehlt(),
+    G = I && oegG(I.g);
+  if (!G) return '';
+  const opt = S.oeg
+      .map((x) => `<option value="${x.k}" ${x.k === I.g ? 'selected' : ''}>${esc(x.n)}</option>`)
+      .join(''),
+    n = (oegDaten(b, V.key) || []).filter((J) => J.g === I.g).length;
+  return `<h4>Gruppe</h4><div class="li on" style="cursor:default">${oegSymbol(G, 48, 26)}<span>${esc(G.n)}<small>${fdFmt(G.l)} m · ${n}× in dieser Ansicht</small></span></div>
+<h4>Tauschen</h4><select style="width:100%" onchange="oegTauschen(this.value)" title="Nur diese Stelle">${opt}</select>
+${n > 1 ? `<select style="width:100%;margin-top:6px" onchange="if(this.value)oegTauschen(this.value,true)" title="Alle ${n} gleichen Gruppen dieser Ansicht"><option value="">Alle ${n} gleichen tauschen gegen …</option>${S.oeg.map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select>` : ''}
+<div class="row"><button class="bt" onclick="okOpen(null,'gr');okGrWahl('${G.k}')">Gruppe bearbeiten …</button><button class="bt" onclick="oegLoeschen()">Entfernen <kbd>Entf</kbd></button></div>
+<div class="mu" style="margin-top:8px">Ziehen zum Verschieben · Änderungen an der Gruppe gelten an allen Stellen</div>`;
 }
 /** Gespeicherte Gruppen prüfen (Projekt laden). */
 function oegPruefen(L) {

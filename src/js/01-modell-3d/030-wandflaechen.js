@@ -1587,6 +1587,8 @@ function lcol(k, v) {
       } else if (k === 'erg' || k === 'erh') {
         // ── Erweiterung aus 07-analyse/190-erreichbarkeit.js
         erNeu();
+      } else if (k === 'fdt') {
+        // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Farben je Fassadentyp, nichts einzufärben
       } else if (k === 'son') {
         // ── Erweiterung aus 07-analyse/200-sonnenstunden.js: Farbskala fest, nichts einzufärben
       } else if (PK[k]) {

@@ -551,12 +551,7 @@ function oeVorschau(g, b, V) {
   g.restore();
 }
 
-// ---- Seitenleiste (aus 060-kopf.js)
-const OECSS = `#fdDock input[type=number]{border:1px solid var(--ln,#dcdcdc);border-radius:5px;padding:3px 5px;background:var(--pn,#E9EDEF);font:inherit;color:inherit;width:70px;text-align:right}
-#fdDock .oeg{display:grid;grid-template-columns:1fr 92px;gap:4px 8px;align-items:center;margin:6px 0}
-#fdDock .oeg input[type=number],#fdDock .oeg select,#fdDock .oeg input[type=text]{width:100%}
-#fdDock .oeg input[type=color]{width:100%;height:24px;padding:0;border:1px solid var(--ln,#dcdcdc);border-radius:4px;background:none}
-#fdDock .ft svg{flex:none}`;
+// ---- Inspektor und Bibliothek (aus 060-kopf.js)
 /** Kleines Symbol des Typs für Listen (Einteilung wie in der Ansicht). */
 function oeSymbol(T, w = 22, h = 18) {
   const A = oeAufteilung(T),
@@ -573,52 +568,37 @@ function oeSymbol(T, w = 22, h = 18) {
   });
   return s + '</svg>';
 }
-/** Abschnitt „Öffnungen“ der Seitenleiste: Typen zum Setzen, Konfigurator, gewählte Öffnung, Bilanz. */
-function oePanelHtml(b, V) {
-  if (!document.getElementById('oeCss')) {
-    const st = document.createElement('style');
-    st.id = 'oeCss';
-    st.textContent = OECSS;
-    document.head.appendChild(st);
-  }
+/** Bibliothek beim Werkzeug „Öffnung“: Typ wählen, dann in die Ansicht klicken. */
+function oeBibliothekHtml() {
   if (!FDS.oeT || !S.oet.some((t) => t.k === FDS.oeT)) FDS.oeT = S.oet[0].k;
-  const n = (k, v, f, lim) =>
-      `<input type="number" step="${lim || 0.01}" value="${+v.toFixed(3)}" onchange="${f}('${k}',this.value)">`,
-    zahl = {};
+  const zahl = {};
   S.bld.forEach((x) =>
     Object.values(x.fd || {}).forEach((d) =>
       ((d && d.oe) || []).forEach((o) => (zahl[o.t] = (zahl[o.t] || 0) + 1)),
     ),
   );
-  let h = `<h4>Öffnungen ${FDS.tool === 'oe' ? '· Typ wählen, in die Ansicht klicken' : ''}</h4>`;
-  {
-    h +=
-      S.oet
-        .map(
-          (t) =>
-            `<div class="ft${FDS.tool === 'oe' && FDS.oeT === t.k ? ' on' : ''}" onclick="oeTypWahl('${t.k}')" title="Zum Setzen wählen – dann in die Ansicht klicken (Shift: ohne Einrasten)">${oeSymbol(t)}<span>${esc(t.n)} <span class="mu">${fdFmt(t.b)} × ${fdFmt(t.h)}</span></span><b>${zahl[t.k] ? zahl[t.k] + '×' : ''}</b></div>`,
-        )
-        .join('') +
-      `<button style="margin-top:6px" onclick="okOpen()" title="Fenster und Türen im Konfigurator anlegen und bearbeiten">Konfigurator …</button>`;
-  }
-  const o = V && oeGewaehlt();
-  if (o) {
-    const T = oeT(o.t),
-      bs = oeGeschossBasis(b, o.v + 0.01);
-    h += `<h4>Gewählte Öffnung</h4><div class="oeg"><span>Typ</span><select onchange="oeAendern('t',this.value)">${S.oet.map((t) => `<option value="${t.k}" ${t.k === o.t ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select>
-<span>Abstand vom linken Rand (m)</span>${n('x', o.u - T.b / 2 - V.u0, 'oeAendern')}<span>Brüstung im Geschoss (m)</span>${n('br', o.v - bs, 'oeAendern')}</div>
-<div><button onclick="oeDuplizieren()" title="Kopie rechts daneben">Duplizieren</button> <button onclick="oeLoeschen()" title="Öffnung löschen (Entf)">Löschen</button></div>`;
-  }
-  if (V) {
-    const L = oeListe(b, V),
-      a = L.reduce((s, x) => s + x.T.b * x.T.h, 0);
-    if (L.length)
-      h += `<div class="mu" style="margin-top:6px">${esc(V.name)}: ${L.length} Öffnung${L.length === 1 ? '' : 'en'} · ${fdFmt(a)} m² · ${Math.round((a / (V.area || 1)) * 100)} % der Ansichtsfläche. Im 3D-Modell ab LOD 200.</div>`;
-  }
-  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Gruppen (beim Werkzeug „Gruppe“ zuerst)
-  const gh = oegPanelHtml(b, V);
-  h = FDS.tool === 'gr' || FDS.gi ? gh + h : h + gh;
-  return h;
+  return (
+    `<h4>Fenster und Türen</h4>` +
+    S.oet
+      .map(
+        (t) =>
+          `<div class="li${FDS.oeT === t.k ? ' on' : ''}" onclick="oeTypWahl('${t.k}')" title="Wählen – dann in die Ansicht klicken (Umschalt: ohne Einrasten)">${oeSymbol(t, 28, 26)}<span>${esc(t.n)}<small>${fdFmt(t.b)} × ${fdFmt(t.h)} m${zahl[t.k] ? ' · ' + zahl[t.k] + '× gesetzt' : ''}</small></span></div>`,
+      )
+      .join('') +
+    `<div class="row"><button class="bt" onclick="okOpen(FDS.oeT,'oe')">Konfigurator …</button></div><div class="mu" style="margin-top:8px">In die Ansicht klicken zum Setzen · <kbd>Esc</kbd> zurück zu „Auswählen“</div>`
+  );
+}
+/** Inspektor der gewählten Öffnung: Typ, Lage, Brüstung, Aktionen. */
+function oeInspektorHtml(b, V) {
+  const o = oeGewaehlt();
+  if (!o) return '';
+  const T = oeT(o.t),
+    bs = oeGeschossBasis(b, o.v + 0.01);
+  return `<h4>Öffnung</h4><div class="li on" style="cursor:default">${oeSymbol(T, 28, 26)}<span>${esc(T.n)}<small>${fdFmt(T.b)} × ${fdFmt(T.h)} m</small></span></div>
+<h4>Typ</h4><select style="width:100%" onchange="oeAendern('t',this.value)">${S.oet.map((t) => `<option value="${t.k}" ${t.k === o.t ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select>
+<h4>Lage</h4><div class="kv"><span>Abstand links</span>${fdZahl(o.u - T.b / 2 - V.u0, 'm', "oeAendern('x',this.value)", 0.05, 'Abstand vom linken Rand der Ansicht')}<span>Brüstung</span>${fdZahl(o.v - bs, 'm', "oeAendern('br',this.value)", 0.05, 'Abstand vom Fußboden des Geschosses')}</div>
+<div class="row"><button class="bt" onclick="oeDuplizieren()">Duplizieren</button><button class="bt" onclick="okOpen('${T.k}','oe')">Typ bearbeiten …</button><button class="bt" onclick="oeLoeschen()">Löschen <kbd>Entf</kbd></button></div>
+<div class="mu" style="margin-top:8px">Ziehen zum Verschieben · Pfeiltasten in den Feldern ändern um 5 cm</div>`;
 }
 /** Bilanz der Öffnungen eines Gebäudes: je Typ Anzahl und Fläche, gesamt. */
 function oeBilanz(b) {

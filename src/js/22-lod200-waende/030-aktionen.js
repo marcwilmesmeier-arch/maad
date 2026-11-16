@@ -351,6 +351,12 @@ setInterval(() => {
   } catch (e) {
     console.warn('LOD200', e);
   }
+  // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js
+  try {
+    ftSync();
+  } catch (e) {
+    logErr(e, 'ftSync');
+  }
 }, 140);
 document.addEventListener('lotlod', () => {
   L2SIG = '';

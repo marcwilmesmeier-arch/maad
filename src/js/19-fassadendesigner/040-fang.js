@@ -696,12 +696,16 @@ function fdCvDraw() {
       : FDS.ed
         ? 'Ziehen – Fang wie beim Zeichnen · Shift = Spur festhalten · Esc = abbrechen'
         : FDS.tool === 'line'
-          ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen (ersetzt Linien darin) · Enter / Rechtsklick = beenden · Shift = Winkel fest · Esc = abbrechen'
+          ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen · Enter / Rechtsklick = beenden · Umschalt = Winkel fest · Esc = abbrechen bzw. zurück zu „Auswählen“'
           : FDS.tool === 'st'
             ? 'Klick auf eine Fläche = diese Fläche im Geschoss wählen (nur die Flucht, in der sie liegt) · danach Fassadentyp rechts wählen · Umschalt = weitere Geschosse'
             : FDS.tool === 'rect'
               ? 'Aufziehen oder zwei Ecken anklicken – ersetzt alle Linien und Felder darin durch eine Fläche · Esc = abbrechen'
-              : 'Feld klicken (Umschalt = mehrere) · Fassadentyp rechts wählen · Linie anklicken: Griffe ziehen, Entf = löschen';
+              : FDS.tool === 'oe'
+                ? 'Klick = Öffnung setzen (rastet an Brüstung und Achsen ein, Umschalt = frei) · Öffnung ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                : FDS.tool === 'gr'
+                  ? 'Klick = Gruppe setzen (rastet am Geschoss und an Nachbargruppen ein) · Gruppe ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                  : 'Klick = Feld, Linie, Öffnung oder Gruppe wählen · Umschalt = mehrere Felder · ziehen = verschieben · Entf = löschen · V T O G = Werkzeuge · Esc = Auswahl aufheben';
   fdHintSet(ht);
 }
 function fdHintSet(t) {
