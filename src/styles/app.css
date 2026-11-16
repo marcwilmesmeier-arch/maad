@@ -2713,3 +2713,99 @@ body.hpj #ic {
 #fap .wmx .mu {
   font-size: 11px;
 }
+/* ---- Modellieren: Auswahlfilter und Kontextleiste an der Auswahl (26-modellier-modus/140-kontextleiste.js) */
+#skflt {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--gl, #e9edefc9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gb, #fff);
+  border-radius: 12px;
+  box-shadow: var(--sh);
+  font-size: 12px;
+}
+#skflt .skfl {
+  padding: 0 8px 0 6px;
+  color: var(--mu);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+#skflt button {
+  border: 0;
+  background: none;
+  color: var(--tx);
+  padding: 5px 11px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+}
+#skflt button:hover {
+  background: #ffffff99;
+}
+#skflt button.on {
+  background: #f07a12;
+  color: #fff;
+}
+#skkl {
+  position: absolute;
+  z-index: 8;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: #ffffffeb;
+  border: 1px solid #f07a1255;
+  border-radius: 12px;
+  box-shadow: var(--sh);
+  font-size: 12px;
+  white-space: nowrap;
+}
+#skkl .skkn {
+  padding: 0 10px 0 8px;
+  color: #b4560a;
+  font-weight: 600;
+  border-right: 1px solid var(--ln);
+  margin-right: 2px;
+}
+#skkl button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: var(--tx);
+  padding: 5px 9px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+}
+#skkl button:hover {
+  background: #f07a1222;
+}
+#skkl button.skkdel:hover {
+  background: #c6282822;
+  color: #c62828;
+}
+#skkl .skkh {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  color: var(--mu);
+}
+#skkl .skkh input {
+  width: 58px;
+  font: inherit;
+  padding: 3px 5px;
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+}

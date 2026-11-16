@@ -1284,6 +1284,8 @@ function placeHc() {
   })();
   try {
     skDraw();
+    // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js
+    skKontext();
   } catch (x) {
     console.warn('sk', x);
   }

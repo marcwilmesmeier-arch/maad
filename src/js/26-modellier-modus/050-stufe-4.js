@@ -1,4 +1,4 @@
-// ================= Stufe 4: Teilen (L) =================
+// ================= Stufe 4: Teilen (T) =================
 // Wandfläche mit einer senkrechten Linie teilen (Klick auf die Fläche; Fang auf Mitte und auf Fluchten anderer Geschosse; Zahl + Enter = Abstand von der nächsten Ecke).
 // Gilt für alle Geschosse der Fläche, Alt = nur dieses Geschoss. Danach lassen sich die Teile einzeln mit Ziehen & Schieben ziehen (Erker, Loggia, Rücksprung).
 // var bewusst: 020-darstellung und 030-leiste fragen SKLN vorher mit typeof ab

@@ -70,7 +70,7 @@ const SKT = [
   ['s', 'Auswahl', '␣'],
   ['p', 'Ziehen & Schieben', 'P'],
   ['m', 'Verschieben', 'M'],
-  ['l', 'Teilen', 'L'],
+  ['l', 'Teilen', 'T'],
 ];
 function skAct() {
   // ── Erweiterung aus 28-erweiterungen-v486-v519/070-import.js

@@ -127,38 +127,38 @@ Die Nummer bestimmt die Ladereihenfolge. Die Bereiche 00–15 sind thematisch ge
 der Entstehungsgeschichte (Versionen v239 … v519). Wo eine Version ein klar abgegrenztes Modul ist, trägt der
 Ordner dessen Namen, sonst `erweiterungen-vAAA-vBBB`.
 
-| Ordner                       | Inhalt                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `00-kern`                    | Hilfsfunktionen, Fehlerprotokoll, Registries `BA`/`SHP`, Zustand `S`              |
-| `01-modell-3d`               | Szene, Gebäude, Dachformen, Wandflächen, Auswahl, Layer                           |
-| `02-geodaten`                | Vektorkacheln, Gelände (DGM/DOM), LoD2/LoD3-Gebäude, Bäume, ALKIS, Bebauungspläne |
-| `03-startseite`              | Demokarte, Startseite, Wolken, 3D-Beschriftungen, Planungsbeispiel                |
-| `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                   |
-| `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                  |
-| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken     |
-| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen, Wind & Rauch (100–150)            |
-| `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                               |
-| `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                |
-| `10-excel-export`            | XLSX-Export (eigener ZIP-/Tabellen-Writer)                                        |
-| `11-bearbeiten`              | Werkzeuggruppen, Abstandsflächen, Verschieben/Drehen, Kontextmenü                 |
-| `12-ifc-export`              | IFC4/STEP-Export mit Prüfer                                                       |
-| `13-geometrie-und-nutzung`   | Geometrie-Hilfen, Nutzungen je Geschoss                                           |
-| `14-projekt-speicherstand`   | vollständiger Projekt-Speicherstand (Laden/Speichern)                             |
-| `15-grundriss`               | Grundriss/Einheiten, Flächenarten, Bilanz, Explosionsansicht, Grundriss-Fenster   |
-| `16-darstellung-erweitert`   | Silhouetten, Auswahlfarben, Himmelfarbe, Zeichenfang                              |
-| `17-erweiterungen-v253-v280` | Analyse-Reiter, Umwelt-/Klimadaten, Risikogebiete, Legende, Dachfarben            |
-| `18-erweiterungen-v280-v325` | Grün/Wasser-Shader, Layer je Darstellung, USA-Daten, Kundenzugang, Administration |
-| `19-fassadendesigner`        | 2D-Fassadendesigner                                                               |
-| `20-geodaten-international`  | Frankreich, Österreich                                                            |
-| `21-gelaendeplanum`          | Geländeplanum, Böschungen, Baugrube, Mauern                                       |
-| `22-lod200-waende`           | LOD 200: Wände und Decken aus dem Grundriss                                       |
-| `23-bauteilkonfigurator`     | Bauteilkonfigurator (Wand, Decke, Dach) und LOD 300                               |
-| `24-erweiterungen-v344-v436` | Fokus-Ansicht, Kamera, Vollgeschoss-Regel, Gebäudeklasse, Varianten, Layouter     |
-| `25-polygon-operationen`     | Vereinigung/Differenz/Schnitt, Innenhöfe                                          |
-| `26-modellier-modus`         | Modellier-Modus (Ziehen & Schieben, Teilen, Versatz, Dach bearbeiten)             |
-| `27-skizze`                  | Skizzenmodus, Kantennetz, Fang                                                    |
-| `28-erweiterungen-v486-v519` | Menügruppen, Bäume setzen, Import-Tab, Detailbäume                                |
-| `29-start`                   | Start und Projekt öffnen                                                          |
+| Ordner                       | Inhalt                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `00-kern`                    | Hilfsfunktionen, Fehlerprotokoll, Registries `BA`/`SHP`, Zustand `S`                                   |
+| `01-modell-3d`               | Szene, Gebäude, Dachformen, Wandflächen, Auswahl, Layer                                                |
+| `02-geodaten`                | Vektorkacheln, Gelände (DGM/DOM), LoD2/LoD3-Gebäude, Bäume, ALKIS, Bebauungspläne                      |
+| `03-startseite`              | Demokarte, Startseite, Wolken, 3D-Beschriftungen, Planungsbeispiel                                     |
+| `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                                        |
+| `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                                       |
+| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken                          |
+| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen, Wind & Rauch (100–150)                                 |
+| `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                                                    |
+| `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                                     |
+| `10-excel-export`            | XLSX-Export (eigener ZIP-/Tabellen-Writer)                                                             |
+| `11-bearbeiten`              | Werkzeuggruppen, Abstandsflächen, Verschieben/Drehen, Kontextmenü                                      |
+| `12-ifc-export`              | IFC4/STEP-Export mit Prüfer                                                                            |
+| `13-geometrie-und-nutzung`   | Geometrie-Hilfen, Nutzungen je Geschoss                                                                |
+| `14-projekt-speicherstand`   | vollständiger Projekt-Speicherstand (Laden/Speichern)                                                  |
+| `15-grundriss`               | Grundriss/Einheiten, Flächenarten, Bilanz, Explosionsansicht, Grundriss-Fenster                        |
+| `16-darstellung-erweitert`   | Silhouetten, Auswahlfarben, Himmelfarbe, Zeichenfang                                                   |
+| `17-erweiterungen-v253-v280` | Analyse-Reiter, Umwelt-/Klimadaten, Risikogebiete, Legende, Dachfarben                                 |
+| `18-erweiterungen-v280-v325` | Grün/Wasser-Shader, Layer je Darstellung, USA-Daten, Kundenzugang, Administration                      |
+| `19-fassadendesigner`        | 2D-Fassadendesigner                                                                                    |
+| `20-geodaten-international`  | Frankreich, Österreich                                                                                 |
+| `21-gelaendeplanum`          | Geländeplanum, Böschungen, Baugrube, Mauern                                                            |
+| `22-lod200-waende`           | LOD 200: Wände und Decken aus dem Grundriss                                                            |
+| `23-bauteilkonfigurator`     | Bauteilkonfigurator (Wand, Decke, Dach) und LOD 300                                                    |
+| `24-erweiterungen-v344-v436` | Fokus-Ansicht, Kamera, Vollgeschoss-Regel, Gebäudeklasse, Varianten, Layouter                          |
+| `25-polygon-operationen`     | Vereinigung/Differenz/Schnitt, Innenhöfe                                                               |
+| `26-modellier-modus`         | Modellier-Modus (Ziehen & Schieben, Teilen, Versatz, Dach bearbeiten, Auswahlfilter und Kontextleiste) |
+| `27-skizze`                  | Skizzenmodus, Kantennetz, Fang                                                                         |
+| `28-erweiterungen-v486-v519` | Menügruppen, Bäume setzen, Import-Tab, Detailbäume                                                     |
+| `29-start`                   | Start und Projekt öffnen                                                                               |
 
 Dateien mit der Endung `.daten.js` enthalten nur eingebettete Daten (Schrift, Bild). Sie werden weder
 formatiert noch gelesen. Ändern: neu erzeugen statt von Hand bearbeiten.
@@ -243,3 +243,20 @@ läuft wie bisher im Browser.
 2. `npm run format`
 3. `npm run check` (Formatierung, Lint, Rauchtest)
 4. `dist/maad.html` ausliefern.
+
+## Modellieren: Auswahlmatrix und Kontextleiste
+
+`26-modellier-modus/140-kontextleiste.js` legt fest, was ein Klick wählt und welche Aktionen dazu angeboten werden:
+
+- `SK.flt` ist der Auswahlfilter: `a` Auto, `g` Gebäude, `s` Geschoss, `f` Fläche, `r` Flucht. Die Chips stehen unten
+  in der 3D-Ansicht (`#skflt`). Bei Auto gilt: erster Klick wählt das Gebäude, ein weiterer Klick in dasselbe Gebäude
+  die Fläche; Doppel-, Dreifach- und Vierfachklick bleiben erhalten.
+- `skKlickListe(en, n, m)` liefert die Auswahl für einen Klick und wird auch für die Hover-Vorschau genutzt
+  (`skHoverListe`). So zeigt der Hover immer genau das, was der Klick oder das Werkzeug trifft.
+- `skAuswTyp()` ordnet die Auswahl einer Zeile der Matrix zu (`g`, `s`, `f`, `r`, `d`, `tf`, `hof`, `m`). `SKKL`
+  enthält je Zeile die angebotenen Aktionen (BA-Schlüssel und `h` für die Geschosshöhe, `bst` für „Bestand
+  ausblenden“).
+- `skKontext()` zeichnet die Kontextleiste `#skkl` über der Auswahl. Sie wird aus `placeHc` aufgerufen, also jedes
+  Bild. Der Inhalt wird nur neu gebaut, wenn sich die Auswahl ändert.
+- Farben der Hervorhebung stehen in `SKC`, Orange und damit unabhängig von der Nutzungsfarbe. Kanten liegen obenauf.
+  Ein ganz gewähltes Gebäude ist nur leicht getönt.

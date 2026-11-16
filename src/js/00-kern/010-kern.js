@@ -24,7 +24,7 @@ const BA = [
   {
     k: 'sks',
     n: 'Auswahl',
-    t: 'Auswahl (Leertaste) – Klick Fläche · Doppelklick in einer Flucht · Dreifachklick Gebäude · Shift/Strg ergänzen · Shift+Ziehen Fenster',
+    t: 'Auswahl (Leertaste) – Klick Gebäude, weiterer Klick Fläche · Doppelklick Fläche · Dreifachklick Geschoss · Vierfachklick Flucht · Auswahlfilter unten in der Ansicht · Shift/Strg ergänzen · Shift+Ziehen Fenster',
     p: '<path d="M5 3l14 7-6 2-2 6z"/>',
   },
   {

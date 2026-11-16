@@ -163,7 +163,13 @@ function skBaSyncBasis() {
 // skMStart(): Erweiterung zusammengeführt, siehe 26-modellier-modus/040-stufe-3.js
 // Bearbeitungsmodus: keine Hover-Infos zu Flurstücken, Straßen, Gebäuden – nur die Werkzeug-Infos
 function skEditing() {
-  return !!(SK.used || SK.op || (typeof SZ !== 'undefined' && (SZ.d || SZ.op)) || S.tool !== 'v');
+  return !!(
+    SK.used ||
+    SK.op ||
+    SK.sel.length ||
+    (typeof SZ !== 'undefined' && (SZ.d || SZ.op)) ||
+    S.tool !== 'v'
+  );
 }
 {
   const _e = SK.opEsc;

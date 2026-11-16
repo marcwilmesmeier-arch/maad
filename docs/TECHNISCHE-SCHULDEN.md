@@ -184,3 +184,15 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Zeitüberschreitung ab; einzeln wiederholt läuft er durch. Ursache noch offen (vermutlich Last beim Gesamtlauf).
 - Einfärbung der Fassade im 3D-Modell (Fassadentypen, Materialien der Gruppenfelder) abgeschaltet (`FT3.aktiv`),
   soll anders umgesetzt werden; 2D-Ansicht und Wandgeometrie (Öffnungen, Rück-/Vorsprünge) unverändert.
+
+## Modellieren
+
+- Werkzeugkette `SK.opDown`/`opMove`/`opUp`/`opEsc`/`keys` wird in mehreren Dateien zur Laufzeit umhüllt
+  (`const _d = SK.opDown; SK.opDown = …`, z. B. 050, 100, 130, 27-skizze/080). Das verstößt gegen Regel 3 und sollte
+  in eine Weiche je Werkzeug zusammengeführt werden.
+- Fünf Wege zur Geometrieänderung bestehen nebeneinander: Wandflächen-Vor-/Rücksprung im Panel, Kugelgriffe,
+  Kontur bearbeiten, Skizze und Modellieren. Ziel ist, dass Teilen und Ziehen & Schieben der Standardweg werden.
+- Die Fassadenfelder im Fassadendesigner nutzen noch nicht dieselbe Auswahlsprache (Hover, Orange, Kontextleiste).
+- Steht ein Bestandsgebäude unter dem Neubau, bietet die Kontextleiste „Bestand ausblenden“ an. Es wird nicht
+  automatisch ausgeblendet.
+- Linien der Hervorhebung sind 1 px breit (WebGL-Linien), dickere Kanten bräuchten Linien als Flächen.
