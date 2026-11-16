@@ -363,6 +363,12 @@ setInterval(() => {
   } catch (e) {
     logErr(e, 'ftSync');
   }
+  // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Gruppen automatisch platzieren
+  try {
+    fkSync();
+  } catch (e) {
+    logErr(e, 'fkSync');
+  }
 }, 140);
 document.addEventListener('lotlod', () => {
   L2SIG = '';

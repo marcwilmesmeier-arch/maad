@@ -71,6 +71,11 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
 - Fassadentypen in 3D (`110-fassadentypen-3d.js`, derzeit abgeschaltet: `FT3.aktiv = false`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
   (`G.fdt`), farbige Flächen 4 cm vor der Außenwand mit ausgesparten Öffnungen, Laibungen in derselben Farbe
   (senkrecht zur tatsächlichen Wand); `ftSync` im Takt von `l2Vis`, je Gebäude nur bei Änderung neu.
+- Gebäudekonfigurator (`19-fassadendesigner/120-gebaeudekonfigurator.js`, Karte „Fassade“ im Gebäudepanel): Stapel
+  `b.fk.st` (Gruppe je Geschoss ab EG, oberste gilt darüber), Abweichungen `b.fk.ab` ('Ansicht|Geschoss', 'Ansicht|_',
+  '_|Geschoss'). `fkSync` (Takt von `l2Vis`) platziert bei Änderung automatisch Verweise mit `a: 1` in allen Feldern
+  aller Ansichten; von Hand verschobene/getauschte Verweise verlieren `a` und bleiben erhalten. `b.fk` wird wie `b.fd`
+  in Rückgängig, Speicherstand und Modellier-Modus mitgeführt.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 - Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
   Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker

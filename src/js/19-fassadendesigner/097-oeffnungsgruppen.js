@@ -345,7 +345,10 @@ function oegTauschen(k, alle) {
   const alt = I.g;
   fdEdit((b) =>
     (oegDaten(b, V.key) || []).forEach((J) => {
-      if (J.id === I.id || (alle && J.g === alt)) J.g = k;
+      if (J.id === I.id || (alle && J.g === alt)) {
+        J.g = k;
+        delete J.a; // von Hand getauscht: bleibt beim automatischen Platzieren erhalten
+      }
     }),
   );
 }
@@ -401,6 +404,7 @@ function oegMove(b, V, p, e) {
     if (!z.bewegt) {
       hist();
       z.bewegt = true;
+      delete I.a; // von Hand verschoben: bleibt beim automatischen Platzieren erhalten
     }
     const q = oegFang(b, V, p.x + z.du, p.z, G, e.shiftKey, I.id);
     I.u = q.u;

@@ -15,6 +15,7 @@ function skCloneB(b) {
       patches: b.patches,
       ub: b.ub,
       fd: b.fd,
+      fk: b.fk, // Gebäudekonfigurator (19-fassadendesigner/120)
       l2: b.l2,
       voids: b.voids,
     }),
