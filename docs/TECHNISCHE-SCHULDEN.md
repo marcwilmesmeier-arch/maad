@@ -173,3 +173,10 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Gebäudemetrik: Fassadenfläche noch brutto (ohne Abzug der Öffnungen).
 - Öffnungsgruppen: „Felder füllen“ legt feste Verweise an; ändert sich danach die Feldbreite, wird nicht automatisch
   neu verteilt (erneut füllen). Gruppen über mehrere Geschosse (z. B. zweigeschossige Achsen) noch nicht vorgesehen.
+- Rücksprünge nur in Öffnungsgruppen (nicht frei an der Fassade); über Wand- oder Geschossgrenzen hinweg wird je Wand
+  getrennt gerechnet. Ohne Fassadentyp bleiben die Seitenflächen grau (Wandfarbe).
+
+## Tests
+
+- `tests/server.test.mjs` (Browsertest Server) bricht in der Cloud-Umgebung gelegentlich beim Klick auf „Anmelden“ mit
+  Zeitüberschreitung ab; einzeln wiederholt läuft er durch. Ursache noch offen (vermutlich Last beim Gesamtlauf).

@@ -213,7 +213,7 @@ const FDCSS = `#fdDock{position:fixed;left:10px;right:84px;bottom:10px;height:va
 #fdDock .fc{flex:1;position:relative;min-width:0;background:var(--bg,#f2f2f2)}
 #fdDock canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
 #fdDock .fo{position:absolute;left:10px;top:10px;z-index:2;display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:12px;background:color-mix(in srgb,var(--pn,#fff) 92%,transparent);box-shadow:0 2px 12px #0002;font-size:12px}
-#fdDock .fo:empty{display:none}#fdDock .fo .seg{max-width:none}#fdDock .fo select{max-width:230px}
+#fdDock .fo:empty{display:none}#fdDock .fo button{white-space:nowrap}#fdDock .fo .seg{max-width:none}#fdDock .fo select{max-width:230px}
 #fdDock .fs{width:300px;flex:none;background:var(--pn,#E9EDEF);border-left:1px solid var(--ln,#dcdcdc);overflow:auto;padding:10px 12px}
 #fdDock h4{margin:14px 0 6px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mu,#7a7a7a);font-weight:600}#fdDock h4:first-child{margin-top:0}
 #fdDock .ff{display:flex;align-items:center;gap:12px;padding:5px 12px;border-top:1px solid var(--ln,#dcdcdc);font-size:11.5px;color:var(--mu,#7a7a7a);background:var(--pn,#E9EDEF)}

@@ -513,6 +513,8 @@ function oeZeichneEine(g, X, Y, u0, u1, v0, T, o) {
 function oeZeichnen(g, b, V, ox, o) {
   const X = (u) => fdSX(u + ox),
     Y = fdSY;
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Rücksprünge unter den Öffnungen
+  oegRueckZeichnen(g, b, V, ox);
   oeListe(b, V).forEach((x) =>
     oeZeichneEine(g, X, Y, x.u0, x.u1, x.v0, x.T, { sel: o.sel && FDS.oe === x.o.id }),
   );

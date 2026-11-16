@@ -159,12 +159,18 @@ function l2MeshOrig(e) {
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Außenwand mit Öffnungen in Stücke teilen
     const O = oeWandOeffnungen(e);
     if (O.length) {
-      oeWandTeilen(e, O).forEach(([f, ya, yb]) => {
+      const stueck = ([f, ya, yb]) => {
         const n0 = g.children.length;
         add(f, yb - ya);
         for (let i = n0; i < g.children.length; i++) g.children[i].position.y = ya;
-      });
-      g.add(oeKoerper(O));
+      };
+      // Löcher: Öffnungen und Rücksprünge; Vorsprünge lassen die Wand unverändert
+      const loecher = O.filter((o) => !o.r || o.r > 0);
+      if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
+      else e.quads.forEach((q) => add({ o: q, h: [] }));
+      oeRuecksprungKoerper(O).forEach(stueck);
+      const Oe = O.filter((o) => !o.r);
+      if (Oe.length) g.add(oeKoerper(Oe));
     } else e.quads.forEach((q) => add({ o: q, h: [] }));
   } else e.faces.forEach((f) => add(f));
   if (e.quads2) {

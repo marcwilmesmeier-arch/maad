@@ -53,6 +53,9 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   (Länge, Höhe, Öffnungen mit Lage), an der Fassade nur Verweise `b.fd[Ansicht].gr = [{id, g, u, v}]`. `oeListe`
   erzeugt daraus die Öffnungen (q = Verweis) – eine geänderte Gruppe ändert alle Stellen. Fassadendesigner: Werkzeug
   „Gruppe“ (setzen, ziehen, tauschen), „Gewählte Felder füllen“ (je Geschoss, Rest gleichmäßig an den Enden).
+  Rücksprünge je Gruppe (`G.rs`, Tiefe d: positiv zurück, negativ vor): Ansicht `oegRuecksprunge`, LOD 200 in
+  `oeWandOeffnungen` (r) → Wand ausgespart (`oeWandTeilen`) und zurückversetzt geschlossen bzw. Vorsprungkörper
+  (`oeRuecksprungKoerper`), Fenster darin um die Tiefe versetzt (rk); Fassadenfarbe mit Fläche und Seiten.
 - Fassadendesigner-Oberfläche (`19-fassadendesigner/030`, `060`): unten angedockt (Höhe am Griff, `maad.fdH`),
   Kopf mit Ansichten als Reitern, Werkzeugleiste (Auswählen V, Teilen T mit Linie/Rechteck/Geschoss, Öffnung O,
   Gruppe G), Optionsleiste über der Zeichnung, Inspektor `fdInspektor` (zeigt nur das Gewählte bzw. die Bibliothek des

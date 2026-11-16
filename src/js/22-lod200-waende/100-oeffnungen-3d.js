@@ -4,7 +4,9 @@
 // geteilt: neben den Öffnungen voll, im Bereich einer Öffnung nur Brüstung und Sturz – so entstehen echte Laibungen.
 // In die Öffnung kommen Rahmen und Einteilung (oeAufteilung, wie in der Ansicht), Glas mit Sprossen bzw. Paneel
 // (noch ohne Fensterbank).
-// Nur in LOD 200 (l2MeshOrig); LOD 100 zeigt keine Öffnungen.
+// Rücksprünge der Öffnungsgruppen (r = Tiefe): die Wand wird dort ausgespart und dahinter um die Tiefe zurückversetzt
+// wieder geschlossen (Vorsprung: zusätzlicher Körper vor der Wand); Fenster im Rücksprung sitzen um dessen Tiefe weiter
+// hinten. Nur in LOD 200 (l2MeshOrig); LOD 100 zeigt keine Öffnungen.
 
 /** Öffnungen eines Gebäudes in Weltkoordinaten (zwischengespeichert, solange sich Form und Öffnungen nicht ändern). */
 function oeWelt(b) {
@@ -32,6 +34,21 @@ function oeWelt(b) {
           return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
         };
         L.push({ p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, y1: base + x.v1, T: x.T, n: V.n, id: x.o.id });
+      }),
+    );
+    // Rücksprünge (aus Öffnungsgruppen), gleiche Umrechnung
+    fdViews(b).forEach((V) =>
+      oegRuecksprunge(b, V).forEach((x) => {
+        if (!x.d) return;
+        const pc = V.pcs.find(
+          (p) => p.pd != null && p.ring && inP([(x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2], p.ring),
+        );
+        if (!pc) return;
+        const W = (uu) => {
+          const s = (uu - pc.ua) / pc.dot;
+          return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
+        };
+        L.push({ p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, y1: base + x.v1, r: x.d, n: V.n, id: x.id });
       }),
     );
   }
@@ -129,16 +146,25 @@ function oeWandOeffnungen(e) {
       y0,
       y1,
       T: o.T,
+      r: o.r,
       A,
       voll: o.y1 - e.y0 <= e.h + 0.01,
     });
+  });
+  // Fenster in einem Rücksprung: Tiefe des Rücksprungs merken (Rahmen sitzt entsprechend weiter innen bzw. außen)
+  R.forEach((o) => {
+    if (o.r) return;
+    const tm = (o.t0 + o.t1) / 2,
+      ym = (o.y0 + o.y1) / 2,
+      rs = R.find((q) => q.r && q.t0 <= tm && q.t1 >= tm && q.y0 <= ym && q.y1 >= ym);
+    o.rk = rs ? rs.r : 0;
   });
   return R;
 }
 /** Kennung für den Neuaufbau einer Wand in l2Sync (ändert sich mit ihren Öffnungen). */
 function oeWandSig(e) {
   const O = oeWandOeffnungen(e);
-  return O.length ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T]) : 0;
+  return O.length ? O.map((o) => [o.t0, o.t1, o.y0, o.y1, o.T || o.r, o.rk || 0]) : 0;
 }
 /** Vieleck auf den Achsbereich t ∈ [a, c] beschneiden (Sutherland-Hodgman, zwei Halbebenen). */
 function oeSchneide(P, d, a, c) {
@@ -197,6 +223,49 @@ function oeWandTeilen(e, O) {
   }
   return R;
 }
+/** Rechteck [t0,t1]×[y0,y1] ohne die Rechtecke L (in Teilrechtecke zerlegt). */
+function oeRechteckOhne(t0, t1, y0, y1, L) {
+  const gr = [t0, t1, ...L.flatMap((o) => [o.t0, o.t1]).filter((x) => x > t0 && x < t1)].sort(
+      (a, c) => a - c,
+    ),
+    R = [];
+  for (let i = 0; i < gr.length - 1; i++) {
+    const a = gr[i],
+      c = gr[i + 1];
+    if (c - a < 1e-4) continue;
+    const m = (a + c) / 2,
+      H = L.filter((o) => o.t0 < m && o.t1 > m)
+        .map((o) => [Math.max(y0, o.y0), Math.min(y1, o.y1)])
+        .filter(([p, q]) => q > p)
+        .sort((p, q) => p[0] - q[0]);
+    let y = y0;
+    H.forEach(([p, q]) => {
+      if (p > y + 1e-3) R.push([a, c, y, p]);
+      y = Math.max(y, q);
+    });
+    if (y < y1 - 1e-3) R.push([a, c, y, y1]);
+  }
+  return R;
+}
+/**
+ * Wandkörper der Rücksprünge: zurückversetzte Rückwand (Tiefe > 0) bzw. Vorsprung vor der Wand (Tiefe < 0), jeweils
+ * ohne die Öffnungen darin. Ergebnis wie oeWandTeilen: [Grundriss, Unterkante, Oberkante].
+ */
+function oeRuecksprungKoerper(O) {
+  const R = [];
+  O.filter((o) => o.r).forEach((rs) => {
+    const A = rs.A,
+      s0 = rs.r > 0 ? A.sI : A.sA,
+      s1 = rs.r > 0 ? A.sA - rs.r : A.sA - rs.r;
+    if (s1 - s0 < 0.01) return;
+    const P = (t, s) => [A.d[0] * t + A.n[0] * s, A.d[1] * t + A.n[1] * s],
+      L = O.filter((o) => !o.r && o.t1 > rs.t0 && o.t0 < rs.t1 && o.y1 > rs.y0 && o.y0 < rs.y1);
+    oeRechteckOhne(rs.t0, rs.t1, rs.y0, rs.y1, L).forEach(([a, c, ya, yb]) =>
+      R.push([{ o: [P(a, s0), P(c, s0), P(c, s1), P(a, s1)], h: [] }, ya, yb]),
+    );
+  });
+  return R;
+}
 /** Rahmen, Glas bzw. Türblatt der Öffnungen einer Wand (Gruppe relativ zur Wandunterkante). */
 function oeKoerper(O) {
   const g = new T.Group(),
@@ -232,7 +301,8 @@ function oeKoerper(O) {
     const T_ = o.T,
       A = o.A,
       tief = 0.08,
-      sV = A.sA - Math.min(T_.et, Math.max(0, A.sA - A.sI - tief)),
+      sAo = A.sA - (o.rk || 0), // Außenfläche am Fenster (im Rücksprung zurückversetzt)
+      sV = sAo - Math.min(T_.et, Math.max(0, sAo - A.sI - tief)),
       sH = sV - tief,
       sm = (sH + sV) / 2,
       R = feld(T_.rf),

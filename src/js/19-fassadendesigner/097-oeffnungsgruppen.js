@@ -1,6 +1,8 @@
 // ======================= ÖFFNUNGSGRUPPEN (wie in Forma) =======================
 // Eine Gruppe ist ein Fassadenabschnitt fester Länge (z. B. 6 m) und Höhe (Geschoss), in dem Öffnungen aus dem Katalog
-// sitzen: S.oeg = [{ k, n, l, h, oe: [{ id, t, x, v }] }] (x = linke Kante, v = Unterkante über dem Fußboden).
+// sitzen: S.oeg = [{ k, n, l, h, oe: [{ id, t, x, v }], rs: [{ id, x, v, b, h, d }] }] (x = linke Kante, v = Unterkante
+// über dem Fußboden). rs = Rücksprünge: Rechtecke mit Tiefe d (m; positiv = Fassade springt zurück, negativ = Vorsprung),
+// z. B. ein vertieftes Feld neben dem Fenster oder ein gerader Versprung über die ganze Gruppe.
 // Angelegt und bearbeitet im Konfigurator (Reiter „Gruppen“), gespeichert mit dem Projekt.
 // An der Fassade stehen nur Verweise: b.fd[Ansicht].gr = [{ id, g, u, v }] (u = linke Kante, v = Geschossboden).
 // Die Öffnungen daraus erzeugt oeListe() (q = Kennung des Verweises) – eine geänderte Gruppe ändert alle Stellen.
@@ -36,6 +38,20 @@ const OEG0 = [
     oe: [
       { id: 'a', t: 'ht', x: 0.8, v: 0 },
       { id: 'b', t: 'fv', x: 2.9, v: 0 },
+    ],
+  },
+  {
+    k: 'g4',
+    n: 'Achse 6 m · Fenster mit Rücksprung',
+    l: 6,
+    h: 3,
+    oe: [
+      { id: 'a', t: 'f1', x: 0.9, v: 0.9 },
+      { id: 'b', t: 'f1', x: 3.6, v: 0.9 },
+    ],
+    rs: [
+      { id: 'r1', x: 1.91, v: 0.75, b: 1.2, h: 1.685, d: 0.05 },
+      { id: 'r2', x: 4.61, v: 0.75, b: 1.2, h: 1.685, d: 0.05 },
     ],
   },
 ];
@@ -74,6 +90,59 @@ function oegOeffnungen(b, V) {
     });
   });
   return R;
+}
+/** Rücksprünge aller Gruppenverweise einer Ansicht: { u0, u1, v0, v1, d, id, gi }. */
+function oegRuecksprunge(b, V) {
+  const R = [];
+  (oegDaten(b, V.key) || []).forEach((I) => {
+    const G = oegG(I.g);
+    if (!G || !G.rs) return;
+    G.rs.forEach((r) =>
+      R.push({
+        u0: I.u + r.x,
+        u1: I.u + r.x + r.b,
+        v0: I.v + r.v,
+        v1: I.v + r.v + r.h,
+        d: r.d,
+        id: I.id + ':' + r.id,
+        gi: I,
+      }),
+    );
+  });
+  return R;
+}
+/** Rücksprung in der Ansicht zeichnen: zurückspringend dunkler, vorspringend heller, Schattenkante oben/links. */
+function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an) {
+  const x0 = X(u0),
+    x1 = X(u1),
+    y0 = Y(v1),
+    y1 = Y(v0);
+  g.save();
+  g.fillStyle = d > 0 ? 'rgba(30,41,59,0.16)' : 'rgba(255,255,255,0.45)';
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  g.strokeStyle = d > 0 ? 'rgba(30,41,59,0.55)' : 'rgba(30,41,59,0.35)';
+  g.lineWidth = an ? 2 : 1;
+  if (an) g.strokeStyle = '#1f6fd1';
+  g.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  // Schattenkante (Licht von links oben)
+  g.strokeStyle = d > 0 ? 'rgba(30,41,59,0.45)' : 'rgba(30,41,59,0.25)';
+  g.lineWidth = 3;
+  g.beginPath();
+  if (d > 0) {
+    g.moveTo(x0 + 1.5, y1);
+    g.lineTo(x0 + 1.5, y0 + 1.5);
+    g.lineTo(x1, y0 + 1.5);
+  } else {
+    g.moveTo(x1 + 1.5, y0);
+    g.lineTo(x1 + 1.5, y1 + 1.5);
+    g.lineTo(x0, y1 + 1.5);
+  }
+  g.stroke();
+  g.restore();
+}
+function oegRueckZeichnen(g, b, V, ox) {
+  const X = (u) => fdSX(u + ox);
+  oegRuecksprunge(b, V).forEach((r) => oegRueckZeichneEins(g, X, fdSY, r.u0, r.u1, r.v0, r.v1, r.d, false));
 }
 /** Gruppenverweis unter dem Punkt (Rechteck der Gruppe). */
 function oegTreffer(b, V, u, v) {
@@ -308,6 +377,9 @@ function oegSymbol(G, w = 44, h = 22) {
     ox = (w - G.l * k) / 2,
     oy = h - (h - G.h * k) / 2;
   let s = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect x="${ox}" y="${oy - G.h * k}" width="${G.l * k}" height="${G.h * k}" fill="#e4e2dd" stroke="#94a3b8" stroke-width=".8"/>`;
+  (G.rs || []).forEach((r) => {
+    s += `<rect x="${ox + r.x * k}" y="${oy - (r.v + r.h) * k}" width="${r.b * k}" height="${r.h * k}" fill="${r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
+  });
   G.oe.forEach((q) => {
     const T = oeT(q.t);
     s += `<rect x="${ox + q.x * k}" y="${oy - (q.v + T.h) * k}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : '#fff'}" stroke="${T.rf}" stroke-width="1"/>`;
@@ -364,5 +436,15 @@ function oegPruefen(L) {
     oe: (Array.isArray(G.oe) ? G.oe : [])
       .filter((q) => q && q.t)
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
+    rs: (Array.isArray(G.rs) ? G.rs : [])
+      .filter((r) => r && +r.b > 0 && +r.h > 0)
+      .map((r, i) => ({
+        id: String(r.id || 'r' + i),
+        x: +r.x || 0,
+        v: +r.v || 0,
+        b: +r.b,
+        h: +r.h,
+        d: Math.max(-1, Math.min(1, +r.d || 0)),
+      })),
   }));
 }

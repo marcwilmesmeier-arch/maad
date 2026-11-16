@@ -4,6 +4,10 @@
 // Aufgerufen aus okRender/okZeichnen/okDown/okMove/okUp (095-konfigurator.js), wenn OK.reiter === 'gr'.
 
 const okGr = () => oegG(OK.g);
+const okGrRs = () => {
+  const G = okGr();
+  return G && G.rs ? G.rs.find((r) => r.id === OK.gr) || null : null;
+};
 const okGrOe = () => {
   const G = okGr();
   return G ? G.oe.find((q) => q.id === OK.go) || null : null;
@@ -51,6 +55,48 @@ function okGrOeNeu(t) {
   const id = 'o' + Date.now().toString(36);
   G.oe.push({ id, t, x: Math.round(((best[0] + best[1]) / 2 - T.b / 2) / OE_RASTER) * OE_RASTER, v: T.br });
   OK.go = id;
+  oeAktualisieren();
+}
+/** Rücksprung hinzufügen: neben der gewählten (sonst ersten) Öffnung, gleiche Höhe ±15 cm, 5 cm tief. */
+function okGrRsNeu() {
+  const G = okGr();
+  if (!G) return;
+  G.rs = G.rs || [];
+  const q = okGrOe() || G.oe[0],
+    T = q && oeT(q.t),
+    id = 'r' + Date.now().toString(36),
+    r = q
+      ? { id, x: q.x + T.b, v: Math.max(0, q.v - 0.15), b: 1.2, h: T.h + 0.3, d: 0.05 }
+      : { id, x: 0, v: 0, b: G.l, h: G.h, d: 0.05 };
+  r.b = Math.max(0.2, Math.min(r.b, G.l - r.x));
+  G.rs.push(r);
+  OK.gr = id;
+  OK.go = null;
+  oeAktualisieren();
+}
+/** Gewählten Rücksprung ändern (x, v, b, h in m; d Tiefe in cm, negativ = Vorsprung). */
+function okGrRsSet(f, v) {
+  const r = okGrRs(),
+    n = +String(v).replace(',', '.');
+  if (!r || !isFinite(n)) return;
+  if (f === 'd') r.d = Math.max(-100, Math.min(100, n)) / 100;
+  else if (f === 'b' || f === 'h') r[f] = Math.max(0.05, n);
+  else if (f === 'x' || f === 'v') r[f] = n;
+  oeAktualisieren();
+}
+/** Rücksprung über die ganze Gruppe (gerader Fassadenversprung). */
+function okGrRsGanz() {
+  const G = okGr(),
+    r = okGrRs();
+  if (!G || !r) return;
+  Object.assign(r, { x: 0, v: 0, b: G.l, h: G.h });
+  oeAktualisieren();
+}
+function okGrRsLoeschen() {
+  const G = okGr();
+  if (!G || !G.rs) return;
+  G.rs = G.rs.filter((r) => r.id !== OK.gr);
+  OK.gr = null;
   oeAktualisieren();
 }
 function okGrOeLoeschen() {
@@ -168,7 +214,15 @@ function okGrRender() {
     h += `<h4>Gewählte Öffnung</h4><div class="okg"><span>Typ</span><select onchange="okGrOeSet('t',this.value)">${opt(q.t)}</select>
 <span>Abstand links (m)</span>${z('x', q.x, 'okGrOeSet')}<span>Brüstung (m)</span>${z('v', q.v, 'okGrOeSet')}</div>
 <div class="okb"><button onclick="okGrOeLoeschen()">Entfernen</button></div>`;
-  else h += `<div class="mu" style="margin-top:6px">Öffnung in der Ansicht anklicken und ziehen.</div>`;
+  const r = okGrRs();
+  h += `<h4>Rücksprünge</h4><div class="okb"><button onclick="okGrRsNeu()" title="Vertieftes Feld, z. B. neben dem Fenster; negative Tiefe = Vorsprung">+ Rücksprung</button></div>`;
+  if (r)
+    h += `<div class="okg" style="margin-top:6px"><span>Tiefe (cm, − = Vorsprung)</span><input type="number" step="1" value="${Math.round(r.d * 1000) / 10}" onchange="okGrRsSet('d',this.value)">
+<span>Breite (m)</span>${z('b', r.b, 'okGrRsSet')}<span>Höhe (m)</span>${z('h', r.h, 'okGrRsSet')}
+<span>Abstand links (m)</span>${z('x', r.x, 'okGrRsSet')}<span>Unterkante (m)</span>${z('v', r.v, 'okGrRsSet')}</div>
+<div class="okb"><button onclick="okGrRsGanz()" title="Über Länge und Höhe der Gruppe – gerader Fassadenversprung">Ganze Gruppe</button><button onclick="okGrRsLoeschen()">Entfernen</button></div>`;
+  if (!q && !r)
+    h += `<div class="mu" style="margin-top:6px">Öffnung oder Rücksprung in der Ansicht anklicken und ziehen; Kanten rasten an den Fenstern ein.</div>`;
   h += `<div class="okb" style="margin-top:14px"><button onclick="okGrSetzen()">Im Fassadendesigner setzen</button><button onclick="okGrKopie()">Kopie</button><button onclick="okGrLoeschen()">Löschen</button></div>
 <div class="mu" style="margin-top:6px">${zahl[G.k] ? zahl[G.k] + '× gesetzt – ' : ''}Änderungen gelten für alle Stellen, an denen die Gruppe sitzt.</div>`;
   R.innerHTML = h;
@@ -225,6 +279,20 @@ function okGrZeichnen() {
   g.moveTo(P.X(-0.6), P.Y(0));
   g.lineTo(P.X(G.l + 0.6), P.Y(0));
   g.stroke();
+  (G.rs || []).forEach((r) => {
+    oegRueckZeichneEins(g, P.X, P.Y, r.x, r.x + r.b, r.v, r.v + r.h, r.d, r.id === OK.gr);
+    if (r.b * P.s > 40) {
+      g.fillStyle = '#475569';
+      g.font = '10px system-ui,sans-serif';
+      g.textAlign = 'right';
+      g.textBaseline = 'top';
+      g.fillText(
+        (r.d > 0 ? '−' : '+') + Math.round(Math.abs(r.d) * 100) + ' cm',
+        P.X(r.x + r.b) - 4,
+        P.Y(r.v + r.h) + 4,
+      );
+    }
+  });
   G.oe.forEach((q) => {
     const T = oeT(q.t);
     oeZeichneEine(g, P.X, P.Y, q.x, q.x + T.b, q.v, T, { sel: q.id === OK.go });
@@ -262,7 +330,8 @@ function okGrZeichnen() {
   g.fillText(fdFmt(G.l) + ' m', P.X(G.l / 2), y2 + 4);
   const hint = okE('okHint');
   if (hint)
-    hint.textContent = 'Öffnung anklicken und ziehen (Shift: ohne Einrasten) · gestrichelt: Länge der Gruppe';
+    hint.textContent =
+      'Öffnung oder Rücksprung anklicken und ziehen (Umschalt: ohne Einrasten) · gestrichelt: Länge der Gruppe';
 }
 function okGrDown(e) {
   const P = okGrAnsicht(),
@@ -277,10 +346,18 @@ function okGrDown(e) {
       .find((q) => {
         const T = oeT(q.t);
         return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
-      });
+      }),
+    r = q
+      ? null
+      : (G.rs || [])
+          .slice()
+          .reverse()
+          .find((r) => x >= r.x && x <= r.x + r.b && y >= r.v && y <= r.v + r.h);
   OK.go = q ? q.id : null;
-  if (q) {
-    OK.gzug = { dx: q.x - x, dv: q.v - y };
+  OK.gr = r ? r.id : null;
+  const z = q || r;
+  if (z) {
+    OK.gzug = { dx: z.x - x, dv: z.v - y };
     okE('okCv').setPointerCapture(e.pointerId);
   }
   okGrRender();
@@ -288,28 +365,58 @@ function okGrDown(e) {
 }
 function okGrMove(e) {
   const P = okGrAnsicht(),
+    G = okGr(),
     q = okGrOe(),
+    rs = okGrRs(),
     z = OK.gzug;
-  if (!P) return;
+  if (!P || !G) return;
   const [px, py] = okPos(e);
-  if (!z || !q) {
-    const G = okGr(),
-      x = P.iX(px),
+  if (!z || (!q && !rs)) {
+    const x = P.iX(px),
       y = P.iY(py),
-      an = G && G.oe.some((o) => x >= o.x && x <= o.x + oeT(o.t).b && y >= o.v && y <= o.v + oeT(o.t).h);
+      an =
+        G.oe.some((o) => x >= o.x && x <= o.x + oeT(o.t).b && y >= o.v && y <= o.v + oeT(o.t).h) ||
+        (G.rs || []).some((r) => x >= r.x && x <= r.x + r.b && y >= r.v && y <= r.v + r.h);
     e.currentTarget.style.cursor = an ? 'move' : '';
     return;
   }
-  const T = oeT(q.t),
-    r = (v) => Math.round(v / OE_RASTER) * OE_RASTER;
+  const r = (v) => Math.round(v / OE_RASTER) * OE_RASTER;
   let x = P.iX(px) + z.dx,
     v = P.iY(py) + z.dv;
-  if (!e.shiftKey) {
-    x = r(x);
-    v = Math.abs(v - T.br) < 0.3 ? T.br : Math.abs(v) < 0.3 ? 0 : r(v);
+  if (q) {
+    const T = oeT(q.t);
+    if (!e.shiftKey) {
+      x = r(x);
+      v = Math.abs(v - T.br) < 0.3 ? T.br : Math.abs(v) < 0.3 ? 0 : r(v);
+    }
+    q.x = Math.round(x * 1000) / 1000;
+    q.v = Math.max(0, Math.round(v * 1000) / 1000);
+  } else {
+    // Rücksprung: Kanten rasten an Fensterkanten und an den Gruppenrändern ein
+    if (!e.shiftKey) {
+      const tol = 0.12,
+        kx = [0, G.l],
+        kv = [0, G.h];
+      G.oe.forEach((o) => {
+        const T = oeT(o.t);
+        kx.push(o.x, o.x + T.b);
+        kv.push(o.v, o.v + T.h);
+      });
+      const fang = (a, w, K) => {
+        let best = null;
+        K.forEach((k) =>
+          [k - a, k - (a + w)].forEach((dd) => {
+            if (Math.abs(dd) < tol && (best === null || Math.abs(dd) < Math.abs(best))) best = dd;
+          }),
+        );
+        return best === null ? r(a) : a + best;
+      };
+      x = fang(x, rs.b, kx);
+      v = fang(v, rs.h, kv);
+    }
+    rs.x = Math.round(x * 1000) / 1000;
+    rs.v = Math.max(0, Math.round(v * 1000) / 1000);
   }
-  q.x = Math.round(x * 1000) / 1000;
-  q.v = Math.max(0, Math.round(v * 1000) / 1000);
   okGrZeichnen();
 }
 function okGrUp() {
