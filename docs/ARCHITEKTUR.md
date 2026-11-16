@@ -32,8 +32,13 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   wie im three.js-Beispiel webgl_loader_3dtiles). Zwei Hilfsdurchgänge mit Ersatzmaterialien (`atmDurchgang`,
   übernehmen Seite und `onBeforeCompile` des Originals): Normalenbild und Schattenmaske (Alpha = maads Schatten,
   r = nachbeleuchten ja/nein). Wasser (`040-wasser-realistisch-plus.js`) spiegelt den Himmel aus einer Würfeltextur
-  und ist von der Nachbeleuchtung ausgenommen. Eigene Objekte mit Sondershadern können über `userData.atmVar`
+  und ist von der Nachbeleuchtung ausgenommen; Tiefenversatz (`polygonOffset` −4/−8) in allen Durchgängen wie beim
+  Wasser in Realistisch, sonst sticht das Gelände in der Ferne durch. Eigene Objekte mit Sondershadern können über `userData.atmVar`
   eigene Ersatzmaterialien mitgeben.
+- Wohnungsmix (`15-grundriss/055-wohnungsmix.js`, aus v545 zurückgeholt): Abschnitt in Gebäudemetrik → Einheiten
+  (`wmxHtml`, aufgerufen in `zoRender`). Einstellung `S.wmx` {p Vorlage, m Anteile %, s Zielgrößen m²} wird mit dem
+  Projekt gespeichert (ältere Projekte: aus `S.gen.cat.Wohnen` des früheren Generators übernommen). Ist aus den
+  Grundriss-Einheiten (wo1–wo5), ohne Einheiten Schätzung aus BGF Wohnen × 75 %.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 - Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
   Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker

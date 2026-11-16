@@ -156,3 +156,10 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Astronomisch mögliche Besonnung ohne Bewölkung und Atmosphäre; Bäume werfen vollen Schatten (kein Laub-Transmissionsgrad).
 - Ergebnis und Analysepunkte werden nicht mit dem Projekt gespeichert. Umgebungsgebäude werden nicht eingefärbt (nur
   Planung und Boden, gewünscht so).
+
+## Wohnungsmix
+
+- Noch nicht im Excel-Export. Schätzung ohne Grundriss mit festem Verhältnis Wohnfläche/BGF 75 % (früher rechnete
+  der Generator Erschließung und Kerne genauer – Generator bleibt entfernt).
+- Realistisch+-Wasser: Tiefenversatz behebt das Durchstechen des Geländes; im Software-Rendering nicht an echten
+  Wasserflächen geprüft – Abnahme im Browser des Nutzers.

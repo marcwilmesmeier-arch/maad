@@ -18,6 +18,7 @@ function projExtra(cam) {
     x.parSel = [...S.parSel].map((i) => AL[i] && AL[i].id).filter(Boolean);
     x.lim = S.lim;
     x.gen = S.gen;
+    x.wmx = S.wmx;
     x.uses = S.uses;
     x.abst = S.abst;
     x.showSN = S.showSN;
@@ -306,6 +307,7 @@ function projApplySet(x) {
   if (x.fang) S.fang = Object.assign({}, S.fang, x.fang);
   if (x.lim) Object.assign(S.lim, cp(x.lim));
   if (x.gen) S.gen = cp(x.gen);
+  S.wmx = x.wmx ? wmxNorm(x.wmx) : wmxAusGenerator(x.gen) || wmxNorm(null);
   if (x.uses) Object.assign(S.uses, cp(x.uses));
   if (x.abst) S.abst = cp(x.abst);
   ['showSN', 'showFN', 'plOpen', 'ortho', 'sd', 'sa', 'lod2On', 'gbMode', 'mkOn', 'mkA'].forEach((k) => {

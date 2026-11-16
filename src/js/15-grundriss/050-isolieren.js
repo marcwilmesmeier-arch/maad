@@ -401,7 +401,9 @@ function zoRender() {
           if (!any)
             h +=
               '<div class="mu" style="margin-top:8px">Noch keine Einheiten vergeben. Im Grundriss (Taste G) mit Linie oder Rechteck schneiden und Flächenarten zuweisen.</div>';
-          else {
+          // ── Erweiterung aus 15-grundriss/055-wohnungsmix.js
+          h += wmxHtml(P, R, A);
+          if (any) {
             const AL = { t: 'all', lab: 'Alle Einheiten' };
             h += zoD(
               'u1',

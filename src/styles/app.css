@@ -2685,3 +2685,50 @@ body.hpj #ic {
   border-color: #1d1d1b;
   background: #fff;
 }
+
+/* Wohnungsmix (Gebäudemetrik → Einheiten) */
+#zol .wmx {
+  padding: 6px 2px 4px 8px;
+  font-size: 12px;
+}
+#zol .wmx select {
+  margin-left: 6px;
+  font-size: 12px;
+  max-width: 100%;
+}
+#zol .wmx table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 4px;
+}
+#zol .wmx th {
+  font-weight: 400;
+  color: var(--zm);
+  font-size: 11px;
+  text-align: left;
+  padding: 2px;
+}
+#zol .wmx td {
+  padding: 2px;
+  white-space: nowrap;
+}
+#zol .wmx td i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+#zol .wmx input[type='number'] {
+  width: 44px !important;
+  padding: 2px 4px !important;
+  font-size: 12px;
+  text-align: right;
+  appearance: textfield;
+}
+#zol .wmx input::-webkit-inner-spin-button,
+#zol .wmx input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
