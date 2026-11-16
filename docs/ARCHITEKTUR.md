@@ -35,10 +35,12 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   und ist von der Nachbeleuchtung ausgenommen; Tiefenversatz (`polygonOffset` −4/−8) in allen Durchgängen wie beim
   Wasser in Realistisch, sonst sticht das Gelände in der Ferne durch. Eigene Objekte mit Sondershadern können über `userData.atmVar`
   eigene Ersatzmaterialien mitgeben.
-- Wohnungsmix (`15-grundriss/055-wohnungsmix.js`, aus v545 zurückgeholt): Abschnitt in Gebäudemetrik → Einheiten
-  (`wmxHtml`, aufgerufen in `zoRender`). Einstellung `S.wmx` {p Vorlage, m Anteile %, s Zielgrößen m²} wird mit dem
-  Projekt gespeichert (ältere Projekte: aus `S.gen.cat.Wohnen` des früheren Generators übernommen). Ist aus den
-  Grundriss-Einheiten (wo1–wo5), ohne Einheiten Schätzung aus BGF Wohnen × 75 %.
+- Wohnungsmix (`15-grundriss/055-wohnungsmix.js`, aus v545 zurückgeholt): Wohnungstypen = Flächenarten mit Nutzung
+  Wohnen (ohne die allgemeine, `df`). Einstellung im Fenster „Flächenarten“ (`wmxEinstellungHtml`, aufgerufen in
+  `grFaHtml`), Auswertung in Gebäudemetrik → Einheiten (`wmxHtml`, aufgerufen in `zoRender`). `S.wmx` {p Vorlage,
+  m Anteil % je Flächenart, s Zielgröße m² je Flächenart} wird mit dem Projekt gespeichert (ältere Projekte: aus
+  `S.gen.cat.Wohnen` des früheren Generators). Ist aus den Grundriss-Einheiten, ohne Einheiten Schätzung aus BGF
+  Wohnen × 75 %.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 - Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
   Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker

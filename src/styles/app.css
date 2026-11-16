@@ -2686,49 +2686,30 @@ body.hpj #ic {
   background: #fff;
 }
 
-/* Wohnungsmix (Gebäudemetrik → Einheiten) */
-#zol .wmx {
-  padding: 6px 2px 4px 8px;
-  font-size: 12px;
+/* Wohnungsmix: Einstellung im Fenster „Flächenarten“ */
+#fap .wmx {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, 1fr) 64px 64px;
+  gap: 4px 6px;
+  align-items: center;
+  margin: 6px 0 2px;
 }
-#zol .wmx select {
-  margin-left: 6px;
-  font-size: 12px;
-  max-width: 100%;
+#fap .wmx i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid #0003;
 }
-#zol .wmx table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 6px 0 4px;
-}
-#zol .wmx th {
-  font-weight: 400;
-  color: var(--zm);
-  font-size: 11px;
-  text-align: left;
-  padding: 2px;
-}
-#zol .wmx td {
-  padding: 2px;
+#fap .wmx label {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-#zol .wmx td i {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 6px;
-  vertical-align: -1px;
-}
-#zol .wmx input[type='number'] {
-  width: 44px !important;
-  padding: 2px 4px !important;
-  font-size: 12px;
+#fap .wmx input[type='number'] {
+  width: 100%;
+  padding: 2px 4px;
   text-align: right;
-  appearance: textfield;
 }
-#zol .wmx input::-webkit-inner-spin-button,
-#zol .wmx input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+#fap .wmx .mu {
+  font-size: 11px;
 }
