@@ -1,7 +1,6 @@
 // ======================= FASSADENTYPEN IM 3D-MODELL =======================
-// Jedes Feld mit Fassadentyp (nicht „ohne Typ“) wird als farbige Fläche 4 cm vor die Fassade gelegt – in LOD 100 auf
-// den Baukörper, ab LOD 200 auf die Außenwände; dort mit ausgesparten Öffnungen (sonst lägen die Flächen vor den
-// Fenstern). Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
+// Jedes Feld mit Fassadentyp (nicht „ohne Typ“) wird ab LOD 200 als farbige Fläche 4 cm vor die Außenwand gelegt
+// (in LOD 100 nur Auswertung, keine Farbe im Modell), mit ausgesparten Öffnungen, die Laibungen bis zum Fensterrahmen in derselben Farbe. Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
 // LOD-200-Ansicht, 22-lod200-waende/030-aktionen.js): neu gebaut wird nur ein Gebäude, dessen Fassade sich geändert hat.
 
 const FT3 = { g: new T.Group(), bau: new Map() };
@@ -18,20 +17,21 @@ function ftBauen(b) {
   let ugH = 0;
   for (let i = 0; i < u; i++) ugH += b.levels[i].h;
   const base = b._y + ugH,
-    mitOeffnungen = l2on();
+    mitOeffnungen = true;
   fdViews(b).forEach((V) => {
     const F = fdFaces(b, V).filter((f) => f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t));
     if (!F.length) return;
     const O = mitOeffnungen ? oeListe(b, V) : [];
     F.forEach((f) => {
       const innen = (u, v) => grInFace(f, u, v),
-        loecher = O.filter(
+        drin = O.filter(
           (x) =>
             innen(x.u0 + 0.01, x.v0 + 0.01) &&
             innen(x.u1 - 0.01, x.v0 + 0.01) &&
             innen(x.u1 - 0.01, x.v1 - 0.01) &&
             innen(x.u0 + 0.01, x.v1 - 0.01),
-        ).map((x) => [
+        ),
+        loecher = drin.map((x) => [
           [x.u0, x.v0],
           [x.u0, x.v1],
           [x.u1, x.v1],
@@ -61,6 +61,42 @@ function ftBauen(b) {
           for (let m = 1; m < P3.length - 1; m++) pos.push(...P3[0], ...P3[m], ...P3[m + 1]);
         }
       });
+      // Laibungen: von der Außenkante bis zum Fensterrahmen (Einbautiefe), 3 mm in die Öffnung gerückt
+      drin.forEach((x) => {
+        const pc = V.pcs.find((p) => p.ring && inP([(x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2], p.ring));
+        if (!pc) return;
+        const e = 0.003,
+          tief = Math.max(0.05, x.T.et || 0.12) + 0.1, // bis hinter den Rahmen (kein Spalt bei schräg liegenden Wänden)
+          // senkrecht zur tatsächlichen Wand (die Ansicht fasst Wände bis 15° Abweichung zusammen)
+          nw = (() => {
+            let nx = -pc.dz,
+              nz = pc.dx;
+            if (nx * V.n[0] + nz * V.n[1] < 0) {
+              nx = -nx;
+              nz = -nz;
+            }
+            return [nx, nz];
+          })(),
+          P = (uu, vv, d) => {
+            const s = (uu - pc.ua) / pc.dot;
+            return [pc.ax + pc.dx * s - nw[0] * d, base + vv, pc.az + pc.dz * s - nw[1] * d];
+          },
+          viereck = (a, b) => {
+            const A0 = P(a[0], a[1], -0.04),
+              B0 = P(b[0], b[1], -0.04),
+              B1 = P(b[0], b[1], tief),
+              A1 = P(a[0], a[1], tief);
+            pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1);
+          },
+          u0 = x.u0 + e,
+          u1 = x.u1 - e,
+          v0 = x.v0 + e,
+          v1 = x.v1 - e;
+        viereck([u0, v0], [u0, v1]);
+        viereck([u1, v0], [u1, v1]);
+        viereck([u0, v1], [u1, v1]);
+        if (!oeTuer(x.T) && x.T.br > 0.05) viereck([u0, v0], [u1, v0]);
+      });
     });
   });
   farben.forEach((pos, c) => {
@@ -89,9 +125,11 @@ function ftSync() {
   const da = new Set(),
     explodiert = !!(S.expl && S.expl.cur > 0.05),
     einheiten = !!(S.zo && S.zo.m === 'u');
+  // erst ab LOD 200 im Modell; in LOD 100 dienen die Fassadentypen nur der Auswertung
+  const an = l2on();
   S.bld.forEach((b) => {
-    if (b.ex || !b.fd || b._y == null) return;
-    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, l2on() ? 1 : 0, l2on() ? [S.oet, S.oeg] : 0]),
+    if (!an || b.ex || !b.fd || b._y == null) return;
+    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg]),
       alt = FT3.bau.get(b.id);
     da.add(b.id);
     if (alt && alt.sg === sg) return;

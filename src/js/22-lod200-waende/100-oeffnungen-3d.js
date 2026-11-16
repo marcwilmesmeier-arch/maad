@@ -2,8 +2,8 @@
 // Die Öffnungen des Fassadendesigners (oeListe, 19-fassadendesigner/090-oeffnungen.js) werden in Weltkoordinaten
 // umgerechnet und den Außenwänden zugeordnet (gleiche Lage, gleiche Höhe). Die Wand wird entlang ihrer Achse in Streifen
 // geteilt: neben den Öffnungen voll, im Bereich einer Öffnung nur Brüstung und Sturz – so entstehen echte Laibungen.
-// In die Öffnung kommen Rahmen und Einteilung (oeAufteilung, wie in der Ansicht), Glas mit Sprossen bzw. Paneel und
-// außen eine Fensterbank.
+// In die Öffnung kommen Rahmen und Einteilung (oeAufteilung, wie in der Ansicht), Glas mit Sprossen bzw. Paneel
+// (noch ohne Fensterbank).
 // Nur in LOD 200 (l2MeshOrig); LOD 100 zeigt keine Öffnungen.
 
 /** Öffnungen eines Gebäudes in Weltkoordinaten (zwischengespeichert, solange sich Form und Öffnungen nicht ändern). */
@@ -197,7 +197,7 @@ function oeWandTeilen(e, O) {
   }
   return R;
 }
-/** Rahmen, Glas bzw. Türblatt und Fensterbank der Öffnungen einer Wand (Gruppe relativ zur Wandunterkante). */
+/** Rahmen, Glas bzw. Türblatt der Öffnungen einer Wand (Gruppe relativ zur Wandunterkante). */
 function oeKoerper(O) {
   const g = new T.Group(),
     teile = new Map(),
@@ -264,9 +264,6 @@ function oeKoerper(O) {
         }
       }
     });
-    // Fensterbank außen
-    if (o.y0 > 0.05 && T_.a === 'fe')
-      quader(feld('#c9c6bf'), A, o.t0 - 0.02, o.t1 + 0.02, o.y0 - 0.03, o.y0, sV, A.sA + 0.05);
   });
   teile.forEach((pos, farbe) => {
     const ge = new T.BufferGeometry();
