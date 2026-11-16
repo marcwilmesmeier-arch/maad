@@ -195,7 +195,10 @@ function oeListe(b, V) {
   return L.map((o) => {
     const T = oeT(o.t);
     return { o, T, u0: o.u - T.b / 2, u1: o.u + T.b / 2, v0: o.v, v1: o.v + T.h };
-  });
+  }).concat(
+    // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Öffnungen der gesetzten Gruppen
+    oegOeffnungen(b, V),
+  );
 }
 /** Unterkante des Geschosses, in dem die Höhe v liegt (Ansichtskoordinate). */
 function oeGeschossBasis(b, v) {
@@ -340,6 +343,7 @@ function oeTypLoeschen(k) {
       if (d && d.oe) d.oe = d.oe.filter((o) => o.t !== k);
     }),
   );
+  S.oeg.forEach((G) => (G.oe = G.oe.filter((q) => q.t !== k)));
   if (FDS.oeT === k) FDS.oeT = S.oet[0].k;
   oeAktualisieren();
 }
@@ -348,6 +352,12 @@ function oeTypLoeschen(k) {
 /** Pointerdown im Werkzeug „Wählen“ oder „Öffnung“; true = Ereignis verbraucht. */
 function oeDown(b, V, p, e) {
   const x = oeTreffer(b, V, p.x, p.z);
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Gruppen wählen, ziehen, setzen
+  if ((x && x.gi) || FDS.tool === 'gr') return oegDown(b, V, p, e, x);
+  if (FDS.gi) {
+    FDS.gi = null;
+    FDS.ps = '';
+  }
   if (x && (FDS.tool === 'sel' || FDS.tool === 'oe')) {
     FDS.oe = x.o.id;
     FDS.sel = [];
@@ -376,6 +386,8 @@ function oeDown(b, V, p, e) {
 }
 /** Pointermove: Öffnung ziehen bzw. Vorschau im Werkzeug „Öffnung“; true = verbraucht. */
 function oeMove(b, V, p, e) {
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js
+  if ((FDS.grZug || FDS.tool === 'gr' || FDS.grVor) && oegMove(b, V, p, e)) return true;
   const z = FDS.oeZug;
   if (z) {
     if (!z.bewegt && Math.hypot(e.clientX - z.px, e.clientY - z.py) < 4) return true;
@@ -411,6 +423,8 @@ function oeMove(b, V, p, e) {
 }
 /** Pointerup: Ziehen abschließen; true = verbraucht. */
 function oeUp() {
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js
+  if (oegUp()) return true;
   const z = FDS.oeZug;
   if (!z) return false;
   FDS.oeZug = null;
@@ -502,6 +516,8 @@ function oeZeichnen(g, b, V, ox, o) {
   oeListe(b, V).forEach((x) =>
     oeZeichneEine(g, X, Y, x.u0, x.u1, x.v0, x.T, { sel: o.sel && FDS.oe === x.o.id }),
   );
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js
+  oegZeichnen(g, b, V, ox, o);
 }
 /** Vorschau beim Setzen und Maße der gewählten Öffnung (nur Einzelansicht). */
 function oeVorschau(g, b, V) {
@@ -599,6 +615,9 @@ function oePanelHtml(b, V) {
     if (L.length)
       h += `<div class="mu" style="margin-top:6px">${esc(V.name)}: ${L.length} Öffnung${L.length === 1 ? '' : 'en'} · ${fdFmt(a)} m² · ${Math.round((a / (V.area || 1)) * 100)} % der Ansichtsfläche. Im 3D-Modell ab LOD 200.</div>`;
   }
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Gruppen (beim Werkzeug „Gruppe“ zuerst)
+  const gh = oegPanelHtml(b, V);
+  h = FDS.tool === 'gr' || FDS.gi ? gh + h : h + gh;
   return h;
 }
 /** Bilanz der Öffnungen eines Gebäudes: je Typ Anzahl und Fläche, gesamt. */

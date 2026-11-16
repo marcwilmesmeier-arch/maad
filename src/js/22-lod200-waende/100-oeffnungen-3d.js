@@ -8,7 +8,12 @@
 
 /** Öffnungen eines Gebäudes in Weltkoordinaten (zwischengespeichert, solange sich Form und Öffnungen nicht ändern). */
 function oeWelt(b) {
-  const sg = JSON.stringify([fdSig(b), b.fd ? Object.keys(b.fd).map((k) => [k, b.fd[k].oe || 0]) : 0, S.oet]);
+  const sg = JSON.stringify([
+    fdSig(b),
+    b.fd ? Object.keys(b.fd).map((k) => [k, b.fd[k].oe || 0, b.fd[k].gr || 0]) : 0,
+    S.oet,
+    S.oeg,
+  ]);
   if (b._oeW && b._oeW.s === sg) return b._oeW.L;
   const L = [];
   if (b.fd && b._y != null) {
@@ -36,8 +41,10 @@ function oeWelt(b) {
 /** Kennung der Öffnungen eines Gebäudes (für den Abgleich in l2Sync). */
 function oeGebSig(b) {
   if (!b.fd) return '';
-  const L = Object.keys(b.fd).map((k) => (b.fd[k] && b.fd[k].oe) || 0);
-  return L.some((x) => x && x.length) ? JSON.stringify([L, S.oet]) : '';
+  const L = Object.keys(b.fd).map((k) => [(b.fd[k] && b.fd[k].oe) || 0, (b.fd[k] && b.fd[k].gr) || 0]);
+  return L.some((x) => (x[0] && x[0].length) || (x[1] && x[1].length))
+    ? JSON.stringify([L, S.oet, S.oeg])
+    : '';
 }
 /** Gebäude zu einem Bauteil (Kennung beginnt mit der Gebäudekennung). */
 function oeBauteilGebaeude(e) {

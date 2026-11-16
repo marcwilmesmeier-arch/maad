@@ -40,6 +40,7 @@ function newProjectReset() {
   try {
     S.ft = JSON.parse(JSON.stringify(FT0));
     S.oet = JSON.parse(JSON.stringify(OET0));
+    S.oeg = JSON.parse(JSON.stringify(OEG0));
     if (FDS.open) fdClose();
   } catch (e) {
     logErr(e, 'newProjectReset');

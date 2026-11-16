@@ -85,6 +85,7 @@ function projExtra(cam) {
     x.ft = JSON.parse(JSON.stringify(S.ft));
     // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
     x.oet = JSON.parse(JSON.stringify(S.oet));
+    x.oeg = JSON.parse(JSON.stringify(S.oeg));
   } catch (e) {
     logErr(e, 'projExtra');
   }
@@ -284,6 +285,7 @@ function projApplySet(x) {
     if (x && x.ft && x.ft.length) S.ft = JSON.parse(JSON.stringify(x.ft));
     // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
     S.oet = x && x.oet && x.oet.length ? oeTypenPruefen(x.oet) : JSON.parse(JSON.stringify(OET0));
+    S.oeg = x && Array.isArray(x.oeg) ? oegPruefen(x.oeg) : JSON.parse(JSON.stringify(OEG0));
   } catch (e) {
     logErr(e, 'projApplySet');
   }

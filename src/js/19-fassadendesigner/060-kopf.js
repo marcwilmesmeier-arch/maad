@@ -29,6 +29,9 @@ function fdTick(force) {
     S.oet,
     FDS.oe,
     FDS.oeT,
+    S.oeg,
+    FDS.gi,
+    FDS.grT,
     S.bld.map((x) => x.id + x.name),
   ]);
   if (force || ps !== FDS.ps) {
@@ -59,6 +62,7 @@ function fdChrome(b, V, cur, F) {
     ['fdTr', 'rect'],
     ['fdTg', 'st'],
     ['fdTo', 'oe'],
+    ['fdTu', 'gr'],
   ].forEach(([id, t]) => {
     const e = fdE(id);
     if (e) e.classList.toggle('on', FDS.tool === t);
@@ -83,7 +87,7 @@ function fdChrome(b, V, cur, F) {
     one = FDS.sel.length === 1 && F[FDS.sel[0]] ? F[FDS.sel[0]] : null;
   let h = '';
   // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Öffnungen oben, solange gesetzt oder gewählt wird
-  const oeOben = FDS.tool === 'oe' || !!FDS.oe;
+  const oeOben = FDS.tool === 'oe' || FDS.tool === 'gr' || !!FDS.oe || !!FDS.gi;
   if (oeOben) h += oePanelHtml(b, cur);
   h += `<h4>Fassadentyp ${cur ? (FDS.sel.length ? 'für ' + FDS.sel.length + (FDS.sel.length === 1 ? ' Feld' : ' Felder') : '(Feld wählen)') : ''}</h4>`;
   if (FDS.mng) {

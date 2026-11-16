@@ -171,4 +171,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Gebäudeform), können sie einer anderen Ansicht zufallen – wie Schnittlinien und Fassadentypen.
 - Öffnungen über die Wandhöhe hinaus (in die Decke) werden in 3D auf die Wandhöhe gestaucht.
 - Gebäudemetrik: Fassadenfläche noch brutto (ohne Abzug der Öffnungen).
-- Öffnungsgruppen (Module fester Länge, automatisch platziert) folgen.
+- Öffnungsgruppen: „Felder füllen“ legt feste Verweise an; ändert sich danach die Feldbreite, wird nicht automatisch
+  neu verteilt (erneut füllen). Gruppen über mehrere Geschosse (z. B. zweigeschossige Achsen) noch nicht vorgesehen.

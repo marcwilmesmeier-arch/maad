@@ -484,8 +484,9 @@ function fdKey(e) {
     } else if (FDS.pts.length || FDS.rect) {
       FDS.pts = [];
       FDS.rect = null;
-    } else if (FDS.oe) {
+    } else if (FDS.oe || FDS.gi) {
       FDS.oe = null;
+      FDS.gi = null;
     } else if (FDS.sel.length || FDS.selCut != null) {
       FDS.sel = [];
       FDS.selCut = null;

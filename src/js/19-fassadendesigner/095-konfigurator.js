@@ -1,8 +1,8 @@
 // ======================= KONFIGURATOR: FENSTER UND TÜREN =======================
 // Eigenes Fenster (über dem Fassadendesigner): Katalog der Öffnungstypen links, große Ansicht in der Mitte, Eigenschaften
 // rechts – bewusst nur das Nötigste (Name, Maße, Brüstung, Rahmenfarbe, Aufteilung). Aufteilung direkt in der Ansicht:
-// Pfosten und Riegel ziehen (Flügelbreiten, Oberlicht, Unterlicht). Der Katalog (S.oet) gilt für das ganze Projekt; der Fassadendesigner setzt die
-// Typen nur. Für weitere Bibliotheken (Öffnungsgruppen, Fassaden) ist die Reiterleiste vorgesehen (OK.reiter).
+// Pfosten und Riegel ziehen (Flügelbreiten, Oberlicht, Unterlicht). Der Katalog (S.oet) gilt für das ganze Projekt; der
+// Fassadendesigner setzt die Typen nur. Reiter „Gruppen“ (Öffnungsgruppen): 098-konfigurator-gruppen.js.
 
 const OK = { open: false, reiter: 'oe', k: null, feld: null, zug: null, hover: null };
 const OKCSS = `#okDock{position:fixed;left:110px;top:70px;width:min(1120px,calc(100vw - 140px));height:min(720px,calc(100vh - 100px));z-index:62;display:none;flex-direction:column;background:var(--bg,#f2f2f2);color:var(--tx,#2b2b2b);border:1px solid var(--ln,#dcdcdc);border-radius:12px;box-shadow:0 18px 60px #0004;font:13px/1.4 system-ui,"Segoe UI",sans-serif;overflow:hidden}
@@ -33,8 +33,8 @@ const OKCSS = `#okDock{position:fixed;left:110px;top:70px;width:min(1120px,calc(
 const okE = (id) => document.getElementById(id);
 const okTyp = () => S.oet.find((t) => t.k === OK.k) || null;
 
-/** Konfigurator öffnen (Typ k vorwählen, sonst den im Fassadendesigner gewählten). */
-function okOpen(k) {
+/** Konfigurator öffnen (Typ k vorwählen, sonst den im Fassadendesigner gewählten; reiter 'oe' oder 'gr'). */
+function okOpen(k, reiter) {
   if (!okE('okCss')) {
     const s = document.createElement('style');
     s.id = 'okCss';
@@ -46,13 +46,15 @@ function okOpen(k) {
     d = document.createElement('div');
     d.id = 'okDock';
     d.tabIndex = 0;
-    d.innerHTML = `<div class="okh" id="okHd"><b>Konfigurator</b><button class="on" title="Fenster und Türen anlegen und einteilen">Fenster &amp; Türen</button><span class="gr"></span><button onclick="okClose()" title="Schließen">✕</button></div>
+    d.innerHTML = `<div class="okh" id="okHd"><b>Konfigurator</b><button id="okRoe" onclick="okReiter('oe')" title="Fenster und Türen anlegen und einteilen">Fenster &amp; Türen</button><button id="okRgr" onclick="okReiter('gr')" title="Öffnungsgruppen: Abschnitte fester Länge mit Öffnungen">Gruppen</button><span class="gr"></span><button onclick="okClose()" title="Schließen">✕</button></div>
 <div class="okm"><div class="okl" id="okL"></div><div class="okc" id="okCw"><canvas id="okCv"></canvas><div class="okhint" id="okHint"></div></div><div class="okr" id="okR"></div></div>`;
     document.body.appendChild(d);
     okInit();
   }
   OK.k = k || (S.oet.some((t) => t.k === FDS.oeT) ? FDS.oeT : S.oet[0].k);
   OK.feld = null;
+  if (reiter) OK.reiter = reiter;
+  if (!OK.g || !oegG(OK.g)) OK.g = FDS.grT && oegG(FDS.grT) ? FDS.grT : S.oeg.length ? S.oeg[0].k : null;
   OK.open = true;
   d.style.display = 'flex';
   okRender();
@@ -61,6 +63,11 @@ function okOpen(k) {
   } catch (e) {
     logErr(e, 'okOpen');
   }
+}
+function okReiter(r) {
+  OK.reiter = r;
+  OK.go = null;
+  okRender();
 }
 function okClose() {
   const d = okE('okDock');
@@ -209,6 +216,16 @@ function okSetzen() {
 // ---- Darstellung
 function okRender() {
   if (!OK.open) return;
+  ['oe', 'gr'].forEach((r) => {
+    const e = okE(r === 'oe' ? 'okRoe' : 'okRgr');
+    if (e) e.classList.toggle('on', OK.reiter === r);
+  });
+  // ── Erweiterung aus 19-fassadendesigner/098-konfigurator-gruppen.js
+  if (OK.reiter === 'gr') {
+    okGrRender();
+    okGrZeichnen();
+    return;
+  }
   if (!okTyp()) OK.k = S.oet[0].k;
   const T = okTyp(),
     zahl = {};
@@ -287,6 +304,7 @@ function okAnsicht() {
   };
 }
 function okZeichnen() {
+  if (OK.reiter === 'gr') return okGrZeichnen();
   const P = okAnsicht(),
     cv = okE('okCv'),
     T = okTyp();
@@ -394,6 +412,7 @@ function okGriffAn(T, P, px, py) {
   );
 }
 function okDown(e) {
+  if (OK.reiter === 'gr') return okGrDown(e);
   const T = okTyp(),
     P = okAnsicht();
   if (!T || !P) return;
@@ -406,6 +425,7 @@ function okDown(e) {
   }
 }
 function okMove(e) {
+  if (OK.reiter === 'gr') return okGrMove(e);
   const T = okTyp(),
     P = okAnsicht();
   if (!T || !P) return;
@@ -437,6 +457,7 @@ function okPb(T) {
   return oeAufteilung(T).pb;
 }
 function okUp() {
+  if (OK.reiter === 'gr') return okGrUp();
   if (!OK.zug) return;
   OK.zug = null;
   oeAktualisieren();
