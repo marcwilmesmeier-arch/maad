@@ -29,7 +29,15 @@ function okGrSet(f, v) {
   const G = okGr();
   if (!G) return;
   if (f === 'n') G.n = String(v).slice(0, 60) || G.n;
-  else {
+  else if (f === 'szan') {
+    // Vorgabe: heutiger Abstand der höchsten Fensteroberkante zur Gruppenoberkante
+    const ok = G.oe.filter((q) => !oeTuer(oeT(q.t))).map((q) => q.v + oeT(q.t).h),
+      s = ok.length ? Math.max(0, G.h - Math.max(...ok)) : 0.5;
+    G.sz = { an: !!v, s: G.sz && G.sz.s != null ? G.sz.s : Math.round(s * 100) / 100 };
+  } else if (f === 'szs') {
+    const n = +String(v).replace(',', '.');
+    if (isFinite(n)) G.sz = { an: true, s: Math.max(0, Math.min(3, n)) };
+  } else {
     const n = +String(v).replace(',', '.');
     if (!isFinite(n)) return;
     if (f === 'l') G.l = Math.max(0.5, Math.min(40, n));
@@ -56,7 +64,7 @@ function okGrOeNeu(t) {
     T = S.oet.find((x) => x.k === t);
   if (!G || !T) return;
   // größte Lücke zwischen den vorhandenen Öffnungen (einschließlich der Enden)
-  const B = G.oe.map((q) => [q.x, q.x + oeT(q.t).b]).sort((a, c) => a[0] - c[0]);
+  const B = G.oe.map((q) => [q.x, q.x + oegTyp(G, q, G.h).b]).sort((a, c) => a[0] - c[0]);
   let best = [0, 0],
     p = 0;
   B.concat([[G.l, G.l]]).forEach(([a, c]) => {
@@ -82,7 +90,7 @@ function okGrTeilenFenster() {
   G.xs = G.xs || [];
   G.ys = G.ys || [];
   G.oe.forEach((q) => {
-    const T = oeT(q.t);
+    const T = oegTyp(G, q, G.h);
     G.xs.push(q.x, q.x + T.b);
     if (q.v > 0.005) G.ys.push(q.v);
     G.ys.push(q.v + T.h);
@@ -190,12 +198,12 @@ function okGrVerteilen() {
   const G = okGr();
   if (!G || !G.oe.length) return;
   const L = G.oe.slice().sort((a, c) => a.x - c.x),
-    sb = L.reduce((s, q) => s + oeT(q.t).b, 0),
+    sb = L.reduce((s, q) => s + oegTyp(G, q, G.h).b, 0),
     gap = Math.max(0, (G.l - sb) / (L.length + 1));
   let x = gap;
   L.forEach((q) => {
     q.x = Math.round(x * 1000) / 1000;
-    x += oeT(q.t).b + gap;
+    x += oegTyp(G, q, G.h).b + gap;
   });
   oeAktualisieren();
 }
@@ -287,6 +295,8 @@ function okGrRender() {
     q = okGrOe();
   let h = `<h4>Gruppe</h4><div class="okg"><span>Name</span><input type="text" value="${esc(G.n)}" onchange="okGrSet('n',this.value)">
 <span>Länge (m)</span>${z('l', G.l)}<span>Höhe (m)</span>${z('h', G.h)}
+<span title="Fensteroberkante immer im gleichen Abstand unter der Oberkante des Geschosses – in höheren Geschossen werden die Fenster höher">Fensterhöhe über festen Sturz</span><input type="checkbox" style="justify-self:end;width:auto" ${G.sz && G.sz.an ? 'checked' : ''} onchange="okGrSet('szan',this.checked)">
+${G.sz && G.sz.an ? `<span>Sturz bis Geschossoberkante (m)</span>${z('szs', G.sz.s)}` : ''}
 <span>Material</span><select onchange="okGrMaterial(this.value)" title="Fassadentyp der ganzen Gruppe (einzelne Felder können abweichen)"><option value="" ${!G.t ? 'selected' : ''}>— wie Fassade —</option>${S.ft
     .filter((x) => !x.df)
     .map((x) => `<option value="${x.k}" ${x.k === G.t ? 'selected' : ''}>${esc(x.n)}</option>`)
@@ -295,7 +305,7 @@ function okGrRender() {
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
   if (q) {
     // gewählte Öffnung: Lage in der Gruppe und der Typ selbst (Maße, Rahmenfarbe, Aufteilung)
-    const T = oeT(q.t),
+    const T = oegTyp(G, q, G.h),
       n = oeTypZahl(T.k);
     OK.k = T.k;
     h += `<h4>Gewählte Öffnung</h4><div class="okg"><span>Typ</span><select onchange="okGrOeSet('t',this.value)">${opt(q.t)}</select>
@@ -465,11 +475,11 @@ function okGrZeichnen() {
     );
   }
   G.oe.forEach((q) => {
-    const T = oeT(q.t);
+    const T = oegTyp(G, q, G.h);
     oeZeichneEine(g, P.X, P.Y, q.x, q.x + T.b, q.v, T, { sel: q.id === OK.go });
   });
   // Maßkette unten: Lücken und Öffnungen
-  const L = G.oe.map((q) => [q.x, q.x + oeT(q.t).b]).sort((a, c) => a[0] - c[0]),
+  const L = G.oe.map((q) => [q.x, q.x + oegTyp(G, q, G.h).b]).sort((a, c) => a[0] - c[0]),
     pk = [0];
   L.forEach(([a, c]) => pk.push(a, c));
   pk.push(G.l);
@@ -531,7 +541,7 @@ function okGrFang(G, a, v, frei) {
     tol = P ? 10 / P.s : 0.12, // 10 Bildpunkte
     K = [];
   G.oe.forEach((q) => {
-    const T = oeT(q.t);
+    const T = oegTyp(G, q, G.h);
     if (a === 'x') K.push(q.x, q.x + T.b);
     else K.push(q.v, q.v + T.h);
   });
@@ -565,7 +575,7 @@ function okGrDown(e) {
     .slice()
     .reverse()
     .find((q) => {
-      const T = oeT(q.t);
+      const T = oegTyp(G, q, G.h);
       return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
     });
   OK.go = q ? q.id : null;
@@ -618,11 +628,13 @@ function okGrMove(e) {
     return;
   }
   if (!z || !q) {
-    const an = G.oe.some((o) => x >= o.x && x <= o.x + oeT(o.t).b && y >= o.v && y <= o.v + oeT(o.t).h);
+    const an = G.oe.some(
+      (o) => x >= o.x && x <= o.x + oegTyp(G, o, G.h).b && y >= o.v && y <= o.v + oegTyp(G, o, G.h).h,
+    );
     e.currentTarget.style.cursor = an ? 'move' : '';
     return;
   }
-  const T = oeT(q.t),
+  const T = oegTyp(G, q, G.h),
     r = (v) => Math.round(v / OE_RASTER) * OE_RASTER;
   let nx = x + z.dx,
     nv = y + z.dv;
@@ -635,7 +647,7 @@ function okGrMove(e) {
       kv = tl.ys.slice();
     G.oe.forEach((o) => {
       if (o === q) return;
-      const U = oeT(o.t);
+      const U = oegTyp(G, o, G.h);
       kx.push(o.x, o.x + U.b);
       kv.push(o.v, o.v + U.h);
     });

@@ -57,7 +57,8 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   (Länge, Höhe, Öffnungen mit Lage), an der Fassade nur Verweise `b.fd[Ansicht].gr = [{id, g, u, v}]`. `oeListe`
   erzeugt daraus die Öffnungen (q = Verweis) – eine geänderte Gruppe ändert alle Stellen. Fassadendesigner: Werkzeug
   „Gruppe“ (setzen, ziehen, tauschen), „Gewählte Felder füllen“ (je Geschoss, Rest gleichmäßig an den Enden).
-  Flächen der Gruppe: Teilungslinien `G.xs`/`G.ys` (zeichnerisch im Konfigurator oder „An Fenstern teilen“), Felder
+  „Fensterhöhe über festen Sturz“ (`G.sz = {an, s}`): `oegTyp` liefert je Verweis die Fensterhöhe bis s unter die
+  Geschossoberkante (Geschosshöhe aus `fdStoreys`), Türen/Tore unverändert. Flächen der Gruppe: Teilungslinien `G.xs`/`G.ys` (zeichnerisch im Konfigurator oder „An Fenstern teilen“), Felder
   `G.fe = [{p, d, k, t}]` mit Tiefe (positiv zurück, negativ vor), Verlauf k (gleichmäßig oder schräg: eine Seite
   bündig) und Material; `G.t` = Material der Gruppe. `oegFlaechenG` fasst gleiche Felder zu Rechtecken zusammen
   (dl/dr = Tiefe links/rechts). LOD 200: `oeWandOeffnungen` (ra/re) → Wand ausgespart, `oeRuecksprungKoerper` schließt

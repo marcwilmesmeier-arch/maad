@@ -75,12 +75,16 @@ function oegDaten(b, vk, mk) {
 }
 /** Öffnungen aller Gruppenverweise einer Ansicht (für oeListe). */
 function oegOeffnungen(b, V) {
-  const R = [];
+  const R = [],
+    B = fdStoreys(b);
   (oegDaten(b, V.key) || []).forEach((I) => {
     const G = oegG(I.g);
     if (!G) return;
+    // Geschosshöhe am Verweis (für Fensterhöhe über festen Sturz)
+    const j = B.findIndex((v, k) => k < B.length - 1 && Math.abs(v - I.v) < 0.05),
+      H = j >= 0 ? B[j + 1] - B[j] : G.h;
     G.oe.forEach((q) => {
-      const T = oeT(q.t),
+      const T = oegTyp(G, q, H),
         u0 = I.u + q.x,
         v0 = I.v + q.v;
       R.push({
@@ -95,6 +99,16 @@ function oegOeffnungen(b, V) {
     });
   });
   return R;
+}
+/**
+ * Wirksamer Typ einer Öffnung in der Gruppe: mit „Fensterhöhe über festen Sturz“ (G.sz = { an, s }) reicht das Fenster
+ * bis s unter die Oberkante des Geschosses (Höhe H) – in höheren Geschossen also höher; Türen und Tore unverändert.
+ */
+function oegTyp(G, q, H) {
+  const T = oeT(q.t);
+  if (!G.sz || !G.sz.an || oeTuer(T)) return T;
+  const h = Math.max(0.3, (H || G.h) - (+G.sz.s || 0) - q.v);
+  return Math.abs(h - T.h) < 1e-4 ? T : { ...T, h };
 }
 /** Teilungen einer Gruppe (sortiert, mit Rändern). */
 function oegTeilung(G) {
@@ -519,7 +533,7 @@ function oegSymbol(G, w = 44, h = 22) {
     s += `<rect x="${ox + r.x0 * k}" y="${oy - r.y1 * k}" width="${(r.x1 - r.x0) * k}" height="${(r.y1 - r.y0) * k}" fill="${r.t ? fdT(r.t).c : r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
   });
   G.oe.forEach((q) => {
-    const T = oeT(q.t);
+    const T = oegTyp(G, q, G.h);
     s += `<rect x="${ox + q.x * k}" y="${oy - (q.v + T.h) * k}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : '#fff'}" stroke="${T.rf}" stroke-width="1"/>`;
   });
   return s + '</svg>';
@@ -575,6 +589,7 @@ function oegPruefen(L) {
       .filter((q) => q && q.t)
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
     t: S.ft.some((x) => x.k === G.t) ? G.t : '',
+    sz: G.sz ? { an: !!G.sz.an, s: Math.max(0, Math.min(3, +G.sz.s || 0)) } : undefined,
     ...oegFelderPruefen(G),
   }));
 }
