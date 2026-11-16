@@ -348,7 +348,7 @@ function oeKoerper(O) {
         y0 = Yy(f.y0),
         y1 = Yy(f.y1);
       if (T_.a === 'to' || f.fu === 'p')
-        quader(feld(T_.a === 'to' ? '#c6cbd0' : '#b9a891'), A, x0, x1, y0, y1, sm - 0.025, sm + 0.025);
+        quader(feld(T_.a === 'to' ? '#c6cbd0' : T_.rf), A, x0, x1, y0, y1, sm - 0.025, sm + 0.025); // Paneel in Rahmenfarbe
       else {
         quader(feld('glas'), A, x0, x1, y0, y1, sm - 0.005, sm + 0.005);
         // Sprossen vor dem Glas

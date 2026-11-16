@@ -118,7 +118,7 @@ const OET0 = [
 S.oet = JSON.parse(JSON.stringify(OET0));
 const oeT = (k) => S.oet.find((t) => t.k === k) || S.oet[0];
 const OE_RASTER = 0.05; // Fangraster beim Setzen und Verschieben (m)
-const OE_FUELL = { g: 'Glas', p: 'Paneel' };
+const OE_FUELL = { g: 'Flügel', p: 'Paneel' }; // Unterteilung: verglaster Flügel oder Paneel in Rahmenfarbe
 const oeTuer = (T) => T.a === 'tu' || T.a === 'to';
 
 /** Flügel eines Typs (aus sp oder, bei älteren Typen, aus Anzahl fl und Öffnungsart oa). */
@@ -155,7 +155,16 @@ function oeAufteilung(T) {
   }
   const ol = T.ol > 0 && T.a !== 'to' ? Math.min(T.ol, yt - yb - 0.3 - pb) : 0;
   if (ol > 0.05) {
-    felder.push({ x0: pb, x1: b - pb, y0: yt - ol, y1: yt, oa: T.olOa || 'f', an: 'l', fu: 'g', i: 'ol' });
+    felder.push({
+      x0: pb,
+      x1: b - pb,
+      y0: yt - ol,
+      y1: yt,
+      oa: T.olOa || 'f',
+      an: 'l',
+      fu: T.olFu || 'g',
+      i: 'ol',
+    });
     stege.push([pb, b - pb, yt - ol - pb, yt - ol]);
     yt -= ol + pb;
   }
@@ -176,8 +185,8 @@ function oeAufteilung(T) {
   return { pb, stege, felder };
 }
 /** Füllfarbe eines Feldes in der Ansicht. */
-// Glas weiß, 80 % durchsichtig (wie im 3D-Modell)
-const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? '#b9a891' : 'rgba(255,255,255,0.2)');
+// Glas weiß, 80 % durchsichtig (wie im 3D-Modell); Paneel in der Rahmenfarbe
+const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? T.rf : 'rgba(255,255,255,0.2)');
 
 /** Gespeicherte Öffnungen einer Ansicht (Liste wird bei Bedarf angelegt). */
 function oeDaten(b, vk, mk) {

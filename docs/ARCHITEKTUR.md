@@ -42,7 +42,9 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `S.gen.cat.Wohnen` des früheren Generators). Ist aus den Grundriss-Einheiten, ohne Einheiten Schätzung aus BGF
   Wohnen × 75 %.
 - Öffnungen (Fenster, Türen): Katalog `S.oet` (`19-fassadendesigner/090-oeffnungen.js`, mit dem Projekt gespeichert),
-  bearbeitet im Konfigurator (`095-konfigurator.js`, eigenes Fenster: Name, Maße, Brüstung, Rahmenfarbe, Aufteilung).
+  bearbeitet im Konfigurator (`095-konfigurator.js`, eigenes Fenster: Name, Maße, Brüstung, Rahmenfarbe, Aufteilung –
+  zeichnerisch: Werkzeuge Senkrecht teilen (Pfosten), Waagerecht teilen (Ober-/Unterlicht), Felder als Fenster oder
+  Paneel in Rahmenfarbe).
   Einteilung einheitlich über `oeAufteilung(T)` (Stege und Felder) für Ansicht, Symbol und 3D. Gesetzte Öffnungen in
   `b.fd[Ansicht].oe = [{id, t, u, v, q}]` (Ansichtskoordinaten; q = Herkunft, heute 'frei'); alle Verbraucher lesen über
   `oeListe(b, V)` – dort kommen später automatisch platzierte Öffnungsgruppen dazu. 3D nur ab LOD 200
@@ -64,7 +66,7 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Gruppe G), Optionsleiste über der Zeichnung, Inspektor `fdInspektor` (zeigt nur das Gewählte bzw. die Bibliothek des
   Werkzeugs), Fußleiste mit Hinweis und Kennwerten. Esc führt stufenweise zurück zu „Auswählen“. Zahlenfelder
   `fdZahl` (Einheit im Feld, Komma, Pfeiltasten).
-- Fassadentypen in 3D (`110-fassadentypen-3d.js`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
+- Fassadentypen in 3D (`110-fassadentypen-3d.js`, derzeit abgeschaltet: `FT3.aktiv = false`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
   (`G.fdt`), farbige Flächen 4 cm vor der Außenwand mit ausgesparten Öffnungen, Laibungen in derselben Farbe
   (senkrecht zur tatsächlichen Wand); `ftSync` im Takt von `l2Vis`, je Gebäude nur bei Änderung neu.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.

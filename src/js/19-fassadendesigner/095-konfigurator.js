@@ -87,8 +87,12 @@ function okInit() {
   d.addEventListener('keydown', (e) => {
     if (/INPUT|SELECT/.test(e.target.tagName)) return;
     if (e.key === 'Escape') {
-      // Gruppen: Teilen-Werkzeug → Auswählen → Auswahl aufheben; sonst schließen
-      if (OK.reiter === 'gr' && OK.gwz !== 'sel') okGrWz('sel');
+      // Teilen-Werkzeug → Auswählen → Auswahl aufheben; sonst schließen
+      if (OK.reiter === 'oe' && OK.owz !== 'sel') okOwz('sel');
+      else if (OK.reiter === 'oe' && OK.ogr) {
+        OK.ogr = null;
+        okZeichnen();
+      } else if (OK.reiter === 'gr' && OK.gwz !== 'sel') okGrWz('sel');
       else if (OK.reiter === 'gr' && (OK.go || OK.glin || OK.gzel.length)) {
         OK.go = null;
         OK.glin = null;
@@ -96,8 +100,9 @@ function okInit() {
         okRender();
       } else okClose();
       e.preventDefault();
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && OK.reiter === 'gr') {
-      okGrEntf();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (OK.reiter === 'gr') okGrEntf();
+      else okOeEntf();
       e.preventDefault();
     }
   });
@@ -231,8 +236,10 @@ function okRender() {
     if (e) e.classList.toggle('on', OK.reiter === r);
   });
   // ── Erweiterung aus 19-fassadendesigner/098-konfigurator-gruppen.js
-  const wz = okE('okGwz');
+  const wz = okE('okGwz'),
+    wo = okE('okOwz');
   if (wz) wz.style.display = OK.reiter === 'gr' ? 'flex' : 'none';
+  if (wo && OK.reiter === 'gr') wo.style.display = 'none';
   if (OK.reiter === 'gr') {
     okGrRender();
     okGrZeichnen();
@@ -268,13 +275,25 @@ function okRender() {
     T &&
     !(R.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName))
   ) {
+    const F = OK.feld != null && oeAufteilung(T).felder.find((f) => f.i === OK.feld);
     let h =
+      (F
+        ? `<h4>${F.i === 'ol' ? 'Oberlicht' : F.i === 'ul' ? 'Unterlicht' : (F.fu === 'p' ? 'Paneel ' : 'Flügel ') + (F.i + 1)}${F.i === 'ol' || F.i === 'ul' ? (F.fu === 'p' ? ' · Paneel' : ' · Flügel') : ''} · ${fdFmt(F.x1 - F.x0)} × ${fdFmt(F.y1 - F.y0)} m</h4><div class="okb" style="margin-top:0">${[
+            ['g', 'Flügel'],
+            ['p', 'Paneel'],
+          ]
+            .map(
+              ([k, n]) =>
+                `<button class="${F.fu === k ? 'on' : ''}" onclick="okFeldFuellung('${k}')" title="${k === 'p' ? 'Geschlossenes Paneel in der Rahmenfarbe' : 'Verglaster Flügel'}">${n}</button>`,
+            )
+            .join('')}</div>`
+        : '') +
       (OK.zurueck && oegG(OK.zurueck)
         ? `<div class="okb" style="margin:0 0 8px"><button onclick="OK.reiter='gr';OK.g=OK.zurueck;OK.zurueck=null;okRender()" title="Zurück zur Gruppe">← Zurück zu „${esc(oegG(OK.zurueck).n)}“</button></div>`
         : '') +
       okTypFelderHtml(T) +
       (T.a !== 'to'
-        ? `<div class="mu" style="margin-top:6px">Flügelbreiten, Oberlicht und Unterlicht in der Ansicht an den blauen Linien ziehen.</div>`
+        ? `<div class="mu" style="margin-top:6px">In der Ansicht zeichnen: „Senkrecht teilen“ setzt Pfosten, „Waagerecht teilen“ Ober-/Unterlicht; blaue Linien ziehen, Entf entfernt.</div>`
         : '');
     h += `<div class="okb" style="margin-top:14px"><button onclick="okSetzen()" title="Typ im Fassadendesigner setzen">Im Fassadendesigner setzen</button><button onclick="okKopie()">Kopie</button>${S.oet.length > 1 ? '<button onclick="okLoeschen()">Löschen</button>' : ''}</div>
 <div class="mu" style="margin-top:6px">${zahl[T.k] ? zahl[T.k] + '× gesetzt – ' : ''}Änderungen gelten für alle gesetzten Öffnungen dieses Typs.</div>`;
@@ -345,7 +364,7 @@ function okZeichnen() {
   oeZeichneEine(g, P.X, P.Y, 0, T.b, 0, T, { feld: OK.feld });
   // Griffe: Pfosten und Riegel (ziehbar)
   okGriffe(T).forEach((q) => {
-    const an = OK.hover === q.id || (OK.zug && OK.zug.id === q.id);
+    const an = OK.hover === q.id || OK.ogr === q.id || (OK.zug && OK.zug.id === q.id);
     g.fillStyle = an ? '#1f6fd1' : '#1f6fd166';
     if (q.art === 'x')
       g.fillRect(P.X(q.a) - 1, P.Y(q.y1), Math.max(3, (q.b - q.a) * P.s) + 2, (q.y1 - q.y0) * P.s);
@@ -405,7 +424,52 @@ function okZeichnen() {
     g.fillText('Brüstung beim Setzen ' + fdFmt(T.br) + ' m', P.X(0), P.Y(0) + 66);
   }
   const hint = okE('okHint');
-  if (hint) hint.textContent = 'Blaue Linien ziehen: Flügelbreite, Oberlicht, Unterlicht · Ansicht von außen';
+  if (hint)
+    hint.textContent =
+      OK.owz === 'x'
+        ? 'Klick ins Fenster = Pfosten setzen (neuer Flügel) · Esc = zurück zu „Auswählen“'
+        : OK.owz === 'y'
+          ? 'Klick in die obere Hälfte = Oberlicht, in die untere = Unterlicht · Esc = zurück zu „Auswählen“'
+          : 'Unterteilung anklicken: Flügel oder Paneel · Pfosten/Riegel (blau) ziehen, Entf = entfernen · Ansicht von außen';
+  // Vorschau der neuen Teilung
+  if (
+    OK.ovor &&
+    (OK.owz === 'x' || OK.owz === 'y') &&
+    OK.ovor.v > 0 &&
+    OK.ovor.v < (OK.ovor.a === 'x' ? T.b : T.h)
+  ) {
+    g.strokeStyle = '#1f6fd1';
+    g.lineWidth = 2;
+    g.setLineDash([5, 4]);
+    g.beginPath();
+    if (OK.ovor.a === 'x') {
+      g.moveTo(P.X(OK.ovor.v), P.Y(0));
+      g.lineTo(P.X(OK.ovor.v), P.Y(T.h));
+    } else {
+      g.moveTo(P.X(0), P.Y(OK.ovor.v));
+      g.lineTo(P.X(T.b), P.Y(OK.ovor.v));
+    }
+    g.stroke();
+    g.setLineDash([]);
+  }
+  // Werkzeugleiste über der Ansicht (wie im Reiter „Gruppen“)
+  let wz = okE('okOwz');
+  if (!wz) {
+    wz = document.createElement('div');
+    wz.id = 'okOwz';
+    wz.style.cssText =
+      'position:absolute;left:10px;top:10px;display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--pn,#fff) 92%,transparent);box-shadow:0 2px 10px #0002;z-index:2';
+    okE('okCw').appendChild(wz);
+  }
+  wz.style.display = T.a === 'to' ? 'none' : 'flex';
+  const wzh = [
+    ['sel', 'Auswählen'],
+    ['x', 'Senkrecht teilen'],
+    ['y', 'Waagerecht teilen'],
+  ]
+    .map(([k, n]) => `<button class="${OK.owz === k ? 'on' : ''}" onclick="okOwz('${k}')">${n}</button>`)
+    .join('');
+  if (wz.innerHTML !== wzh) wz.innerHTML = wzh;
 }
 /** Ziehbare Stege: Pfosten zwischen Flügeln (art 'x') und Riegel von Oberlicht/Unterlicht (art 'y'). */
 function okGriffe(T) {
@@ -436,18 +500,98 @@ function okGriffAn(T, P, px, py) {
     ) || null
   );
 }
+// Werkzeug im Reiter „Fenster & Türen“: 'sel' Auswählen/Ziehen, 'x' senkrecht teilen (Pfosten), 'y' waagerecht
+// teilen (Oberlicht in der oberen, Unterlicht in der unteren Hälfte)
+OK.owz = 'sel';
+OK.ogr = null; // gewählter Pfosten/Riegel (Griff-Kennung)
+function okOwz(w) {
+  OK.owz = w;
+  OK.ovor = null;
+  okZeichnen();
+}
+/** Senkrecht teilen: Flügel an der Stelle x (lokal, m) in zwei Flügel teilen. */
+function okTeilenX(T, x) {
+  const A = oeAufteilung(T),
+    F = A.felder.filter((f) => typeof f.i === 'number'),
+    f = F.find((q) => x > q.x0 + 0.12 && x < q.x1 - 0.12);
+  if (!f || F.length >= 8) return;
+  const SP = okSpSicher(T);
+  F.forEach((q, k) => (SP[k].w = q.x1 - q.x0));
+  const c = SP[f.i],
+    w1 = x - A.pb / 2 - f.x0,
+    w2 = f.x1 - (x + A.pb / 2);
+  SP.splice(f.i, 1, { ...c, w: w1 }, { ...c, w: w2, an: c.an === 'l' ? 'r' : 'l' });
+  T.fl = SP.length;
+}
+/** Waagerecht teilen: Oberlicht (obere Hälfte) bzw. Unterlicht (untere Hälfte) bis zur Stelle y. */
+function okTeilenY(T, y) {
+  if (T.a === 'to') return;
+  const pb = okPb(T),
+    unten = oeTuer(T) ? 0 : pb;
+  if (y > T.h / 2) T.ol = Math.max(0.15, Math.round((T.h - pb - y - pb / 2) * 100) / 100);
+  else if (!oeTuer(T)) T.ul = Math.max(0.15, Math.round((y - unten - pb / 2) * 100) / 100);
+}
+/** Gewählten Pfosten bzw. Riegel entfernen (Flügel zusammenlegen, Ober-/Unterlicht weg). */
+function okOeEntf() {
+  const T = okTyp(),
+    id = OK.ogr;
+  if (!T || !id) return;
+  if (id === 'ol') T.ol = 0;
+  else if (id === 'ul') T.ul = 0;
+  else {
+    const i = +id.slice(1),
+      A = oeAufteilung(T),
+      F = A.felder.filter((f) => typeof f.i === 'number'),
+      SP = okSpSicher(T);
+    if (!F[i + 1]) return;
+    F.forEach((q, k) => (SP[k].w = q.x1 - q.x0));
+    SP.splice(i, 2, { ...SP[i], w: F[i + 1].x1 - F[i].x0 });
+    T.fl = SP.length;
+  }
+  OK.ogr = null;
+  oeAktualisieren();
+}
 function okDown(e) {
   if (OK.reiter === 'gr') return okGrDown(e);
   const T = okTyp(),
     P = okAnsicht();
   if (!T || !P) return;
   const [px, py] = okPos(e),
-    q = okGriffAn(T, P, px, py);
-  if (q) {
-    OK.zug = q;
-    okE('okCv').setPointerCapture(e.pointerId);
+    x = Math.round(P.iX(px) * 100) / 100,
+    y = Math.round(P.iY(py) * 100) / 100;
+  if (OK.owz === 'x' || OK.owz === 'y') {
+    if (x > 0 && x < T.b && y > 0 && y < T.h) {
+      if (OK.owz === 'x') okTeilenX(T, x);
+      else okTeilenY(T, y);
+      oeAktualisieren();
+    }
     return;
   }
+  const q = okGriffAn(T, P, px, py);
+  OK.ogr = q ? q.id : null;
+  if (q) {
+    OK.zug = q;
+    OK.feld = null;
+    okE('okCv').setPointerCapture(e.pointerId);
+  } else {
+    // Feld (Flügel, Oberlicht, Unterlicht) wählen
+    const f = oeAufteilung(T).felder.find((f) => x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1);
+    OK.feld = f && T.a !== 'to' ? f.i : null;
+  }
+  okRender();
+}
+/** Gewähltes Feld als Fenster (Glas) oder Paneel (in Rahmenfarbe) festlegen. */
+function okFeldFuellung(v) {
+  const T = okTyp(),
+    i = OK.feld;
+  if (!T || i == null || !OE_FUELL[v]) return;
+  if (i === 'ol') T.olFu = v;
+  else if (i === 'ul') T.ulFu = v;
+  else {
+    const SP = okSpSicher(T);
+    if (SP[i]) SP[i].fu = v;
+  }
+  oeAktualisieren();
 }
 function okMove(e) {
   if (OK.reiter === 'gr') return okGrMove(e);
@@ -456,6 +600,12 @@ function okMove(e) {
   if (!T || !P) return;
   const [px, py] = okPos(e),
     z = OK.zug;
+  if (OK.owz === 'x' || OK.owz === 'y') {
+    OK.ovor = { a: OK.owz, v: Math.round((OK.owz === 'x' ? P.iX(px) : P.iY(py)) * 100) / 100 };
+    e.currentTarget.style.cursor = OK.owz === 'x' ? 'col-resize' : 'row-resize';
+    okZeichnen();
+    return;
+  }
   if (!z) {
     const q = okGriffAn(T, P, px, py),
       id = q ? q.id : null;

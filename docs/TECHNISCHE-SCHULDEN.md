@@ -182,3 +182,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 
 - `tests/server.test.mjs` (Browsertest Server) bricht in der Cloud-Umgebung gelegentlich beim Klick auf „Anmelden“ mit
   Zeitüberschreitung ab; einzeln wiederholt läuft er durch. Ursache noch offen (vermutlich Last beim Gesamtlauf).
+- Einfärbung der Fassade im 3D-Modell (Fassadentypen, Materialien der Gruppenfelder) abgeschaltet (`FT3.aktiv`),
+  soll anders umgesetzt werden; 2D-Ansicht und Wandgeometrie (Öffnungen, Rück-/Vorsprünge) unverändert.

@@ -5,11 +5,13 @@
 // Seitenflächen nur an Kanten mit Tiefenunterschied (gestuft, L-förmig, schräg). Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
 // LOD-200-Ansicht, 22-lod200-waende/030-aktionen.js): neu gebaut wird nur ein Gebäude, dessen Fassade sich geändert hat.
 
-const FT3 = { g: new T.Group(), bau: new Map() };
+// Vorerst abgeschaltet (Wunsch: Einfärbung im 3D-Modell anders umsetzen; 2D-Ansicht unverändert). Mit aktiv = true
+// wieder einschalten – dann auch die Ebene „Fassadentypen“.
+const FT3 = { aktiv: false, g: new T.Group(), bau: new Map() };
 FT3.g.name = 'Fassadentypen';
 sc.add(FT3.g);
 G.fdt = FT3.g;
-LY.push(['Fassadentypen', 'fdt', 1, 1]);
+if (FT3.aktiv) LY.push(['Fassadentypen', 'fdt', 1, 1]);
 
 /**
  * Vereinigung achsparalleler Rechtecke {u0,u1,v0,v1} als Ringe (Umrisse). Aneinanderstoßende Aussparungen werden so zu
@@ -286,7 +288,7 @@ function ftSync() {
     explodiert = !!(S.expl && S.expl.cur > 0.05),
     einheiten = !!(S.zo && S.zo.m === 'u');
   // erst ab LOD 200 im Modell; in LOD 100 dienen die Fassadentypen nur der Auswertung
-  const an = l2on();
+  const an = FT3.aktiv && l2on();
   S.bld.forEach((b) => {
     if (!an || b.ex || !b.fd || b._y == null) return;
     const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg]),
