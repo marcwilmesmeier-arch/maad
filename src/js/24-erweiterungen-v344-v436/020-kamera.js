@@ -233,6 +233,43 @@ function shFit(cm, sh) {
   const up = Math.abs(dir.y) > 0.99 ? new T.Vector3(1, 0, 0) : new T.Vector3(0, 1, 0),
     ax = new T.Vector3().crossVectors(up, dir).normalize(),
     ay = new T.Vector3().crossVectors(dir, ax).normalize();
+  // Normale Ansicht mit geladenem Gelände: Schatten auf dem ganzen Gelände – Ausschnitt eng um dessen Umriss aus Sicht
+  // der Sonne (Rechteck, auf Texel gerastert, damit nichts flimmert). Die Kamera-Ansicht behält den feinen Ausschnitt.
+  if (!CAMX.on) {
+    const gb = shGelaende();
+    if (gb) {
+      let u0 = Infinity,
+        u1 = -Infinity,
+        v0 = Infinity,
+        v1 = -Infinity,
+        s0 = Infinity,
+        s1 = -Infinity;
+      const P = new T.Vector3();
+      for (const x of [-gb.h, gb.h])
+        for (const z of [-gb.h, gb.h])
+          for (const y of [gb.y0, gb.y1]) {
+            P.set(x, y, z);
+            const u = P.dot(ax),
+              v = P.dot(ay),
+              w = P.dot(dir);
+            u0 = Math.min(u0, u);
+            u1 = Math.max(u1, u);
+            v0 = Math.min(v0, v);
+            v1 = Math.max(v1, v);
+            s0 = Math.min(s0, w);
+            s1 = Math.max(s1, w);
+          }
+      const Rx = (u1 - u0) / 2,
+        Ry = (v1 - v0) / 2,
+        q = (2 * Math.max(Rx, Ry)) / (sh.mapSize.x || 4096),
+        cu = Math.round((u0 + u1) / 2 / q) * q,
+        cv = Math.round((v0 + v1) / 2 / q) * q,
+        sm = (s0 + s1) / 2,
+        F = new T.Vector3().addScaledVector(ax, cu).addScaledVector(ay, cv).addScaledVector(dir, sm),
+        Dd = s1 - sm + 20;
+      return { F, dir, R: Math.max(Rx, Ry), Rx, Ry, near: 10, far: Dd + (sm - s0) + 20, Dd, q };
+    }
+  }
   let R = Math.max(35, Math.min(160, V.d * 1.5)),
     fx = V.tx,
     fz = V.tz,
@@ -262,6 +299,33 @@ function shFit(cm, sh) {
     F = new T.Vector3().addScaledVector(ax, cu).addScaledVector(ay, cv).addScaledVector(dir, sm),
     Dd = s1 - sm + 10;
   return { F, dir, R, near: 10, far: Dd + (sm - s0) + 10, Dd, q };
+}
+/** Ausdehnung des geladenen Geländes für den Schattenausschnitt: halbe Kantenlänge h und Höhenbereich (mit Platz für
+    Gebäude und Bäume); zwischengespeichert je Gelände. null ohne geladenes Gelände. */
+const SHG = { k: '', r: null };
+function shGelaende() {
+  if (!S.geo || !(GEO.size > 0)) return null;
+  const k = GEO.size + '|' + GEO.lon + '|' + GEO.lat + '|' + (S.ex || []).length;
+  if (SHG.k === k) return SHG.r;
+  const h = GEO.size / 2;
+  let lo = Infinity,
+    hi = -Infinity;
+  for (let i = 0; i <= 8; i++)
+    for (let j = 0; j <= 8; j++) {
+      const y = gh(-h + (i * GEO.size) / 8, -h + (j * GEO.size) / 8);
+      if (isFinite(y)) {
+        lo = Math.min(lo, y);
+        hi = Math.max(hi, y);
+      }
+    }
+  if (!isFinite(lo)) lo = hi = 0;
+  const top = Math.max(
+    60,
+    ...(S.ex || []).map((b) => (b.levels || []).reduce((s, l) => s + (+l.h || 3), 0) + 15),
+  );
+  SHG.k = k;
+  SHG.r = { h, y0: lo - 5, y1: hi + top };
+  return SHG.r;
 }
 // Schatten seltener berechnen: die Schattenkarte wird nur neu gerendert, wenn sich Schattenwerfer, Sonne oder Ausschnitt ändern (Sicherheits-Refresh alle 1,5 s)
 const SHC = { on: true, sig: null, t: 0, n: 0, skip: 0 };

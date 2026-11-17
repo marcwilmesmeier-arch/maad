@@ -157,7 +157,14 @@ function mkRender(scn, cm) {
         sunL.position.copy(f.F).addScaledVector(f.dir, f.Dd);
         sunL.target.updateMatrixWorld();
         sunL.updateMatrixWorld();
-        Object.assign(c, { left: -f.R, right: f.R, top: f.R, bottom: -f.R, near: f.near, far: f.far });
+        Object.assign(c, {
+          left: -(f.Rx || f.R),
+          right: f.Rx || f.R,
+          top: f.Ry || f.R,
+          bottom: -(f.Ry || f.R),
+          near: f.near,
+          far: f.far,
+        });
         c.updateProjectionMatrix();
         sh.bias = -0.0002;
         sh.normalBias = Math.max(0.02, f.q * 1.6);
