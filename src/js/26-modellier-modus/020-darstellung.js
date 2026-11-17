@@ -26,6 +26,11 @@ function skQuadsBasis(ents, col, op, line) {
       f = lf(b, l),
       z0 = skZ(b, e.j),
       z1 = z0 + l.h;
+    // ── Erweiterung aus 26-modellier-modus/150-ecken.js: Ecke als schmale Streifen entlang beider Wände
+    if (e.ek != null) {
+      skEckeQuads(f, e.ek, z0, z1, pos, lp, line);
+      return;
+    }
     if (e.top) {
       const pts = f.map((p) => new T.Vector2(p[0], p[1])),
         tr = T.ShapeUtils.triangulateShape(pts, []);
@@ -40,33 +45,12 @@ function skQuadsBasis(ents, col, op, line) {
     const a = f[e.i],
       c = f[(e.i + 1) % f.length];
     pos.push(a[0], z0, a[1], c[0], z0, c[1], c[0], z1, c[1], a[0], z0, a[1], c[0], z1, c[1], a[0], z1, a[1]);
-    if (line)
-      lp.push(
-        a[0],
-        z0,
-        a[1],
-        c[0],
-        z0,
-        c[1],
-        c[0],
-        z0,
-        c[1],
-        c[0],
-        z1,
-        c[1],
-        c[0],
-        z1,
-        c[1],
-        a[0],
-        z1,
-        a[1],
-        a[0],
-        z1,
-        a[1],
-        a[0],
-        z0,
-        a[1],
-      );
+    if (line) {
+      lp.push(a[0], z0, a[1], c[0], z0, c[1], c[0], z1, c[1], a[0], z1, a[1]);
+      // senkrechte Kanten nur an echten Ecken – Ausrundungen sollen rund wirken (150-ecken.js)
+      if (skEckeEcht(f, (e.i + 1) % f.length)) lp.push(c[0], z0, c[1], c[0], z1, c[1]);
+      if (skEckeEcht(f, e.i)) lp.push(a[0], z1, a[1], a[0], z0, a[1]);
+    }
   });
   const o = [],
     P = pos.concat(tp);
@@ -95,7 +79,11 @@ function skQuadsBasis(ents, col, op, line) {
     g2.setAttribute('position', new T.BufferAttribute(new Float32Array(lp), 3));
     const ln = new T.LineSegments(
       g2,
-      new T.LineBasicMaterial({ color: 0x1f5fa8, depthTest: false, transparent: true }),
+      new T.LineBasicMaterial({
+        color: typeof line === 'number' ? line : SKC.sel,
+        depthTest: false,
+        transparent: true,
+      }),
     );
     ln.renderOrder = 8;
     ln.raycast = () => {};
@@ -128,9 +116,13 @@ function skDraw() {
   const bs = new Set(SK.sel.map((e) => e.b));
   if (SK.hv) bs.add(SK.hv.b);
   if (SK.ghost) SK.ghost.forEach((e) => bs.add(e.b));
+  if (SK.op && SK.op.b) bs.add(SK.op.b);
   const key = [
     SK.ver,
     SK.sel.length,
+    SK.flt,
+    SK.tool,
+    SK.op ? 'op' : '',
     SK.hv ? skKey(SK.hv) : '',
     ...[...bs].map((b) => b.id + ':' + skSig(b)),
   ].join('#');
@@ -141,12 +133,19 @@ function skDraw() {
     c.geometry && c.geometry.dispose();
     c.material && c.material.dispose();
   }
-  if (SK.hv && !skHas(SK.hv))
-    skQuads(SK.tool === 's' ? [SK.hv] : skGroupHv(SK.hv), 0x6aa6d6, 0.4, false).forEach((x) => SKG.add(x));
-  if (SK.sel.length) skQuads(SK.sel, 0x2f7fd0, 0.55, true).forEach((x) => SKG.add(x));
-}
-function skGroupHv(en) {
-  return SK.tool === 'p' && !SK.sel.length && !en.top ? skGroup(en) : [en];
+  // Hover zeigt genau das, was der Klick bzw. das Werkzeug trifft; Auswahl in Orange obenauf,
+  // ein ganzes Gebäude nur leicht getönt mit Kontur, damit die Nutzungsfarbe lesbar bleibt
+  if (SK.hv) {
+    const hl = skHoverListe(SK.hv),
+      ks = new Set(SK.sel.map(skKey));
+    if (hl.length && !(hl.length === ks.size && hl.every((x) => ks.has(skKey(x)))))
+      skQuads(hl, SKC.hv, 0.28, SKC.hv).forEach((x) => SKG.add(x));
+  }
+  if (SK.op && SK.op.tg && !SK.op.kind) skQuads(SK.op.tg, SKC.sel, 0.5, SKC.sel).forEach((x) => SKG.add(x));
+  if (SK.sel.length) {
+    const ganz = [...new Set(SK.sel.map((e) => e.b))].every((b) => skWhole(b));
+    skQuads(SK.sel, SKC.sel, ganz ? 0.13 : 0.5, SKC.sel).forEach((x) => SKG.add(x));
+  }
 }
 // placeHc(): Erweiterung zusammengeführt, siehe 01-modell-3d/030-wandflaechen.js
 // hover(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
@@ -341,6 +340,12 @@ addEventListener(
       const t = e.target || {};
       if (/INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable) return;
       if (e.key === 'Escape') {
+        // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: offene Gruppenauswahl zuerst schließen
+        if (FK.kl || FK.wahl) {
+          fkWahlZu();
+          e.stopImmediatePropagation();
+          return;
+        }
         if (SK.opEsc && SK.opEsc()) {
           e.stopImmediatePropagation();
           return;

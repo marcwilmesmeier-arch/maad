@@ -32,8 +32,57 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   wie im three.js-Beispiel webgl_loader_3dtiles). Zwei Hilfsdurchgänge mit Ersatzmaterialien (`atmDurchgang`,
   übernehmen Seite und `onBeforeCompile` des Originals): Normalenbild und Schattenmaske (Alpha = maads Schatten,
   r = nachbeleuchten ja/nein). Wasser (`040-wasser-realistisch-plus.js`) spiegelt den Himmel aus einer Würfeltextur
-  und ist von der Nachbeleuchtung ausgenommen. Eigene Objekte mit Sondershadern können über `userData.atmVar`
+  und ist von der Nachbeleuchtung ausgenommen; Tiefenversatz (`polygonOffset` −4/−8) in allen Durchgängen wie beim
+  Wasser in Realistisch, sonst sticht das Gelände in der Ferne durch. Eigene Objekte mit Sondershadern können über `userData.atmVar`
   eigene Ersatzmaterialien mitgeben.
+- Wohnungsmix (`15-grundriss/055-wohnungsmix.js`, aus v545 zurückgeholt): Wohnungstypen = Flächenarten mit Nutzung
+  Wohnen (ohne die allgemeine, `df`). Einstellung im Fenster „Flächenarten“ (`wmxEinstellungHtml`, aufgerufen in
+  `grFaHtml`), Auswertung in Gebäudemetrik → Einheiten (`wmxHtml`, aufgerufen in `zoRender`). `S.wmx` {p Vorlage,
+  m Anteil % je Flächenart, s Zielgröße m² je Flächenart} wird mit dem Projekt gespeichert (ältere Projekte: aus
+  `S.gen.cat.Wohnen` des früheren Generators). Ist aus den Grundriss-Einheiten, ohne Einheiten Schätzung aus BGF
+  Wohnen × 75 %.
+- Öffnungen (Fenster, Türen): Katalog `S.oet` (`19-fassadendesigner/090-oeffnungen.js`, mit dem Projekt gespeichert),
+  bearbeitet im Konfigurator (`095-konfigurator.js`, eigenes Fenster: Name, Maße, Brüstung, Rahmenfarbe, Aufteilung –
+  zeichnerisch: Werkzeuge Senkrecht teilen (Pfosten), Waagerecht teilen (Ober-/Unterlicht), Felder als Fenster oder
+  Paneel in Rahmenfarbe).
+  Einteilung einheitlich über `oeAufteilung(T)` (Stege und Felder) für Ansicht, Symbol und 3D. Gesetzte Öffnungen in
+  `b.fd[Ansicht].oe = [{id, t, u, v, q}]` (Ansichtskoordinaten; q = Herkunft, heute 'frei'); alle Verbraucher lesen über
+  `oeListe(b, V)` – dort kommen später automatisch platzierte Öffnungsgruppen dazu. 3D nur ab LOD 200
+  (`22-lod200-waende/100-oeffnungen-3d.js`): `oeWelt` rechnet in Weltkoordinaten um, `oeWandOeffnungen` ordnet jede
+  Öffnung genau einer Außenwand zu, `oeWandTeilen` teilt die Wand in Streifen (echte Laibungen), `oeKoerper` baut Rahmen,
+  Glas (weiß, 80 % durchsichtig), Paneele und Sprossen (keine Fensterbank). Grundriss LOD 200: `oeGrundriss` (aus
+  `l2Draw`) mit derselben Zuordnung – geschnittene Öffnungen (Schnitthöhe `S.gro.sh`) ausgespart mit Laibung,
+  Rahmen, Glas bzw. Türblatt mit Aufschlag, höhere gestrichelt; Rück-/Vorsprünge ändern die Wandkontur. Die Wandableitung (`l2Els`) ignoriert `oe`/`gr`.
+- Öffnungsgruppen (`097-oeffnungsgruppen.js`, Konfigurator-Reiter `098-konfigurator-gruppen.js`): Bibliothek `S.oeg`
+  (Länge, Höhe, Öffnungen mit Lage), an der Fassade nur Verweise `b.fd[Ansicht].gr = [{id, g, u, v}]`. `oeListe`
+  erzeugt daraus die Öffnungen (q = Verweis) – eine geänderte Gruppe ändert alle Stellen. Fassadendesigner: Werkzeug
+  „Gruppe“ (setzen, ziehen, tauschen), „Gewählte Felder füllen“ (je Geschoss, Rest gleichmäßig an den Enden).
+  „Fensterhöhe über festen Sturz“ (`G.sz = {an, s}`): `oegTyp` liefert je Verweis die Fensterhöhe bis s unter die
+  Geschossoberkante (Geschosshöhe aus `fdStoreys`), Türen/Tore unverändert. Flächen der Gruppe: Teilungslinien `G.xs`/`G.ys` (zeichnerisch im Konfigurator oder „An Fenstern teilen“), Felder
+  `G.fe = [{p, d, k, t}]` mit Tiefe (positiv zurück, negativ vor), Verlauf k (gleichmäßig oder schräg: eine Seite
+  bündig) und Material; `G.t` = Material der Gruppe. `oegFlaechenG` fasst gleiche Felder zu Rechtecken zusammen
+  (dl/dr = Tiefe links/rechts). LOD 200: `oeWandOeffnungen` (ra/re) → Wand ausgespart, `oeRuecksprungKoerper` schließt
+  mit (schräger) Fläche bzw. Vorsprungkörper; Fassadenfarbe: Felder in ihrer Tiefe, Seitenflächen nur an Kanten mit
+  Tiefenunterschied, Aussparungen über `ftVereinigung` vereinigt. Alte `G.rs` werden beim Laden übernommen.
+- Fassadendesigner-Oberfläche (`19-fassadendesigner/030`, `060`): unten angedockt (Höhe am Griff, `maad.fdH`),
+  Kopf mit Ansichten als Reitern, Werkzeugleiste (Auswählen V, Teilen T mit Linie/Rechteck/Geschoss, Öffnung O,
+  Gruppe G), Optionsleiste über der Zeichnung, Inspektor `fdInspektor` (zeigt nur das Gewählte bzw. die Bibliothek des
+  Werkzeugs), Fußleiste mit Hinweis und Kennwerten. Esc führt stufenweise zurück zu „Auswählen“. Zahlenfelder
+  `fdZahl` (Einheit im Feld, Komma, Pfeiltasten).
+- Fassadentypen in 3D (`110-fassadentypen-3d.js`, derzeit abgeschaltet: `FT3.aktiv = false`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
+  (`G.fdt`), farbige Flächen 4 cm vor der Außenwand mit ausgesparten Öffnungen, Laibungen in derselben Farbe
+  (senkrecht zur tatsächlichen Wand); `ftSync` im Takt von `l2Vis`, je Gebäude nur bei Änderung neu.
+- Bibliothek (`19-fassadendesigner/130-bibliothek.js`): eigene oder geänderte Öffnungstypen und Gruppen werden bei jeder
+  Änderung (`oeAktualisieren`) in `localStorage` `maad.bib.v1` gemerkt. Neues Projekt: Bibliothek ersetzt gleiche
+  Schlüssel. Projekt öffnen: Projekt gewinnt, Bibliothek ergänzt fehlende. Löschen im Konfigurator entfernt auch dort.
+- Gruppen reichen an der Fassade immer über das ganze Geschoss (`oegHoehe`); `G.h` ist nur die Zeichenhöhe. Mit
+  `G.sz.an` wachsen Fenster (Sturz bleibt wie gezeichnet, `oegTyp`), sonst wächst der Sturz (`oegYAbb`).
+- Öffnungstypen: `pb` Rahmenbreite, `pp` Pfosten und Riegel (ohne Angabe wie `pb`, `oeAufteilung`).
+- Gebäudekonfigurator (`19-fassadendesigner/120-gebaeudekonfigurator.js`, Karte „Fassade“ im Gebäudepanel): Stapel
+  `b.fk.st` (Gruppe je Geschoss ab EG, oberste gilt darüber), Abweichungen `b.fk.ab` ('Ansicht|Geschoss', 'Ansicht|_',
+  '_|Geschoss'). `fkSync` (Takt von `l2Vis`) platziert bei Änderung automatisch Verweise mit `a: 1` in allen Feldern
+  aller Ansichten; von Hand verschobene/getauschte Verweise verlieren `a` und bleiben erhalten. `b.fk` wird wie `b.fd`
+  in Rückgängig, Speicherstand und Modellier-Modus mitgeführt.
 - Tests und Werkzeuge liefern alle externen Bibliotheken über `tests/bibliotheken.mjs` lokal aus.
 - Wind & Rauch (Analyse-Reiter `wi`, `07-analyse/100–150`): Strömungslöser `wiLoeser` (Gitter-Boltzmann D3Q19,
   Smagorinsky) und Teilchenausbreitung `wiAusbreitung` sind reine Rechenfunktionen. Sie laufen als Blob-Worker
@@ -84,38 +133,38 @@ Die Nummer bestimmt die Ladereihenfolge. Die Bereiche 00–15 sind thematisch ge
 der Entstehungsgeschichte (Versionen v239 … v519). Wo eine Version ein klar abgegrenztes Modul ist, trägt der
 Ordner dessen Namen, sonst `erweiterungen-vAAA-vBBB`.
 
-| Ordner                       | Inhalt                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `00-kern`                    | Hilfsfunktionen, Fehlerprotokoll, Registries `BA`/`SHP`, Zustand `S`              |
-| `01-modell-3d`               | Szene, Gebäude, Dachformen, Wandflächen, Auswahl, Layer                           |
-| `02-geodaten`                | Vektorkacheln, Gelände (DGM/DOM), LoD2/LoD3-Gebäude, Bäume, ALKIS, Bebauungspläne |
-| `03-startseite`              | Demokarte, Startseite, Wolken, 3D-Beschriftungen, Planungsbeispiel                |
-| `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                   |
-| `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                  |
-| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken     |
-| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen, Wind & Rauch (100–150)            |
-| `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                               |
-| `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                |
-| `10-excel-export`            | XLSX-Export (eigener ZIP-/Tabellen-Writer)                                        |
-| `11-bearbeiten`              | Werkzeuggruppen, Abstandsflächen, Verschieben/Drehen, Kontextmenü                 |
-| `12-ifc-export`              | IFC4/STEP-Export mit Prüfer                                                       |
-| `13-geometrie-und-nutzung`   | Geometrie-Hilfen, Nutzungen je Geschoss                                           |
-| `14-projekt-speicherstand`   | vollständiger Projekt-Speicherstand (Laden/Speichern)                             |
-| `15-grundriss`               | Grundriss/Einheiten, Flächenarten, Bilanz, Explosionsansicht, Grundriss-Fenster   |
-| `16-darstellung-erweitert`   | Silhouetten, Auswahlfarben, Himmelfarbe, Zeichenfang                              |
-| `17-erweiterungen-v253-v280` | Analyse-Reiter, Umwelt-/Klimadaten, Risikogebiete, Legende, Dachfarben            |
-| `18-erweiterungen-v280-v325` | Grün/Wasser-Shader, Layer je Darstellung, USA-Daten, Kundenzugang, Administration |
-| `19-fassadendesigner`        | 2D-Fassadendesigner                                                               |
-| `20-geodaten-international`  | Frankreich, Österreich                                                            |
-| `21-gelaendeplanum`          | Geländeplanum, Böschungen, Baugrube, Mauern                                       |
-| `22-lod200-waende`           | LOD 200: Wände und Decken aus dem Grundriss                                       |
-| `23-bauteilkonfigurator`     | Bauteilkonfigurator (Wand, Decke, Dach) und LOD 300                               |
-| `24-erweiterungen-v344-v436` | Fokus-Ansicht, Kamera, Vollgeschoss-Regel, Gebäudeklasse, Varianten, Layouter     |
-| `25-polygon-operationen`     | Vereinigung/Differenz/Schnitt, Innenhöfe                                          |
-| `26-modellier-modus`         | Modellier-Modus (Ziehen & Schieben, Teilen, Versatz, Dach bearbeiten)             |
-| `27-skizze`                  | Skizzenmodus, Kantennetz, Fang                                                    |
-| `28-erweiterungen-v486-v519` | Menügruppen, Bäume setzen, Import-Tab, Detailbäume                                |
-| `29-start`                   | Start und Projekt öffnen                                                          |
+| Ordner                       | Inhalt                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `00-kern`                    | Hilfsfunktionen, Fehlerprotokoll, Registries `BA`/`SHP`, Zustand `S`                                   |
+| `01-modell-3d`               | Szene, Gebäude, Dachformen, Wandflächen, Auswahl, Layer                                                |
+| `02-geodaten`                | Vektorkacheln, Gelände (DGM/DOM), LoD2/LoD3-Gebäude, Bäume, ALKIS, Bebauungspläne                      |
+| `03-startseite`              | Demokarte, Startseite, Wolken, 3D-Beschriftungen, Planungsbeispiel                                     |
+| `04-datenquellen`            | Datenquellen je Bundesland, Einzel-Nachladen, Metalink-Download                                        |
+| `05-projekt-und-bedienung`   | Projekt-Assistent, Kamera, Ansichten, Interaktion, Zeichenformen                                       |
+| `06-darstellung`             | Weißmodell/Schattiert/Realistisch, Sonnenstand, Himmel, Atmosphäre und Wolken                          |
+| `07-analyse`                 | Kennwerte, Flächen/Rauminhalte, Beschriftungen, Wind & Rauch (100–150)                                 |
+| `08-layout-pdf`              | Seitenlayout und eigener PDF-Writer                                                                    |
+| `09-umgebung-und-flaechen`   | Rundflug, freie und eigene Flächen, Straßen, Maske                                                     |
+| `10-excel-export`            | XLSX-Export (eigener ZIP-/Tabellen-Writer)                                                             |
+| `11-bearbeiten`              | Werkzeuggruppen, Abstandsflächen, Verschieben/Drehen, Kontextmenü                                      |
+| `12-ifc-export`              | IFC4/STEP-Export mit Prüfer                                                                            |
+| `13-geometrie-und-nutzung`   | Geometrie-Hilfen, Nutzungen je Geschoss                                                                |
+| `14-projekt-speicherstand`   | vollständiger Projekt-Speicherstand (Laden/Speichern)                                                  |
+| `15-grundriss`               | Grundriss/Einheiten, Flächenarten, Bilanz, Explosionsansicht, Grundriss-Fenster                        |
+| `16-darstellung-erweitert`   | Silhouetten, Auswahlfarben, Himmelfarbe, Zeichenfang                                                   |
+| `17-erweiterungen-v253-v280` | Analyse-Reiter, Umwelt-/Klimadaten, Risikogebiete, Legende, Dachfarben                                 |
+| `18-erweiterungen-v280-v325` | Grün/Wasser-Shader, Layer je Darstellung, USA-Daten, Kundenzugang, Administration                      |
+| `19-fassadendesigner`        | 2D-Fassadendesigner                                                                                    |
+| `20-geodaten-international`  | Frankreich, Österreich                                                                                 |
+| `21-gelaendeplanum`          | Geländeplanum, Böschungen, Baugrube, Mauern                                                            |
+| `22-lod200-waende`           | LOD 200: Wände und Decken aus dem Grundriss                                                            |
+| `23-bauteilkonfigurator`     | Bauteilkonfigurator (Wand, Decke, Dach) und LOD 300                                                    |
+| `24-erweiterungen-v344-v436` | Fokus-Ansicht, Kamera, Vollgeschoss-Regel, Gebäudeklasse, Varianten, Layouter                          |
+| `25-polygon-operationen`     | Vereinigung/Differenz/Schnitt, Innenhöfe                                                               |
+| `26-modellier-modus`         | Modellier-Modus (Ziehen & Schieben, Teilen, Versatz, Dach bearbeiten, Auswahlfilter und Kontextleiste) |
+| `27-skizze`                  | Skizzenmodus, Kantennetz, Fang                                                                         |
+| `28-erweiterungen-v486-v519` | Menügruppen, Bäume setzen, Import-Tab, Detailbäume                                                     |
+| `29-start`                   | Start und Projekt öffnen                                                                               |
 
 Dateien mit der Endung `.daten.js` enthalten nur eingebettete Daten (Schrift, Bild). Sie werden weder
 formatiert noch gelesen. Ändern: neu erzeugen statt von Hand bearbeiten.
@@ -200,3 +249,124 @@ läuft wie bisher im Browser.
 2. `npm run format`
 3. `npm run check` (Formatierung, Lint, Rauchtest)
 4. `dist/maad.html` ausliefern.
+
+## Modellieren: Auswahlmatrix und Kontextleiste
+
+`26-modellier-modus/140-kontextleiste.js` legt fest, was ein Klick wählt und welche Aktionen dazu angeboten werden:
+
+- `SK.flt` ist der Auswahlfilter: `a` Auto, `g` Gebäude, `s` Geschoss, `f` Fläche, `r` Flucht. Die Chips stehen unten
+  in der 3D-Ansicht (`#skflt`). Ist von einem Gebäude noch nichts gewählt, wählt der erste Klick immer das ganze
+  Gebäude. Erst weitere Klicks in dasselbe Gebäude folgen dem Filter. Bei Auto wählt ein weiterer Klick die Fläche;
+  Doppel-, Dreifach- und Vierfachklick bleiben erhalten.
+- `skKlickListe(en, n, m)` liefert die Auswahl für einen Klick und wird auch für die Hover-Vorschau genutzt
+  (`skHoverListe`). So zeigt der Hover immer genau das, was der Klick oder das Werkzeug trifft.
+- `skAuswTyp()` ordnet die Auswahl einer Zeile der Matrix zu (`g`, `s`, `f`, `r`, `d`, `tf`, `hof`, `m`). `SKKL`
+  enthält je Zeile die angebotenen Aktionen (BA-Schlüssel und `h` für die Geschosshöhe, `bst` für „Bestand
+  ausblenden“).
+- `skKontext()` zeichnet die Kontextleiste `#skkl` über der Auswahl. Sie wird aus `placeHc` aufgerufen, also jedes
+  Bild. Der Inhalt wird nur neu gebaut, wenn sich die Auswahl ändert.
+- Farben der Hervorhebung stehen in `SKC`, Orange und damit unabhängig von der Nutzungsfarbe. Kanten liegen obenauf.
+  Ein ganz gewähltes Gebäude ist nur leicht getönt.
+- Fassadengruppen aus der Kontextleiste (`skKlGruppen`): Am Gebäude ist es die Grundeinstellung (`b.fk.st`, eine
+  Zeile für alle Geschosse). Geschoss, Wand und Flucht bekommen eine eigene Anordnung als Abweichung
+  (`b.fk.ab['Seite|Geschoss']` mit Rhythmus als Liste, Ausrichtung in `b.fk.auA` mit demselben Schlüssel, ausgewertet
+  in `fkAusr`). Abweichungen bleiben bestehen, wenn sich die Grundeinstellung ändert. Das Fenster ist `#fkWahl` des
+  Gebäudekonfigurators (`fkWahlEl`).
+- Schneiden (`skx`, Modus `SK.schnitt` des Werkzeugs Teilen): Der Schnitt läuft senkrecht zur angeklickten Wand rund
+  ums Gebäude (Fassade, Dach, Fassade). `skSchnittDo` fügt in jedem Geschoss Teilungspunkte in die Kontur ein (wie
+  Teilen) und trennt die freien Dach- und Terrassenflächen in Teilflächen (`l.faces`). Es bleibt ein Gebäude, Decken
+  und Grundrisse bleiben ganz.
+- Seitenecken (`26-modellier-modus/150-ecken.js`): Im Auswahl-Werkzeug ist ein Klick nahe einer senkrechten Ecke der
+  Eintrag `{ b, j, ek }`. `skEckGruppe` bildet daraus die Konturflucht über alle Geschosse. Eine gewählte Ecke
+  anfassen und ziehen ist der Vorgang `SK.op.kind === 'e'` (Fang auf die Richtungen der angrenzenden Wände).
+  `skEckRunden(r)` ersetzt die Ecke durch einen Bogen.
+- Nach jeder abgeschlossenen Aktion (Ziehen, Verschieben, Teilen, Schneiden, Ecke) ruft maad `skNachAktion(b)` auf:
+  zurück ins Auswahl-Werkzeug, das Gebäude bleibt gewählt. Die alten weißen Kugelgriffe, die weiße Hover-Kontur und
+  der Fang-Marker sind im Auswahl-Werkzeug ausgeblendet.
+- LOD-200-Außenkontur (`22-lod200-waende/110-aussenkontur.js`): `l2KonturPunkte(b)` berechnet aus den Grundrissen nur
+  die echten Außenkanten. Das sind Ecken über 20° Knick, Fuß, Dachrand, Auskragungen und Rücksprünge zwischen den
+  Geschossen sowie die Dachkanten geneigter Dächer. Unterteilungen von Wänden und Decken sind nicht dabei. Die Linien
+  sind `kont`-Linien (Layer „Gebäudekontur“, unabhängig von der „Fetten Außenkontur“). Die fette Kontur ist wie bei Umgebungsgebäuden nur die Silhouette. `l2KonturSil(cm)` (aus `konPre`) sucht je Bild
+  die Kanten, an denen eine angrenzende Fläche zur Kamera und die andere weg zeigt. Diese werden als breite Linie leicht
+  hinter dem Gebäude gezeichnet. Eine Hülle schiene durch die Fensterlöcher.
+
+## Konfigurator: feldweise Teilungen
+
+- Fenster und Türen: `T.ut` enthält je oberstem Feld (Flügel `0…`, `ol`, `ul`) einen Teilungsbaum. Ein Knoten ist
+  `{ a: 'x'|'y', r: Lage 0–1, k: [Kind, Kind] }`, ein Blatt `{ fu: 'g'|'p' }`. `oeAufteilung` liefert weiterhin
+  `felder` und `stege`, dazu `oben` (oberste Felder für Flügelbreiten und Pfosten) und `ns` (ziehbare Stege der
+  Unterteilungen). Teilfelder heißen `oben.pfad`. „Senkrecht/Waagerecht teilen“ teilt nur das angeklickte Feld
+  (`okFeldTeilen`).
+- Gruppen: `G.vb` enthält verbundene Felder als Rechtecke auf Teilungslinien. `oegZellen` fasst die Rasterfelder
+  darin zu einem Feld zusammen. Eine Teilung anklicken wählt nur das Stück zwischen zwei Feldern, Entf verbindet sie
+  (`okGrSegmentLoeschen`). „Ganze Linie entfernen“, „Felder verbinden“ und „Verbindung lösen“ ergänzen das.
+- Gruppen lassen sich auch über das × in der Liste löschen. Dabei werden Verweise und die Gebäudekonfiguration
+  (`b.fk`) bereinigt.
+
+## LOD 200: Innenhöfe
+
+`l2Els` (`22-lod200-waende/020-ableitung…`) spart Innenhöfe (`b.voids`, `znVoidsAt`) aus der Geschossdecke aus, wenn
+der Hof über dem Geschoss weiterläuft oder es das oberste Geschoss ist (offen zum Himmel). Die Decke unter dem
+untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss, fehlt dort auch die Bodenplatte.
+
+## Gebäudekonfigurator: Material je Geschoss und Versatz
+
+- Karte „Fassade“ (Planen): Stapel der Öffnungsgruppen mit Ausrichtung und Versatz je Zeile (`b.fk.vs`, m). Darunter
+  liegt der Stapel „Fassadenmaterial je Geschoss“ (`b.fk.mt`, Fassadentyp je Geschoss, die oberste Zeile gilt darüber).
+  Ausrichtung je Seite und Abweichungen sind nicht mehr in der Karte; Abweichungen setzt man im Modell (Kontextleiste
+  „Gruppen“, mit Versatz in `b.fk.vsA`).
+- Versatz (`fkVersatz`): Links bzw. rechts ist er der Abstand vom Rand, positiv nach innen. Mittig ist er eine
+  Verschiebung, positiv nach rechts.
+- Material je Geschoss ist die Voreinstellung für Ansichtsflächen ohne eigenen Fassadentyp. Es wird in der
+  Fassadenansicht geschossweise gezeichnet und in `fdStats` anteilig gezählt (`fkMaterialAnteile`).
+- Außenwandstärke in der Karte „Fassade“ (`fkWandstaerke`): setzt `b.l2.c.AW` (Standardstärke LOD 200 wie im
+  Bauteilkonfigurator) und setzt Einzelwerte der Außenwände zurück.
+
+## LOD 200: Terrassen
+
+`l2Els` gibt Außenwänden ohne Geschoss darüber (mindestens 3 von 5 Prüfpunkten frei) eine Attika (`r.hAt = 0,30 m`)
+und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfläche (innen vor der Attika, Stäbe alle 0,24 m, Fußleiste, Handlauf, Oberkante
+1,00 m über der Geschossoberkante). Die LOD-200-Außenkontur hebt Terrassenränder und -ecken um die Attika an.
+
+## Balkone und Loggien
+
+- In den Öffnungsgruppen haben Felder eine Art `a` (Konfigurator › Gruppen › Feld › „Art“): `''` Fläche, `'lo'`
+  Loggia, `'ba'` Balkon. Gezeichnet wird wie bei Rücksprüngen: teilen, Feld wählen, Art und Tiefe setzen.
+- Eine Loggia ist ein Rücksprung um `d` (Wandaussparung wie bisher) mit Geländer in der Fassadenebene.
+- Bei einem Balkon ist `d` die Auskragung (`tb` in `oegFlaechen`); die Wand bleibt bündig.
+- In den Ansichten zeichnet `oegArtZeichnen` das Symbol: Geländer 1,00 m, beim Balkon die Platte.
+- In LOD 200 baut `22-lod200-waende/130-balkone.js` (`l2Balkone`, Takt aus 030-aktionen) je Gebäude die Platten
+  (0,20 m) und die Stabgeländer (`l2Stabgelaender`).
+
+## Zugänglichkeit
+
+`16-darstellung-erweitert/060-zugaenglichkeit.js` (`uiZugang`, aus `start()`) beschriftet Symbol-Buttons mit ihrem
+`title` als `aria-label`. Anklickbare `div`/`span` macht es per Tastatur bedienbar (`role="button"`, `tabindex`,
+Enter/Leertaste). Ein MutationObserver erfasst auch alles, was die Panels später neu zeichnen. Die CSS liefert einen
+sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
+
+## Schatten und Fassadengruppen (Ergänzungen)
+
+- `shFit` (24-…/020-kamera) führt die Schattenkarte auch in der normalen 3D-Ansicht dem Blickpunkt nach, nicht nur im
+  Kamera-Modus. Außerhalb davon rasten Ausschnittgröße (Stufen ×1,25) und Mittelpunkt (Raster R/6) ein; die
+  Schattenkarte wird nur bei deutlicher Bewegung neu gerechnet (`SHC`).
+- `fkAnwenden`: Reihen (Ansichtsfläche + Höhe), in denen eine Gruppe von Hand getauscht oder verschoben wurde, bleiben
+  komplett erhalten, auch mit den automatisch gesetzten Nachbarn. Eigene Anordnungen (`b.fk.ab`) haben Vorrang vor
+  der Gebäudeeinstellung.
+
+## Geneigte Dächer bei zusammengesetzten Grundrissen
+
+`roofRects` (01-modell-3d/020-mehrkoerper) zerlegt rechtwinklige Grundrisse in Rechtecke (Einzelkörper):
+
+- Hauptkörper ist der breiteste Körper (größte kürzere Seite), bei gleicher Breite der größte.
+- Jeder Körper bekommt einen eigenen First auf seiner Mittellinie, längs seiner längeren Seite.
+- Zerlegt wird in den Achsen der Gebäudekanten. Passt die Firstrichtung (auch eine von Hand gesetzte) nicht dazu,
+  nimmt `roofField` die Achsen der längsten Kante.
+- Eine Firstrichtung von Hand (`b.roof.dir`) gilt nur für einfache Körper. Bei mehreren Flügeln (`_rp.mehr`) zeigt
+  das Panel statt des Feldes einen Hinweis.
+- Ein angeschlossener Flügel hat seinen First immer quer zu dem Körper, an dem er hängt (Zwerchgiebel), auch wenn er
+  breiter als lang ist. Nur frei stehende Körper richten sich nach ihrer längeren Seite.
+- Die Dachhöhe ist das Maximum der Einzeldächer. Schmalere Flügel haben bei gleicher Neigung einen niedrigeren First
+  und laufen mit einer Kehle ins Hauptdach.
+- Dachkanten (`roofKanten`) werden aus der Dachform bestimmt, nicht aus den Dreiecken: Neigungswechsel über 15° oder
+  Rand des Grundrisses, dazu der Umriss der Giebelwände. Das gilt für LOD 100 und die LOD-200-Kontur.

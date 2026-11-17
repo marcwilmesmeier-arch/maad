@@ -2685,3 +2685,283 @@ body.hpj #ic {
   border-color: #1d1d1b;
   background: #fff;
 }
+
+/* Wohnungsmix: Einstellung im Fenster „Flächenarten“ */
+#fap .wmx {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, 1fr) 64px 64px;
+  gap: 4px 6px;
+  align-items: center;
+  margin: 6px 0 2px;
+}
+#fap .wmx i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid #0003;
+}
+#fap .wmx label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#fap .wmx input[type='number'] {
+  width: 100%;
+  padding: 2px 4px;
+  text-align: right;
+}
+#fap .wmx .mu {
+  font-size: 11px;
+}
+/* ---- Modellieren: Auswahlfilter und Kontextleiste an der Auswahl (26-modellier-modus/140-kontextleiste.js)
+   Gestaltung: Glas wie die übrigen Panels; Orange nur für das, was mit der Auswahl im Modell verbunden ist
+   (Markierung, Bezugslinie), Schiefer für Einstellungen (Filter); Maße in Tabellenziffern. */
+#skflt {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  background: var(--gl);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gb);
+  border-radius: 12px;
+  box-shadow: var(--sh);
+  font-size: 12px;
+}
+#skflt .skfl {
+  display: flex;
+  padding: 0 6px 0 7px;
+  color: var(--mu);
+}
+#skflt button {
+  border: 0;
+  background: none;
+  color: var(--tx);
+  padding: 5px 11px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+}
+#skflt button:hover {
+  background: color-mix(in srgb, var(--rd) 14%, transparent);
+}
+#skflt button.on {
+  background: var(--rd);
+  color: #fff;
+}
+#skflt button:focus-visible,
+#skkl button:focus-visible {
+  outline: 2px solid var(--rd);
+  outline-offset: 1px;
+}
+#skkl {
+  --leit: #f07a12;
+  position: absolute;
+  z-index: 8;
+  display: none;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  background: var(--gl);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gb);
+  border-radius: 12px;
+  box-shadow: var(--sh);
+  font-size: 12px;
+  color: var(--tx);
+  white-space: nowrap;
+}
+/* Benennung der Auswahl: Markierung in Auswahlfarbe, Art fett, Zusatz leise, Maß in Tabellenziffern */
+#skkl .skkn {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 0 10px 0 8px;
+}
+#skkl .skkd {
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--leit);
+  flex: none;
+}
+#skkl .skkn b {
+  font-weight: 650;
+}
+#skkl .skkz {
+  color: var(--mu);
+}
+#skkl .skkm {
+  color: var(--mu);
+  font-variant-numeric: tabular-nums;
+}
+#skkl .skksep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 3px;
+  background: var(--ln);
+}
+#skkl .skkn + button,
+#skkl .skkn + label {
+  margin-left: 2px;
+  box-shadow: -1px 0 0 var(--ln);
+  border-radius: 0 9px 9px 0;
+}
+#skkl button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: var(--tx);
+  padding: 5px 9px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+}
+#skkl button:hover,
+#skkl button.skkon {
+  background: color-mix(in srgb, var(--rd) 14%, transparent);
+}
+#skkl button.skkdel:hover {
+  background: #c6282822;
+  color: #c62828;
+}
+#skkl .skkh {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  color: var(--mu);
+}
+#skkl .skkh input {
+  width: 58px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 5px;
+  color: var(--tx);
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+}
+#skkl.kompakt button span {
+  display: none;
+}
+#skkl.kompakt button {
+  padding: 6px 8px;
+}
+/* Bezugslinie: haarfein in Auswahlfarbe von der Leiste zur Auswahl, Punkt am Ende */
+#skkl .skkleit {
+  position: absolute;
+  left: var(--lx, 50%);
+  top: 100%;
+  width: 1px;
+  height: var(--lh, 0);
+  background: var(--leit);
+  pointer-events: none;
+}
+#skkl .skkleit::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--leit);
+  box-shadow: 0 0 0 2px var(--gb);
+}
+#skkl.ohneleit .skkleit {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #skkl .skkleit {
+    transition: height 0.12s ease-out;
+  }
+}
+#fkWahl .skga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+#fkWahl .skgr {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#fkWahl .skgp {
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  background: var(--bg, #fff);
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+  min-width: 26px;
+  min-height: 26px;
+  font-size: 14px;
+}
+#fkWahl .skgp.on {
+  border-color: #f07a12;
+  box-shadow: 0 0 0 2px #f07a1233;
+}
+#fkWahl .skgau {
+  display: flex;
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#fkWahl .skgau button {
+  border: 0;
+  background: transparent;
+  padding: 3px 7px;
+  cursor: pointer;
+  color: var(--mu);
+}
+#fkWahl .skgau button.on {
+  background: #5e7f92;
+  color: #fff;
+}
+@media (prefers-reduced-transparency: reduce) {
+  #skkl,
+  #skflt {
+    background: var(--pn);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+/* ---- Zugänglichkeit (Prüfung nach web-design-guidelines): sichtbarer Tastaturfokus, reduzierte Bewegung, Farbschema */
+:root {
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}
+button:focus-visible,
+[role='button']:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--rd);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -49,7 +49,7 @@ function sk2Hit(e) {
 // setMode(): Erweiterung zusammengeführt, siehe 05-projekt-und-bedienung/030-mini.js
 
 // ---- Menü (oberes Menü „Bearbeiten“ und Rechtsklick-Menü): Werkzeuge aus der einen Registry BA
-const SKBA = { sks: 's', skp: 'p', mv: 'm', skc: 'm', skl: 'l', skf: 'f', skr: 'r', skz: 'z' };
+const SKBA = { sks: 's', skp: 'p', mv: 'm', skc: 'm', skl: 'l', skx: 'l', skf: 'f', skr: 'r', skz: 'z' };
 SK.cp = false;
 SK.used = false;
 function skUse(t, cp) {
@@ -154,7 +154,14 @@ function skBaSyncBasis() {
   document.querySelectorAll('[data-ba]').forEach((b) => {
     const m = SKBA[b.dataset.ba];
     if (m)
-      b.classList.toggle('on', !!skAct() && SK.used && SK.tool === m && (b.dataset.ba === 'skc') === !!SK.cp);
+      b.classList.toggle(
+        'on',
+        !!skAct() &&
+          SK.used &&
+          SK.tool === m &&
+          (b.dataset.ba === 'skc') === !!SK.cp &&
+          (m !== 'l' || (b.dataset.ba === 'skx') === !!SK.schnitt),
+      );
   });
 }
 // baDo(): Erweiterung zusammengeführt, siehe 11-bearbeiten/020-bearbeiten.js
@@ -163,7 +170,13 @@ function skBaSyncBasis() {
 // skMStart(): Erweiterung zusammengeführt, siehe 26-modellier-modus/040-stufe-3.js
 // Bearbeitungsmodus: keine Hover-Infos zu Flurstücken, Straßen, Gebäuden – nur die Werkzeug-Infos
 function skEditing() {
-  return !!(SK.used || SK.op || (typeof SZ !== 'undefined' && (SZ.d || SZ.op)) || S.tool !== 'v');
+  return !!(
+    SK.used ||
+    SK.op ||
+    SK.sel.length ||
+    (typeof SZ !== 'undefined' && (SZ.d || SZ.op)) ||
+    S.tool !== 'v'
+  );
 }
 {
   const _e = SK.opEsc;

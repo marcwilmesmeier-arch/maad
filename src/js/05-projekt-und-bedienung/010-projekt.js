@@ -39,6 +39,10 @@ function newProjectReset() {
   // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js
   try {
     S.ft = JSON.parse(JSON.stringify(FT0));
+    S.oet = JSON.parse(JSON.stringify(OET0));
+    S.oeg = JSON.parse(JSON.stringify(OEG0));
+    // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: eigene Typen und Gruppen aus früheren Projekten
+    bibErgaenzen(true);
     if (FDS.open) fdClose();
   } catch (e) {
     logErr(e, 'newProjectReset');

@@ -140,6 +140,13 @@ function baDo(k) {
       logErr(e, 'baDo');
     }
     skUse(SKBA[k], k === 'skc');
+    // ── Erweiterung aus 26-modellier-modus/140-kontextleiste.js: Schneiden = Teilen rund ums Gebäude
+    if (k === 'skx') {
+      SK.schnitt = true;
+      skBaSync();
+      $('hud').textContent =
+        'Schneiden · Wand anklicken, wo das Gebäude geschnitten werden soll · Zahl + Enter = Abstand';
+    }
     return;
   }
   // ── Erweiterung aus 19-fassadendesigner/060-kopf.js

@@ -99,6 +99,18 @@ function start() {
     mesh(b);
   });
   drInit();
+  // eigene Fenster/Türen und Gruppen aus früheren Projekten (19-fassadendesigner/130-bibliothek)
+  try {
+    bibErgaenzen(true);
+  } catch (e) {
+    logErr(e, 'start');
+  }
+  // Zugänglichkeit: Symbol-Buttons beschriften, anklickbare div/span per Tastatur bedienbar (16-darstellung-erweitert/060)
+  try {
+    uiZugang();
+  } catch (e) {
+    logErr(e, 'start');
+  }
   nav();
   setMode(1);
   $('b3').classList.add('on');

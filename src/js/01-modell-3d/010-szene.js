@@ -24,7 +24,7 @@ ren.shadowMap.type = T.PCFShadowMap;
 sh.mapSize.set(4096, 4096);
 sh.bias = -0.0007;
 sh.normalBias = 0.25;
-sh.radius = 1.5;
+sh.radius = 2.5; // weiche Schattenkante (PCF, in Texeln)
 Object.assign(sh.camera, { left: -260, right: 260, top: 260, bottom: -260, near: 1, far: 700 });
 const pc = new T.PerspectiveCamera(45, 1, 1, 9000),
   oc = new T.OrthographicCamera(-1, 1, 1, -1, 1, 3000);
@@ -242,7 +242,7 @@ function roofAreas(b) {
     Cz = tc * tz + sc * sz,
     TT = (p) => (p[0] - Cx) * tx + (p[1] - Cz) * tz,
     SS = (p) => (p[0] - Cx) * sx + (p[1] - Cz) * sz;
-  const hf = roofField(r.type, fp, TT, SS, a, bb, tn).hf;
+  const hf = roofField(r.type, fp, TT, SS, a, bb, tn, r.dir != null && r.dir !== '').hf;
   const st = Math.max(0.1, Math.sqrt(((x1 - x0) * (z1 - z0)) / 40000)),
     cell = st * st;
   let n2 = 0,

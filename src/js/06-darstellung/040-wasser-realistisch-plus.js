@@ -88,8 +88,13 @@ function wasBauen() {
     weg = 'if(texture2D(tM,(vW.xz+uHs)/uS).a<.5)discard;\n',
     vs =
       'varying vec3 vW;void main(){vW=position;gl_Position=projectionMatrix*viewMatrix*vec4(position,1.);}',
-    u = { tM: { value: tex }, uS: { value: GEO.size }, uHs: { value: hs } };
+    u = { tM: { value: tex }, uS: { value: GEO.size }, uHs: { value: hs } },
+    // Tiefenversatz zum Gelände wie beim Wasser in Realistisch: 14 cm reichen in der Ferne nicht (Tiefenauflösung,
+    // Gelände zwischen den Stützpunkten des Wassergitters höher) – sonst sticht das Gelände fleckig durch.
+    // In allen Durchgängen gleich, damit Normalen- und Schattenmaske dieselben Pixel treffen.
+    vor = { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 };
   const mat = new T.ShaderMaterial({
+    ...vor,
     toneMapped: false,
     uniforms: {
       ...u,
@@ -129,6 +134,7 @@ function wasBauen() {
   // in der Maske r = 0 (nicht nachbeleuchten) und kein Schatten
   m.userData.atmVar = {
     n: new T.ShaderMaterial({
+      ...vor,
       uniforms: u,
       vertexShader: vs,
       fragmentShader:
@@ -138,6 +144,7 @@ function wasBauen() {
         'gl_FragColor=vec4(normalize((viewMatrix*vec4(0.,1.,0.,0.)).xyz)*.5+.5,1.);}',
     }),
     s: new T.ShaderMaterial({
+      ...vor,
       uniforms: u,
       blending: T.NoBlending,
       vertexShader: vs,

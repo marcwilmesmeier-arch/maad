@@ -156,3 +156,89 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Astronomisch mögliche Besonnung ohne Bewölkung und Atmosphäre; Bäume werfen vollen Schatten (kein Laub-Transmissionsgrad).
 - Ergebnis und Analysepunkte werden nicht mit dem Projekt gespeichert. Umgebungsgebäude werden nicht eingefärbt (nur
   Planung und Boden, gewünscht so).
+
+## Wohnungsmix
+
+- Noch nicht im Excel-Export. Schätzung ohne Grundriss mit festem Verhältnis Wohnfläche/BGF 75 % (früher rechnete
+  der Generator Erschließung und Kerne genauer – Generator bleibt entfernt).
+- Realistisch+-Wasser: Tiefenversatz behebt das Durchstechen des Geländes; im Software-Rendering nicht an echten
+  Wasserflächen geprüft – Abnahme im Browser des Nutzers.
+
+## Öffnungen (Fenster und Türen)
+
+- LOD 300 zeigt noch keine Öffnungen (Schichtenaufbau `l2MeshL` ohne Ausschnitte).
+- Öffnungen hängen am Schlüssel der Ansicht (`b.fd[N]`); ändert sich die Gliederung der Ansichten (z. B. neue
+  Gebäudeform), können sie einer anderen Ansicht zufallen – wie Schnittlinien und Fassadentypen.
+- Öffnungen über die Wandhöhe hinaus (in die Decke) werden in 3D auf die Wandhöhe gestaucht.
+- Gebäudemetrik: Fassadenfläche noch brutto (ohne Abzug der Öffnungen).
+- Öffnungsgruppen: „Felder füllen“ legt feste Verweise an; ändert sich danach die Feldbreite, wird nicht automatisch
+  neu verteilt (erneut füllen). Gruppen über mehrere Geschosse (z. B. zweigeschossige Achsen) noch nicht vorgesehen.
+- Rücksprünge nur in Öffnungsgruppen (nicht frei an der Fassade); über Wand- oder Geschossgrenzen hinweg wird je Wand
+  getrennt gerechnet. Ohne Fassadentyp/Material bleiben die Seitenflächen grau (Wandfarbe).
+- Teilungen in Gruppen nur als durchgehende senkrechte/waagerechte Linien (Raster); Teilfelder entstehen durch
+  Auswahl mehrerer Felder. Schräger Verlauf nur waagerecht (links/rechts), nicht oben/unten.
+
+## Tests
+
+- `tests/server.test.mjs` (Browsertest Server) bricht in der Cloud-Umgebung gelegentlich beim Klick auf „Anmelden“ mit
+  Zeitüberschreitung ab; einzeln wiederholt läuft er durch. Ursache noch offen (vermutlich Last beim Gesamtlauf).
+- Einfärbung der Fassade im 3D-Modell (Fassadentypen, Materialien der Gruppenfelder) abgeschaltet (`FT3.aktiv`),
+  soll anders umgesetzt werden; 2D-Ansicht und Wandgeometrie (Öffnungen, Rück-/Vorsprünge) unverändert.
+
+## Modellieren
+
+- Werkzeugkette `SK.opDown`/`opMove`/`opUp`/`opEsc`/`keys` wird in mehreren Dateien zur Laufzeit umhüllt
+  (`const _d = SK.opDown; SK.opDown = …`, z. B. 050, 100, 130, 27-skizze/080). Das verstößt gegen Regel 3 und sollte
+  in eine Weiche je Werkzeug zusammengeführt werden.
+- Fünf Wege zur Geometrieänderung bestehen nebeneinander: Wandflächen-Vor-/Rücksprung im Panel, Kugelgriffe,
+  Kontur bearbeiten, Skizze und Modellieren. Ziel ist, dass Teilen und Ziehen & Schieben der Standardweg werden.
+- Die Fassadenfelder im Fassadendesigner nutzen noch nicht dieselbe Auswahlsprache (Hover, Orange, Kontextleiste).
+- Steht ein Bestandsgebäude unter dem Neubau, bietet die Kontextleiste „Bestand ausblenden“ an. Es wird nicht
+  automatisch ausgeblendet.
+- Linien der Hervorhebung sind 1 px breit (WebGL-Linien), dickere Kanten bräuchten Linien als Flächen.
+- Schneiden verwirft die Wandflächen-Teile (`patches`) beider Teile und die von Hand gesetzten Öffnungen/Schnitte
+  des zweiten Teils (`fd`). Der erste Teil behält `fd`, dessen Ansichten sich verschoben haben können. Die
+  Gebäudekonfiguration (`fk`) wird übernommen und neu platziert.
+- Abweichungen der Fassadengruppen aus der Kontextleiste haben eine eigene Ausrichtung (`auA`). In der Karte „Fassade“
+  im Panel wird sie angezeigt, aber nicht bearbeitet.
+- Ausgerundete Ecken sind Polygonzüge (Segmente ca. 11°). Abstandsflächen werden je Segment gezeichnet (Strahlen an
+  der Rundung), Wandflächen, Fassadenansichten und Ziehen & Schieben sehen viele kurze Wände. Ein echter Bogen-Typ
+  im Grundriss fehlt noch.
+- Ecke verschieben: keine Zahleneingabe für den genauen Abstand, Fang nur auf die Richtungen der angrenzenden Wände.
+- Die alten Kugelgriffe (`hc`, `handle`, `patchKnob`) sind im Modellier-Modus ausgeblendet, ihr Code ist aber noch
+  vorhanden und sollte entfernt werden, sobald sicher ist, dass er nicht mehr gebraucht wird.
+- Schatten in LOD 200: Wände, Laibungen und Fenster empfangen jetzt immer Schatten (vorher nur in der
+  Explosionsansicht). Bei sehr flachem Sonnenstand auf Schattenakne an dünnen Schichten achten.
+- Im Schema-Modus gibt es Schatten nur mit eingeschalteter Sonne; das Himmelslicht ist stark, Schatten auf den Flächen
+  wirken daher hell (gewollt, keine Verstärkung).
+- Ausrundungen: Normalen werden an flachen Knicken (bis 25°) geglättet (`glattNormalen`), Kanten erst ab 20°.
+  Weiße Haarlinien an den Segmenten bleiben in der Darstellung sichtbar (Ursache nicht gefunden, laut Nutzer in
+  Ordnung).
+- Terrassen-Attika und Geländer nur je ganzer Außenwand. Eine Wand, die nur teilweise unter dem Geschoss darüber liegt,
+  bekommt sie, wenn mindestens 3 von 5 Prüfpunkten frei sind. Geländer nur in LOD 200, nicht in LOD 300.
+- Balkone und Loggien nur über Öffnungsgruppen (nicht frei an der Fassade) und nur in LOD 200. Sie gehen noch nicht in
+  BGF/NGF, Abstandsflächen oder Mengen ein. Die Balkonplatte liegt an der Feldunterkante (Geschossboden der Gruppe).
+
+## Oberfläche: Prüfung nach web-design-guidelines (offen)
+
+- Zahlen werden mit `toFixed` + Komma-Ersetzung formatiert statt mit `Intl.NumberFormat('de-DE')`. Das ergibt keine
+  Tausenderpunkte und ist uneinheitlich. Umstellung über eine zentrale Formatierfunktion.
+- Rund 230 Eingabefelder ohne eigenes `<label>`/`aria-label`. Die meisten stehen neben einem sichtbaren Text, der nicht
+  mit dem Feld verknüpft ist (Klickfläche, Bildschirmleser).
+- 12 Löschvorgänge fragen mit `confirm()`. Besser wäre Rückgängig (`hist`) mit Hinweis statt eines Dialogs.
+- Klickbare `div`/`span` sind über `uiZugang` per Tastatur bedienbar gemacht; langfristig echte `<button>`.
+- Text unter 12 px in Panels (11 px Hinweise) und Klickflächen unter 44 px in den Leisten (Desktop-Werkzeug; für
+  Touch prüfen).
+- LOD 200: Gelände wird unter der Bodenplatte ausgespart (`pitBuild` nimmt in LOD 200 auch Gebäude ohne UG, Grundriss
+  EG, 0,40 m unter `b._y`). Nur die äußere Kontur, Innenhöfe im EG bleiben vom Gelände bedeckt.
+- Innenräume haben kein eigenes Licht: Echte indirekte Beleuchtung (Lichtstreuung im Raum) ist im Browser in Echtzeit
+  nicht vorhanden. Eine eigene Umgebungsverdeckung (SSAO) wurde versucht und wegen starker Bildfehler wieder entfernt; offen bleibt eine
+  Lichtberechnung im Hintergrund (Ray-Tracing).
+- Mehrkörper-Dächer nur bei rechtwinkligen Grundrissen (alle Kanten parallel zu den beiden Firstachsen). Schräge oder
+  runde Grundrisse bekommen ein Dach über den ganzen Grundriss in der Hauptrichtung.
+
+- Bibliothek für Öffnungstypen und Gruppen liegt nur im `localStorage` des Browsers (nicht auf dem Server, nicht
+  zwischen Rechnern geteilt). Bei Server-Betrieb wäre eine Bibliothek je Mandant sinnvoll.
+- Gruppen: früherer fester Sturzwert `G.sz.s` entfällt; der Sturz kommt jetzt aus der Zeichnung der Gruppe.
+- Schatten in der normalen Ansicht decken das ganze geladene Gelände ab (`shFit`/`shGelaende`, Schattenkarte 4096²):
+  bei 600 m Gelände ca. 0,2 m je Texel, bei größeren Geländen gröber. Feiner ginge nur mit Kaskaden (mehrere Karten).

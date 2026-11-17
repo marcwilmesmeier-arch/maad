@@ -389,6 +389,18 @@ function fdStats(b) {
     const d = fdD(b, V.key);
     if (d && (d.cuts.length || d.units.length)) R.cust = true;
     fdFaces(b, V).forEach((f) => {
+      // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Material je Geschoss als Voreinstellung
+      const vor = fkMaterialAnteile(b, f);
+      if (vor) {
+        vor.forEach((m) => {
+          const r = R.t[m.t] || (R.t[m.t] = { a: 0, n: 0 });
+          r.a += m.a;
+          r.n++;
+        });
+        R.tot += f.a;
+        R.rows.push({ vk: V.key, vn: V.name, idx: f.idx, t: f.t, n: f.n, a: f.a });
+        return;
+      }
       const r = R.t[f.t] || (R.t[f.t] = { a: 0, n: 0 });
       r.a += f.a;
       r.n++;

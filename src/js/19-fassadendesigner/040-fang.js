@@ -40,7 +40,8 @@ function fdSnap(V, p, shift, mode, Fx) {
     s = fdVP().s,
     tol = 12 / s,
     tg = 9 / s,
-    LE = fdLevEdges(b, V),
+    // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Außenkanten und Ecken der Öffnungen fangen
+    LE = fdLevEdges(b, V).concat(oeFangKanten(b, V)),
     ed = F._ed.concat(LE),
     vt = F._vt.concat(LE.map((e) => [e[0], e[1]]).concat(LE.map((e) => [e[2], e[3]]))),
     res = { x: p.x, z: p.z, t: null, gd: [], arc: null },
@@ -310,6 +311,22 @@ function fdDrawView(g, b, V, ox, o) {
     });
     g.fillStyle = t.c;
     g.fill('evenodd');
+    // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Fassadenmaterial je Geschoss als
+    // Voreinstellung für Flächen ohne eigenen Fassadentyp
+    const vor = fkMaterialAnteile(b, f);
+    if (vor) {
+      g.save();
+      g.clip('evenodd');
+      const xs = f.o.map((p) => X(p[0]));
+      vor.forEach((m) => {
+        if (m.t === 'ohne') return;
+        g.fillStyle = fdT(m.t).c;
+        const ya = Y(Math.min(m.v1, 1e3)),
+          yb = Y(m.v0);
+        g.fillRect(Math.min(...xs), Math.min(ya, yb), Math.max(...xs) - Math.min(...xs), Math.abs(yb - ya));
+      });
+      g.restore();
+    }
     if (o.sel && o.sel.includes(i)) {
       g.fillStyle = '#1F2A3333';
       g.fill('evenodd');
@@ -368,6 +385,8 @@ function fdDrawView(g, b, V, ox, o) {
       g.setLineDash([]);
     });
   }
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  oeZeichnen(g, b, V, ox, o);
   if (o.lab) {
     const s = fdVP().s;
     F.forEach((f, i) => {
@@ -447,6 +466,8 @@ function fdCvDraw() {
   const V = fdVw(b, FDS.vk);
   if (!V) return;
   fdDrawView(g, b, V, 0, { lab: true, sel: FDS.sel, selCut: FDS.selCut });
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  oeVorschau(g, b, V);
   // Maße
   g.fillStyle = '#334155';
   g.font = '11px system-ui,sans-serif';
@@ -692,12 +713,16 @@ function fdCvDraw() {
       : FDS.ed
         ? 'Ziehen – Fang wie beim Zeichnen · Shift = Spur festhalten · Esc = abbrechen'
         : FDS.tool === 'line'
-          ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen (ersetzt Linien darin) · Enter / Rechtsklick = beenden · Shift = Winkel fest · Esc = abbrechen'
+          ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen · Enter / Rechtsklick = beenden · Umschalt = Winkel fest · Esc = abbrechen bzw. zurück zu „Auswählen“'
           : FDS.tool === 'st'
             ? 'Klick auf eine Fläche = diese Fläche im Geschoss wählen (nur die Flucht, in der sie liegt) · danach Fassadentyp rechts wählen · Umschalt = weitere Geschosse'
             : FDS.tool === 'rect'
               ? 'Aufziehen oder zwei Ecken anklicken – ersetzt alle Linien und Felder darin durch eine Fläche · Esc = abbrechen'
-              : 'Feld klicken (Umschalt = mehrere) · Fassadentyp rechts wählen · Linie anklicken: Griffe ziehen, Entf = löschen';
+              : FDS.tool === 'oe'
+                ? 'Klick = Öffnung setzen (rastet an Brüstung und Achsen ein, Umschalt = frei) · Öffnung ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                : FDS.tool === 'gr'
+                  ? 'Klick = Gruppe setzen (rastet am Geschoss und an Nachbargruppen ein) · Gruppe ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                  : 'Klick = Feld, Linie, Öffnung oder Gruppe wählen · Umschalt = mehrere Felder · ziehen = verschieben · Entf = löschen · V T O G = Werkzeuge · Esc = Auswahl aufheben';
   fdHintSet(ht);
 }
 function fdHintSet(t) {

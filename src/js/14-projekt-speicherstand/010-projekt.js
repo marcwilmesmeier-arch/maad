@@ -18,6 +18,7 @@ function projExtra(cam) {
     x.parSel = [...S.parSel].map((i) => AL[i] && AL[i].id).filter(Boolean);
     x.lim = S.lim;
     x.gen = S.gen;
+    x.wmx = S.wmx;
     x.uses = S.uses;
     x.abst = S.abst;
     x.showSN = S.showSN;
@@ -82,6 +83,9 @@ function projExtra(cam) {
   // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js (danach)
   try {
     x.ft = JSON.parse(JSON.stringify(S.ft));
+    // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+    x.oet = JSON.parse(JSON.stringify(S.oet));
+    x.oeg = JSON.parse(JSON.stringify(S.oeg));
   } catch (e) {
     logErr(e, 'projExtra');
   }
@@ -279,6 +283,12 @@ function projApplySet(x) {
   // ── Erweiterung aus 19-fassadendesigner/010-fassadendesigner.js
   try {
     if (x && x.ft && x.ft.length) S.ft = JSON.parse(JSON.stringify(x.ft));
+    // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+    S.oet = x && x.oet && x.oet.length ? oeTypenPruefen(x.oet) : JSON.parse(JSON.stringify(OET0));
+    S.oeg = x && Array.isArray(x.oeg) ? oegPruefen(x.oeg) : JSON.parse(JSON.stringify(OEG0));
+    // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: Bibliothek ergänzt, eigene Einträge des Projekts merken
+    bibErgaenzen(false);
+    bibMerken();
   } catch (e) {
     logErr(e, 'projApplySet');
   }
@@ -306,6 +316,7 @@ function projApplySet(x) {
   if (x.fang) S.fang = Object.assign({}, S.fang, x.fang);
   if (x.lim) Object.assign(S.lim, cp(x.lim));
   if (x.gen) S.gen = cp(x.gen);
+  S.wmx = x.wmx ? wmxNorm(x.wmx) : wmxAusGenerator(x.gen) || wmxNorm(null);
   if (x.uses) Object.assign(S.uses, cp(x.uses));
   if (x.abst) S.abst = cp(x.abst);
   ['showSN', 'showFN', 'plOpen', 'ortho', 'sd', 'sa', 'lod2On', 'gbMode', 'mkOn', 'mkA'].forEach((k) => {

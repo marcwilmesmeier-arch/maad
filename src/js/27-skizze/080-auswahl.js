@@ -13,30 +13,18 @@ function skSelClick(e) {
     }
     return;
   }
-  const lvl = () => skBld(en.b).filter((x) => x.j === en.j);
-  const list =
-    m === 'rep'
-      ? n === 1
-        ? skBld(en.b)
-        : n === 2
-          ? [en]
-          : n === 3
-            ? lvl()
-            : skGroup(en)
-      : n >= 3
-        ? lvl()
-        : [en];
+  // Auswahlfilter und Klickstufen: 140-kontextleiste.js (skKlickListe)
+  const list = skKlickListe(en, n, m);
   skSet(list, m === 'rep' ? 'rep' : m);
   $('hud').textContent =
     '' +
     skInfo() +
-    (n === 1
-      ? ' · P = Ziehen & Schieben ganzer Flächen · Doppelklick = Fläche dieses Geschosses bzw. Dachfläche'
-      : n === 2
-        ? ' · Rechtsklick = Ziehen & Schieben oder Versatz (oder mit gedrückter linker Maustaste ziehen) · Dreifachklick = ganzes Geschoss'
-        : n === 3
-          ? ' · Rechtsklick = Grundriss des Geschosses öffnen · Vierfachklick = Flucht über alle Geschosse'
-          : '');
+    (m === 'rep' && list.length > 1 && skWhole(en.b)
+      ? ' · weiterer Klick wählt ' +
+        { a: 'eine Fläche', g: 'das Gebäude', s: 'ein Geschoss', f: 'eine Fläche', r: 'eine Flucht' }[SK.flt]
+      : list.length === 1 && !en.top
+        ? ' · Fläche anfassen und ziehen = Ziehen & Schieben'
+        : '');
 }
 const SKX = { pend: null, back: 0 };
 {
@@ -54,7 +42,7 @@ const SKX = { pend: null, back: 0 };
         !SK.op
       ) {
         const en = skHit(e);
-        if (en && skHas(en) && !skWhole(en.b) && SK.sel.length <= 6)
+        if (en && en.ek == null && skHas(en) && !skWhole(en.b) && SK.sel.length <= 6)
           SKX.pend = { x: e.clientX, y: e.clientY, en, id: e.pointerId };
       }
     } catch (e) {

@@ -152,10 +152,10 @@ function konLines(on) {
     const m = l.material,
       u = l.userData;
     if (!m) return;
-    if (u._kc == null) {
-      u._kc = m.color.getHex();
-      u._ko = m.opacity;
-    }
+    // Farbe und Deckkraft getrennt merken: _kc setzt auch der Layer „Gebäudekontur“ (bkApply), _ko nur hier –
+    // fehlte _ko, wurden die dünnen Linien beim Ausschalten der fetten Kontur unsichtbar (Deckkraft undefiniert)
+    if (u._kc == null) u._kc = m.color.getHex();
+    if (u._ko == null) u._ko = m.opacity != null ? m.opacity : 1;
     if (on) {
       m.color.setHex(0x80807e);
       if (u._ko < 1) m.opacity = Math.min(u._ko, 0.6);
@@ -218,6 +218,12 @@ function konPre(scn, cm) {
     p.ol.visible = vis;
     if (vis) p.ol.matrixWorld.copy(o.matrixWorld);
   });
+  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: Silhouette der LOD-200-Gebäude
+  try {
+    l2KonturSil(cm);
+  } catch (e) {
+    logErr(e, 'konPre');
+  }
 }
 
 // ---- Fußlinie: dicke dunkle Kontur entlang des Grundrisses, dem Gelände folgend (Bildschirm-Breite)
@@ -406,7 +412,7 @@ document
   .getElementById('darBase')
   .insertAdjacentHTML(
     'afterbegin',
-    '<label id="konL" title="Starke schwarze Außenkontur aus Betrachterrichtung – gilt nur für diese Darstellung">Starke Außenkontur <input type="checkbox" id="konck"></label>',
+    '<label id="konL" title="Fette Außenkontur (Silhouette) aus Betrachterrichtung – gilt nur für diese Darstellung, unabhängig von der dünnen Gebäudekontur">Fette Außenkontur <input type="checkbox" id="konck"></label>',
   );
 function konMode() {
   return S.dar === 'wm' ? 'wm' : 'sch';

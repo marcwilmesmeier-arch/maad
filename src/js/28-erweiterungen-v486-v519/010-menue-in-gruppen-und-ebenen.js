@@ -3,7 +3,7 @@ const MNG = [
   ['Auswahl', ['sks']],
   ['Zeichnen', ['skz', 'skr', 'skk']],
   ['Transformieren', ['mv', 'skc', 'ro']],
-  ['Form', ['skp', 'skf', 'skl', 'ed']],
+  ['Form', ['skp', 'skf', 'skl', 'skx', 'ed']],
   ['Weiter', ['gr', 'fd']],
   ['Löschen', ['del']],
 ];

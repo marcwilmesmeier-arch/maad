@@ -24,7 +24,7 @@ const BA = [
   {
     k: 'sks',
     n: 'Auswahl',
-    t: 'Auswahl (Leertaste) – Klick Fläche · Doppelklick in einer Flucht · Dreifachklick Gebäude · Shift/Strg ergänzen · Shift+Ziehen Fenster',
+    t: 'Auswahl (Leertaste) – Klick Gebäude, weiterer Klick Fläche · Doppelklick Fläche · Dreifachklick Geschoss · Vierfachklick Flucht · Auswahlfilter unten in der Ansicht · Shift/Strg ergänzen · Shift+Ziehen Fenster',
     p: '<path d="M5 3l14 7-6 2-2 6z"/>',
   },
   {
@@ -80,6 +80,12 @@ const BA = [
     n: 'Teilen',
     t: 'T – Wand oder Dachfläche teilen (Fang: Endpunkt, Mitte, parallel, 45°, 90°)',
     x: '✂',
+  },
+  {
+    k: 'skx',
+    n: 'Schneiden',
+    t: 'Gebäude schneiden – Fassaden und Dach rund ums Gebäude an einer Linie teilen (Decken und Grundrisse bleiben ganz): Wand anklicken · Fang Mitte und Ecken · Zahl + Enter = Abstand',
+    p: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M12 2v20" stroke-dasharray="2.5 2"/>',
   },
   {
     k: 'ed',

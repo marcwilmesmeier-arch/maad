@@ -19,22 +19,33 @@ function fdInit() {
   } catch (e) {
     logErr(e, 'fdInit');
   }
-  // Fenster verschieben
-  const hd = fdE('fdHd');
+  // Höhe des angedockten Bereichs am oberen Griff ziehen (gemerkt im Browser)
+  const gr = fdE('fdGr');
+  try {
+    const h = localStorage.getItem('maad.fdH');
+    if (h) d.style.setProperty('--fdH', h);
+  } catch (e) {
+    logErr(e, 'fdInit');
+  }
   let dr = null;
-  hd.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button,select,input')) return;
-    const q = d.getBoundingClientRect();
-    dr = { x: e.clientX - q.left, y: e.clientY - q.top };
-    hd.setPointerCapture(e.pointerId);
+  gr.addEventListener('pointerdown', (e) => {
+    dr = { y: e.clientY, h: d.getBoundingClientRect().height };
+    gr.setPointerCapture(e.pointerId);
   });
-  hd.addEventListener('pointermove', (e) => {
+  gr.addEventListener('pointermove', (e) => {
     if (!dr) return;
-    d.style.left = Math.max(0, e.clientX - dr.x) + 'px';
-    d.style.top = Math.max(0, e.clientY - dr.y) + 'px';
+    const h = Math.max(220, Math.min(window.innerHeight - 90, dr.h - (e.clientY - dr.y)));
+    d.style.setProperty('--fdH', h + 'px');
+    FDS.dirty = 1;
   });
-  hd.addEventListener('pointerup', () => {
+  gr.addEventListener('pointerup', () => {
+    if (!dr) return;
     dr = null;
+    try {
+      localStorage.setItem('maad.fdH', d.style.getPropertyValue('--fdH'));
+    } catch (e) {
+      logErr(e, 'fdInit');
+    }
   });
   setInterval(() => {
     try {
@@ -329,6 +340,10 @@ function fdDown(e) {
   const V = fdVw(b, FDS.vk);
   if (!V) return;
   const p = { x: fdWU(x), z: fdWV(y) };
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js: Öffnungen wählen, ziehen, setzen
+  if ((FDS.tool === 'sel' && !(FDS.selCut != null && fdEdHit(V, FDS.selCut, p))) || FDS.tool === 'oe') {
+    if (oeDown(b, V, p, e)) return;
+  }
   if (FDS.tool === 'sel') {
     if (FDS.selCut != null) {
       const hd = fdEdHit(V, FDS.selCut, p);
@@ -397,6 +412,8 @@ function fdCvMove(e) {
   const V = FDS.vk === '*' ? null : fdVw(b, FDS.vk);
   if (!V) return;
   const p = { x: fdWU(x), z: fdWV(y) };
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  if (!FDS.ed && oeMove(b, V, p, e)) return;
   if (FDS.ed) {
     const ed = FDS.ed;
     if (!ed.moved && Math.hypot(e.clientX - ed.px, e.clientY - ed.py) < 4) return;
@@ -427,6 +444,8 @@ function fdCvMove(e) {
   FDS.dirty = 1;
 }
 function fdUp(e) {
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
+  if (oeUp()) return;
   const b = fdB();
   if (FDS.ed) {
     const ed = FDS.ed;
@@ -469,36 +488,42 @@ function fdKey(e) {
     if (FDS.tool === 'line') fdFinishLine();
     e.preventDefault();
   } else if (k === 'Escape') {
+    // Schritt für Schritt zurück: laufende Eingabe → Werkzeug „Auswählen“ → Auswahl aufheben (schließt nicht)
     if (FDS.ed) {
       FDS.ed = null;
       FDS.pts = [];
       FDS.cur = null;
-    } else if (FDS.pts.length || FDS.rect) {
+    } else if (FDS.pts.length || FDS.rect || FDS.oeZug || FDS.grZug) {
       FDS.pts = [];
       FDS.rect = null;
-    } else if (FDS.sel.length || FDS.selCut != null) {
+      FDS.oeZug = null;
+      FDS.grZug = null;
+    } else if (FDS.tool !== 'sel') fdTool('sel');
+    else if (FDS.oe || FDS.gi || FDS.sel.length || FDS.selCut != null) {
+      FDS.oe = null;
+      FDS.gi = null;
       FDS.sel = [];
       FDS.selCut = null;
-    } else fdClose();
+    }
     FDS.dirty = 1;
     FDS.ps = '';
     e.preventDefault();
   } else if (k === 'Delete' || k === 'Backspace') {
     fdDelSel();
     e.preventDefault();
+  } else if (e.ctrlKey || e.metaKey || e.altKey) {
+    if (k === 'z' || k === 'Z') {
+      e.preventDefault();
+      fdUndo();
+    }
   } else if (k === 'v' || k === 'V') fdTool('sel');
+  else if (k === 't' || k === 'T') fdTool('teil');
   else if (k === 'l' || k === 'L') fdTool('line');
   else if (k === 'r' || k === 'R') fdTool('rect');
-  else if (k === 'g' || k === 'G') fdTool('st');
+  else if (k === 'o' || k === 'O') fdTool('oe');
+  else if (k === 'g' || k === 'G') fdTool('gr');
   else if (k === 'f' || k === 'F') fdFit();
-  else if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) {
-    e.preventDefault();
-    undo();
-    FDS.sel = [];
-    FDS.selCut = null;
-    FDS.ps = '';
-    FDS.dirty = 1;
-  } else if (k === ' ') {
+  else if (k === ' ') {
     FDS.space = true;
     e.preventDefault();
   }

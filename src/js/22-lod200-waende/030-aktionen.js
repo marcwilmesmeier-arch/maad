@@ -136,11 +136,8 @@ function l2MeshOrig(e) {
     const gg = new T.BufferGeometry();
     gg.setAttribute('position', new T.BufferAttribute(new Float32Array(e.tri), 3));
     gg.computeVertexNormals();
-    if (e.kind === 'RD') {
-      mat.polygonOffset = true;
-      mat.polygonOffsetFactor = -2;
-      mat.polygonOffsetUnits = -2;
-    }
+    // Dach ohne polygonOffset: Giebel- und Drempelwände enden ohne Oberseite unter der Dachfläche (020-ableitung),
+    // ein Versatz nach vorn ließe die Plattenkante durch die Giebelwand scheinen
     const m = new T.Mesh(gg, mat);
     m.castShadow = m.receiveShadow = true;
     m.raycast = () => {};
@@ -155,8 +152,24 @@ function l2MeshOrig(e) {
     );
     ln.raycast = () => {};
     g.add(ln);
-  } else if (e.quads) e.quads.forEach((q) => add({ o: q, h: [] }));
-  else e.faces.forEach((f) => add(f));
+  } else if (e.quads) {
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Außenwand mit Öffnungen in Stücke teilen
+    const O = oeWandOeffnungen(e);
+    if (O.length) {
+      const stueck = ([f, ya, yb]) => {
+        const n0 = g.children.length;
+        add(f, yb - ya);
+        for (let i = n0; i < g.children.length; i++) g.children[i].position.y = ya;
+      };
+      // Löcher: Öffnungen und Rücksprünge; Vorsprünge lassen die Wand unverändert
+      const loecher = O.filter((o) => !o.r || Math.max(o.ra, o.re) > 0);
+      if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
+      else e.quads.forEach((q) => add({ o: q, h: [] }));
+      oeRuecksprungKoerper(O).forEach(stueck);
+      const Oe = O.filter((o) => !o.r);
+      if (Oe.length) g.add(oeKoerper(Oe));
+    } else e.quads.forEach((q) => add({ o: q, h: [] }));
+  } else e.faces.forEach((f) => add(f));
   if (e.quads2) {
     const n0 = g.children.length;
     e.quads2.forEach((q) => add({ o: q, h: [] }, e.hTop));
@@ -171,7 +184,8 @@ function l2MeshOrig(e) {
 }
 function l2Sync() {
   const bs = S.bld.filter((b) => !b.ex && b._y != null),
-    sig = bs.map((b) => b.id + '|' + l2Els(b).k).join('#') + (l23() ? l2mSig() : '');
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen (nicht Teil der Wandableitung)
+    sig = bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') + (l23() ? l2mSig() : '');
   if (sig !== L2SIG) {
     L2SIG = sig;
     const seen = new Set(),
@@ -184,11 +198,14 @@ function l2Sync() {
             e.quads || e.faces.map((f) => f.o),
             e.quads2 || 0,
             e.hAt || 0,
+            e.gel || 0,
             e.y0,
             e.h,
             e.T.id,
             S.lod,
             l23() ? l2mSig() : 0,
+            // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js
+            l23() ? 0 : oeWandSig(e),
           ]).replace(/(\d+\.\d{3})\d+/g, '$1'),
           old = L2I.get(e.id);
         seen.add(e.id);
@@ -292,8 +309,9 @@ function l2Vis() {
       it.g.children.forEach((o) => {
         if (o.userData.off) return;
         if (o.isLineSegments && o.visible !== ex) o.visible = ex;
-        if (o.isMesh && o.receiveShadow !== ex) {
-          o.receiveShadow = ex;
+        // Wände, Laibungen und Fenster empfangen immer Schatten (Tiefe der Öffnungen, Selbstverschattung)
+        if (o.isMesh && !o.receiveShadow) {
+          o.receiveShadow = true;
           o.material.needsUpdate = true;
         }
       });
@@ -337,6 +355,35 @@ setInterval(() => {
     if (l2on()) l2Sync();
   } catch (e) {
     console.warn('LOD200', e);
+  }
+  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: Außenkontur der Gebäude
+  try {
+    l2Kontur();
+  } catch (e) {
+    logErr(e, 'l2Kontur');
+  }
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone, Loggien und Terrassengeländer
+  try {
+    l2Terrassen();
+  } catch (e) {
+    logErr(e, 'l2Terrassen');
+  }
+  try {
+    l2Balkone();
+  } catch (e) {
+    logErr(e, 'l2Balkone');
+  }
+  // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js
+  try {
+    ftSync();
+  } catch (e) {
+    logErr(e, 'ftSync');
+  }
+  // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Gruppen automatisch platzieren
+  try {
+    fkSync();
+  } catch (e) {
+    logErr(e, 'fkSync');
   }
 }, 140);
 document.addEventListener('lotlod', () => {
@@ -472,6 +519,12 @@ function l2Draw() {
     }
   }
   x.globalAlpha = 1;
+  // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen und Rück-/Vorsprünge im Schnitt
+  try {
+    oeGrundriss(x, wl, blk ? '#111' : '#bdbdbd');
+  } catch (err) {
+    logErr(err, 'l2Draw>oeGrundriss');
+  }
   wl.forEach((e) => {
     if (!isSel(e)) return;
     x.strokeStyle = '#3b7bd8';

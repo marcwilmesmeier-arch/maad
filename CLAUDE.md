@@ -58,3 +58,15 @@ Ohne installierten Browser: `npx playwright install chromium` oder `CHROMIUM_PAT
 - Menüs: Registries `BA` (Gebäude-Aktionen) und `SHP` (Zeichenformen) in `00-kern`. Neue Aktion = Eintrag dort.
 - Panel rechts neu zeichnen: `rr()`. Rückgängig-Punkt: `hist()`. Werkzeug wechseln: `tool(k)`.
 - Sprache in Oberfläche, Kommentaren und Commits: Deutsch.
+
+## Gestaltung
+
+- Bei jeder Erweiterung oder Änderung der Oberfläche (neue Leisten, Fenster, Karten, Bedienelemente) den Skill
+  `frontend-design` nutzen und die Gestaltung daran ausrichten: bestehende Bildsprache von maad (Glas-Panels, Schiefer
+  `#5E7F92`, Auswahl orange `#f07a12`), keine Vorlagen-Muster (Versalien-Labels, „A · B · C“-Ketten, Deko ohne
+  Bedeutung), Maße mit Tabellenziffern, Struktur nur, wo sie etwas bedeutet.
+- Projekt-Skills dazu unter `.claude/skills`: `web-design-guidelines` (Prüfung der geänderten Oberfläche vor der
+  Auslieferung: Bedienbarkeit, Fokus, Bewegung, Texte), `apple-design` (Bewegung, Ziehen, Glas, Tiefe, Schrift),
+  `learn-taste` (Gestaltungskorrekturen des Nutzers als Regeln festhalten, nur auf Zuruf), `ui-ux-pro-max`
+  (Nachschlagen von UX-Regeln, Farben, Schriften: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<Frage>"
+--domain ux`). Keine React-/Tailwind-Bibliotheken (z. B. Magic UI): maad ist reines JavaScript ohne Framework.

@@ -33,7 +33,8 @@ function l2GeoStufe1(b) {
     '|' +
     ((b.l2 && b.l2.r) || '') +
     '|' +
-    JSON.stringify(b.fd || 0) +
+    // Öffnungen (fd[..].oe) ändern die Wandableitung nicht – nur die Wandkörper (100-oeffnungen-3d.js)
+    JSON.stringify(b.fd || 0, (k, v) => (k === 'oe' || k === 'gr' ? undefined : v)) +
     JSON.stringify(S.ft.map((t) => t.k + t.n)) +
     (l23()
       ? '|d' + JSON.stringify([b._l2ref || 0, (b.l2 && b.l2.rw) || 0, (b.l2 && b.l2.cn) || 0])
@@ -405,6 +406,32 @@ function l2GeoStufe1(b) {
         }
       }
       if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
+      else if (li < L.length - 1) {
+        // Terrasse: über dieser Außenwand steht kein Geschoss mehr → Attika wie am Dach und Geländer (r.gel)
+        // Prüfpunkte 0,8 m innen vor der Wand (Innenseite aus dem eigenen Geschossgrundriss bestimmt, unabhängig
+        // von der Richtung der gespeicherten Normalen); frei, wenn das Geschoss darüber dort nicht steht
+        const jB = b.levels.indexOf(lv.obj),
+          eig = jB >= 0 ? lf(b, b.levels[jB]) : null,
+          up = jB >= 0 && b.levels[jB + 1] ? lf(b, b.levels[jB + 1]) : null,
+          wl = Math.hypot(r.sb[0] - r.sa[0], r.sb[1] - r.sa[1]) || 1,
+          px = -(r.sb[1] - r.sa[1]) / wl,
+          pz = (r.sb[0] - r.sa[0]) / wl;
+        if (up && eig && up.length >= 3) {
+          let frei = 0;
+          [0.1, 0.3, 0.5, 0.7, 0.9].forEach((t) => {
+            const mx = r.sa[0] + (r.sb[0] - r.sa[0]) * t,
+              mz = r.sa[1] + (r.sb[1] - r.sa[1]) * t,
+              a = [mx + px * 0.8, mz + pz * 0.8],
+              c = [mx - px * 0.8, mz - pz * 0.8],
+              innen = inP(a, eig) ? a : inP(c, eig) ? c : null;
+            if (innen && !inP(innen, up)) frei++;
+          });
+          if (frei >= 3) {
+            r.hAt = 0.3;
+            r.gel = 1;
+          }
+        }
+      }
     });
     const extI = new Map();
     ext.forEach((r) =>
@@ -613,6 +640,18 @@ function l2GeoStufe1(b) {
       });
     }
     const holes = []; /* Treppenhaus/Schacht: Decke läuft durch (Öffnungen folgen mit dem Treppenelement) */
+    // ── Erweiterung aus 25-polygon-operationen/020-innenhoefe-und-dachflaechen-als-echte.js: Innenhöfe (b.voids)
+    // sparen die Decke aus, wenn der Hof darüber weiterläuft oder offen zum Himmel ist (oberstes Geschoss); der Hofboden
+    // (Decke unter dem untersten Hofgeschoss) bleibt. Beginnt der Hof im untersten Geschoss, fehlt dort die Bodenplatte.
+    const jB = b.levels.indexOf(lv.obj),
+      hofDecke = [],
+      hofBoden = [];
+    if (jB >= 0)
+      znVoidsAt(b, jB).forEach((v) => {
+        const ring = v.poly.map((q) => q.slice());
+        if (jB < v.j1 || jB === b.levels.length - 1) hofDecke.push(ring);
+        if (jB === v.j0 && li === 0) hofBoden.push(ring);
+      });
     const eS = (kind, fc, y0, T) => {
       sl(kind, [fc], y0, T);
       const e = R.els[R.els.length - 1];
@@ -638,8 +677,8 @@ function l2GeoStufe1(b) {
           }
           return dAW / 2;
         };
-    eS('DE', mk1(offR(outerD, slOff), holes), y + lv.h - dDE, l2T(DF.DE));
-    if (li === 0) eS('BP', mk1(outer.slice(), []), y - l2T(DF.BP).d, l2T(DF.BP));
+    eS('DE', mk1(offR(outerD, slOff), holes.concat(hofDecke)), y + lv.h - dDE, l2T(DF.DE));
+    if (li === 0) eS('BP', mk1(outer.slice(), hofBoden), y - l2T(DF.BP).d, l2T(DF.BP));
     R.lv.push({ li, name: lv.name, y0: y, h: lv.h, area: lv.area });
     prevOuter = outer;
     y += lv.h;
@@ -670,7 +709,7 @@ function l2GeoStufe1(b) {
         });
         return c % 2 === 1;
       };
-      const solid = (tris, off) => {
+      const solid = (tris, off, seiten = true, oben = false) => {
         const all = [],
           out = [],
           cnt = new Map(),
@@ -695,20 +734,29 @@ function l2GeoStufe1(b) {
             cnt.set(k, (cnt.get(k) || 0) + 1);
           });
         });
-        tris.forEach((t) => {
-          [
-            [0, 1],
-            [1, 2],
-            [2, 0],
-          ].forEach(([i, j]) => {
-            if (cnt.get(ek(t[i], t[j])) !== 1) return;
-            const P = R_(t[i]),
-              Q = R_(t[j]),
-              P2 = off(P),
-              Q2 = off(Q);
-            all.push(...P, ...Q, ...Q2, ...P, ...Q2, ...P2);
+        if (seiten)
+          tris.forEach((t) => {
+            [
+              [0, 1],
+              [1, 2],
+              [2, 0],
+            ].forEach(([i, j]) => {
+              if (cnt.get(ek(t[i], t[j])) !== 1) return;
+              // oben = Giebelwand: Oberseite (schräg am Ortgang, waagerecht an der Traufe) liegt in der Dachfläche und
+              // flimmerte mit ihr; die Dachplatte deckt die Wand ab
+              if (
+                oben &&
+                Math.min(t[i][1], t[j][1]) > yr + 0.01 &&
+                Math.hypot(t[i][0] - t[j][0], t[i][2] - t[j][2]) > 1e-3
+              )
+                return;
+              const P = R_(t[i]),
+                Q = R_(t[j]),
+                P2 = off(P),
+                Q2 = off(Q);
+              all.push(...P, ...Q, ...Q2, ...P, ...Q2, ...P2);
+            });
           });
-        });
         return { all, out };
       };
       const tw = new Map();
@@ -766,6 +814,8 @@ function l2GeoStufe1(b) {
         const S_ = solid(
             g.t.map((tri) => tri.map((P) => [P[0] + g.nx * (0.004 + sh), P[1], P[2] + g.nz * (0.004 + sh)])),
             (P) => [P[0] - g.nx * (d - sh + 0.004), P[1], P[2] - g.nz * (d - sh + 0.004)],
+            true,
+            true,
           ),
           len = g.t1 - g.t0;
         wi++;
@@ -804,7 +854,24 @@ function l2GeoStufe1(b) {
           [pr[i + 3], pr[i + 4], pr[i + 5]],
           [pr[i + 6], pr[i + 7], pr[i + 8]],
         ]);
-      const S2 = solid(trs, (P) => [P[0], Math.max(P[1] - tv, 0), P[2]]);
+      // Unterseite waagerecht auf Traufhöhe abschneiden: mit Drempel liegt die Traufe über der Geschossoberkante, sonst ragt die
+      // Dachplatte in den Drempel hinein und überlagert ihn. Ohne Stirnseiten: an Ortgang und Pultfirst liegen sie in der Ebene der
+      // Giebelwand (Flimmern), den Rand schließen dort Giebel- und Drempelwände bis zur Dachfläche; an der Traufe ist die Platte 0 dick.
+      const yTr = Math.max(0, Math.min(...trs.flat().map((P) => P[1] - yr))),
+        // Unterseite 3 cm zur Mitte gezogen: ihre Kante läge sonst nur Millimeter hinter der Giebelwand und schiene durch
+        cx = trs.reduce((s, t) => s + t[0][0] + t[1][0] + t[2][0], 0) / (3 * trs.length || 1),
+        cz = trs.reduce((s, t) => s + t[0][2] + t[1][2] + t[2][2], 0) / (3 * trs.length || 1),
+        S2 = solid(
+          trs,
+          (P) => {
+            const dx = cx - P[0],
+              dz = cz - P[2],
+              l = Math.hypot(dx, dz) || 1,
+              k = Math.min(0.03, l) / l;
+            return [P[0] + dx * k, Math.max(P[1] - tv, yTr), P[2] + dz * k];
+          },
+          false,
+        );
       R.els.push({
         bid: b.id,
         kind: 'RD',

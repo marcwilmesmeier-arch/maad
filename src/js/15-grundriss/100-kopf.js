@@ -285,6 +285,8 @@ ${S.fa
   .join('')}
 <button class="full" onclick="GR.faAdd()">+ Flächenart hinzufügen</button><button class="full" onclick="GR.faReset()">Standardliste wiederherstellen</button>
 <div class="mu" style="margin-top:6px">Die Flächenart bestimmt Farbe, Nutzung und Anrechnung der Einheit in Grundriss, Bilanz und 3D.</div>`;
+  // ── Erweiterung aus 15-grundriss/055-wohnungsmix.js
+  h += wmxEinstellungHtml();
   return h;
 }
 function grFaOpts(cur) {
