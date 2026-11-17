@@ -419,12 +419,14 @@ function l2MeshL(e) {
       QS.forEach((o) =>
         prism(
           { o, h: [] },
-          ovr ? e.h - e.hTop : e.h + (fz ? (e.hTop || 0) + (e.hAt || 0) : 0),
+          ovr ? e.h - e.hTop : e.h + (fz ? (e.hTop || 0) + (e.atT ? 0 : e.hAt || 0) : 0),
           m,
           ovr ? e.hTop : 0,
         ),
       );
-      if (e.hAt && !fz) QS.forEach((o) => prism({ o, h: [] }, e.hAt, m, e.h + (e.hTop || 0)));
+      // Attika: ganze Wand bei Fassadenschichten schon oben mitgeführt; nur freie Abschnitte (e.atT) einzeln
+      if (e.hAt && (!fz || e.atT))
+        l2AtQuads(e, QS).forEach((o) => prism({ o, h: [] }, e.hAt, m, e.h + (e.hTop || 0)));
     });
   } else if (e.faces) {
     Ls.forEach((L, ix) => {

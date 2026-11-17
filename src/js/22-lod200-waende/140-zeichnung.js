@@ -50,28 +50,37 @@ float kante(vec2 uv, out float d0) {
   vec3 n0 = texture(tN, uv).xyz * 2.0 - 1.0;
   float z0 = lin(d0), e = 0.0, th = 0.004 * z0 + 0.04;
   vec2 o[4] = vec2[4](vec2(uPx.x, 0.0), vec2(0.0, -uPx.y), vec2(-uPx.x, 0.0), vec2(0.0, uPx.y));
+  // Riss (Lücke an einer Stoßstelle, 1–2 Texel): auf beiden gegenüberliegenden Seiten liegt die Fläche näher – keine Linie
+  for (int k = 1; k <= 2; k++)
+    for (int a = 0; a < 2; a++) {
+      float p = texture(tD, uv + float(k) * o[a]).r, q = texture(tD, uv - float(k) * o[a]).r;
+      if (p < 1.0 && q < 1.0 && lin(p) < z0 - th && lin(q) < z0 - th) return 0.0;
+    }
   for (int i = 0; i < 4; i++) {
-    // je Richtung zwei Nachbarn (1 und 2 Texel): nur was über beide reicht, ist eine Kante – Risse an den Stoßstellen
+    // je Richtung drei Nachbarn (1–3 Texel): nur was über alle reicht, ist eine Kante – Risse an den Stoßstellen
     // der Wandstücke fallen so weg; Tiefensprung nur auf der vorderen Seite, Knick nur nach rechts und unten
-    float da = texture(tD, uv + o[i]).r, db = texture(tD, uv + 2.0 * o[i]).r;
-    float za = da >= 1.0 ? 1e9 : lin(da), zb = db >= 1.0 ? 1e9 : lin(db);
-    if (za > z0 + th && zb > z0 + th) e = 1.0;
-    if (i < 2 && da < 1.0 && db < 1.0) {
-      vec3 na = texture(tN, uv + o[i]).xyz * 2.0 - 1.0, nb = texture(tN, uv + 2.0 * o[i]).xyz * 2.0 - 1.0;
-      if (dot(n0, na) < 0.9 && dot(n0, nb) < 0.9 && abs(za - z0) < 4.0 * th) e = 1.0;
+    float da = texture(tD, uv + o[i]).r, db = texture(tD, uv + 2.0 * o[i]).r, dc = texture(tD, uv + 3.0 * o[i]).r;
+    float za = da >= 1.0 ? 1e9 : lin(da), zb = db >= 1.0 ? 1e9 : lin(db), zc = dc >= 1.0 ? 1e9 : lin(dc);
+    if (za > z0 + th && zb > z0 + th && zc > z0 + th) e = 1.0;
+    if (i < 2 && da < 1.0 && db < 1.0 && dc < 1.0) {
+      vec3 na = texture(tN, uv + o[i]).xyz * 2.0 - 1.0, nb = texture(tN, uv + 2.0 * o[i]).xyz * 2.0 - 1.0,
+        nc = texture(tN, uv + 3.0 * o[i]).xyz * 2.0 - 1.0;
+      if (dot(n0, na) < 0.9 && dot(n0, nb) < 0.9 && dot(n0, nc) < 0.9 && abs(za - z0) < 4.0 * th) e = 1.0;
     }
   }
   return e;
 }
 void main() {
-  // Kantenglättung: vier Teilproben je Bildpunkt (Normalen-/Tiefenbild doppelt aufgelöst)
+  // Kantenglättung: 3 × 3 Teilproben je Bildpunkt im doppelt aufgelösten Bild, Zeltgewichte 1-2-1 (gleichmäßige
+  // Übergänge auch an schrägen Linien)
   float e = 0.0, dm = 1.0, d;
-  vec2 h = uPx * 0.5;
-  e += kante(vUv + vec2(-h.x, -h.y), d); dm = min(dm, d);
-  e += kante(vUv + vec2(h.x, -h.y), d); dm = min(dm, d);
-  e += kante(vUv + vec2(-h.x, h.y), d); dm = min(dm, d);
-  e += kante(vUv + vec2(h.x, h.y), d); dm = min(dm, d);
-  e *= 0.25;
+  for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++) {
+      float w = (i == 0 ? 2.0 : 1.0) * (j == 0 ? 2.0 : 1.0);
+      e += w * kante(vUv + vec2(float(i), float(j)) * uPx * 0.667, d);
+      dm = min(dm, d);
+    }
+  e /= 16.0;
   if (e < 0.01 || dm >= 1.0) discard;
   fc = vec4(uC, e);
   gl_FragDepth = dm - 1e-6;

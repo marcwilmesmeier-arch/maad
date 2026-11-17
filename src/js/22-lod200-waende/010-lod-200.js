@@ -430,6 +430,19 @@ S.l2 = {
   pick: 0,
 };
 const l2on = () => S.lod === 200 || S.lod === 300;
+/**
+ * Attika-Stücke einer Außenwand: die ganze Wand oder nur die freien Abschnitte (e.atT, Terrasse neben einem
+ * Vollgeschoss). Viereck q = [A0, Z0, Z1, A1] (A Anfang, Z Ende der Wand; 0 außen, 1 innen) wird entlang der Wand
+ * auf [t0, t1] zugeschnitten.
+ */
+function l2AtQuads(e, Q = e.quads) {
+  if (!Q) return [];
+  if (!e.atT) return Q;
+  const L = (P, R, t) => [P[0] + (R[0] - P[0]) * t, P[1] + (R[1] - P[1]) * t];
+  return Q.flatMap((q) =>
+    e.atT.map(([t0, t1]) => [L(q[0], q[1], t0), L(q[0], q[1], t1), L(q[3], q[2], t1), L(q[3], q[2], t0)]),
+  );
+}
 const l23 = () => S.lod === 300;
 LODS[1].ok = () => true;
 LODS[2].ok = () => true;

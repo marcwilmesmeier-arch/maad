@@ -536,9 +536,13 @@ function mesh(b) {
     if (recT.length) ge = pxCutCap(ge, lf(b, l), recT, dpt, true);
     if (recB.length) ge = pxCutCap(ge, lf(b, l), recB, 0, false);
     glattNormalen(ge, 25);
+    if (!b.ex) dachTon(ge);
     const m = new T.Mesh(
       ge,
-      mat(b.ex ? 0xe6e6e6 : new T.Color(S.uses[l.use || b.use || 'Wohnen']), { emissive: 0x000000 }),
+      mat(b.ex ? 0xe6e6e6 : new T.Color(S.uses[l.use || b.use || 'Wohnen']), {
+        emissive: 0x000000,
+        vertexColors: !b.ex,
+      }),
     );
     m.position.y = y0 - (i ? 0 : 3) + cum;
     if (!i && !recA.length) {
@@ -568,9 +572,14 @@ function mesh(b) {
   b._roofH = 0;
   if (rr0) {
     b._roofH = rr0.h;
+    if (!b.ex) dachTon(rr0.geo);
     const rm = new T.Mesh(
       rr0.geo,
-      mat(new T.Color(b.ex ? 0xe6e6e6 : S.uses[roofUse(b)]), { emissive: 0x000000, side: T.DoubleSide }),
+      mat(new T.Color(b.ex ? 0xe6e6e6 : S.uses[roofUse(b)]), {
+        emissive: 0x000000,
+        side: T.DoubleSide,
+        vertexColors: !b.ex,
+      }),
     );
     rm.castShadow = rm.receiveShadow = true;
     rm.userData.b = b;
@@ -670,6 +679,18 @@ function glattNormalen(ge, maxDeg) {
  * (Traufe/Ortgang). Dazu Giebelwände (Umriss der senkrechten Dreiecke). Rückgabe: p = Kantenpunkte, n = je Kante die
  * Normalen der beiden angrenzenden Flächen (für die Silhouette in LOD 200).
  */
+/**
+ * Dachflächen geplanter Gebäude etwas grauer: nach oben zeigende Flächen (Flachdach-Deckel, Dachflächen) bekommen
+ * über Vertex-Farben den Faktor k, Wände und Unterseiten bleiben 1 – die Materialfarbe (Nutzung, Weißmodell) wirkt
+ * weiter, das Dach liegt nur etwas dunkler (sonst überstrahlt es in der Sonne).
+ */
+function dachTon(ge, k = 0.88) {
+  const n = ge.attributes.normal;
+  if (!n) return;
+  const c = new Float32Array(n.count * 3);
+  for (let i = 0; i < n.count; i++) c.fill(n.getY(i) > 0.35 ? k : 1, i * 3, i * 3 + 3);
+  ge.setAttribute('color', new T.BufferAttribute(c, 3));
+}
 function roofKanten(rp, fp) {
   const p = [],
     n = [],

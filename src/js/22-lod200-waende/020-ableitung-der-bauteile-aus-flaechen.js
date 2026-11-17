@@ -417,18 +417,32 @@ function l2GeoStufe1(b) {
           px = -(r.sb[1] - r.sa[1]) / wl,
           pz = (r.sb[0] - r.sa[0]) / wl;
         if (up && eig && up.length >= 3) {
-          let frei = 0;
-          [0.1, 0.3, 0.5, 0.7, 0.9].forEach((t) => {
-            const mx = r.sa[0] + (r.sb[0] - r.sa[0]) * t,
+          // Abschnitte von etwa 25 cm: frei (Terrasse) oder unter dem Geschoss darüber. Läuft die Wand teils unter
+          // einem Vollgeschoss weiter, bekommt nur der freie Teil eine Attika (r.atT = [[t0, t1], …] entlang der Wand)
+          const n = Math.max(5, Math.ceil(wl / 0.25)),
+            frei = [];
+          for (let k = 0; k < n; k++) {
+            const t = (k + 0.5) / n,
+              mx = r.sa[0] + (r.sb[0] - r.sa[0]) * t,
               mz = r.sa[1] + (r.sb[1] - r.sa[1]) * t,
               a = [mx + px * 0.8, mz + pz * 0.8],
               c = [mx - px * 0.8, mz - pz * 0.8],
               innen = inP(a, eig) ? a : inP(c, eig) ? c : null;
-            if (innen && !inP(innen, up)) frei++;
+            frei.push(!!innen && !inP(innen, up));
+          }
+          const atT = [];
+          let t0 = null;
+          frei.concat([false]).forEach((f, k) => {
+            if (f && t0 == null) t0 = k / n;
+            if (!f && t0 != null) {
+              if ((k / n - t0) * wl >= 0.3) atT.push([t0, k / n]);
+              t0 = null;
+            }
           });
-          if (frei >= 3) {
+          if (atT.length) {
             r.hAt = 0.3;
             r.gel = 1;
+            if (!(atT.length === 1 && atT[0][0] < 0.02 && atT[0][1] > 0.98)) r.atT = atT;
           }
         }
       }

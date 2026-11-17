@@ -243,3 +243,6 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Schatten in der normalen Ansicht decken den sichtbaren Teil des Geländes ab (`shFit`/`shSichtbar`, Schattenkarte
   4096², Rand zur Sonne für Schattenwerfer): flacher Blick bis zum Horizont = ganzes Gelände, dann grob (2 km ≈ 0,7 m
   je Texel, Licht kann an Wänden durchsickern). Feiner ginge nur mit Kaskaden (mehrere Karten).
+- LOD 200: an Stoßstellen der Wandstücke (Öffnungen, Geschossdecken) entstehen 1-Pixel-Risse (T-Stöße ohne gemeinsame
+  Eckpunkte), sichtbar als feine Punkte entlang der Geschosslinien. Behebung: Wandstücke mit gemeinsamen Eckpunkten
+  erzeugen oder Stöße minimal überlappen lassen.

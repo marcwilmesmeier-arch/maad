@@ -177,7 +177,7 @@ function l2MeshOrig(e) {
   }
   if (e.hAt) {
     const n1 = g.children.length;
-    e.quads.forEach((q) => add({ o: q, h: [] }, e.hAt));
+    l2AtQuads(e).forEach((q) => add({ o: q, h: [] }, e.hAt));
     for (let i = n1; i < g.children.length; i++) g.children[i].position.y = e.h + e.hTop;
   }
   return { g, mat };
@@ -198,6 +198,7 @@ function l2Sync() {
             e.quads || e.faces.map((f) => f.o),
             e.quads2 || 0,
             e.hAt || 0,
+            e.atT || 0,
             e.gel || 0,
             e.y0,
             e.h,
