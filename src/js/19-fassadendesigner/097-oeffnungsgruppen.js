@@ -67,6 +67,10 @@ const OEG0 = [
     h: 3.1,
     oe: [{ id: 'a', t: 'r3', x: 0.2, v: 0.2 }],
     sz: { an: true },
+    // über dem Fenster in Fensterbreite ein nach hinten versetztes Feld bis zur Oberkante (wandert mit dem Sturz)
+    xs: [0.2, 1.6],
+    ys: [2.65],
+    fe: [{ p: [0.9, 2.9], d: 0.08, t: '' }],
   },
   {
     k: 'g6',

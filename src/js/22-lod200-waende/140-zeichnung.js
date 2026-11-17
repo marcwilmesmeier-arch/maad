@@ -43,28 +43,38 @@ float lin(float d) {
   float z = d * 2.0 - 1.0;
   return 2.0 * uNF.x * uNF.y / (uNF.y + uNF.x - z * (uNF.y - uNF.x));
 }
-void main() {
-  float d0 = texture(tD, vUv).r;
-  if (d0 >= 1.0) discard; // kein Gebäude an diesem Bildpunkt
-  vec3 n0 = texture(tN, vUv).xyz * 2.0 - 1.0;
-  float z0 = lin(d0), e = 0.0;
+// Kantenstärke an einer Stelle (im doppelt aufgelösten Normalen-/Tiefenbild); d0 = Tiefe dort
+float kante(vec2 uv, out float d0) {
+  d0 = texture(tD, uv).r;
+  if (d0 >= 1.0) return 0.0;
+  vec3 n0 = texture(tN, uv).xyz * 2.0 - 1.0;
+  float z0 = lin(d0), e = 0.0, th = 0.004 * z0 + 0.04;
   vec2 o[4] = vec2[4](vec2(uPx.x, 0.0), vec2(0.0, -uPx.y), vec2(-uPx.x, 0.0), vec2(0.0, uPx.y));
   for (int i = 0; i < 4; i++) {
-    // je Richtung zwei Nachbarn (1 und 2 Bildpunkte): nur was über beide reicht, ist eine Kante – 1 Bildpunkt breite
-    // Risse an den Stoßstellen der Wandstücke fallen so weg
-    float da = texture(tD, vUv + o[i]).r, db = texture(tD, vUv + 2.0 * o[i]).r;
-    float za = da >= 1.0 ? 1e9 : lin(da), zb = db >= 1.0 ? 1e9 : lin(db), th = 0.004 * z0 + 0.04;
-    // Sprung in der Tiefe: nur auf der vorderen Seite zeichnen (Linie 1 Bildpunkt breit)
+    // je Richtung zwei Nachbarn (1 und 2 Texel): nur was über beide reicht, ist eine Kante – Risse an den Stoßstellen
+    // der Wandstücke fallen so weg; Tiefensprung nur auf der vorderen Seite, Knick nur nach rechts und unten
+    float da = texture(tD, uv + o[i]).r, db = texture(tD, uv + 2.0 * o[i]).r;
+    float za = da >= 1.0 ? 1e9 : lin(da), zb = db >= 1.0 ? 1e9 : lin(db);
     if (za > z0 + th && zb > z0 + th) e = 1.0;
-    // Knick: nur nach rechts und unten (sonst doppelt breit)
     if (i < 2 && da < 1.0 && db < 1.0) {
-      vec3 na = texture(tN, vUv + o[i]).xyz * 2.0 - 1.0, nb = texture(tN, vUv + 2.0 * o[i]).xyz * 2.0 - 1.0;
+      vec3 na = texture(tN, uv + o[i]).xyz * 2.0 - 1.0, nb = texture(tN, uv + 2.0 * o[i]).xyz * 2.0 - 1.0;
       if (dot(n0, na) < 0.9 && dot(n0, nb) < 0.9 && abs(za - z0) < 4.0 * th) e = 1.0;
     }
   }
-  if (e < 0.01) discard;
+  return e;
+}
+void main() {
+  // Kantenglättung: vier Teilproben je Bildpunkt (Normalen-/Tiefenbild doppelt aufgelöst)
+  float e = 0.0, dm = 1.0, d;
+  vec2 h = uPx * 0.5;
+  e += kante(vUv + vec2(-h.x, -h.y), d); dm = min(dm, d);
+  e += kante(vUv + vec2(h.x, -h.y), d); dm = min(dm, d);
+  e += kante(vUv + vec2(-h.x, h.y), d); dm = min(dm, d);
+  e += kante(vUv + vec2(h.x, h.y), d); dm = min(dm, d);
+  e *= 0.25;
+  if (e < 0.01 || dm >= 1.0) discard;
   fc = vec4(uC, e);
-  gl_FragDepth = d0 - 1e-6;
+  gl_FragDepth = dm - 1e-6;
 }`,
   });
   L2Z.qs = new T.Scene();
@@ -78,8 +88,13 @@ function l2Zeichnung(cm) {
   if (!S.l2zs || !l2on() || !G.l2 || !G.l2.visible || S.dar === 'realp' || !cm) return;
   try {
     l2ZInit();
-    const sz = ren.getDrawingBufferSize(new T.Vector2());
-    if (L2Z.rt.width !== sz.x || L2Z.rt.height !== sz.y) L2Z.rt.setSize(sz.x, sz.y);
+    // doppelte Auflösung (Kantenglättung), begrenzt durch die größte Texturgröße
+    const sz = ren.getDrawingBufferSize(new T.Vector2()),
+      mx = ren.capabilities.maxTextureSize || 4096,
+      k = Math.min(2, mx / sz.x, mx / sz.y),
+      w = Math.floor(sz.x * k),
+      hh = Math.floor(sz.y * k);
+    if (L2Z.rt.width !== w || L2Z.rt.height !== hh) L2Z.rt.setSize(w, hh);
     // 1. nur die LOD-200-Flächen ins Normalenbild (andere Teile der Szene und Linien kurz ausgeblendet)
     const aus = [];
     sc.children.forEach((o) => {
@@ -122,7 +137,7 @@ function l2Zeichnung(cm) {
     }
     // 2. Kanten über das Bild, Tiefentest gegen das fertige Bild
     const u = L2Z.q.uniforms;
-    u.uPx.value.set(1 / sz.x, 1 / sz.y);
+    u.uPx.value.set(1 / w, 1 / hh);
     u.uNF.value.set(cm.near, cm.far);
     u.uOrtho.value = cm.isOrthographicCamera ? 1 : 0;
     ren.autoClear = false;
