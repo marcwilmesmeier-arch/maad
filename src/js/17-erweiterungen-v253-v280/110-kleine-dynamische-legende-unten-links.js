@@ -72,7 +72,7 @@ const LGD = [
       r.push([c, 'Flurstücksgrenze', 'ln']);
       if (hasA && AL.length > 1) r.push([c, 'Grenze zwischen Flurstücken', 'dash']);
       if (sel) r.push([c, 'Gewähltes Flurstück', 'bd']);
-      if (hasS) r.push([c, 'Grundstück (zusammengelegt)', 'bd']);
+      if (hasS) r.push([c, 'Grundstück (zusammengelegt)', 'ln']);
     }
     if (B && B[2]) r.push([S.lc.bplan || '#7a6fb0', 'Bebauungsplan']);
     return r.length ? { t: 'Grundstücke und Flurstücke', r } : null;
