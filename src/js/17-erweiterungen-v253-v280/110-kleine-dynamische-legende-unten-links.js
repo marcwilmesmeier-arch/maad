@@ -130,7 +130,12 @@ function lgdHtml() {
               g.r
                 .map(
                   (x) =>
-                    '<div class="lgr"><i' +
+                    // x[4]: Aktion beim Anklicken (z. B. Kamerafahrt zum Objekt), auch per Tastatur
+                    (x[4]
+                      ? '<div class="lgr lgk" role="button" tabindex="0" onclick="' +
+                        esc(x[4]) +
+                        '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" title="Hinfliegen und einmal umkreisen"><i'
+                      : '<div class="lgr"><i') +
                     (x[2]
                       ? ' class="' + x[2] + '" style="--c:' + x[0] + '"'
                       : ' style="background:' + x[0] + '"') +
@@ -186,6 +191,7 @@ body.hpj #lgd{bottom:36px}
 #lgd .lgb{border-top:1px solid var(--ln);margin-top:7px;padding-top:2px}
 #lgd h6{margin:7px 0 3px;font-size:12px;font-weight:600;color:var(--mu);letter-spacing:0;text-transform:none}
 #lgd .lgr{display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px}
+#lgd .lgr.lgk{cursor:pointer;border-radius:6px;margin:0 -4px;padding:2px 4px}#lgd .lgr.lgk:hover{background:color-mix(in srgb,var(--tx) 7%,transparent)}#lgd .lgr.lgk:focus-visible{outline:2px solid #5E7F92;outline-offset:1px}
 #lgd .lgr i{flex:none;width:14px;height:14px;border-radius:4px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tx) 22%,transparent)}
 #lgd .lgr i.ln,#lgd .lgr i.dash,#lgd .lgr i.bd{height:0;border-radius:0;box-shadow:none;align-self:center}
 #lgd .lgr i.ln{border-top:2px solid var(--c)}

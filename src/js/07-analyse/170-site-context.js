@@ -498,13 +498,82 @@ function scLegendeLm() {
   if (!L || !L[2] || !SC.lm.length) return null;
   return {
     t: 'Landmarks',
-    r: scAuswahl().map((l, i) => ['#1f2a33', l.name + (l.jahr ? ' · ' + l.jahr : ''), 'nr', String(i + 1)]),
+    r: scAuswahl().map((l, i) => [
+      '#1f2a33',
+      l.name + (l.jahr ? ' · ' + l.jahr : ''),
+      'nr',
+      String(i + 1),
+      `scFlug('lm','${l.id}')`,
+    ]),
   };
 }
 /** Legendengruppe „Plätze“. */
 function scLegendePl() {
   if (!ovVis('scp') || !SC.pl.length) return null;
-  return { t: 'Plätze', r: SC.pl.slice(0, 8).map((p) => [S.lc.scp, p.name]) };
+  return {
+    t: 'Plätze',
+    r: SC.pl.slice(0, 8).map((p) => [S.lc.scp, p.name, '', '', `scFlug('pl','${p.id}')`]),
+  };
+}
+
+/**
+ * Kamerafahrt zu einem Landmark ('lm') oder Platz ('pl'): hinfliegen (Abstand nach Größe und Höhe), dann einmal mit
+ * Blick auf das Objekt herum. Jede Maus-/Radeingabe bricht ab. Läuft in 3D (wechselt bei Bedarf).
+ */
+const SCF = { an: false, az0: 0, t0: 0, dur: 16000, raf: 0 };
+function scFlug(art, id) {
+  const o = (art === 'lm' ? SC.lm : SC.pl).find((x) => x.id === id);
+  if (!o) return;
+  const ring = o.r && o.r.length ? o.r[0] : null,
+    c = ring ? cen(ring) : o.pt;
+  let ext = 20,
+    h = 0;
+  if (ring) {
+    const xs = ring.map((p) => p[0]),
+      zs = ring.map((p) => p[1]);
+    ext = Math.max(10, Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)));
+  }
+  if (art === 'lm')
+    scGebaeude(o).forEach((i) => {
+      const b = GEO.ranges[i] && GEO.ranges[i].b;
+      if (b && b.h > h) h = b.h;
+    });
+  if (!S.m3) setMode(1);
+  const d = Math.max(70, Math.min(700, ext * 1.5 + h * 2.2)),
+    az = V.az;
+  S.vanim = {
+    f: { tx: V.tx, tz: V.tz, d: V.d, az: V.az, pol: V.pol, rot: V.rot },
+    t: { tx: c[0], tz: c[1], d, az, pol: 1.0, rot: V.rot },
+    t0: performance.now(),
+    dur: Math.min(2400, Math.max(900, 600 + Math.hypot(c[0] - V.tx, c[1] - V.tz) * 1.2)),
+  };
+  SCF.an = true;
+  SCF.az0 = az;
+  SCF.t0 = 0;
+  cancelAnimationFrame(SCF.raf);
+  SCF.raf = requestAnimationFrame(scFlugTakt);
+}
+function scFlugTakt(now) {
+  if (!SCF.an) return;
+  if (S.vanim) {
+    SCF.raf = requestAnimationFrame(scFlugTakt);
+    return;
+  }
+  if (!SCF.t0) SCF.t0 = now;
+  const t = Math.min(1, (now - SCF.t0) / SCF.dur),
+    e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  V.az = SCF.az0 + e * Math.PI * 2;
+  if (t >= 1) {
+    SCF.an = false;
+    return;
+  }
+  SCF.raf = requestAnimationFrame(scFlugTakt);
+}
+/** Kamerafahrt abbrechen (Nutzereingabe). */
+function scFlugStopp(e) {
+  if (!SCF.an || (e && e.target && e.target.closest && e.target.closest('#lgd'))) return;
+  SCF.an = false;
+  cancelAnimationFrame(SCF.raf);
 }
 
 /** Gespeicherte Landmarks eines Projekts übernehmen (ohne erneuten Abruf). */

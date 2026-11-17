@@ -99,6 +99,10 @@ function start() {
     mesh(b);
   });
   drInit();
+  // Kamerafahrt zu Landmarks/Plätzen (07-analyse/170-site-context): Maus oder Rad bricht sie ab
+  ['pointerdown', 'wheel'].forEach((ev) =>
+    addEventListener(ev, scFlugStopp, { passive: true, capture: true }),
+  );
   // eigene Fenster/Türen und Gruppen aus früheren Projekten (19-fassadendesigner/130-bibliothek)
   try {
     bibErgaenzen(true);
