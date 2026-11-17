@@ -24,7 +24,7 @@ ren.shadowMap.type = T.PCFShadowMap;
 sh.mapSize.set(4096, 4096);
 sh.bias = -0.0007;
 sh.normalBias = 0.25;
-sh.radius = 2.5; // weiche Schattenkante (PCF, in Texeln)
+sh.radius = 2.1; // weiche Schattenkante (PCF, in Texeln)
 Object.assign(sh.camera, { left: -260, right: 260, top: 260, bottom: -260, near: 1, far: 700 });
 const pc = new T.PerspectiveCamera(45, 1, 1, 9000),
   oc = new T.OrthographicCamera(-1, 1, 1, -1, 1, 3000);
