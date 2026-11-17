@@ -216,3 +216,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Ordnung).
 - Terrassen-Attika und Geländer nur je ganzer Außenwand. Eine Wand, die nur teilweise unter dem Geschoss darüber liegt,
   bekommt sie, wenn mindestens 3 von 5 Prüfpunkten frei sind. Geländer nur in LOD 200, nicht in LOD 300.
+- Balkone und Loggien nur über Öffnungsgruppen (nicht frei an der Fassade) und nur in LOD 200. Sie gehen noch nicht in
+  BGF/NGF, Abstandsflächen oder Mengen ein. Die Balkonplatte liegt an der Feldunterkante (Geschossboden der Gruppe).

@@ -446,6 +446,12 @@ setInterval(() => {
   } catch (e) {
     logErr(e, 'l2Kontur');
   }
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone und Loggien
+  try {
+    l2Balkone();
+  } catch (e) {
+    logErr(e, 'l2Balkone');
+  }
   // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js
   try {
     ftSync();

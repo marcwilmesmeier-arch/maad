@@ -170,6 +170,7 @@ function oegZellen(G) {
       z.d = f.d || 0;
       z.k = f.k === 'l' || f.k === 'r' ? f.k : 'g';
       z.t = f.t || '';
+      z.a = f.a === 'lo' || f.a === 'ba' ? f.a : ''; // Art: Loggia, Balkon (sonst Fläche)
     }
   });
   return Z;
@@ -180,7 +181,7 @@ function oegZellen(G) {
  */
 function oegFlaechenG(G) {
   const Z = oegZellen(G).map((z) => ({ ...z, t: z.t || G.t || '' })),
-    key = (z) => z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t,
+    key = (z) => z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t + '|' + (z.a || ''),
     zeilen = [];
   // waagerecht zusammenfassen
   const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
@@ -190,7 +191,7 @@ function oegFlaechenG(G) {
     Zj.forEach((z) => {
       if (cur && key(cur) === key(z) && Math.abs(cur.x1 - z.x0) < 1e-6) cur.x1 = z.x1;
       else {
-        cur = { x0: z.x0, x1: z.x1, y0: z.y0, y1: z.y1, d: z.d, k: z.d ? z.k : 'g', t: z.t };
+        cur = { x0: z.x0, x1: z.x1, y0: z.y0, y1: z.y1, d: z.d, k: z.d ? z.k : 'g', t: z.t, a: z.a || '' };
         zeilen.push(cur);
       }
     });
@@ -215,7 +216,11 @@ function oegFlaechenG(G) {
     r.dl = r.k === 'r' ? 0 : r.d;
     r.dr = r.k === 'l' ? 0 : r.d;
   });
-  return R.filter((r) => r.d || r.t);
+  // Balkon: Tiefe ist die Auskragung vor der Wand (kein Rücksprung, Wand bleibt bündig)
+  R.forEach((r) => {
+    if (r.a === 'ba') r.dl = r.dr = 0;
+  });
+  return R.filter((r) => r.d || r.t || r.a);
 }
 /** Flächen aller Gruppenverweise einer Ansicht (Tiefe und/oder Material): { u0, u1, v0, v1, d, t, id, gi }. */
 function oegFlaechen(b, V) {
@@ -229,10 +234,12 @@ function oegFlaechen(b, V) {
         u1: I.u + r.x1,
         v0: I.v + r.y0,
         v1: I.v + r.y1,
-        d: r.d,
+        d: r.a === 'ba' ? 0 : r.d,
         dl: r.dl,
         dr: r.dr,
         t: r.t,
+        a: r.a || '',
+        tb: r.a === 'ba' ? Math.abs(r.d) || 1.5 : 0, // Auskragung des Balkons
         id: I.id + ':f' + k,
         gi: I,
       }),
@@ -245,7 +252,7 @@ function oegRuecksprunge(b, V) {
   return oegFlaechen(b, V).filter((r) => r.d);
 }
 /** Rücksprung in der Ansicht zeichnen: zurückspringend dunkler, vorspringend heller, Schattenkante oben/links. */
-function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k) {
+function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art) {
   const x0 = X(u0),
     x1 = X(u1),
     y0 = Y(v1),
@@ -255,7 +262,9 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k) {
     g.fillStyle = farbe;
     g.fillRect(x0, y0, x1 - x0, y1 - y0);
   }
-  if (!d) {
+  // Balkon/Loggia: Geländer (und Balkonplatte) als Ansichtssymbol
+  if (art) oegArtZeichnen(g, X, Y, u0, u1, v0, art);
+  if (!d || art === 'ba') {
     g.restore();
     return;
   }
@@ -288,6 +297,35 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k) {
   g.stroke();
   g.restore();
 }
+/** Ansichtssymbol für Balkon (Platte und Geländer vor der Wand) bzw. Loggia (Geländer in der Öffnung), 1,00 m hoch. */
+function oegArtZeichnen(g, X, Y, u0, u1, v0, art) {
+  const x0 = X(u0),
+    x1 = X(u1),
+    yb = Y(v0),
+    yh = Y(v0 + 1.0),
+    n = Math.max(2, Math.round((u1 - u0) / 0.24));
+  g.save();
+  g.strokeStyle = '#475569';
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + ((x1 - x0) * i) / n;
+    g.moveTo(x, yb);
+    g.lineTo(x, yh);
+  }
+  g.stroke();
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(x0, yh);
+  g.lineTo(x1, yh);
+  g.stroke();
+  if (art === 'ba') {
+    // Balkonplatte (0,20 m) unter dem Geländer
+    g.fillStyle = '#94a3b8';
+    g.fillRect(x0 - 2, yb, x1 - x0 + 4, Math.max(3, Y(v0 - 0.2) - yb));
+  }
+  g.restore();
+}
 function oegRueckZeichnen(g, b, V, ox) {
   const X = (u) => fdSX(u + ox);
   oegFlaechen(b, V).forEach((r) =>
@@ -303,6 +341,7 @@ function oegRueckZeichnen(g, b, V, ox) {
       false,
       r.t ? fdT(r.t).c : null,
       r.dl === r.dr ? 'g' : r.dl ? 'l' : 'r',
+      r.a,
     ),
   );
 }
@@ -644,6 +683,7 @@ function oegFelderPruefen(G) {
         d: Math.max(-1, Math.min(1, +f.d || 0)),
         k: f.k === 'l' || f.k === 'r' ? f.k : 'g',
         t: String(f.t || ''),
+        a: f.a === 'lo' || f.a === 'ba' ? f.a : '',
       }));
   (Array.isArray(G.rs) ? G.rs : []).forEach((r) => {
     if (!r || !(+r.b > 0) || !(+r.h > 0)) return;

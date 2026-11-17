@@ -328,3 +328,13 @@ Gebäudeinnere zeigen. Dazu geht es einen Schritt (0,60 m) entlang der Normalen 
 Punkt im Geschoss liegt (nicht im Innenhof, mindestens 0,45 m vom Rand). Das Ergebnis steht im Attribut `aInnen`. Im
 Material wird dort das Himmels- und Umgebungslicht (`irradiance`) auf `L2IN.k` (30 %) reduziert. Die Sonne bleibt
 voll, so wird das Licht sichtbar, das durch die Fenster fällt.
+
+## Balkone und Loggien
+
+- In den Öffnungsgruppen haben Felder eine Art `a` (Konfigurator › Gruppen › Feld › „Art“): `''` Fläche, `'lo'`
+  Loggia, `'ba'` Balkon. Gezeichnet wird wie bei Rücksprüngen: teilen, Feld wählen, Art und Tiefe setzen.
+- Eine Loggia ist ein Rücksprung um `d` (Wandaussparung wie bisher) mit Geländer in der Fassadenebene.
+- Bei einem Balkon ist `d` die Auskragung (`tb` in `oegFlaechen`); die Wand bleibt bündig.
+- In den Ansichten zeichnet `oegArtZeichnen` das Symbol: Geländer 1,00 m, beim Balkon die Platte.
+- In LOD 200 baut `22-lod200-waende/130-balkone.js` (`l2Balkone`, Takt aus 030-aktionen) je Gebäude die Platten
+  (0,20 m) und die Stabgeländer (`l2Stabgelaender`).

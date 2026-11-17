@@ -191,13 +191,20 @@ function okGrFeldSet(f, v) {
     let e = G.fe.find((q) => q.p[0] > z.x0 && q.p[0] < z.x1 && q.p[1] > z.y0 && q.p[1] < z.y1);
     if (!e) G.fe.push((e = { p: [(z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2], d: 0, k: 'g', t: '' }));
     if (f === 'k') e.k = v === 'l' || v === 'r' ? v : 'g';
+    if (f === 'a') {
+      // Loggia: Rücksprung (Standard 1,50 m), Balkon: Auskragung (Standard 1,50 m)
+      e.a = v === 'lo' || v === 'ba' ? v : '';
+      if (e.a && !(Math.abs(e.d) > 0.05)) e.d = 1.5;
+      if (e.a === 'lo' && e.d < 0) e.d = -e.d;
+      if (e.a === 'ba') e.d = Math.abs(e.d);
+    }
     if (f === 'd') {
       const n = +String(v).replace(',', '.');
       if (isFinite(n)) e.d = Math.max(-100, Math.min(100, n)) / 100;
     }
     if (f === 't') e.t = S.ft.some((x) => x.k === v) ? v : '';
   });
-  G.fe = G.fe.filter((e) => e.d || e.t);
+  G.fe = G.fe.filter((e) => e.d || e.t || e.a);
   oeAktualisieren();
 }
 /** Material der ganzen Gruppe. */
@@ -402,7 +409,18 @@ ${G.sz && G.sz.an ? `<span>Sturz bis Geschossoberkante (m)</span>${z('szs', G.sz
       gleichD = Z.every((z) => z.d === d0),
       gleichT = Z.every((z) => z.t === t0),
       a = Z.reduce((s, z) => s + (z.x1 - z.x0) * (z.y1 - z.y0), 0);
-    h += `<div class="mu" style="margin-top:8px">${Z.length === 1 ? 'Feld' : Z.length + ' Felder'} · ${fdFmt(a)} m²</div><div class="okg" style="margin-top:4px"><span>Tiefe (cm)</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig">
+    h += `<div class="mu" style="margin-top:8px">${Z.length === 1 ? 'Feld' : Z.length + ' Felder'} · ${fdFmt(a)} m²</div><div class="okg" style="margin-top:4px"><span>Art</span><select onchange="okGrFeldSet('a',this.value)" title="Loggia: Rücksprung mit Geländer · Balkon: Platte mit Geländer vor der Wand (Tiefe = Auskragung)">${[
+      ['', 'Fläche'],
+      ['lo', 'Loggia'],
+      ['ba', 'Balkon'],
+    ]
+      .map(
+        ([k, n]) =>
+          `<option value="${k}" ${Z.every((z) => (z.a || '') === k) ? 'selected' : ''}>${n}</option>`,
+      )
+      .join(
+        '',
+      )}</select><span>${Z.every((z) => z.a === 'ba') ? 'Auskragung (cm)' : 'Tiefe (cm)'}</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig · beim Balkon: Auskragung">
 <span>Verlauf</span><select onchange="okGrFeldSet('k',this.value)" title="Schräg: eine Seite springt zurück, die andere bleibt bündig">${[
       ['g', 'gleichmäßig'],
       ['l', 'schräg – links tief'],
@@ -480,14 +498,16 @@ function okGrZeichnen() {
     g.fillRect(P.X(0), P.Y(G.h), G.l * P.s, G.h * P.s);
   }
   oegFlaechenG(G).forEach((r) => {
-    oegRueckZeichneEins(g, P.X, P.Y, r.x0, r.x1, r.y0, r.y1, r.d, false, r.t ? fdT(r.t).c : null, r.k);
+    oegRueckZeichneEins(g, P.X, P.Y, r.x0, r.x1, r.y0, r.y1, r.d, false, r.t ? fdT(r.t).c : null, r.k, r.a);
     if (r.d && (r.x1 - r.x0) * P.s > 40) {
       g.fillStyle = '#334155';
       g.font = '10px system-ui,sans-serif';
       g.textAlign = 'right';
       g.textBaseline = 'top';
       g.fillText(
-        (r.d > 0 ? '−' : '+') + Math.round(Math.abs(r.d) * 100) + ' cm',
+        r.a === 'ba'
+          ? 'Balkon ' + Math.round(Math.abs(r.d) * 100) + ' cm'
+          : (r.a === 'lo' ? 'Loggia ' : '') + (r.d > 0 ? '−' : '+') + Math.round(Math.abs(r.d) * 100) + ' cm',
         P.X(r.x1) - 4,
         P.Y(r.y1) + 4,
       );
