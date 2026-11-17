@@ -1,4 +1,4 @@
-/* v344 Fokus-Ansicht: zeigt nur noch die Gebäude des Grundstücks (Grundstück = Filter) und das Grundstück auf weißem Hintergrund. Kein Körper, keine Größeneinstellung. Ein/Aus im oberen Menü. */
+/* v344 Fokus-Ansicht: zeigt nur noch die gezeichneten Gebäude des Grundstücks (Grundstück = Filter) auf weißem Hintergrund, mit ihrem Schatten auf einem unsichtbaren Boden. Ein/Aus im oberen Menü. */
 const ISO3 = { on: 0, g: new T.Group(), bid: '', sig: '', saved: new Map(), clr: null };
 sc.add(ISO3.g);
 function iso3Target() {
@@ -65,62 +65,32 @@ function iso3Site(bx) {
     L = P.filter((q) => q.poly && q.poly.length > 2);
   return L.find((q) => q.site && iso3PIP(q.poly, cx, cz)) || L.find((q) => iso3PIP(q.poly, cx, cz)) || null;
 }
-function iso3Draw(poly) {
+/**
+ * Boden der Fokus-Ansicht: keine Grundstücksfläche, nur ein unsichtbarer Boden auf Höhe des Erdgeschosses, der den
+ * Schatten der Gebäude aufnimmt (ShadowMaterial) – Gebäude stehen auf Weiß und werfen ihren Schatten darauf.
+ */
+function iso3Draw(L) {
   while (ISO3.g.children.length) {
     const o = ISO3.g.children.pop();
     o.geometry && o.geometry.dispose();
     o.material && o.material.dispose();
   }
-  if (!poly) return;
-  const pts = [];
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i],
-      b = poly[(i + 1) % poly.length],
-      n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2));
-    for (let k = 0; k < n; k++) {
-      const t = k / n,
-        x = a[0] + (b[0] - a[0]) * t,
-        z = a[1] + (b[1] - a[1]) * t;
-      pts.push(new T.Vector3(x, gh(x, z) + 0.15, z));
-    }
-  }
-  const ln = new T.LineLoop(
-    new T.BufferGeometry().setFromPoints(pts),
-    new T.LineBasicMaterial({ color: 0x222222 }),
-  );
-  ln.raycast = () => {};
-  ln.frustumCulled = false;
-  ISO3.g.add(ln);
-  try {
-    const sh = new T.Shape(poly.map((q) => new T.Vector2(q[0], -q[1]))),
-      g = new T.ShapeGeometry(sh);
-    const pa = g.attributes.position;
-    for (let i = 0; i < pa.count; i++) {
-      const x = pa.getX(i),
-        z = -pa.getY(i);
-      pa.setXYZ(i, x, gh(x, z) + 0.05, z);
-    }
-    g.computeVertexNormals();
-    const m = new T.Mesh(
-      g,
-      new T.MeshBasicMaterial({
-        color: 0x9aa0a6,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-        side: T.DoubleSide,
-        polygonOffset: true,
-        polygonOffsetFactor: 2,
-        polygonOffsetUnits: 2,
-      }),
-    );
-    m.raycast = () => {};
-    m.frustumCulled = false;
-    m.renderOrder = -5;
-    ISO3.g.add(m);
-  } catch (e) {
-    console.warn('Fokus Fläche', e);
-  }
+  if (!L || !L.length) return;
+  const bx = new T.Box3();
+  L.forEach((x) => x._g && bx.expandByObject(x._g));
+  if (bx.isEmpty()) return;
+  const c = bx.getCenter(new T.Vector3()),
+    sz = bx.getSize(new T.Vector3()),
+    r = Math.max(80, Math.max(sz.x, sz.z) * 2 + sz.y * 4),
+    y = Math.min(...L.map((x) => (x._y != null ? x._y : 0))),
+    g = new T.PlaneGeometry(r * 2, r * 2);
+  g.rotateX(-Math.PI / 2);
+  const m = new T.Mesh(g, new T.ShadowMaterial({ color: 0x000000, opacity: 0.22, depthWrite: false }));
+  m.position.set(c.x, y - 0.02, c.z);
+  m.receiveShadow = true;
+  m.raycast = () => {};
+  m.renderOrder = -5;
+  ISO3.g.add(m);
 }
 // Gebäude im Fokus: das gewählte und alle anderen auf demselben Grundstück
 function iso3Set() {
@@ -214,12 +184,11 @@ function iso3Apply(force) {
     ren.setClearColor(0xffffff);
     ISO3.clr = 'w';
   }
-  const s = ss.site,
-    key = L.map((x) => x.id).join(',') + '|' + (s ? s.id + JSON.stringify(s.poly) : '-');
+  const key = L.map((x) => x.id + ':' + x._y + ':' + (x._h || 0)).join(',');
   if (force || key !== ISO3.sig) {
     ISO3.sig = key;
     ISO3.bid = b.id;
-    iso3Draw(s ? s.poly : null);
+    iso3Draw(L);
   }
   iso3Ui();
 }
@@ -328,7 +297,7 @@ const ISO3F = {
     b.setAttribute('onclick', 'ISO3F.main()');
     b.setAttribute('aria-label', 'Fokus');
     b.dataset.th = '1';
-    b.dataset.tip = 'Fokus-Ansicht: nur Gebäude und Grundstück auf weißem Hintergrund';
+    b.dataset.tip = 'Fokus-Ansicht: nur die Gebäude des Grundstücks auf weißem Hintergrund, mit Schatten';
     b.innerHTML =
       '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/><circle cx="12" cy="12" r="3"/></svg>';
     const c = document.getElementById('bcam');
