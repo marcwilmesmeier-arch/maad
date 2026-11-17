@@ -709,7 +709,7 @@ function l2GeoStufe1(b) {
         });
         return c % 2 === 1;
       };
-      const solid = (tris, off, seiten = true) => {
+      const solid = (tris, off, seiten = true, oben = false) => {
         const all = [],
           out = [],
           cnt = new Map(),
@@ -742,6 +742,14 @@ function l2GeoStufe1(b) {
               [2, 0],
             ].forEach(([i, j]) => {
               if (cnt.get(ek(t[i], t[j])) !== 1) return;
+              // oben = Giebelwand: Oberseite (schräg am Ortgang, waagerecht an der Traufe) liegt in der Dachfläche und
+              // flimmerte mit ihr; die Dachplatte deckt die Wand ab
+              if (
+                oben &&
+                Math.min(t[i][1], t[j][1]) > yr + 0.01 &&
+                Math.hypot(t[i][0] - t[j][0], t[i][2] - t[j][2]) > 1e-3
+              )
+                return;
               const P = R_(t[i]),
                 Q = R_(t[j]),
                 P2 = off(P),
@@ -806,6 +814,8 @@ function l2GeoStufe1(b) {
         const S_ = solid(
             g.t.map((tri) => tri.map((P) => [P[0] + g.nx * (0.004 + sh), P[1], P[2] + g.nz * (0.004 + sh)])),
             (P) => [P[0] - g.nx * (d - sh + 0.004), P[1], P[2] - g.nz * (d - sh + 0.004)],
+            true,
+            true,
           ),
           len = g.t1 - g.t0;
         wi++;

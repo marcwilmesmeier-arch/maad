@@ -720,17 +720,15 @@ function roofKanten(rp, fp) {
         p.push(...A, ...B);
         n.push(...n1, ...n2);
       }
-  // Giebel- und Drempelwände: Umriss der senkrechten Dreiecke (dort entstehen keine Stoßstellen quer über Flächen)
+  // Giebel- und Drempelwände: nur die senkrechten Ecken; Ortgang und Traufe kommen aus den Dachrändern oben (die Oberkante
+  // der Wände läge knapp daneben und erschiene doppelt), der Fuß setzt die Fassade darunter fort
   if (rp.pw && rp.pw.length) {
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(new Float32Array(rp.pw), 3));
     const eg = new T.EdgesGeometry(g, 15),
       a = eg.attributes.position.array;
-    let fuss = Infinity;
-    for (let m = 1; m < rp.pw.length; m += 3) fuss = Math.min(fuss, rp.pw[m]);
     for (let i = 0; i + 5 < a.length; i += 6) {
-      // waagerechte Kanten am Fuß der Giebelwand gehören zur Geschossdecke, nicht zum Dach
-      if (Math.abs(a[i + 1] - a[i + 4]) < 1e-3 && Math.min(a[i + 1], a[i + 4]) < fuss + 1e-3) continue;
+      if (Math.hypot(a[i] - a[i + 3], a[i + 2] - a[i + 5]) > 1e-3) continue;
       p.push(a[i], a[i + 1], a[i + 2], a[i + 3], a[i + 4], a[i + 5]);
       n.push(0, 0, 0, 0, 0, 0);
     }

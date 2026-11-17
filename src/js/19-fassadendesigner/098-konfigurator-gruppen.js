@@ -29,15 +29,8 @@ function okGrSet(f, v) {
   const G = okGr();
   if (!G) return;
   if (f === 'n') G.n = String(v).slice(0, 60) || G.n;
-  else if (f === 'szan') {
-    // Vorgabe: heutiger Abstand der höchsten Fensteroberkante zur Gruppenoberkante
-    const ok = G.oe.filter((q) => !oeTuer(oeT(q.t))).map((q) => q.v + oeT(q.t).h),
-      s = ok.length ? Math.max(0, G.h - Math.max(...ok)) : 0.5;
-    G.sz = { an: !!v, s: G.sz && G.sz.s != null ? G.sz.s : Math.round(s * 100) / 100 };
-  } else if (f === 'szs') {
-    const n = +String(v).replace(',', '.');
-    if (isFinite(n)) G.sz = { an: true, s: Math.max(0, Math.min(3, n)) };
-  } else {
+  else if (f === 'szan') G.sz = { an: !!v };
+  else {
     const n = +String(v).replace(',', '.');
     if (!isFinite(n)) return;
     if (f === 'l') G.l = Math.max(0.5, Math.min(40, n));
@@ -55,6 +48,8 @@ function okGrOeSet(f, v) {
     if (!isFinite(n)) return;
     if (f === 'x') q.x = n;
     if (f === 'v') q.v = Math.max(0, n);
+    // Sturz: Fenster bei gleicher Höhe so verschieben, dass darüber s bis zur Gruppenoberkante frei bleibt
+    if (f === 's') q.v = Math.max(0, okGr().h - Math.max(0, n) - oeT(q.t).h);
   }
   oeAktualisieren();
 }
@@ -373,13 +368,13 @@ function okGrRender() {
         .join(''),
     q = okGrOe();
   let h = `<h4>Gruppe</h4><div class="okg"><span>Name</span><input type="text" value="${esc(G.n)}" onchange="okGrSet('n',this.value)">
-<span>Länge (m)</span>${z('l', G.l)}<span>Höhe (m)</span>${z('h', G.h)}
-<span title="Fensteroberkante immer im gleichen Abstand unter der Oberkante des Geschosses – in höheren Geschossen werden die Fenster höher">Fensterhöhe über festen Sturz</span><input type="checkbox" style="justify-self:end;width:auto" ${G.sz && G.sz.an ? 'checked' : ''} onchange="okGrSet('szan',this.checked)">
-${G.sz && G.sz.an ? `<span>Sturz bis Geschossoberkante (m)</span>${z('szs', G.sz.s)}` : ''}
+<span>Länge (m)</span>${z('l', G.l)}<span title="An der Fassade reicht die Gruppe immer über das ganze Geschoss">Zeichenhöhe (m)</span>${z('h', G.h)}
+<span title="In höheren Geschossen: Fenster werden höher und der Sturz bleibt. Ohne Haken bleibt das Fenster und der Sturz wird höher.">Fensterhöhe über festen Sturz</span><input type="checkbox" style="justify-self:end;width:auto" ${G.sz && G.sz.an ? 'checked' : ''} onchange="okGrSet('szan',this.checked)">
 <span>Material</span><select onchange="okGrMaterial(this.value)" title="Fassadentyp der ganzen Gruppe (einzelne Felder können abweichen)"><option value="" ${!G.t ? 'selected' : ''}>— wie Fassade —</option>${S.ft
     .filter((x) => !x.df)
     .map((x) => `<option value="${x.k}" ${x.k === G.t ? 'selected' : ''}>${esc(x.n)}</option>`)
     .join('')}</select></div>
+<div class="mu" style="margin-top:6px">An der Fassade reicht die Gruppe über das ganze Geschoss. ${G.sz && G.sz.an ? 'Fenster behalten Brüstung und Sturz wie gezeichnet und werden in höheren Geschossen höher.' : 'Fenster bleiben wie gezeichnet, in höheren Geschossen wird der Sturz höher.'}</div>
 <h4>Öffnungen</h4><div class="okg"><select onchange="okE('okGrT').dataset.t=this.value">${opt(S.oet[0] && S.oet[0].k)}</select><button id="okGrT" onclick="okGrOeNeu(this.dataset.t||'${S.oet[0] ? S.oet[0].k : ''}')">Hinzufügen</button></div>
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
   if (q) {
@@ -389,7 +384,8 @@ ${G.sz && G.sz.an ? `<span>Sturz bis Geschossoberkante (m)</span>${z('szs', G.sz
     OK.k = T.k;
     h += `<h4>Gewählte Öffnung</h4><div class="okg"><span>Typ</span><select onchange="okGrOeSet('t',this.value)">${opt(q.t)}</select>
 <span class="mu">Breite (m)</span><input type="number" value="${+T.b.toFixed(3)}" disabled title="Maße über „Bearbeiten“ ändern"><span class="mu">Höhe (m)</span><input type="number" value="${+T.h.toFixed(3)}" disabled title="Maße über „Bearbeiten“ ändern">
-<span>Abstand links (m)</span>${z('x', q.x, 'okGrOeSet')}<span>Brüstung (m)</span>${z('v', q.v, 'okGrOeSet')}</div>
+<span>Abstand links (m)</span>${z('x', q.x, 'okGrOeSet')}<span>Brüstung (m)</span>${z('v', q.v, 'okGrOeSet')}
+${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante der Gruppe – bleibt in jedem Geschoss gleich">Sturz (m)</span>${z('s', Math.max(0, G.h - q.v - T.h), 'okGrOeSet')}`}</div>
 <div class="okb"><button onclick="okGrOeLoeschen()">Entfernen</button></div>
 <div class="okb"><button onclick="okGrOeBearbeiten()" title="Typ im Reiter „Fenster & Türen“ öffnen – Maße, Rahmenfarbe, Aufteilung">Bearbeiten</button><button onclick="okGrOeEigen()" title="Kopie des Typs nur für diese Öffnung anlegen und bearbeiten – andere Stellen bleiben unverändert">Als eigenen Typ bearbeiten</button></div>
 <div class="mu" style="margin-top:6px">${n > 1 ? `„${esc(T.n)}“ sitzt ${n}× im Projekt – „Bearbeiten“ ändert alle Stellen.` : 'Änderungen am Typ gelten für alle Stellen dieses Typs.'}</div>`;

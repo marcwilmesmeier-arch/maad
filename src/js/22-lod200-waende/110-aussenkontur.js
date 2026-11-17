@@ -103,7 +103,8 @@ function l2KonturPunkte(b) {
       nor.push(...wn(N[0], v), ...wn(v, N[1]));
     });
     rand(x.f, x.z0, unten, false);
-    rand(x.f, x.z1, oben, true, oben ? 0.3 : 0);
+    // geneigtes Dach: über dem obersten Geschoss laufen Drempel und Giebel in derselben Ebene weiter – keine Kante
+    if (flach || x.j !== letzt) rand(x.f, x.z1, oben, true, oben ? 0.3 : 0);
   });
   // geneigte Dächer: Kanten zwischen Dachflächen über 15° Knick und Ränder (Nachbarfläche dort: Wand darunter)
   if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat') {

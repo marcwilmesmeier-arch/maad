@@ -80,9 +80,7 @@ function oegOeffnungen(b, V) {
   (oegDaten(b, V.key) || []).forEach((I) => {
     const G = oegG(I.g);
     if (!G) return;
-    // Geschosshöhe am Verweis (für Fensterhöhe über festen Sturz)
-    const j = B.findIndex((v, k) => k < B.length - 1 && Math.abs(v - I.v) < 0.05),
-      H = j >= 0 ? B[j + 1] - B[j] : G.h;
+    const H = oegHoehe(B, I, G);
     G.oe.forEach((q) => {
       const T = oegTyp(G, q, H),
         u0 = I.u + q.x,
@@ -101,14 +99,36 @@ function oegOeffnungen(b, V) {
   return R;
 }
 /**
- * Wirksamer Typ einer Öffnung in der Gruppe: mit „Fensterhöhe über festen Sturz“ (G.sz = { an, s }) reicht das Fenster
- * bis s unter die Oberkante des Geschosses (Höhe H) – in höheren Geschossen also höher; Türen und Tore unverändert.
+ * Höhe eines Gruppenverweises: die Gruppe reicht immer über das ganze Geschoss, in dem sie sitzt (B = fdStoreys);
+ * G.h ist nur die Höhe, in der sie im Konfigurator gezeichnet ist.
+ */
+function oegHoehe(B, I, G) {
+  const j = B.findIndex((v, k) => k < B.length - 1 && Math.abs(v - I.v) < 0.05);
+  return j >= 0 ? B[j + 1] - B[j] : G.h;
+}
+/**
+ * Wirksamer Typ einer Öffnung in einer Gruppe der Höhe H. Mit „Fensterhöhe über festen Sturz“ (G.sz.an) behalten
+ * Fenster Brüstung und Sturz (Abstand der Oberkante zur Gruppenoberkante, wie gezeichnet) und werden um H − G.h
+ * höher bzw. niedriger; ohne bleibt das Fenster und der Sturz wächst. Türen und Tore bleiben immer.
  */
 function oegTyp(G, q, H) {
   const T = oeT(q.t);
-  if (!G.sz || !G.sz.an || oeTuer(T)) return T;
-  const h = Math.max(0.3, (H || G.h) - (+G.sz.s || 0) - q.v);
+  if (!G.sz || !G.sz.an || oeTuer(T) || H == null || Math.abs(H - G.h) < 1e-4) return T;
+  const h = Math.max(0.3, T.h + H - G.h);
   return Math.abs(h - T.h) < 1e-4 ? T : { ...T, h };
+}
+/**
+ * Höhenlage in einer Gruppe der Höhe H. Mit festem Sturz wandern Teilungen ab der niedrigsten Fensteroberkante
+ * (Sturzbereich) mit der Oberkante, darunter (Brüstung) bleiben sie; ohne Fenster wandert die obere Hälfte mit.
+ * Ohne festen Sturz bleiben alle Teilungen, nur die Oberkante wandert (die oberste Feldreihe wächst).
+ */
+function oegYAbb(G, H) {
+  const dH = H - G.h;
+  if (Math.abs(dH) < 1e-4) return (y) => y;
+  if (!G.sz || !G.sz.an) return (y) => (y >= G.h - 0.004 ? H : y);
+  const ok = G.oe.filter((q) => !oeTuer(oeT(q.t))).map((q) => q.v + oeT(q.t).h),
+    grenze = ok.length ? Math.min(...ok) - 0.01 : G.h / 2;
+  return (y) => (y >= grenze ? y + dH : y);
 }
 /** Verbundene Felder der Gruppe (geprüft). */
 function oegVerbunden(G) {
@@ -225,15 +245,17 @@ function oegFlaechenG(G) {
 /** Flächen aller Gruppenverweise einer Ansicht (Tiefe und/oder Material): { u0, u1, v0, v1, d, t, id, gi }. */
 function oegFlaechen(b, V) {
   const R = [];
+  const B = fdStoreys(b);
   (oegDaten(b, V.key) || []).forEach((I) => {
     const G = oegG(I.g);
     if (!G) return;
+    const Y = oegYAbb(G, oegHoehe(B, I, G));
     oegFlaechenG(G).forEach((r, k) =>
       R.push({
         u0: I.u + r.x0,
         u1: I.u + r.x1,
-        v0: I.v + r.y0,
-        v1: I.v + r.y1,
+        v0: I.v + Y(r.y0),
+        v1: I.v + Y(r.y1),
         d: r.a === 'ba' ? 0 : r.d,
         dl: r.dl,
         dr: r.dr,
@@ -347,11 +369,12 @@ function oegRueckZeichnen(g, b, V, ox) {
 }
 /** Gruppenverweis unter dem Punkt (Rechteck der Gruppe). */
 function oegTreffer(b, V, u, v) {
-  const L = oegDaten(b, V.key) || [];
+  const L = oegDaten(b, V.key) || [],
+    B = fdStoreys(b);
   for (let i = L.length - 1; i >= 0; i--) {
     const I = L[i],
       G = oegG(I.g);
-    if (G && u >= I.u && u <= I.u + G.l && v >= I.v && v <= I.v + G.h) return I;
+    if (G && u >= I.u && u <= I.u + G.l && v >= I.v && v <= I.v + oegHoehe(B, I, G)) return I;
   }
   return null;
 }
@@ -566,13 +589,14 @@ function oegUp() {
 function oegZeichnen(g, b, V, ox, o) {
   const X = (u) => fdSX(u + ox),
     Y = fdSY,
-    rahmen = (u, v, G, an, alpha) => {
+    // H: Höhe des Rahmens (Geschosshöhe am Verweis, in der Vorschau die gezeichnete Höhe)
+    rahmen = (u, v, G, an, alpha, H = G.h) => {
       g.save();
       g.globalAlpha = alpha || 1;
       g.strokeStyle = an ? '#1f6fd1' : '#5E7F92';
       g.lineWidth = an ? 2.2 : 1;
       g.setLineDash(an ? [] : [5, 4]);
-      g.strokeRect(X(u), Y(v + G.h), X(u + G.l) - X(u), Y(v) - Y(v + G.h));
+      g.strokeRect(X(u), Y(v + H), X(u + G.l) - X(u), Y(v) - Y(v + H));
       g.setLineDash([]);
       const w = X(u + G.l) - X(u);
       if (w > 60) {
@@ -582,16 +606,18 @@ function oegZeichnen(g, b, V, ox, o) {
         g.textBaseline = 'top';
         let t = G.n;
         while (t.length > 3 && g.measureText(t).width > w - 8) t = t.slice(0, -1);
-        g.fillText(t, X(u) + 4, Y(v + G.h) + 3);
+        g.fillText(t, X(u) + 4, Y(v + H) + 3);
       }
       g.restore();
     };
   // Rahmen nur beim Werkzeug „Gruppe“ oder mit gewählter Gruppe (sonst ruhige Ansicht)
-  if (FDS.tool === 'gr' || FDS.gi)
+  if (FDS.tool === 'gr' || FDS.gi) {
+    const B = fdStoreys(b);
     (oegDaten(b, V.key) || []).forEach((I) => {
       const G = oegG(I.g);
-      if (G) rahmen(I.u, I.v, G, o.sel !== undefined && FDS.gi === I.id);
+      if (G) rahmen(I.u, I.v, G, o.sel !== undefined && FDS.gi === I.id, 1, oegHoehe(B, I, G));
     });
+  }
   const p = FDS.grVor;
   if (p && FDS.tool === 'gr' && !FDS.grZug && o.sel !== undefined && !ox) {
     rahmen(p.u, p.v, p.G, true, 0.7);
@@ -667,7 +693,7 @@ function oegPruefen(L) {
       .filter((q) => q && q.t)
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
     t: S.ft.some((x) => x.k === G.t) ? G.t : '',
-    sz: G.sz ? { an: !!G.sz.an, s: Math.max(0, Math.min(3, +G.sz.s || 0)) } : undefined,
+    sz: G.sz ? { an: !!G.sz.an } : undefined,
     ...oegFelderPruefen(G),
   }));
 }
