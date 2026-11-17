@@ -2965,3 +2965,97 @@ summary:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* Navigationswürfel (16-darstellung-erweitert/070): heller Würfel ohne Konturen, weich schattiert, fette Buchstaben */
+#nwuerfel {
+  position: absolute;
+  right: 26px;
+  bottom: 84px;
+  width: 84px;
+  height: 84px;
+  perspective: 300px;
+  z-index: 5;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+#nwuerfel:active {
+  cursor: grabbing;
+}
+#nwuerfel .nwb {
+  position: absolute;
+  left: 22px;
+  top: 22px;
+  width: 40px;
+  height: 40px;
+  transform-style: preserve-3d;
+}
+#nwuerfel .nwf {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  background: #f2f3f4;
+  color: #3c4146;
+  font:
+    700 12px/40px system-ui,
+    sans-serif;
+  backface-visibility: hidden;
+  cursor: pointer;
+}
+#nwuerfel .nwf[data-k='o'] {
+  background: #fbfbfb;
+}
+#nwuerfel .nwf[data-k='S'],
+#nwuerfel .nwf[data-k='N'] {
+  background: #eff0f1;
+}
+#nwuerfel .nwf[data-k='O'],
+#nwuerfel .nwf[data-k='W'] {
+  background: #e3e5e7;
+}
+#nwuerfel .nwf:hover {
+  color: #f07a12;
+}
+#nwuerfel .nwring {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(29, 29, 27, 0.035) 60%,
+    rgba(29, 29, 27, 0.06) 70%,
+    transparent 71%
+  );
+  transform-style: preserve-3d;
+}
+#nwuerfel .nwk {
+  position: absolute;
+  left: 34px;
+  top: 34px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #5f666c;
+  font:
+    700 9px/16px system-ui,
+    sans-serif;
+  cursor: pointer;
+  z-index: 2;
+}
+#nwuerfel .nwk:hover {
+  color: #f07a12;
+}
+#nwuerfel button:focus-visible {
+  outline: 2px solid #5e7f92;
+  outline-offset: 1px;
+}

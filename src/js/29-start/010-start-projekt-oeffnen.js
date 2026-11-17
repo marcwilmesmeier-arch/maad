@@ -99,6 +99,12 @@ function start() {
     mesh(b);
   });
   drInit();
+  // Navigationswürfel unten rechts (16-darstellung-erweitert/070)
+  try {
+    nwInit();
+  } catch (e) {
+    logErr(e, 'start');
+  }
   // Kamerafahrt zu Landmarks/Plätzen (07-analyse/170-site-context): Maus oder Rad bricht sie ab
   ['pointerdown', 'wheel'].forEach((ev) =>
     addEventListener(ev, scFlugStopp, { passive: true, capture: true }),

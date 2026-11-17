@@ -82,6 +82,11 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `fdViews` bildet je Hof und Richtung eigene Ansichten (Schlüssel `H1N` …, Name „Innenhof 1 · Nord“), verdeckt nur
   durch Wände desselben Hofs. Gruppen, Fassadendesigner und LOD-200-Öffnungen gelten damit auch dort; in der
   Kontextleiste wählt `skKlHofAnsicht` die Hofansicht einer Hofwand (Abschnitt wie eine Flucht).
+- Navigationswürfel (`16-darstellung-erweitert/070-navigationswuerfel.js`, Start in `start()`): CSS-3D-Würfel unten
+  rechts (nur 3D), Seiten O/V/R/H/L (Oben, Vorne = Süd, Rechts = Ost …), Kompassring N/O/S/W. Klick = Kamerafahrt über
+  `S.vanim`, Rand einer Seite = Kante/Ecke, Ziehen = drehen.
+- Schnittlinien (Punkte auf gerader Wand, `skSchnittPunkt` in `26-modellier-modus/150-ecken.js`) sind wie Ecken wählbar
+  und ziehbar; „Schnitt entfernen“ (`skSchnittWeg`) nimmt sie aus den Grundrissen.
 - Fassadengruppen je Abschnitt: Fläche/Flucht in der Kontextleiste schreibt `b.fk.abU['Seite|Geschoss'] =
 [{ u0, u1, R, au, vs }]` (Bereich entlang der Ansicht, Geschoss `*` = Flucht). `fkAnwenden` teilt jedes Band an
   diesen Grenzen und füllt die Teile einzeln – so tragen die Hälften einer geschnittenen Flucht eigene Gruppen.
