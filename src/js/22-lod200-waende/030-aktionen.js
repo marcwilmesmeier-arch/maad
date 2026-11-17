@@ -182,89 +182,8 @@ function l2MeshOrig(e) {
     const n1 = g.children.length;
     e.quads.forEach((q) => add({ o: q, h: [] }, e.hAt));
     for (let i = n1; i < g.children.length; i++) g.children[i].position.y = e.h + e.hTop;
-    // Terrasse: Stabgeländer auf der Attika, Oberkante 1,00 m über der Geschossoberkante
-    if (e.gel && !l23()) g.add(l2Gelaender(e));
-  }
-  // ── Erweiterung aus 22-lod200-waende/120-innenlicht.js: Innenflächen bekommen weniger Himmelslicht
-  try {
-    l2InnenMarkieren(e, g, mat);
-  } catch (er) {
-    logErr(er, 'l2MeshOrig');
   }
   return { g, mat };
-}
-/**
- * Stabgeländer an einer Terrassenwand (LOD 200): innen vor der Attika auf dem Terrassenboden, senkrechte Stäbe alle
- * 0,24 m, Fußleiste und Handlauf, Oberkante 1,00 m über der Geschossoberkante. Eine Geometrie je Wand.
- */
-function l2Gelaender(e) {
-  const pos = [],
-    yb = e.h + (e.hTop || 0), // Oberkante Geschoss = Terrassenboden
-    y1 = yb + 1.0,
-    bb = S.bld.find((x) => x.id === e.bid),
-    mz = bb ? cen(bb.fp) : null,
-    box = (x0, x1, ya, yc, z0, z1) => {
-      // Quader in lokalen Koordinaten (u entlang der Wand, y, w quer zur Wand)
-      const P = [
-        [x0, ya, z0],
-        [x1, ya, z0],
-        [x1, ya, z1],
-        [x0, ya, z1],
-        [x0, yc, z0],
-        [x1, yc, z0],
-        [x1, yc, z1],
-        [x0, yc, z1],
-      ];
-      [
-        [0, 2, 1, 0, 3, 2],
-        [4, 5, 6, 4, 6, 7],
-        [0, 1, 5, 0, 5, 4],
-        [1, 2, 6, 1, 6, 5],
-        [2, 3, 7, 2, 7, 6],
-        [3, 0, 4, 3, 4, 7],
-      ].forEach((f) => f.forEach((i) => pos.push(P[i])));
-    };
-  (e.quads || []).forEach((q) => {
-    // Innenseite der Attika: die der Gebäudemitte nähere Wandseite; Geländer 3 cm davor auf dem Terrassenboden
-    const s1 = [q[0], q[1]],
-      s2 = [q[3], q[2]],
-      mid = (s) => [(s[0][0] + s[1][0]) / 2, (s[0][1] + s[1][1]) / 2],
-      d = (s) => (mz ? Math.hypot(mid(s)[0] - mz[0], mid(s)[1] - mz[1]) : 0),
-      [aus, inn] = d(s1) < d(s2) ? [s2, s1] : [s1, s2],
-      A = inn[0],
-      B = inn[1],
-      L = Math.hypot(B[0] - A[0], B[1] - A[1]);
-    if (L < 0.2) return;
-    const ux = (B[0] - A[0]) / L,
-      uz = (B[1] - A[1]) / L,
-      // Richtung nach innen (von der Außen- zur Innenseite)
-      ix = mid(inn)[0] - mid(aus)[0],
-      iz = mid(inn)[1] - mid(aus)[1],
-      il = Math.hypot(ix, iz) || 1,
-      sw = (-uz * ix + ux * iz) / il > 0 ? 1 : -1,
-      off = 0.03 + 0.02,
-      n0 = pos.length,
-      k = Math.max(1, Math.round(L / 0.24));
-    for (let i = 0; i <= k; i++) {
-      const t = Math.min(L - 0.01, Math.max(0.01, (i / k) * L));
-      box(t - 0.01, t + 0.01, yb + 0.05, y1 - 0.04, off - 0.015, off + 0.015);
-    }
-    box(0, L, y1 - 0.04, y1, off - 0.03, off + 0.03); // Handlauf
-    box(0, L, yb + 0.05, yb + 0.09, off - 0.02, off + 0.02); // Fußleiste
-    for (let i = n0; i < pos.length; i++) {
-      const [u, y, w] = pos[i],
-        ww = w * sw;
-      pos[i] = [A[0] + ux * u - uz * ww, y, A[1] + uz * u + ux * ww];
-    }
-  });
-  const ge = new T.BufferGeometry();
-  ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos.flat()), 3));
-  ge.computeVertexNormals();
-  const m = new T.Mesh(ge, new T.MeshLambertMaterial({ color: 0xa9aeb3, side: T.DoubleSide }));
-  m.castShadow = m.receiveShadow = true;
-  m.raycast = () => {};
-  m.userData.gel = 1;
-  return m;
 }
 function l2Sync() {
   const bs = S.bld.filter((b) => !b.ex && b._y != null),
@@ -446,13 +365,12 @@ setInterval(() => {
   } catch (e) {
     logErr(e, 'l2Kontur');
   }
-  // ── Erweiterung aus 22-lod200-waende/120-innenlicht.js: beim Aufklappen aus
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone, Loggien und Terrassengeländer
   try {
-    l2InnenTakt();
+    l2Terrassen();
   } catch (e) {
-    logErr(e, 'l2InnenTakt');
+    logErr(e, 'l2Terrassen');
   }
-  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone und Loggien
   try {
     l2Balkone();
   } catch (e) {

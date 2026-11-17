@@ -109,7 +109,17 @@ function pitBuild() {
   const items = [];
   let gi = 0;
   S.bld.forEach((b) => {
-    if (b.ex || b._y == null || !(b.levels || []).some((l) => l.ug)) return;
+    if (b.ex || b._y == null) return;
+    // ── Erweiterung aus 22-lod200-waende: in LOD 200 auch ohne Untergeschoss das Gelände unter der Bodenplatte
+    // aussparen (sonst schneidet es die Bodenplatte bzw. die Decke im Erdgeschoss)
+    if (!(b.levels || []).some((l) => l.ug)) {
+      if (!l2on() || !b.levels || !b.levels.length) return;
+      const r = lf(b, b.levels[0]);
+      if (!r || r.length < 3) return;
+      items.push({ r, y0: b._y - 0.4, g: gi % 4 });
+      gi++;
+      return;
+    }
     let y = b._y;
     b.levels.forEach((l) => {
       const y0 = y;

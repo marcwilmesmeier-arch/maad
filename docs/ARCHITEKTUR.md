@@ -318,16 +318,8 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 ## LOD 200: Terrassen
 
 `l2Els` gibt Außenwänden ohne Geschoss darüber (mindestens 3 von 5 Prüfpunkten frei) eine Attika (`r.hAt = 0,30 m`)
-und `r.gel`. `l2Gelaender(e)` (030-aktionen) setzt darauf ein Stabgeländer (innen vor der Attika, Stäbe alle 0,24 m, Fußleiste, Handlauf, Oberkante
+und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfläche (innen vor der Attika, Stäbe alle 0,24 m, Fußleiste, Handlauf, Oberkante
 1,00 m über der Geschossoberkante). Die LOD-200-Außenkontur hebt Terrassenränder und -ecken um die Attika an.
-
-## LOD 200: Innenlicht
-
-`22-lod200-waende/120-innenlicht.js`: `l2InnenMarkieren` (aus `l2MeshOrig`) ergänzt das Material der LOD-200-Bauteile.
-Die Prüfung läuft je Bildpunkt im Shader: Der Punkt wird 0,60 m entlang der Normalen versetzt, das Geschoss nach der
-Höhe bestimmt, dann wird gegen die Grundrisskanten geprüft (Datentextur je Gebäude, `l2InnenDaten`, Innenhöfe als
-Löcher, mindestens 0,45 m vom Rand). Innen wird das Himmelslicht (`irradiance`) auf 30 % reduziert, die Sonne bleibt
-voll. Beim Aufklappen ist die Abdunklung aus (`l2InnenTakt`).
 
 ## Balkone und Loggien
 

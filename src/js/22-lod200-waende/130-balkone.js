@@ -139,3 +139,91 @@ function l2BalkoneWeg(o) {
     if (m.material) m.material.dispose();
   });
 }
+// ---- Terrassen: Stabgeländer auf der Terrassenfläche (Geschoss ohne Geschoss darüber an dieser Stelle), entlang
+// der Außenkante mit Abstand zur Attika. Terrassenfläche = Grundriss des Geschosses minus Grundriss darüber.
+const L2TG = new Map(); // Gebäude-ID → { sig, g }
+/** Geländerlinien der Terrassen eines Gebäudes: [{ A, B, y }] (y = Terrassenboden). */
+function l2TerrassenLinien(b) {
+  const R = [],
+    aw = ((b.l2 && b.l2.c && b.l2.c.AW) || L2DC.AW) / 100,
+    ein = aw + 0.12; // Abstand von der Außenkante: Wand/Attika plus Luft
+  let z = b._y;
+  b.levels.forEach((l, j) => {
+    const z1 = z + l.h;
+    z = z1;
+    const ob = b.levels[j + 1];
+    if (l.ug || !ob) return;
+    const f = lf(b, l),
+      g = lf(b, ob);
+    let T2 = [];
+    try {
+      T2 = boolOp([bpP(f)], [bpP(g)], 'd');
+    } catch (e) {
+      logErr(e, 'l2TerrassenLinien');
+      return;
+    }
+    T2.forEach((P) => {
+      if (!P.o || P.o.length < 3 || Math.abs(l2QA(P.o)) < 2) return;
+      const r = P.o,
+        n = r.length;
+      for (let i = 0; i < n; i++) {
+        const a = r[i],
+          c = r[(i + 1) % n],
+          L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        if (L < 0.5) continue;
+        const ux = (c[0] - a[0]) / L,
+          uz = (c[1] - a[1]) / L,
+          m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2],
+          // nur Kanten auf der Gebäudeaußenkante (nicht entlang der Wand des Geschosses darüber)
+          aussen = f.some((p, k) => {
+            const q = f[(k + 1) % f.length];
+            return proj(m, p, q).d < 0.05;
+          });
+        if (!aussen) continue;
+        // Richtung in die Terrasse
+        let nx = -uz,
+          nz = ux;
+        if (!inP([m[0] + nx * 0.2, m[1] + nz * 0.2], r)) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const A = [a[0] + nx * ein + ux * ein, a[1] + nz * ein + uz * ein],
+          B = [c[0] + nx * ein - ux * ein, c[1] + nz * ein - uz * ein];
+        if (Math.hypot(B[0] - A[0], B[1] - A[1]) > 0.3) R.push({ A, B, y: z1 });
+      }
+    });
+  });
+  return R;
+}
+/** Terrassengeländer der geplanten Gebäude aktuell halten (Takt aus 030-aktionen, nur LOD 200). */
+function l2Terrassen() {
+  const an = l2on() && !l23() && !(S.expl && S.expl.cur > 0.05),
+    da = new Set();
+  S.bld.forEach((b) => {
+    if (b.ex || b._y == null || !an) return;
+    const sig = skSig(b) + '|' + JSON.stringify((b.l2 && b.l2.c) || 0);
+    da.add(b.id);
+    let o = L2TG.get(b.id);
+    if (o && o.sig === sig) return;
+    if (o) l2BalkoneWeg(o);
+    const pos = [];
+    l2TerrassenLinien(b).forEach((x) => l2Stabgelaender(pos, x.A, x.B, x.y));
+    const g = new T.Group();
+    if (pos.length) {
+      const ge = new T.BufferGeometry();
+      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+      ge.computeVertexNormals();
+      const m = new T.Mesh(ge, new T.MeshLambertMaterial({ color: 0xa9aeb3, side: T.DoubleSide }));
+      m.castShadow = m.receiveShadow = true;
+      m.raycast = () => {};
+      g.add(m);
+    }
+    G.l2.add(g);
+    L2TG.set(b.id, { sig, g });
+  });
+  L2TG.forEach((o, id) => {
+    if (da.has(id)) return;
+    l2BalkoneWeg(o);
+    L2TG.delete(id);
+  });
+}
