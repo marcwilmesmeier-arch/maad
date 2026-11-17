@@ -323,8 +323,14 @@ function projApplySet(x) {
     if (x[k] != null) S[k] = x[k];
   });
   if (x.ly) {
+    // Umwelt-Overlays (CORINE, Schutzgebiete, Hochwasser): Zustand bleibt erhalten; eingeschaltete werden nach dem
+    // Laden nachgeladen (gespeicherte Daten ohne Abruf, ovLoad), ohne geladenes Gelände bleiben sie aus
+    const ovNach = [];
     x.ly.forEach(([k, v, o]) => {
-      if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) v = 0;
+      if (['clc', 'nsg', 'ffh', 'vsg', 'hq'].includes(k)) {
+        if (v && S.geo) ovNach.push(k);
+        else v = 0;
+      }
       const i = LY.findIndex((l) => l[1] === k);
       if (i < 0) return;
       LY[i][2] = v;
@@ -338,6 +344,10 @@ function projApplySet(x) {
     });
     labVis();
     if (S.geo) recomp();
+    ovNach.forEach((k) => {
+      if (OVD[k] && OVD[k].st === 'err') delete OVD[k];
+      ovLoad(k).catch((e) => logErr(e, 'projApplySet'));
+    });
   }
   if (x.light) {
     const L = x.light;
