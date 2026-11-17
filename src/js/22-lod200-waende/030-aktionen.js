@@ -182,8 +182,68 @@ function l2MeshOrig(e) {
     const n1 = g.children.length;
     e.quads.forEach((q) => add({ o: q, h: [] }, e.hAt));
     for (let i = n1; i < g.children.length; i++) g.children[i].position.y = e.h + e.hTop;
+    // Terrasse: Stabgeländer auf der Attika, Oberkante 1,00 m über der Geschossoberkante
+    if (e.gel && !l23()) g.add(l2Gelaender(e));
   }
   return { g, mat };
+}
+/**
+ * Stabgeländer über einer Terrassenwand (LOD 200): senkrechte Stäbe (Abstand 0,12 m) und Handlauf auf der Mittellinie
+ * der Attika, von deren Oberkante bis 1,00 m über der Geschossoberkante. Eine Geometrie je Wand.
+ */
+function l2Gelaender(e) {
+  const pos = [],
+    y0 = e.h + (e.hTop || 0) + e.hAt,
+    y1 = e.h + (e.hTop || 0) + 1.0,
+    box = (x0, x1, ya, yb, z0, z1) => {
+      // Quader in lokalen Koordinaten (Achsen: u entlang der Wand, y, w quer) → wird über die Wandrichtung abgebildet
+      const P = [
+        [x0, ya, z0],
+        [x1, ya, z0],
+        [x1, ya, z1],
+        [x0, ya, z1],
+        [x0, yb, z0],
+        [x1, yb, z0],
+        [x1, yb, z1],
+        [x0, yb, z1],
+      ];
+      [
+        [0, 2, 1, 0, 3, 2],
+        [4, 5, 6, 4, 6, 7],
+        [0, 1, 5, 0, 5, 4],
+        [1, 2, 6, 1, 6, 5],
+        [2, 3, 7, 2, 7, 6],
+        [3, 0, 4, 3, 4, 7],
+      ].forEach((f) => f.forEach((i) => pos.push(P[i])));
+    };
+  (e.quads || []).forEach((q) => {
+    // Mittellinie der Attika aus den vier Ecken der Wand im Grundriss
+    const A = [(q[0][0] + q[3][0]) / 2, (q[0][1] + q[3][1]) / 2],
+      B = [(q[1][0] + q[2][0]) / 2, (q[1][1] + q[2][1]) / 2],
+      L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (L < 0.2 || y1 <= y0 + 0.1) return;
+    const ux = (B[0] - A[0]) / L,
+      uz = (B[1] - A[1]) / L,
+      n0 = pos.length,
+      k = Math.max(1, Math.round(L / 0.12));
+    for (let i = 0; i <= k; i++) {
+      const t = Math.min(L - 0.01, Math.max(0.01, (i / k) * L));
+      box(t - 0.01, t + 0.01, y0, y1 - 0.04, -0.015, 0.015);
+    }
+    box(0, L, y1 - 0.04, y1, -0.03, 0.03); // Handlauf
+    for (let i = n0; i < pos.length; i++) {
+      const [u, y, w] = pos[i];
+      pos[i] = [A[0] + ux * u - uz * w, y, A[1] + uz * u + ux * w];
+    }
+  });
+  const ge = new T.BufferGeometry();
+  ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos.flat()), 3));
+  ge.computeVertexNormals();
+  const m = new T.Mesh(ge, new T.MeshLambertMaterial({ color: 0xa9aeb3, side: T.DoubleSide }));
+  m.castShadow = m.receiveShadow = true;
+  m.raycast = () => {};
+  m.userData.gel = 1;
+  return m;
 }
 function l2Sync() {
   const bs = S.bld.filter((b) => !b.ex && b._y != null),
@@ -201,6 +261,7 @@ function l2Sync() {
             e.quads || e.faces.map((f) => f.o),
             e.quads2 || 0,
             e.hAt || 0,
+            e.gel || 0,
             e.y0,
             e.h,
             e.T.id,

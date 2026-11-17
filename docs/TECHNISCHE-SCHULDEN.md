@@ -214,3 +214,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Ausrundungen: Normalen werden an flachen Knicken (bis 25°) geglättet (`glattNormalen`), Kanten erst ab 20°.
   Weiße Haarlinien an den Segmenten bleiben in der Darstellung sichtbar (Ursache nicht gefunden, laut Nutzer in
   Ordnung).
+- Terrassen-Attika und Geländer nur je ganzer Außenwand. Eine Wand, die nur teilweise unter dem Geschoss darüber liegt,
+  bekommt sie, wenn mindestens 3 von 5 Prüfpunkten frei sind. Geländer nur in LOD 200, nicht in LOD 300.

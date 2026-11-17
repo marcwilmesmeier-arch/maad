@@ -30,7 +30,8 @@ function l2KonturPunkte(b) {
     },
     // Ring f auf Höhe y abgehen; Stücke, an denen die Wand gerade weiterläuft (Nachbargeschoss g), auslassen
     // oben: Kante oben am Geschoss (true) oder unten (false)
-    rand = (f, y, g, oben) => {
+    // att: Attika-Höhe an Terrassenrändern (Rand oben, kein Geschoss darüber)
+    rand = (f, y, g, oben, att) => {
       const n = f.length,
         sg = flaeche(f) > 0 ? 1 : -1;
       for (let i = 0; i < n; i++) {
@@ -61,7 +62,7 @@ function l2KonturPunkte(b) {
             // waagerechte Nachbarfläche: oben Dach (nach oben) bzw. Terrasse davor; unten Unterseite bzw. Sockel
             const w = [nx, 0, nz],
               h = art === 1 ? [0, oben ? 1 : -1, 0] : [0, oben ? -1 : 1, 0];
-            seg(start, P, y, w, h);
+            seg(start, P, y + (oben && art === 1 ? att || 0 : 0), w, h);
             start = null;
           }
           if (a2 && !start) {
@@ -90,12 +91,19 @@ function l2KonturPunkte(b) {
       };
     x.f.forEach((v, i) => {
       if (!skEckeEcht(x.f, i)) return;
-      const N = skEckeNachbarn(x.f, i);
-      out.push(v[0], x.z0, v[1], v[0], x.z1, v[1]);
+      const N = skEckeNachbarn(x.f, i),
+        // Terrassenecke (nicht unter dem Geschoss darüber): Kante bis Oberkante Attika
+        terr =
+          oben &&
+          !inP(
+            [v[0] + (N[0][0] + N[1][0] - 2 * v[0]) * 0.01, v[1] + (N[0][1] + N[1][1] - 2 * v[1]) * 0.01],
+            oben,
+          );
+      out.push(v[0], x.z0, v[1], v[0], x.z1 + (terr ? 0.3 : 0), v[1]);
       nor.push(...wn(N[0], v), ...wn(v, N[1]));
     });
     rand(x.f, x.z0, unten, false);
-    rand(x.f, x.z1, oben, true);
+    rand(x.f, x.z1, oben, true, oben ? 0.3 : 0);
   });
   // geneigte Dächer: Kanten zwischen Dachflächen über 15° Knick und Ränder (Nachbarfläche dort: Wand darunter)
   if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat')

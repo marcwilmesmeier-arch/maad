@@ -311,3 +311,11 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Verschiebung, positiv nach rechts.
 - Material je Geschoss ist die Voreinstellung für Ansichtsflächen ohne eigenen Fassadentyp. Es wird in der
   Fassadenansicht geschossweise gezeichnet und in `fdStats` anteilig gezählt (`fkMaterialAnteile`).
+- Außenwandstärke in der Karte „Fassade“ (`fkWandstaerke`): setzt `b.l2.c.AW` (Standardstärke LOD 200 wie im
+  Bauteilkonfigurator) und setzt Einzelwerte der Außenwände zurück.
+
+## LOD 200: Terrassen
+
+`l2Els` gibt Außenwänden ohne Geschoss darüber (mindestens 3 von 5 Prüfpunkten frei) eine Attika (`r.hAt = 0,30 m`)
+und `r.gel`. `l2Gelaender(e)` (030-aktionen) setzt darauf ein Stabgeländer (Stäbe alle 0,12 m, Handlauf, Oberkante
+1,00 m über der Geschossoberkante). Die LOD-200-Außenkontur hebt Terrassenränder und -ecken um die Attika an.

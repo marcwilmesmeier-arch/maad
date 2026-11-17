@@ -260,6 +260,24 @@ function fkMtLoeschen(i) {
   });
   FDS.dirty = 1;
 }
+/**
+ * Außenwandstärke des Gebäudes (cm) für LOD 200 – gleiche Daten wie die Standardstärke im Bauteilkonfigurator
+ * (b.l2.c.AW); Einzelwerte einzelner Außenwände werden dabei zurückgesetzt.
+ */
+function fkWandstaerke(v) {
+  const b = S.sel && !S.sel.ex ? S.sel : null,
+    cm = Math.round(parseFloat(String(v).replace(',', '.')) * 2) / 2;
+  if (!b || !(cm >= 5 && cm <= 80)) return;
+  hist();
+  b.l2 = b.l2 || {};
+  b.l2.c = Object.assign({}, b.l2.c || {}, { AW: cm });
+  b.l2.rwc = {};
+  (b.levels || []).forEach((l) => {
+    if (l.l2 && l.l2.tc) l.l2.tc = l.l2.tc.filter((q) => q.k !== 'AW');
+  });
+  b._l2 = null;
+  rr();
+}
 /** Abschnitt „Fassadenmaterial“ der Karte. */
 function fkMtHtml(fk, GS) {
   const mt = fk.mt || [],
@@ -436,7 +454,8 @@ function fkCard(b) {
         )}</span><input type="number" step="0.05" class="fkvs" value="${+(+((fk.vs || [])[i] || 0)).toFixed(3)}" title="Versatz in m zur Ausrichtung: links/rechts = Abstand vom Rand (positiv nach innen), mittig = positiv nach rechts" onchange="fkVersatzSetzen(${i},this.value)"><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
       return h;
     };
-  let h = `<h4>Fassade</h4><div class="card fk"><div class="mu" style="font-size:11px;margin-bottom:6px">Öffnungsgruppen je Geschoss, ab Erdgeschoss – die oberste Zeile gilt für alle Geschosse darüber. Wird in allen Ansichten platziert.</div>`;
+  const aw = (b.l2 && b.l2.c && b.l2.c.AW) || L2DC.AW;
+  let h = `<h4>Fassade</h4><div class="card fk"><div class="fkz"><span class="fkn" title="Stärke der Außenwände in LOD 200 (gleich der Standardstärke im Bauteilkonfigurator)">Außenwandstärke</span><input type="number" step="0.5" min="5" max="80" value="${aw}" style="width:64px" onchange="fkWandstaerke(this.value)"><span class="mu" style="font-size:11px">cm</span></div><div class="mu" style="font-size:11px;margin:8px 0 6px">Öffnungsgruppen je Geschoss, ab Erdgeschoss – die oberste Zeile gilt für alle Geschosse darüber. Wird in allen Ansichten platziert.</div>`;
   if (!st.length)
     h += `<button class="sm" style="width:100%" onclick="fkNeu(-1)">+ Gruppe für alle Geschosse</button>`;
   else {

@@ -406,6 +406,25 @@ function l2GeoStufe1(b) {
         }
       }
       if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
+      else if (li < L.length - 1) {
+        // Terrasse: über dieser Außenwand steht kein Geschoss mehr → Attika wie am Dach und Geländer (r.gel)
+        const up = L[li + 1] && L[li + 1].fp && L[li + 1].fp.length >= 3 ? L[li + 1].fp : null,
+          g0 = r.es[0];
+        if (up && g0 && g0.n) {
+          let frei = 0;
+          [0.1, 0.3, 0.5, 0.7, 0.9].forEach((t) => {
+            const pt = [
+              r.sa[0] + (r.sb[0] - r.sa[0]) * t - g0.n[0] * 0.3,
+              r.sa[1] + (r.sb[1] - r.sa[1]) * t - g0.n[1] * 0.3,
+            ];
+            if (!inP(pt, up)) frei++;
+          });
+          if (frei >= 3) {
+            r.hAt = 0.3;
+            r.gel = 1;
+          }
+        }
+      }
     });
     const extI = new Map();
     ext.forEach((r) =>
