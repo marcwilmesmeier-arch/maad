@@ -121,6 +121,7 @@ function l2MeshOrig(e) {
       const P = grPrism(f, 0, hh || e.h),
         m = new T.Mesh(P.g, mat);
       m.castShadow = m.receiveShadow = true;
+      m.userData.l2k = 1; // fette Kontur (16-darstellung-erweitert/010)
       m.raycast = () => {};
       g.add(m);
       const lg = new T.BufferGeometry();
@@ -143,6 +144,7 @@ function l2MeshOrig(e) {
     }
     const m = new T.Mesh(gg, mat);
     m.castShadow = m.receiveShadow = true;
+    m.userData.l2k = 1;
     m.raycast = () => {};
     g.add(m);
     const go = new T.BufferGeometry();
@@ -357,6 +359,12 @@ setInterval(() => {
     if (l2on()) l2Sync();
   } catch (e) {
     console.warn('LOD200', e);
+  }
+  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: Außenkontur der Gebäude
+  try {
+    l2Kontur();
+  } catch (e) {
+    logErr(e, 'l2Kontur');
   }
   // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js
   try {

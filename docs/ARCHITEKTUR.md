@@ -275,3 +275,8 @@ läuft wie bisher im Browser.
 - Nach jeder abgeschlossenen Aktion (Ziehen, Verschieben, Teilen, Schneiden, Ecke) ruft maad `skNachAktion(b)` auf:
   zurück ins Auswahl-Werkzeug, das Gebäude bleibt gewählt. Die alten weißen Kugelgriffe, die weiße Hover-Kontur und
   der Fang-Marker sind im Auswahl-Werkzeug ausgeblendet.
+- LOD-200-Außenkontur (`22-lod200-waende/110-aussenkontur.js`): `l2KonturPunkte(b)` berechnet aus den Grundrissen nur
+  die echten Außenkanten. Das sind Ecken über 20° Knick, Fuß, Dachrand, Auskragungen und Rücksprünge zwischen den
+  Geschossen sowie die Dachkanten geneigter Dächer. Unterteilungen von Wänden und Decken sind nicht dabei. Die Linien
+  sind `kont`-Linien (Schalter „Kontur“). Die fette Kontur erfasst LOD-200-Wände und -Decken über `userData.l2k`,
+  Fenster nicht.
