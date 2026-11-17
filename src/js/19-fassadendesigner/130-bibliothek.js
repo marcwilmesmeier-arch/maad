@@ -3,7 +3,7 @@
 // Browser gemerkt (localStorage 'maad.bib.v1' = { oet: [...], oeg: [...] }) und stehen in neuen Projekten zur
 // Verfügung. Vorgaben (OET0/OEG0) werden nur gemerkt, wenn sie geändert wurden.
 // Neues Projekt: Bibliothek ersetzt gleichnamige Vorgaben und ergänzt den Rest.
-// Projekt öffnen: das Projekt gewinnt, die Bibliothek ergänzt nur fehlende Schlüssel; eigene Einträge des Projekts
+// Projekt öffnen: das Projekt gewinnt, Bibliothek und Vorgaben ergänzen nur fehlende Schlüssel; eigene Einträge des Projekts
 // werden danach selbst in die Bibliothek übernommen.
 // Löschen im Konfigurator entfernt den Eintrag auch aus der Bibliothek.
 
@@ -75,4 +75,11 @@ function bibErgaenzen(neu) {
       });
   holen(S.oet, B.oet);
   holen(S.oeg, B.oeg);
+  // neue Vorgaben (z. B. Raster-Fassade) auch in bestehenden Projekten, sofern der Schlüssel dort fehlt
+  const fehlend = (L, V) =>
+    V.forEach((x) => {
+      if (!L.some((y) => y.k === x.k)) L.push(JSON.parse(JSON.stringify(x)));
+    });
+  fehlend(S.oet, OET0);
+  fehlend(S.oeg, OEG0);
 }
