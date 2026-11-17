@@ -67,4 +67,6 @@ Ohne installierten Browser: `npx playwright install chromium` oder `CHROMIUM_PAT
   Bedeutung), Maße mit Tabellenziffern, Struktur nur, wo sie etwas bedeutet.
 - Projekt-Skills dazu unter `.claude/skills`: `web-design-guidelines` (Prüfung der geänderten Oberfläche vor der
   Auslieferung: Bedienbarkeit, Fokus, Bewegung, Texte), `apple-design` (Bewegung, Ziehen, Glas, Tiefe, Schrift),
-  `learn-taste` (Gestaltungskorrekturen des Nutzers als Regeln festhalten, nur auf Zuruf).
+  `learn-taste` (Gestaltungskorrekturen des Nutzers als Regeln festhalten, nur auf Zuruf), `ui-ux-pro-max`
+  (Nachschlagen von UX-Regeln, Farben, Schriften: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<Frage>"
+  --domain ux`). Keine React-/Tailwind-Bibliotheken (z. B. Magic UI): maad ist reines JavaScript ohne Framework.
