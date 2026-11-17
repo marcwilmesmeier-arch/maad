@@ -249,8 +249,9 @@ läuft wie bisher im Browser.
 `26-modellier-modus/140-kontextleiste.js` legt fest, was ein Klick wählt und welche Aktionen dazu angeboten werden:
 
 - `SK.flt` ist der Auswahlfilter: `a` Auto, `g` Gebäude, `s` Geschoss, `f` Fläche, `r` Flucht. Die Chips stehen unten
-  in der 3D-Ansicht (`#skflt`). Bei Auto gilt: erster Klick wählt das Gebäude, ein weiterer Klick in dasselbe Gebäude
-  die Fläche; Doppel-, Dreifach- und Vierfachklick bleiben erhalten.
+  in der 3D-Ansicht (`#skflt`). Ist von einem Gebäude noch nichts gewählt, wählt der erste Klick immer das ganze
+  Gebäude. Erst weitere Klicks in dasselbe Gebäude folgen dem Filter. Bei Auto wählt ein weiterer Klick die Fläche;
+  Doppel-, Dreifach- und Vierfachklick bleiben erhalten.
 - `skKlickListe(en, n, m)` liefert die Auswahl für einen Klick und wird auch für die Hover-Vorschau genutzt
   (`skHoverListe`). So zeigt der Hover immer genau das, was der Klick oder das Werkzeug trifft.
 - `skAuswTyp()` ordnet die Auswahl einer Zeile der Matrix zu (`g`, `s`, `f`, `r`, `d`, `tf`, `hof`, `m`). `SKKL`

@@ -19,8 +19,9 @@ function skSelClick(e) {
   $('hud').textContent =
     '' +
     skInfo() +
-    (SK.flt === 'a' && m === 'rep' && list.length > 1 && skWhole(en.b)
-      ? ' · Klick auf eine Fläche wählt die Fläche'
+    (m === 'rep' && list.length > 1 && skWhole(en.b)
+      ? ' · weiterer Klick wählt ' +
+        { a: 'eine Fläche', g: 'das Gebäude', s: 'ein Geschoss', f: 'eine Fläche', r: 'eine Flucht' }[SK.flt]
       : list.length === 1 && !en.top
         ? ' · Fläche anfassen und ziehen = Ziehen & Schieben'
         : '');

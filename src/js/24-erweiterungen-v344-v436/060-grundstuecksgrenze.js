@@ -1,4 +1,5 @@
-/* v400 Grundstücksgrenze: rundum geschlossenes Band mit Gehrung an den Ecken, Breite bildschirmabhängig (aus der Ferne kräftig, nah nur etwas stärker als die 1-px-Flurstücksgrenzen). Neuaufbau bei Zoomänderung. */
+/* v400 Grundstücksgrenze: rundum geschlossenes Band mit Gehrung an den Ecken, feste Bildschirmbreite (2 px, etwas stärker
+   als die 1-px-Flurstücksgrenzen), knapp über den Flurstückslinien. Neuaufbau bei Zoomänderung. */
 const PBR = { polys: [], m: null, w: 0, px: 0 };
 function pbWpp() {
   const mid = document.getElementById('mid') || ren.domElement,
@@ -9,8 +10,9 @@ function pbWpp() {
   }
   return { wpp: (oc.top - oc.bottom) / H / Math.max(0.001, oc.zoom || 1), D: V.d || 100 };
 }
+// Bildschirmbreite der Grenze: etwas kräftiger als die 1-px-Flurstückslinien, aber kein dickes Band
 function pbPx(D) {
-  return 1.5;
+  return 2;
 }
 function pbBuild(force) {
   try {
@@ -24,7 +26,7 @@ function pbBuild(force) {
     const { wpp, D } = pbWpp(),
       px = pbPx(D);
     let w = px * wpp;
-    if (S.m3) w /= Math.max(0.45, Math.cos(Math.min(1.2, V.pol || 0)));
+    if (S.m3) w /= Math.max(0.75, Math.cos(Math.min(1.2, V.pol || 0)));
     PBR.w = w;
     const pos = [],
       idx = [];
@@ -67,7 +69,7 @@ function pbBuild(force) {
         mz /= ml;
         const cs = Math.max(0.4, mx * n1[0] + mz * n1[1]),
           k = w / 2 / cs,
-          y = gh(p[0], p[1]) + 0.8;
+          y = gh(p[0], p[1]) + 0.5; // knapp über den Flurstückslinien (0,45 m), überdeckt sie
         pos.push(p[0] + mx * k, y, p[1] + mz * k, p[0] - mx * k, y, p[1] - mz * k);
       }
       for (let i = 0; i < N; i++) {
@@ -107,7 +109,7 @@ setInterval(() => {
     if (!PBR.polys.length || !PBR.m) return;
     const { wpp, D } = pbWpp();
     let w = pbPx(D) * wpp;
-    if (S.m3) w /= Math.max(0.45, Math.cos(Math.min(1.2, V.pol || 0)));
+    if (S.m3) w /= Math.max(0.75, Math.cos(Math.min(1.2, V.pol || 0)));
     if (Math.abs(Math.log(w / PBR.w)) > 0.07) pbBuild();
   } catch (e) {
     logErr(e, 'init>anonym');

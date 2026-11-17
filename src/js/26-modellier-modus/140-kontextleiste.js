@@ -10,15 +10,21 @@ const SKF = [
     'Klick = Gebäude, weiterer Klick = Fläche · Doppelklick Fläche · Dreifach Geschoss · Vierfach Flucht',
   ],
   ['g', 'Gebäude', 'Klick wählt das ganze Gebäude'],
-  ['s', 'Geschoss', 'Klick wählt alle Wände und die Decke eines Geschosses'],
-  ['f', 'Fläche', 'Klick wählt genau eine Fläche (Wand eines Geschosses, Dach)'],
-  ['r', 'Flucht', 'Klick wählt die Wand in einer Flucht über alle Geschosse'],
+  ['s', 'Geschoss', 'Erster Klick wählt das Gebäude, weitere Klicks ein Geschoss'],
+  ['f', 'Fläche', 'Erster Klick wählt das Gebäude, weitere Klicks eine Fläche (Wand eines Geschosses, Dach)'],
+  [
+    'r',
+    'Flucht',
+    'Erster Klick wählt das Gebäude, weitere Klicks die Wand in einer Flucht über alle Geschosse',
+  ],
 ];
 SK.flt = 'a';
 // Was ein Klick (Anzahl n, Modus m) mit dem aktuellen Filter wählt – auch für die Hover-Vorschau
 function skKlickListe(en, n, m) {
   const lvl = () => skBld(en.b).filter((x) => x.j === en.j && !szSp(x)),
     f = SK.flt;
+  // noch nichts von diesem Gebäude gewählt: der erste Klick wählt immer das ganze Gebäude, erst danach greift der Filter
+  if (m === 'rep' && !(SK.sel.length && SK.sel.every((x) => x.b === en.b))) return skBld(en.b);
   if (szSp(en)) return f === 'g' ? skBld(en.b) : [en];
   // ── Erweiterung aus 150-ecken.js: Seitenecke als Konturflucht über alle Geschosse (Filter Fläche = nur dieses Geschoss)
   if (en.ek != null) {
