@@ -96,6 +96,15 @@ function fkGruppe(fk, vk, j) {
   return st.length ? st[Math.min(j, st.length - 1)] || null : null;
 }
 
+/**
+ * Abweichungen je Abschnitt einer Seite (Fläche oder Flucht, z. B. nach dem Schneiden): b.fk.abU['Seite|Geschoss'] =
+ * [{ u0, u1, R, au, vs }] mit u0–u1 entlang der Ansicht; Geschoss '*' = Flucht über alle Geschosse. Geschossbezogene
+ * Einträge gehen vor.
+ */
+function fkAbschnitte(fk, vk, j) {
+  const U = fk.abU || {};
+  return (U[vk + '|' + j] || []).concat(U[vk + '|*'] || []);
+}
 /** Automatisch platzierte Verweise neu aufbauen (nur geänderte Gebäude; Takt aus 030-aktionen). */
 function fkSync() {
   S.bld.forEach((b) => {
@@ -131,13 +140,35 @@ function fkAnwenden(b) {
       bleibt = L.filter((I) => !I.a || inFest(I));
     // übrige automatische Verweise entfernen (werden neu platziert)
     L.splice(0, L.length, ...bleibt);
+    // Rhythmus wiederholen, solange die nächste Gruppe noch passt; Rest gleichmäßig an beiden Enden
+    // Ausrichtung mit Versatz: links/rechts verkürzt ein positiver Versatz den verfügbaren Platz am Rand
+    const setze = (a, c, R, au, vs, v0) => {
+      const rand = au === 'm' ? 0 : Math.max(0, vs),
+        folge = [];
+      let lang = 0;
+      for (let i = 0; i < 500; i++) {
+        const G = R[i % R.length];
+        if (lang + G.l > c - a - rand + 1e-6) break;
+        folge.push(G);
+        lang += G.l;
+      }
+      const rest = c - a - lang;
+      let u = au === 'l' ? a + vs : au === 'r' ? a + rest - vs : a + rest / 2 + vs;
+      // im Feld halten
+      u = Math.max(a, Math.min(a + rest, u));
+      folge.forEach((G) => {
+        L.push({ id: oegNeuId(), g: G.k, u, v: v0, a: 1 });
+        u += G.l;
+      });
+    };
+    const reihe = (x) => fkReihe(x).map(oegG).filter(Boolean);
     fdFaces(b, V).forEach((f) =>
       GS.forEach((gs) => {
-        const R = fkReihe(fkGruppe(fk, V.key, gs.j))
-          .map(oegG)
-          .filter(Boolean);
-        if (!R.length) return;
-        const hMin = Math.min(...R.map((G) => G.h)),
+        const Rd = reihe(fkGruppe(fk, V.key, gs.j)),
+          Ov = fkAbschnitte(fk, V.key, gs.j),
+          alle = Rd.concat(...Ov.map((o) => reihe(o.R)));
+        if (!alle.length) return;
+        const hMin = Math.min(...alle.map((G) => G.h)),
           r = fdBandU(f, gs.v0 + 0.05, Math.min(gs.v1, gs.v0 + hMin) - 0.05);
         if (!r || !grInFace(f, (r[0] + r[1]) / 2, gs.v0 + 0.5)) return;
         const [a, c] = r;
@@ -150,27 +181,21 @@ function fkAnwenden(b) {
           })
         )
           return;
-        // Rhythmus wiederholen, solange die nächste Gruppe noch passt; Rest gleichmäßig an beiden Enden
-        // Ausrichtung mit Versatz: links/rechts verkürzt ein positiver Versatz den verfügbaren Platz am Rand
-        const au = fkAusr(fk, V.key, gs.j),
-          vs = fkVersatz(fk, V.key, gs.j),
-          rand = au === 'm' ? 0 : Math.max(0, vs),
-          folge = [];
-        let lang = 0;
-        for (let i = 0; i < 500; i++) {
-          const G = R[i % R.length];
-          if (lang + G.l > c - a - rand + 1e-6) break;
-          folge.push(G);
-          lang += G.l;
+        // an den Grenzen der Abschnitte teilen; jeder Teil mit eigener Anordnung (Abschnitt) oder der der Seite
+        const P = [a, c];
+        Ov.forEach((o) => [o.u0, o.u1].forEach((x) => x > a + 0.05 && x < c - 0.05 && P.push(x)));
+        P.sort((x, y) => x - y);
+        for (let k = 0; k + 1 < P.length; k++) {
+          const s0 = P[k],
+            s1 = P[k + 1];
+          if (s1 - s0 < 0.05) continue;
+          const m = (s0 + s1) / 2,
+            o = Ov.find((x) => m > x.u0 && m < x.u1);
+          if (o) {
+            const R = reihe(o.R);
+            if (R.length) setze(s0, s1, R, o.au || 'm', +o.vs || 0, gs.v0);
+          } else if (Rd.length) setze(s0, s1, Rd, fkAusr(fk, V.key, gs.j), fkVersatz(fk, V.key, gs.j), gs.v0);
         }
-        const rest = c - a - lang;
-        let u = au === 'l' ? a + vs : au === 'r' ? a + rest - vs : a + rest / 2 + vs;
-        // im Feld halten
-        u = Math.max(a, Math.min(a + rest, u));
-        folge.forEach((G) => {
-          L.push({ id: oegNeuId(), g: G.k, u, v: gs.v0, a: 1 });
-          u += G.l;
-        });
       }),
     );
     if (!L.length) {

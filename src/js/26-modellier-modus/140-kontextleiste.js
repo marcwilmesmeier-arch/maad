@@ -263,8 +263,48 @@ function skKlGruppenZiel() {
     if (t !== 's' && !V) return null;
     const vk = V ? V.key : '*',
       key = vk + '|' + j,
-      jj = j === '*' ? 0 : j,
-      eig = !!(fk.ab && key in fk.ab);
+      jj = j === '*' ? 0 : j;
+    // Fläche/Flucht: eigener Abschnitt entlang der Ansicht (b.fk.abU) – nach dem Schneiden können beide Teile
+    // unterschiedliche Gruppen tragen
+    if (t === 'f' || t === 'r') {
+      // Bereich über alle gewählten Stücke (Ausrundung = mehrere, Flucht = je Geschoss eines)
+      const uu = (P) => P[0] * V.n[1] - P[1] * V.n[0];
+      let u0 = Infinity,
+        u1 = -Infinity;
+      s.forEach((x) => {
+        if (x.i == null) return;
+        const ring = lf(b, b.levels[x.j]);
+        [ring[x.i], ring[(x.i + 1) % ring.length]].forEach((P) => {
+          u0 = Math.min(u0, uu(P));
+          u1 = Math.max(u1, uu(P));
+        });
+      });
+      const A = ((fk.abU || {})[key] || []).find(
+        (o) => Math.abs(o.u0 - u0) < 0.05 && Math.abs(o.u1 - u1) < 0.05,
+      );
+      return {
+        t,
+        b,
+        vk,
+        j,
+        key,
+        u0,
+        u1,
+        eig: !!A,
+        name:
+          'Seite ' +
+          V.name.replace('Ansicht ', '') +
+          ' · ' +
+          (j === '*' ? 'alle Geschosse' : lname(b, s[0].j)) +
+          ' · ' +
+          fdFmt(u1 - u0) +
+          ' m',
+        R: fkReihe(A ? A.R : fkGruppe(fk, vk, jj)),
+        au: A ? A.au || 'm' : fkAusr(fk, vk, jj),
+        vs: A ? +A.vs || 0 : fkVersatz(fk, vk, jj),
+      };
+    }
+    const eig = !!(fk.ab && key in fk.ab);
     return {
       t,
       b,
@@ -374,6 +414,17 @@ function skKlSchreiben(z, R, au, vs) {
       fk.st = R && R.length ? [wert] : [];
       fk.au = [au || 'm'];
       fk.vs = [vs];
+      return;
+    }
+    if (z.u0 != null) {
+      // Abschnitt (Fläche/Flucht): Eintrag mit gleichen Grenzen ersetzen bzw. entfernen
+      fk.abU = fk.abU || {};
+      const L = (fk.abU[z.key] || []).filter(
+        (o) => !(Math.abs(o.u0 - z.u0) < 0.05 && Math.abs(o.u1 - z.u1) < 0.05),
+      );
+      if (R !== null) L.push({ u0: z.u0, u1: z.u1, R: wert, au: au || 'm', vs });
+      if (L.length) fk.abU[z.key] = L;
+      else delete fk.abU[z.key];
       return;
     }
     fk.ab = fk.ab || {};

@@ -78,6 +78,9 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Umgebung und Gelände verdeckt wird. Aufruf in `mkRender` nach dem Hauptbild; nicht in Realistisch+.
 - Vorgaben Raster-Fassade: Typen `r3` (Rasterfenster 3-teilig), `sf` (Schaufenster EG), `gt` (Glastür mit Oberlicht),
   Gruppen `g5`–`g7` (1,80 m).
+- Fassadengruppen je Abschnitt: Fläche/Flucht in der Kontextleiste schreibt `b.fk.abU['Seite|Geschoss'] =
+  [{ u0, u1, R, au, vs }]` (Bereich entlang der Ansicht, Geschoss `*` = Flucht). `fkAnwenden` teilt jedes Band an
+  diesen Grenzen und füllt die Teile einzeln – so tragen die Hälften einer geschnittenen Flucht eigene Gruppen.
 - Bibliothek (`19-fassadendesigner/130-bibliothek.js`): eigene oder geänderte Öffnungstypen und Gruppen werden bei jeder
   Änderung (`oeAktualisieren`) in `localStorage` `maad.bib.v1` gemerkt. Neues Projekt: Bibliothek ersetzt gleiche
   Schlüssel. Projekt öffnen: Projekt gewinnt, Bibliothek ergänzt fehlende. Löschen im Konfigurator entfernt auch dort.
