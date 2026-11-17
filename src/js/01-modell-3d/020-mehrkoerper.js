@@ -95,7 +95,8 @@ function roofRects(fp, TT, SS, fest) {
     rects.push(best);
     mark(best);
   }
-  const R = rects.map((c, k) => {
+  const R = [];
+  rects.forEach((c, k) => {
     const t0 = Ts[c.i0],
       t1 = Ts[c.i1 + 1],
       s0 = Ss[c.j0],
@@ -103,9 +104,25 @@ function roofRects(fp, TT, SS, fest) {
       te = t1 - t0,
       se = s1 - s0;
     let ax = te >= se ? 't' : 's';
-    if (k === 0 && (fest || Math.abs(te - se) < 0.05)) ax = 't';
-    else if (k > 0 && Math.abs(te - se) < 0.05) ax = 's';
-    return { k, t0, t1, s0, s1, ax };
+    if (k === 0) {
+      if (fest || Math.abs(te - se) < 0.05) ax = 't';
+    } else {
+      // angeschlossener Flügel: First quer zum Körper, an dem er hängt (Zwerchgiebel läuft ins Hauptdach), auch wenn
+      // der Flügel breiter als lang ist; nur wenn er an keinem Körper hängt, zählt die längere Seite
+      for (const o of R) {
+        const tOv = Math.min(t1, o.t1) - Math.max(t0, o.t0),
+          sOv = Math.min(s1, o.s1) - Math.max(s0, o.s0);
+        if (sOv > 0.05 && tOv > -0.05 && tOv < te - 0.05) {
+          ax = 't';
+          break;
+        }
+        if (tOv > 0.05 && sOv > -0.05 && sOv < se - 0.05) {
+          ax = 's';
+          break;
+        }
+      }
+    }
+    R.push({ k, t0, t1, s0, s1, ax });
   });
   return R.length > 1 ? R : null;
 }
@@ -515,10 +532,14 @@ function mesh(b) {
     rm.userData.b = b;
     rm.userData.k = null;
     rm.userData.roof = true;
-    const re = new T.LineSegments(
-      new T.EdgesGeometry(rr0.geo, 15),
-      new T.LineBasicMaterial({ color: 0x4a4a4a }),
+    // Dachkanten aus der Dachform (First, Grat, Kehle, Traufe, Ortgang) statt aus den Dreiecken: die Zerlegung
+    // zusammengesetzter Dächer erzeugt Stoßstellen, die sonst als Linien quer über die Dachflächen erschienen
+    const rk = new T.BufferGeometry();
+    rk.setAttribute(
+      'position',
+      new T.BufferAttribute(new Float32Array(roofKanten(rr0, lf(b, b.levels[b.levels.length - 1])).p), 3),
     );
+    const re = new T.LineSegments(rk, new T.LineBasicMaterial({ color: 0x4a4a4a }));
     re.userData.kont = 1;
     re.visible = !S.noK;
     g.add(rm, re);
@@ -597,4 +618,80 @@ function glattNormalen(ge, maxDeg) {
   });
   ge.setAttribute('normal', new T.BufferAttribute(neu, 3));
   return ge;
+}
+
+/**
+ * Kanten eines geneigten Dachs aus der Dachform: eine Dreieckskante ist eine echte Kante, wenn die Dachneigung auf
+ * beiden Seiten verschieden ist (First, Grat, Kehle, über 15°) oder eine Seite außerhalb des Grundrisses liegt
+ * (Traufe/Ortgang). Dazu Giebelwände (Umriss der senkrechten Dreiecke). Rückgabe: p = Kantenpunkte, n = je Kante die
+ * Normalen der beiden angrenzenden Flächen (für die Silhouette in LOD 200).
+ */
+function roofKanten(rp, fp) {
+  const p = [],
+    n = [],
+    seen = new Set(),
+    hf = rp.hf,
+    k = (x, y, z) => Math.round(x * 100) + ',' + Math.round(y * 100) + ',' + Math.round(z * 100),
+    norm = (q) => {
+      const e = 0.02,
+        gx = (hf([q[0] + e, q[1]]) - hf([q[0] - e, q[1]])) / (2 * e),
+        gz = (hf([q[0], q[1] + e]) - hf([q[0], q[1] - e])) / (2 * e),
+        l = Math.hypot(gx, 1, gz);
+      return [-gx / l, 1 / l, -gz / l];
+    },
+    cos15 = Math.cos((15 * Math.PI) / 180),
+    pr = rp.pr || [];
+  if (hf)
+    for (let t = 0; t + 8 < pr.length; t += 9)
+      for (let e = 0; e < 3; e++) {
+        const i = t + e * 3,
+          j = t + ((e + 1) % 3) * 3,
+          A = [pr[i], pr[i + 1], pr[i + 2]],
+          B = [pr[j], pr[j + 1], pr[j + 2]],
+          L = Math.hypot(B[0] - A[0], B[2] - A[2]);
+        if (L < 0.02) continue;
+        const ka = k(...A),
+          kb = k(...B),
+          key = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const M = [(A[0] + B[0]) / 2, (A[2] + B[2]) / 2],
+          q = [-(B[2] - A[2]) / L, (B[0] - A[0]) / L],
+          P1 = [M[0] + q[0] * 0.06, M[1] + q[1] * 0.06],
+          P2 = [M[0] - q[0] * 0.06, M[1] - q[1] * 0.06],
+          in1 = inP(P1, fp),
+          in2 = inP(P2, fp);
+        if (!in1 && !in2) continue;
+        let n1, n2;
+        if (in1 && in2) {
+          n1 = norm(P1);
+          n2 = norm(P2);
+          if (n1[0] * n2[0] + n1[1] * n2[1] + n1[2] * n2[2] > cos15) continue;
+        } else {
+          // Rand: die andere Seite ist die Wand darunter (waagerechte Richtung nach außen)
+          n1 = norm(in1 ? P1 : P2);
+          const o = in1 ? [-q[0], -q[1]] : q;
+          n2 = [o[0], 0, o[1]];
+        }
+        p.push(...A, ...B);
+        n.push(...n1, ...n2);
+      }
+  // Giebel- und Drempelwände: Umriss der senkrechten Dreiecke (dort entstehen keine Stoßstellen quer über Flächen)
+  if (rp.pw && rp.pw.length) {
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(rp.pw), 3));
+    const eg = new T.EdgesGeometry(g, 15),
+      a = eg.attributes.position.array;
+    let fuss = Infinity;
+    for (let m = 1; m < rp.pw.length; m += 3) fuss = Math.min(fuss, rp.pw[m]);
+    for (let i = 0; i + 5 < a.length; i += 6) {
+      // waagerechte Kanten am Fuß der Giebelwand gehören zur Geschossdecke, nicht zum Dach
+      if (Math.abs(a[i + 1] - a[i + 4]) < 1e-3 && Math.min(a[i + 1], a[i + 4]) < fuss + 1e-3) continue;
+      p.push(a[i], a[i + 1], a[i + 2], a[i + 3], a[i + 4], a[i + 5]);
+      n.push(0, 0, 0, 0, 0, 0);
+    }
+    eg.dispose();
+    g.dispose();
+  }
+  return { p, n };
 }

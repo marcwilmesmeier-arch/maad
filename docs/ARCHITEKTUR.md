@@ -351,8 +351,13 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 ## Geneigte Dächer bei zusammengesetzten Grundrissen
 
 `roofRects` (01-modell-3d/020-mehrkoerper) zerlegt rechtwinklige Grundrisse in Rechtecke (Einzelkörper):
+
 - Hauptkörper ist der breiteste Körper (größte kürzere Seite), bei gleicher Breite der größte.
 - Jeder Körper bekommt einen eigenen First auf seiner Mittellinie, längs seiner längeren Seite. Ist die Firstrichtung
   von Hand gesetzt (`b.roof.dir`), behält der Hauptkörper diese.
+- Ein angeschlossener Flügel hat seinen First immer quer zu dem Körper, an dem er hängt (Zwerchgiebel), auch wenn er
+  breiter als lang ist. Nur frei stehende Körper richten sich nach ihrer längeren Seite.
 - Die Dachhöhe ist das Maximum der Einzeldächer. Schmalere Flügel haben bei gleicher Neigung einen niedrigeren First
   und laufen mit einer Kehle ins Hauptdach.
+- Dachkanten (`roofKanten`) werden aus der Dachform bestimmt, nicht aus den Dreiecken: Neigungswechsel über 15° oder
+  Rand des Grundrisses, dazu der Umriss der Giebelwände. Das gilt für LOD 100 und die LOD-200-Kontur.

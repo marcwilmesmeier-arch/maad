@@ -106,54 +106,13 @@ function l2KonturPunkte(b) {
     rand(x.f, x.z1, oben, true, oben ? 0.3 : 0);
   });
   // geneigte Dächer: Kanten zwischen Dachflächen über 15° Knick und Ränder (Nachbarfläche dort: Wand darunter)
-  if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat')
-    l2DachKanten(b._rp.geo, out, nor);
-  return { p: out, n: nor };
-}
-function l2DachKanten(geo, out, nor) {
-  const P = geo.attributes.position,
-    ix = geo.index,
-    N = ix ? ix.count : P.count,
-    k = (i) =>
-      Math.round(P.getX(i) * 50) + ',' + Math.round(P.getY(i) * 50) + ',' + Math.round(P.getZ(i) * 50),
-    E = new Map(),
-    A = new T.Vector3(),
-    B = new T.Vector3(),
-    C = new T.Vector3();
-  for (let t = 0; t + 2 < N; t += 3) {
-    const v = [0, 1, 2].map((q) => (ix ? ix.getX(t + q) : t + q));
-    A.fromBufferAttribute(P, v[0]);
-    B.fromBufferAttribute(P, v[1]);
-    C.fromBufferAttribute(P, v[2]);
-    const n = new T.Vector3().subVectors(B, A).cross(new T.Vector3().subVectors(C, A));
-    if (n.lengthSq() < 1e-10) continue;
-    n.normalize();
-    if (n.y < 0) n.negate();
-    [
-      [v[0], v[1]],
-      [v[1], v[2]],
-      [v[2], v[0]],
-    ].forEach(([i, j]) => {
-      const a = k(i),
-        c = k(j),
-        key = a < c ? a + '|' + c : c + '|' + a;
-      let e = E.get(key);
-      if (!e) E.set(key, (e = { i, j, n: [] }));
-      e.n.push(n.clone());
-    });
+  if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat') {
+    // Dachkanten aus der Dachform (01-modell-3d/020-mehrkoerper: roofKanten), keine Stoßstellen der Zerlegung
+    const K = roofKanten(b._rp, lf(b, b.levels[b.levels.length - 1]));
+    K.p.forEach((v) => out.push(v));
+    K.n.forEach((v) => nor.push(v));
   }
-  E.forEach((e) => {
-    let n1 = e.n[0],
-      n2 = e.n[1];
-    if (!n2) {
-      // Rand: Nachbarfläche ist die Wand darunter (waagerechter Anteil der Dachnormale)
-      n2 = new T.Vector3(n1.x, 0, n1.z);
-      if (n2.lengthSq() < 1e-6) n2.set(0, -1, 0);
-      else n2.normalize();
-    } else if (n1.dot(n2) > Math.cos((15 * Math.PI) / 180)) return;
-    out.push(P.getX(e.i), P.getY(e.i), P.getZ(e.i), P.getX(e.j), P.getY(e.j), P.getZ(e.j));
-    nor.push(n1.x, n1.y, n1.z, n2.x, n2.y, n2.z);
-  });
+  return { p: out, n: nor };
 }
 // Material der fetten Silhouette: wie die Fußlinie (KON.lm), aber doppelt breit und leicht nach hinten versetzt,
 // damit nur der äußere Teil am Gebäude vorbei sichtbar ist (wie die Hülle der Umgebungsgebäude)
