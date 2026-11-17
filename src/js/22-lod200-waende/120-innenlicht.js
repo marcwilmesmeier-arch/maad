@@ -1,87 +1,118 @@
 /* Innenlicht in LOD 200: Flächen, die ins Gebäudeinnere zeigen (Deckenunterseiten, Böden unter einem Geschoss,
    Innenseiten der Außenwände, Innenwände), bekommen nur einen Teil des Himmelslichts – innen fehlt der freie Himmel.
    Die direkte Sonne bleibt voll und verschattet; so zeichnet sich das Licht, das durch die Fenster fällt, im Raum ab.
-   Je Dreieck: einen Schritt entlang der Normalen gehen; liegt der Punkt im Gebäude (Geschoss-Grundriss, nicht im
-   Innenhof, mindestens L2IN.rand vom Rand entfernt), ist die Fläche innen. Attribut aInnen (0/1) je Eckpunkt. */
-const L2IN = { k: { value: 0.3 }, rand: 0.45, schritt: 0.6 };
-/** Liegt der Punkt (x, y, z) im Gebäude b? */
-function l2ImGebaeude(b, x, y, z) {
+   Die Prüfung läuft je Bildpunkt im Shader: Punkt 0,6 m entlang der Flächennormale versetzen, Geschoss nach der Höhe
+   bestimmen, liegt er im Geschossgrundriss (gerade/ungerade Kantenzählung, Innenhöfe als Löcher) und mindestens
+   0,45 m vom Rand entfernt, ist die Fläche innen. Grundrisskanten je Gebäude in einer Datentextur. Beim Aufklappen
+   (Explosionsansicht) aus, weil die Geschosse dann verschoben sind. */
+const L2IN = { k: { value: 0.3 }, rand: 0.45, schritt: 0.6, geb: new Map() };
+/** Uniforms eines Gebäudes (Kanten, Geschosshöhen), bei Formänderung neu aufgebaut. */
+function l2InnenDaten(b) {
+  const sig = skSig(b) + JSON.stringify(b.voids || []);
+  let d = L2IN.geb.get(b.id);
+  if (d && d.sig === sig) return d.u;
+  const kan = [],
+    lz = [];
   let z0 = b._y;
-  for (let j = 0; j < b.levels.length; j++) {
-    const l = b.levels[j],
-      z1 = z0 + l.h;
-    if (y >= z0 && y < z1) {
-      if (l.ug) return true;
-      const f = lf(b, l);
-      if (!inP([x, z], f)) return false;
-      if (znVoidsAt(b, j).some((v) => inP([x, z], v.poly))) return false;
-      // Abstand zum Rand (Wandbereich und Laibungen zählen nicht als innen)
-      for (let i = 0; i < f.length; i++) {
-        const a = f[i],
-          c = f[(i + 1) % f.length];
-        if (proj([x, z], a, c).d < L2IN.rand) return false;
-      }
-      return true;
-    }
-    z0 = z1;
+  b.levels.slice(0, 48).forEach((l, j) => {
+    lz.push(new T.Vector2(z0, z0 + l.h));
+    z0 += l.h;
+    const ringe = [lf(b, l)].concat(znVoidsAt(b, j).map((v) => v.poly));
+    ringe.forEach((f) =>
+      f.forEach((a, i) => {
+        const c = f[(i + 1) % f.length];
+        if (Math.hypot(c[0] - a[0], c[1] - a[1]) > 1e-3) kan.push([a[0], a[1], c[0], c[1], j]);
+      }),
+    );
+  });
+  while (lz.length < 48) lz.push(new T.Vector2(1e9, -1e9));
+  const n = Math.min(kan.length, 1024),
+    arr = new Float32Array(Math.max(1, n) * 2 * 4);
+  for (let i = 0; i < n; i++) {
+    arr.set(kan[i].slice(0, 4), i * 4);
+    arr[(Math.max(1, n) + i) * 4] = kan[i][4];
   }
-  return false;
+  const tex = new T.DataTexture(arr, Math.max(1, n), 2, T.RGBAFormat, T.FloatType);
+  tex.needsUpdate = true;
+  if (d) {
+    d.u.uInT.value.dispose();
+    d.u.uInT.value = tex;
+    d.u.uInN.value = n;
+    d.u.uInZ.value = lz;
+    d.sig = sig;
+    return d.u;
+  }
+  const u = {
+    uInT: { value: tex },
+    uInN: { value: n },
+    uInZ: { value: lz },
+    uInK: L2IN.k,
+    uInAn: { value: 1 },
+  };
+  L2IN.geb.set(b.id, { sig, u });
+  return u;
 }
-/** Meshes eines LOD-200-Bauteils markieren und das Material um die Innenabdunklung ergänzen. */
+/** Material eines LOD-200-Bauteils um die Innenabdunklung ergänzen (aus l2MeshOrig). */
 function l2InnenMarkieren(e, g, mat) {
   const b = S.bld.find((x) => x.id === e.bid);
   if (!b || l23()) return;
-  const A = new T.Vector3(),
-    B = new T.Vector3(),
-    C = new T.Vector3(),
-    N = new T.Vector3(),
-    E = new T.Vector3();
-  let innen = 0;
-  g.children.forEach((m) => {
-    if (!m.isMesh || m.material !== mat || !m.geometry.attributes.position) return;
-    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
-    if (geo !== m.geometry) m.geometry = geo;
-    const P = geo.attributes.position,
-      a = new Float32Array(P.count),
-      dy = g.position.y + m.position.y;
-    for (let t = 0; t + 2 < P.count; t += 3) {
-      A.fromBufferAttribute(P, t);
-      B.fromBufferAttribute(P, t + 1);
-      C.fromBufferAttribute(P, t + 2);
-      N.subVectors(B, A).cross(E.subVectors(C, A));
-      if (N.lengthSq() < 1e-12) continue;
-      N.normalize();
-      const mx = (A.x + B.x + C.x) / 3 + N.x * L2IN.schritt,
-        my = (A.y + B.y + C.y) / 3 + dy + N.y * L2IN.schritt,
-        mz = (A.z + B.z + C.z) / 3 + N.z * L2IN.schritt;
-      if (l2ImGebaeude(b, mx, my, mz)) {
-        a[t] = a[t + 1] = a[t + 2] = 1;
-        innen++;
-      }
-    }
-    geo.setAttribute('aInnen', new T.BufferAttribute(a, 1));
-  });
-  if (!innen) return;
-  // alle Meshes mit diesem Material brauchen das Attribut
-  g.children.forEach((m) => {
-    if (m.isMesh && m.material === mat && !m.geometry.attributes.aInnen)
-      m.geometry.setAttribute(
-        'aInnen',
-        new T.BufferAttribute(new Float32Array(m.geometry.attributes.position.count), 1),
-      );
-  });
+  const u = l2InnenDaten(b);
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uInnenK = L2IN.k;
+    Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aInnen;\nvarying float vInnen;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvInnen = aInnen;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vInP;\nvarying vec3 vInN;')
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvInP = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvInN = normalize(mat3(modelMatrix) * objectNormal);',
+      );
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vInnen;\nuniform float uInnenK;')
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vInP;
+varying vec3 vInN;
+uniform sampler2D uInT;
+uniform int uInN;
+uniform vec2 uInZ[48];
+uniform float uInK;
+uniform float uInAn;
+float l2Innen() {
+  if (uInAn < 0.5 || uInN == 0) return 0.0;
+  vec3 n = normalize(vInN) * (gl_FrontFacing ? 1.0 : -1.0);
+  vec3 q = vInP + n * ${L2IN.schritt.toFixed(2)};
+  int lv = -1;
+  for (int j = 0; j < 48; j++) { if (q.y >= uInZ[j].x && q.y < uInZ[j].y) { lv = j; break; } }
+  if (lv < 0) return 0.0;
+  bool drin = false;
+  float dmin = 1e9;
+  for (int i = 0; i < 1024; i++) {
+    if (i >= uInN) break;
+    if (int(texelFetch(uInT, ivec2(i, 1), 0).r + 0.5) != lv) continue;
+    vec4 e = texelFetch(uInT, ivec2(i, 0), 0);
+    if ((e.y > q.z) != (e.w > q.z) && q.x < (e.z - e.x) * (q.z - e.y) / (e.w - e.y) + e.x) drin = !drin;
+    vec2 a = e.xy, ab = e.zw - e.xy, p = q.xz - a;
+    float t = clamp(dot(p, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+    dmin = min(dmin, length(p - ab * t));
+  }
+  return drin && dmin > ${L2IN.rand.toFixed(2)} ? 1.0 : 0.0;
+}`,
+      )
       .replace(
         '#include <lights_fragment_end>',
-        'irradiance *= mix( 1.0, uInnenK, vInnen );\n#include <lights_fragment_end>',
+        'irradiance *= mix( 1.0, uInK, l2Innen() );\n#include <lights_fragment_end>',
       );
   };
-  mat.customProgramCacheKey = () => 'l2innen';
+  mat.customProgramCacheKey = () => 'l2innen2';
   mat.needsUpdate = true;
+}
+/** Takt (aus 030-aktionen): beim Aufklappen aus, Daten verschwundener Gebäude freigeben. */
+function l2InnenTakt() {
+  const an = !(S.expl && S.expl.cur > 0.05) ? 1 : 0;
+  L2IN.geb.forEach((d, id) => {
+    d.u.uInAn.value = an;
+    if (!S.bld.some((b) => b.id === id)) {
+      d.u.uInT.value.dispose();
+      L2IN.geb.delete(id);
+    }
+  });
 }

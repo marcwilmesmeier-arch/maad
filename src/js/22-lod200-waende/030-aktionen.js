@@ -446,6 +446,12 @@ setInterval(() => {
   } catch (e) {
     logErr(e, 'l2Kontur');
   }
+  // ── Erweiterung aus 22-lod200-waende/120-innenlicht.js: beim Aufklappen aus
+  try {
+    l2InnenTakt();
+  } catch (e) {
+    logErr(e, 'l2InnenTakt');
+  }
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone und Loggien
   try {
     l2Balkone();

@@ -323,11 +323,11 @@ und `r.gel`. `l2Gelaender(e)` (030-aktionen) setzt darauf ein Stabgeländer (inn
 
 ## LOD 200: Innenlicht
 
-`22-lod200-waende/120-innenlicht.js`: `l2InnenMarkieren` (aus `l2MeshOrig`) markiert je Dreieck Flächen, die ins
-Gebäudeinnere zeigen. Dazu geht es einen Schritt (0,60 m) entlang der Normalen und prüft mit `l2ImGebaeude`, ob der
-Punkt im Geschoss liegt (nicht im Innenhof, mindestens 0,45 m vom Rand). Das Ergebnis steht im Attribut `aInnen`. Im
-Material wird dort das Himmels- und Umgebungslicht (`irradiance`) auf `L2IN.k` (30 %) reduziert. Die Sonne bleibt
-voll, so wird das Licht sichtbar, das durch die Fenster fällt.
+`22-lod200-waende/120-innenlicht.js`: `l2InnenMarkieren` (aus `l2MeshOrig`) ergänzt das Material der LOD-200-Bauteile.
+Die Prüfung läuft je Bildpunkt im Shader: Der Punkt wird 0,60 m entlang der Normalen versetzt, das Geschoss nach der
+Höhe bestimmt, dann wird gegen die Grundrisskanten geprüft (Datentextur je Gebäude, `l2InnenDaten`, Innenhöfe als
+Löcher, mindestens 0,45 m vom Rand). Innen wird das Himmelslicht (`irradiance`) auf 30 % reduziert, die Sonne bleibt
+voll. Beim Aufklappen ist die Abdunklung aus (`l2InnenTakt`).
 
 ## Balkone und Loggien
 
