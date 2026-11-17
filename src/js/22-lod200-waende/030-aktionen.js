@@ -185,6 +185,12 @@ function l2MeshOrig(e) {
     // Terrasse: Stabgeländer auf der Attika, Oberkante 1,00 m über der Geschossoberkante
     if (e.gel && !l23()) g.add(l2Gelaender(e));
   }
+  // ── Erweiterung aus 22-lod200-waende/120-innenlicht.js: Innenflächen bekommen weniger Himmelslicht
+  try {
+    l2InnenMarkieren(e, g, mat);
+  } catch (er) {
+    logErr(er, 'l2MeshOrig');
+  }
   return { g, mat };
 }
 /**

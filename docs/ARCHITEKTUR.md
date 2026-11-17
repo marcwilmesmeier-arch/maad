@@ -320,3 +320,11 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 `l2Els` gibt Außenwänden ohne Geschoss darüber (mindestens 3 von 5 Prüfpunkten frei) eine Attika (`r.hAt = 0,30 m`)
 und `r.gel`. `l2Gelaender(e)` (030-aktionen) setzt darauf ein Stabgeländer (innen vor der Attika, Stäbe alle 0,24 m, Fußleiste, Handlauf, Oberkante
 1,00 m über der Geschossoberkante). Die LOD-200-Außenkontur hebt Terrassenränder und -ecken um die Attika an.
+
+## LOD 200: Innenlicht
+
+`22-lod200-waende/120-innenlicht.js`: `l2InnenMarkieren` (aus `l2MeshOrig`) markiert je Dreieck Flächen, die ins
+Gebäudeinnere zeigen. Dazu geht es einen Schritt (0,60 m) entlang der Normalen und prüft mit `l2ImGebaeude`, ob der
+Punkt im Geschoss liegt (nicht im Innenhof, mindestens 0,45 m vom Rand). Das Ergebnis steht im Attribut `aInnen`. Im
+Material wird dort das Himmels- und Umgebungslicht (`irradiance`) auf `L2IN.k` (30 %) reduziert. Die Sonne bleibt
+voll, so wird das Licht sichtbar, das durch die Fenster fällt.
