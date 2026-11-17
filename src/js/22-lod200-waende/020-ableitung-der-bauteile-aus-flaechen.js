@@ -709,7 +709,7 @@ function l2GeoStufe1(b) {
         });
         return c % 2 === 1;
       };
-      const solid = (tris, off) => {
+      const solid = (tris, off, seiten = true) => {
         const all = [],
           out = [],
           cnt = new Map(),
@@ -734,20 +734,21 @@ function l2GeoStufe1(b) {
             cnt.set(k, (cnt.get(k) || 0) + 1);
           });
         });
-        tris.forEach((t) => {
-          [
-            [0, 1],
-            [1, 2],
-            [2, 0],
-          ].forEach(([i, j]) => {
-            if (cnt.get(ek(t[i], t[j])) !== 1) return;
-            const P = R_(t[i]),
-              Q = R_(t[j]),
-              P2 = off(P),
-              Q2 = off(Q);
-            all.push(...P, ...Q, ...Q2, ...P, ...Q2, ...P2);
+        if (seiten)
+          tris.forEach((t) => {
+            [
+              [0, 1],
+              [1, 2],
+              [2, 0],
+            ].forEach(([i, j]) => {
+              if (cnt.get(ek(t[i], t[j])) !== 1) return;
+              const P = R_(t[i]),
+                Q = R_(t[j]),
+                P2 = off(P),
+                Q2 = off(Q);
+              all.push(...P, ...Q, ...Q2, ...P, ...Q2, ...P2);
+            });
           });
-        });
         return { all, out };
       };
       const tw = new Map();
@@ -843,7 +844,11 @@ function l2GeoStufe1(b) {
           [pr[i + 3], pr[i + 4], pr[i + 5]],
           [pr[i + 6], pr[i + 7], pr[i + 8]],
         ]);
-      const S2 = solid(trs, (P) => [P[0], Math.max(P[1] - tv, 0), P[2]]);
+      // Unterseite waagerecht auf Traufhöhe abschneiden: mit Drempel liegt die Traufe über der Geschossoberkante, sonst ragt die
+      // Dachplatte in den Drempel hinein und überlagert ihn. Ohne Stirnseiten: an Ortgang und Pultfirst liegen sie in der Ebene der
+      // Giebelwand (Flimmern), den Rand schließen dort Giebel- und Drempelwände bis zur Dachfläche; an der Traufe ist die Platte 0 dick.
+      const yTr = Math.max(0, Math.min(...trs.flat().map((P) => P[1] - yr))),
+        S2 = solid(trs, (P) => [P[0], Math.max(P[1] - tv, yTr), P[2]], false);
       R.els.push({
         bid: b.id,
         kind: 'RD',
