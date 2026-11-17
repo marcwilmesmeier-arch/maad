@@ -338,3 +338,12 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 `title` als `aria-label`. Anklickbare `div`/`span` macht es per Tastatur bedienbar (`role="button"`, `tabindex`,
 Enter/Leertaste). Ein MutationObserver erfasst auch alles, was die Panels später neu zeichnen. Die CSS liefert einen
 sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
+
+## Schatten und Fassadengruppen (Ergänzungen)
+
+- `shFit` (24-…/020-kamera) führt die Schattenkarte auch in der normalen 3D-Ansicht dem Blickpunkt nach, nicht nur im
+  Kamera-Modus. Außerhalb davon rasten Ausschnittgröße (Stufen ×1,25) und Mittelpunkt (Raster R/6) ein; die
+  Schattenkarte wird nur bei deutlicher Bewegung neu gerechnet (`SHC`).
+- `fkAnwenden`: Reihen (Ansichtsfläche + Höhe), in denen eine Gruppe von Hand getauscht oder verschoben wurde, bleiben
+  komplett erhalten, auch mit den automatisch gesetzten Nachbarn. Eigene Anordnungen (`b.fk.ab`) haben Vorrang vor
+  der Gebäudeeinstellung.

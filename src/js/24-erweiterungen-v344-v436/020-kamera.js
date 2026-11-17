@@ -219,9 +219,11 @@ function camxPhoto() {
     console.warn(e);
   }
 }
-// Schattenkarte folgt dem Blickpunkt (nur Kamera-Modus): ~10× feinere Schatten bei Nahaufnahmen
+// Schattenkarte folgt dem Blickpunkt (Kamera-Modus und normale 3D-Ansicht): ~10× feinere Schatten bei Nahaufnahmen.
+// Außerhalb des Kamera-Modus rasten Ausschnittgröße (Stufen ×1,25) und Mittelpunkt (Raster R/6) ein – die Schattenkarte
+// wird dann nur neu gerechnet, wenn man sich deutlich bewegt oder zoomt (SHC), nicht in jedem Bild.
 function shFit(cm, sh) {
-  if (!(CAMX.on && S.m3 && cm === pc) || CAMX.sh === false) return null;
+  if (!(S.m3 && cm === pc) || CAMX.sh === false) return null;
   const c = sh.camera,
     tp = sunL.target.position,
     dir = sunL.position.clone().sub(tp),
@@ -231,8 +233,22 @@ function shFit(cm, sh) {
   const up = Math.abs(dir.y) > 0.99 ? new T.Vector3(1, 0, 0) : new T.Vector3(0, 1, 0),
     ax = new T.Vector3().crossVectors(up, dir).normalize(),
     ay = new T.Vector3().crossVectors(dir, ax).normalize();
-  const F0 = new T.Vector3(V.tx, CAMX.ty, V.tz),
-    R = Math.max(35, Math.min(160, V.d * 1.5)),
+  let R = Math.max(35, Math.min(160, V.d * 1.5)),
+    fx = V.tx,
+    fz = V.tz,
+    fy = CAMX.on ? CAMX.ty : 0;
+  if (!CAMX.on) {
+    R = Math.min(200, 35 * Math.pow(1.25, Math.ceil(Math.log(R / 35) / Math.log(1.25))));
+    const gr = R / 6;
+    fx = Math.round(fx / gr) * gr;
+    fz = Math.round(fz / gr) * gr;
+    try {
+      fy = Math.round(gh(fx, fz));
+    } catch (e) {
+      logErr(e, 'shFit');
+    }
+  }
+  const F0 = new T.Vector3(fx, fy, fz),
     u = F0.dot(ax),
     v = F0.dot(ay),
     s = F0.dot(dir),

@@ -118,9 +118,19 @@ function fkAnwenden(b) {
   const GS = fkGeschosse(b);
   fdViews(b).forEach((V) => {
     const L = oegDaten(b, V.key, true),
-      hand = L.filter((I) => !I.a);
-    // bisherige automatische Verweise entfernen
-    L.splice(0, L.length, ...hand);
+      hand = L.filter((I) => !I.a),
+      F0 = fdFaces(b, V),
+      feld = (I) => {
+        const H = oegG(I.g);
+        return F0.findIndex((f) => grInFace(f, I.u + (H ? H.l : 0) / 2, I.v + 0.5));
+      },
+      // Reihen (Ansichtsfläche + Höhe), in denen von Hand getauscht/verschoben wurde, bleiben komplett so wie sie
+      // sind – auch die automatisch gesetzten Gruppen daneben (sonst verschwänden sie beim nächsten Platzieren)
+      fest = hand.map((I) => [feld(I), I.v]),
+      inFest = (I) => fest.some(([fi, v]) => Math.abs(v - I.v) < 0.01 && fi === feld(I)),
+      bleibt = L.filter((I) => !I.a || inFest(I));
+    // übrige automatische Verweise entfernen (werden neu platziert)
+    L.splice(0, L.length, ...bleibt);
     fdFaces(b, V).forEach((f) =>
       GS.forEach((gs) => {
         const R = fkReihe(fkGruppe(fk, V.key, gs.j))
