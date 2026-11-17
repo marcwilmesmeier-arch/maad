@@ -59,6 +59,30 @@ const OEG0 = [
       { p: [5.21, 1.59], d: 0.05, t: '' },
     ],
   },
+  // Raster-Fassade 1,80 m: Fenster wachsen mit dem Geschoss, der Sturz bleibt (sz)
+  {
+    k: 'g5',
+    n: 'Raster 1,8 m · Fenster',
+    l: 1.8,
+    h: 3.1,
+    oe: [{ id: 'a', t: 'r3', x: 0.2, v: 0.2 }],
+    sz: { an: true },
+  },
+  {
+    k: 'g6',
+    n: 'Raster 1,8 m · Schaufenster EG',
+    l: 1.8,
+    h: 4,
+    oe: [{ id: 'a', t: 'sf', x: 0.15, v: 0 }],
+    sz: { an: true },
+  },
+  {
+    k: 'g7',
+    n: 'Raster 1,8 m · Eingang EG',
+    l: 1.8,
+    h: 4,
+    oe: [{ id: 'a', t: 'gt', x: 0.35, v: 0 }],
+  },
 ];
 S.oeg = JSON.parse(JSON.stringify(OEG0));
 const oegG = (k) => S.oeg.find((g) => g.k === k) || null;

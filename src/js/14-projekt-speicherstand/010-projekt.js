@@ -51,6 +51,7 @@ function projExtra(cam) {
     x.sd = S.sd;
     x.sa = S.sa;
     x.lod2On = S.lod2On;
+    x.l2zs = S.l2zs;
     x.lod3On = S.lod3On;
     x.views = S.views;
     x.variants = S.variants;
@@ -319,9 +320,11 @@ function projApplySet(x) {
   S.wmx = x.wmx ? wmxNorm(x.wmx) : wmxAusGenerator(x.gen) || wmxNorm(null);
   if (x.uses) Object.assign(S.uses, cp(x.uses));
   if (x.abst) S.abst = cp(x.abst);
-  ['showSN', 'showFN', 'plOpen', 'ortho', 'sd', 'sa', 'lod2On', 'gbMode', 'mkOn', 'mkA'].forEach((k) => {
-    if (x[k] != null) S[k] = x[k];
-  });
+  ['showSN', 'showFN', 'plOpen', 'ortho', 'sd', 'sa', 'lod2On', 'gbMode', 'mkOn', 'mkA', 'l2zs'].forEach(
+    (k) => {
+      if (x[k] != null) S[k] = x[k];
+    },
+  );
   if (x.ly) {
     // Umwelt-Overlays (CORINE, Schutzgebiete, Hochwasser): Zustand bleibt erhalten; eingeschaltete werden nach dem
     // Laden nachgeladen (gespeicherte Daten ohne Abruf, ovLoad), ohne geladenes Gelände bleiben sie aus

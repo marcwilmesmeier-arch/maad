@@ -26,6 +26,8 @@ S.lod = S.lod || 100;
 #lodbar button:disabled{opacity:.38;cursor:not-allowed}
 #lodbar button:not(:disabled):not(.on):hover{background:color-mix(in srgb,var(--tx,#1d1d1b) 8%,transparent)}
 #lodbar button:focus-visible{outline:2px solid var(--pa4,#888);outline-offset:1px}
+#lodbar button.lodz{flex:none;width:26px;padding:0;display:grid;place-items:center;color:var(--mu)}
+#lodbar button.lodz.an{background:var(--pn,#fff);color:var(--tx,#1d1d1b);box-shadow:0 1px 6px #1d1d1b1f}
 #hud{top:122px!important}
 `;
   document.head.appendChild(c);
@@ -64,7 +66,15 @@ function lodRender() {
           '</button>'
         );
       })
-      .join('');
+      .join('') +
+    // ── Erweiterung aus 22-lod200-waende/140-zeichnung.js: Zeichenstil (Kantenlinien) ab LOD 200
+    (S.lod >= 200
+      ? '<button type="button" class="lodz' +
+        (S.l2zs ? ' an' : '') +
+        '" aria-pressed="' +
+        !!S.l2zs +
+        '" onclick="l2ZSet(!S.l2zs)" title="Geplantes Gebäude als Zeichnung: feine Linien an allen Kanten" aria-label="Zeichnung"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 9l8-5 8 5v10l-8 2-8-2z"/><path d="M12 4v17M4 9l8 3 8-3"/></svg></button>'
+      : '');
 }
 function lodSet(k) {
   const L = LODS.find((x) => x.k === +k);

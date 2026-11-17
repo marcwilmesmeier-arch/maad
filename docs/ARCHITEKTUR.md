@@ -72,6 +72,12 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
 - Fassadentypen in 3D (`110-fassadentypen-3d.js`, derzeit abgeschaltet: `FT3.aktiv = false`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
   (`G.fdt`), farbige Flächen 4 cm vor der Außenwand mit ausgesparten Öffnungen, Laibungen in derselben Farbe
   (senkrecht zur tatsächlichen Wand); `ftSync` im Takt von `l2Vis`, je Gebäude nur bei Änderung neu.
+- LOD-200-Zeichnung (`22-lod200-waende/140-zeichnung.js`, Schalter `S.l2zs` in der LOD-Leiste, mit dem Projekt
+  gespeichert): Kantenlinien des geplanten Gebäudes im Bild – G.l2 allein als Normalen- und Tiefenbild, danach ein
+  bildschirmfüllendes Rechteck mit Kantenerkennung (Knick > ~25°, Tiefensprung), das seine Tiefe schreibt und so von
+  Umgebung und Gelände verdeckt wird. Aufruf in `mkRender` nach dem Hauptbild; nicht in Realistisch+.
+- Vorgaben Raster-Fassade: Typen `r3` (Rasterfenster 3-teilig), `sf` (Schaufenster EG), `gt` (Glastür mit Oberlicht),
+  Gruppen `g5`–`g7` (1,80 m).
 - Bibliothek (`19-fassadendesigner/130-bibliothek.js`): eigene oder geänderte Öffnungstypen und Gruppen werden bei jeder
   Änderung (`oeAktualisieren`) in `localStorage` `maad.bib.v1` gemerkt. Neues Projekt: Bibliothek ersetzt gleiche
   Schlüssel. Projekt öffnen: Projekt gewinnt, Bibliothek ergänzt fehlende. Löschen im Konfigurator entfernt auch dort.
