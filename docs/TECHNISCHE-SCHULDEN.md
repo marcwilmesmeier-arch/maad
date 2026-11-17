@@ -240,5 +240,6 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Bibliothek für Öffnungstypen und Gruppen liegt nur im `localStorage` des Browsers (nicht auf dem Server, nicht
   zwischen Rechnern geteilt). Bei Server-Betrieb wäre eine Bibliothek je Mandant sinnvoll.
 - Gruppen: früherer fester Sturzwert `G.sz.s` entfällt; der Sturz kommt jetzt aus der Zeichnung der Gruppe.
-- Schatten in der normalen Ansicht decken das ganze geladene Gelände ab (`shFit`/`shGelaende`, Schattenkarte 4096²):
-  bei 600 m Gelände ca. 0,2 m je Texel, bei größeren Geländen gröber. Feiner ginge nur mit Kaskaden (mehrere Karten).
+- Schatten in der normalen Ansicht decken den sichtbaren Teil des Geländes ab (`shFit`/`shSichtbar`, Schattenkarte
+  4096², Rand zur Sonne für Schattenwerfer): flacher Blick bis zum Horizont = ganzes Gelände, dann grob (2 km ≈ 0,7 m
+  je Texel, Licht kann an Wänden durchsickern). Feiner ginge nur mit Kaskaden (mehrere Karten).

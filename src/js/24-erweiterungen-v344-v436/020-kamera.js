@@ -244,9 +244,10 @@ function shFit(cm, sh) {
         v1 = -Infinity,
         s0 = Infinity,
         s1 = -Infinity;
-      const P = new T.Vector3();
-      for (const x of [-gb.h, gb.h])
-        for (const z of [-gb.h, gb.h])
+      const P = new T.Vector3(),
+        B = shSichtbar(cm, gb, dir);
+      for (const x of [B[0], B[1]])
+        for (const z of [B[2], B[3]])
           for (const y of [gb.y0, gb.y1]) {
             P.set(x, y, z);
             const u = P.dot(ax),
@@ -299,6 +300,49 @@ function shFit(cm, sh) {
     F = new T.Vector3().addScaledVector(ax, cu).addScaledVector(ay, cv).addScaledVector(dir, sm),
     Dd = s1 - sm + 10;
   return { F, dir, R, near: 10, far: Dd + (sm - s0) + 10, Dd, q };
+}
+/**
+ * Sichtbarer Teil des Geländes für den Schattenausschnitt: Bodenpunkte der Bildränder (Strahlen über dem Horizont
+ * bis zum Geländerand), dazu ein Rand in Richtung Sonne für Schattenwerfer außerhalb des Bildes; auf 20 m gerastert
+ * (weniger Neuberechnungen) und auf das Gelände begrenzt. Rückgabe [x0, x1, z0, z1]. Nah herangezoomt wird die
+ * Schattenkarte so fein, weit weg deckt sie das ganze Gelände ab.
+ */
+function shSichtbar(cm, gb, dir) {
+  const h = gb.h,
+    o = cm.position,
+    r = new T.Vector3(),
+    weit = h * 3;
+  let x0 = o.x,
+    x1 = o.x,
+    z0 = o.z,
+    z1 = o.z;
+  for (let i = 0; i <= 4; i++)
+    for (let j = 0; j <= 4; j++) {
+      r.set(-1 + i / 2, -1 + j / 2, 0.5)
+        .unproject(cm)
+        .sub(o)
+        .normalize();
+      const t = r.y < -1e-3 ? Math.min(weit, (gb.y0 - o.y) / r.y) : weit,
+        x = o.x + r.x * t,
+        z = o.z + r.z * t;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      z0 = Math.min(z0, z);
+      z1 = Math.max(z1, z);
+    }
+  // Schattenwerfer außerhalb des Bildes: Rand zur Sonne hin (Schattenlänge der höchsten Bauten, höchstens 300 m)
+  const hl = Math.hypot(dir.x, dir.z),
+    L = hl > 1e-3 ? Math.min(300, ((gb.y1 - gb.y0) * hl) / Math.max(0.05, dir.y)) : 0;
+  if (hl > 1e-3) {
+    const ex = (dir.x / hl) * L,
+      ez = (dir.z / hl) * L;
+    if (ex > 0) x1 += ex;
+    else x0 += ex;
+    if (ez > 0) z1 += ez;
+    else z0 += ez;
+  }
+  const k = (v, f) => Math.max(-h, Math.min(h, f(v / 20) * 20));
+  return [k(x0, Math.floor), k(x1, Math.ceil), k(z0, Math.floor), k(z1, Math.ceil)];
 }
 /** Ausdehnung des geladenen Geländes für den Schattenausschnitt: halbe Kantenlänge h und Höhenbereich (mit Platz für
     Gebäude und Bäume); zwischengespeichert je Gelände. null ohne geladenes Gelände. */

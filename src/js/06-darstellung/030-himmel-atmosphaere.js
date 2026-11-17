@@ -161,7 +161,8 @@ function atmAufbau(L) {
       // blauer Himmel maads Flächen zu stark
       '  vec3 Y = vec3(0.2126, 0.7152, 0.0722);\n' +
       '  vec3 sonneSoll = mix(vec3(dot(uSonneC, Y)), uSonneC, uLf);\n' +
-      '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf);\n' +
+      // Himmelslicht im Schatten etwas weniger blau als die Sonne gedämpft (sonst wirken Schatten bläulich)
+      '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf * 0.6);\n' +
       '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
       '  vec3 k = min(soll / max(nach, vec3(1e-4)), vec3(8.0));\n' +
       '  outputColor = vec4(a * k, inputColor.a);\n}\n',
