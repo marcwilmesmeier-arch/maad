@@ -100,6 +100,31 @@ async function atmStart() {
   atmUi();
 }
 
+/**
+ * Wolkenschatten mit Streulicht: Die Bibliothek nimmt unter Wolken nur das Sonnenlicht weg; übrig bliebe blaues
+ * Himmelslicht (Flächen dort sehr dunkel und blau). Echte Wolken streuen das abgeschirmte Licht weißlich weiter –
+ * ein Anteil ATM_WOLKE_STREU davon kommt hier als ungerichtetes Licht (nach Neigung: oben voll, unten halb) zurück.
+ * Eingriff in den Shadertext der AerialPerspectiveEffect (Stelle „sunIrradiance *= sunTransmittance;“); fehlt sie nach
+ * einem Versionswechsel, bleibt die Bibliothek unverändert und der Fehler wird gemeldet.
+ */
+const ATM_WOLKE_STREU = 0.45;
+function atmWolkenStreulicht(ap) {
+  const alt = 'sunIrradiance *= sunTransmittance;',
+    fs = ap.getFragmentShader ? ap.getFragmentShader() : ap.fragmentShader;
+  if (!fs || !fs.includes(alt)) {
+    logErr(new Error('Stelle für Wolken-Streulicht nicht gefunden'), 'atmWolkenStreulicht');
+    return;
+  }
+  const neu =
+    '{ vec3 maadUp = normalize(positionECEF); vec3 maadSkyH; ' +
+    'vec3 maadSunH = GetSunAndSkyIrradiance(positionECEF, maadUp, sunDirection, maadSkyH); ' +
+    'skyIrradiance += maadSunH * (1.0 - sunTransmittance) * ' +
+    ATM_WOLKE_STREU.toFixed(2) +
+    ' * (0.75 + 0.25 * dot(normal, maadUp)); }\n  ' +
+    alt;
+  ap.setFragmentShader(fs.replace(alt, neu));
+}
+
 /** Nachbearbeitungskette aufbauen. */
 function atmAufbau(L) {
   const cm = pc;
@@ -107,6 +132,7 @@ function atmAufbau(L) {
   ATM.ap.sky = false; // Himmel zeichnet himmelM (mit Boden jenseits des Modells)
   ATM.ap.sunLight = true; // Beleuchtung in der Nachbearbeitung (braucht das Normalenbild)
   ATM.ap.skyLight = true;
+  atmWolkenStreulicht(ATM.ap);
   ATM.cl = new L.CloudsEffect(cm);
   // Wolkenschatten: Aufteilung wie im Beispiel, Reichweite auf maads Maßstab (Modell ~1 km) statt 100 km,
   // dafür feinere Karte – sonst Streifenmuster auf den Flächen
@@ -141,7 +167,7 @@ function atmAufbau(L) {
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
+    'uniform float uK, uSat, uLf, uStreu;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec4 mk = texture2D(tMaske, uv);\n' +
@@ -161,8 +187,10 @@ function atmAufbau(L) {
       // blauer Himmel maads Flächen zu stark
       '  vec3 Y = vec3(0.2126, 0.7152, 0.0722);\n' +
       '  vec3 sonneSoll = mix(vec3(dot(uSonneC, Y)), uSonneC, uLf);\n' +
-      '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf);\n' +
-      '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
+      '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf * 0.5);\n' +
+      // Streulicht der besonnten Umgebung (Nachbarfassaden, Boden): hellt maads Schatten neutral auf
+      '  vec3 streu = vec3(dot(sonneSoll, Y)) * uStreu * schatten;\n' +
+      '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll + streu + uBodenC * (0.5 - 0.5 * oben);\n' +
       '  vec3 k = min(soll / max(nach, vec3(1e-4)), vec3(8.0));\n' +
       '  outputColor = vec4(a * k, inputColor.a);\n}\n',
     {
@@ -172,6 +200,7 @@ function atmAufbau(L) {
         ['uK', new T.Uniform(0.6)],
         ['uSat', new T.Uniform(0.85)],
         ['uLf', new T.Uniform(0.5)],
+        ['uStreu', new T.Uniform(0)],
         ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uObenV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uSonneC', new T.Uniform(new T.Vector3(1, 1, 1))],
@@ -309,6 +338,8 @@ function atmUmgebung() {
     boden = 0.25 * (S.atm.um ?? 1);
   u.get('uSonneC').value.set(sc0.r, sc0.g, sc0.b);
   u.get('uHimmelC').value.copy(h);
+  // Streulicht im Schatten: mit der Sonnenhöhe (tief stehende Sonne beleuchtet die Umgebung weniger)
+  u.get('uStreu').value = 0.12 * Math.min(1, hoch * 1.6);
   u.get('uBodenC').value.set(
     boden * (sc0.r * hoch + h.x) * 1.0,
     boden * (sc0.g * hoch + h.y) * 0.95,

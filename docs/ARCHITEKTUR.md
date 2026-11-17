@@ -35,6 +35,10 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   und ist von der Nachbeleuchtung ausgenommen; Tiefenversatz (`polygonOffset` −4/−8) in allen Durchgängen wie beim
   Wasser in Realistisch, sonst sticht das Gelände in der Ferne durch. Eigene Objekte mit Sondershadern können über `userData.atmVar`
   eigene Ersatzmaterialien mitgeben.
+- Realistisch+ Schatten: unter Wolken gibt `atmWolkenStreulicht` (Eingriff in den Shadertext der
+  AerialPerspectiveEffect an „sunIrradiance *= sunTransmittance;“) einen Teil des abgeschirmten Sonnenlichts als
+  ungerichtetes Licht zurück; in maads Schatten hellt `uStreu` (Streulicht der Umgebung) neutral auf. Nach einem
+  Versionswechsel der Bibliothek prüfen, ob die Stelle noch existiert (sonst Meldung über logErr).
 - Wohnungsmix (`15-grundriss/055-wohnungsmix.js`, aus v545 zurückgeholt): Wohnungstypen = Flächenarten mit Nutzung
   Wohnen (ohne die allgemeine, `df`). Einstellung im Fenster „Flächenarten“ (`wmxEinstellungHtml`, aufgerufen in
   `grFaHtml`), Auswertung in Gebäudemetrik → Einheiten (`wmxHtml`, aufgerufen in `zoRender`). `S.wmx` {p Vorlage,
