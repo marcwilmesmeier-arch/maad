@@ -218,6 +218,12 @@ function konPre(scn, cm) {
     p.ol.visible = vis;
     if (vis) p.ol.matrixWorld.copy(o.matrixWorld);
   });
+  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: Silhouette der LOD-200-Gebäude
+  try {
+    l2KonturSil(cm);
+  } catch (e) {
+    logErr(e, 'konPre');
+  }
 }
 
 // ---- Fußlinie: dicke dunkle Kontur entlang des Grundrisses, dem Gelände folgend (Bildschirm-Breite)

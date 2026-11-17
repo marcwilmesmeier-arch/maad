@@ -1,17 +1,24 @@
 /* Außenkontur in LOD 200: nur die wirklichen Außenkanten des Baukörpers (echte Ecken über 20° Knick, Fuß, Dachrand,
    Auskragungen und Rücksprünge zwischen Geschossen, Dachkanten geneigter Dächer) – keine Unterteilungen der Wände,
    Decken oder Öffnungen. Sichtbar mit „Kontur“ (S.noK aus), in der Explosionsansicht ausgeblendet (dort zeigen die
-   Bauteile ihre eigenen Kanten). Mit der fetten Kontur (16-darstellung-erweitert/010) werden dieselben Kanten zusätzlich als breite
-   Bildschirmlinie gezeichnet (wie die Fußlinie) – eine Hülle wie bei Umgebungsgebäuden schiene durch die Fensterlöcher. */
+   Bauteile ihre eigenen Kanten).
+   Fette Kontur (16-darstellung-erweitert/010): wie bei Umgebungsgebäuden nur die Silhouette, hinter dem Gebäude. Eine
+   Hülle schiene durch die Fensterlöcher; deshalb werden je Bild die Kanten gesucht, an denen eine angrenzende Fläche
+   zur Kamera und die andere von ihr weg zeigt, und als breite Linie leicht hinter dem Gebäude gezeichnet. */
 const L2KO = new Map(); // Gebäude-ID → { sig, ln }
-/** Kantenpunkte [x, y, z, x, y, z, …] der Außenkontur von Gebäude b. */
+/** Außenkontur von Gebäude b: p = Kantenpunkte [x, y, z, x, y, z, …], n = je Kante die Normalen der beiden
+    angrenzenden Flächen [n1x, n1y, n1z, n2x, n2y, n2z, …] (für die Silhouette). */
 function l2KonturPunkte(b) {
   const out = [],
+    nor = [],
     L = b.levels
       .map((l, j) => ({ l, j, f: lf(b, l), z0: skZ(b, j), z1: skZ(b, j) + l.h }))
       .filter((x) => !x.l.ug);
   if (!L.length) return out;
-  const seg = (a, c, y) => out.push(a[0], y, a[1], c[0], y, c[1]),
+  const seg = (a, c, y, n1, n2) => {
+      out.push(a[0], y, a[1], c[0], y, c[1]);
+      nor.push(...n1, ...n2);
+    },
     flaeche = (f) => {
       let A = 0;
       for (let i = 0; i < f.length; i++) {
@@ -22,7 +29,8 @@ function l2KonturPunkte(b) {
       return A;
     },
     // Ring f auf Höhe y abgehen; Stücke, an denen die Wand gerade weiterläuft (Nachbargeschoss g), auslassen
-    rand = (f, y, g) => {
+    // oben: Kante oben am Geschoss (true) oder unten (false)
+    rand = (f, y, g, oben) => {
       const n = f.length,
         sg = flaeche(f) > 0 ? 1 : -1;
       for (let i = 0; i < n; i++) {
@@ -35,46 +43,151 @@ function l2KonturPunkte(b) {
           nx = sg > 0 ? uz : -uz,
           nz = sg > 0 ? -ux : ux,
           k = Math.max(1, Math.ceil(len / 0.5));
-        let start = null;
+        let start = null,
+          art = 0;
         for (let s = 0; s <= k; s++) {
-          let kante = false;
+          // 0 = keine Kante, 1 = Rand zur waagerechten Fläche dieses Geschosses (Dach/Unterseite), 2 = zur Fläche davor
+          let a2 = 0;
           if (s < k) {
             const t = ((s + 0.5) / k) * len,
-              m = [a[0] + ux * t, a[1] + uz * t];
-            kante =
-              !g ||
-              !(
-                inP([m[0] - nx * 0.05, m[1] - nz * 0.05], g) && !inP([m[0] + nx * 0.05, m[1] + nz * 0.05], g)
-              );
+              m = [a[0] + ux * t, a[1] + uz * t],
+              rein = g && inP([m[0] - nx * 0.05, m[1] - nz * 0.05], g),
+              raus = g && inP([m[0] + nx * 0.05, m[1] + nz * 0.05], g);
+            a2 = !g || !rein ? 1 : raus ? 2 : 0;
           }
           const t0 = (s / k) * len,
             P = [a[0] + ux * t0, a[1] + uz * t0];
-          if (kante && !start) start = P;
-          else if (!kante && start) {
-            seg(start, P, y);
+          if (start && a2 !== art) {
+            // waagerechte Nachbarfläche: oben Dach (nach oben) bzw. Terrasse davor; unten Unterseite bzw. Sockel
+            const w = [nx, 0, nz],
+              h = art === 1 ? [0, oben ? 1 : -1, 0] : [0, oben ? -1 : 1, 0];
+            seg(start, P, y, w, h);
             start = null;
+          }
+          if (a2 && !start) {
+            start = P;
+            art = a2;
           }
         }
       }
     };
+  // Attika 0,30 m über dem obersten Geschoss bei Flachdach (wie l2Els, 020-ableitung: hAt)
+  const flach = !b.roof || !b.roof.type || b.roof.type === 'flat',
+    letzt = b.levels.length - 1;
+  L.forEach((x) => {
+    if (flach && x.j === letzt) x.z1 += 0.3;
+  });
   L.forEach((x, q) => {
     const unten = L[q - 1] && L[q - 1].j === x.j - 1 ? L[q - 1].f : null,
       oben = L[q + 1] && L[q + 1].j === x.j + 1 ? L[q + 1].f : null;
-    // senkrechte Kanten nur an echten Ecken
+    // senkrechte Kanten nur an echten Ecken (Normalen der beiden angrenzenden Wände)
+    const sg = flaeche(x.f) > 0 ? 1 : -1,
+      wn = (p, q) => {
+        const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
+          ux = (q[0] - p[0]) / L,
+          uz = (q[1] - p[1]) / L;
+        return sg > 0 ? [uz, 0, -ux] : [-uz, 0, ux];
+      };
     x.f.forEach((v, i) => {
-      if (skEckeEcht(x.f, i)) out.push(v[0], x.z0, v[1], v[0], x.z1, v[1]);
+      if (!skEckeEcht(x.f, i)) return;
+      const N = skEckeNachbarn(x.f, i);
+      out.push(v[0], x.z0, v[1], v[0], x.z1, v[1]);
+      nor.push(...wn(N[0], v), ...wn(v, N[1]));
     });
-    rand(x.f, x.z0, unten);
-    rand(x.f, x.z1, oben);
+    rand(x.f, x.z0, unten, false);
+    rand(x.f, x.z1, oben, true);
   });
-  // geneigte Dächer: Kanten der Dachfläche
-  if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat') {
-    const eg = new T.EdgesGeometry(b._rp.geo, 15),
-      a = eg.attributes.position.array;
-    for (let i = 0; i < a.length; i++) out.push(a[i]);
-    eg.dispose();
+  // geneigte Dächer: Kanten zwischen Dachflächen über 15° Knick und Ränder (Nachbarfläche dort: Wand darunter)
+  if (b._rp && b._rp.geo && b.roof && b.roof.type && b.roof.type !== 'flat')
+    l2DachKanten(b._rp.geo, out, nor);
+  return { p: out, n: nor };
+}
+function l2DachKanten(geo, out, nor) {
+  const P = geo.attributes.position,
+    ix = geo.index,
+    N = ix ? ix.count : P.count,
+    k = (i) =>
+      Math.round(P.getX(i) * 50) + ',' + Math.round(P.getY(i) * 50) + ',' + Math.round(P.getZ(i) * 50),
+    E = new Map(),
+    A = new T.Vector3(),
+    B = new T.Vector3(),
+    C = new T.Vector3();
+  for (let t = 0; t + 2 < N; t += 3) {
+    const v = [0, 1, 2].map((q) => (ix ? ix.getX(t + q) : t + q));
+    A.fromBufferAttribute(P, v[0]);
+    B.fromBufferAttribute(P, v[1]);
+    C.fromBufferAttribute(P, v[2]);
+    const n = new T.Vector3().subVectors(B, A).cross(new T.Vector3().subVectors(C, A));
+    if (n.lengthSq() < 1e-10) continue;
+    n.normalize();
+    if (n.y < 0) n.negate();
+    [
+      [v[0], v[1]],
+      [v[1], v[2]],
+      [v[2], v[0]],
+    ].forEach(([i, j]) => {
+      const a = k(i),
+        c = k(j),
+        key = a < c ? a + '|' + c : c + '|' + a;
+      let e = E.get(key);
+      if (!e) E.set(key, (e = { i, j, n: [] }));
+      e.n.push(n.clone());
+    });
   }
-  return out;
+  E.forEach((e) => {
+    let n1 = e.n[0],
+      n2 = e.n[1];
+    if (!n2) {
+      // Rand: Nachbarfläche ist die Wand darunter (waagerechter Anteil der Dachnormale)
+      n2 = new T.Vector3(n1.x, 0, n1.z);
+      if (n2.lengthSq() < 1e-6) n2.set(0, -1, 0);
+      else n2.normalize();
+    } else if (n1.dot(n2) > Math.cos((15 * Math.PI) / 180)) return;
+    out.push(P.getX(e.i), P.getY(e.i), P.getZ(e.i), P.getX(e.j), P.getY(e.j), P.getZ(e.j));
+    nor.push(n1.x, n1.y, n1.z, n2.x, n2.y, n2.z);
+  });
+}
+// Material der fetten Silhouette: wie die Fußlinie (KON.lm), aber doppelt breit und leicht nach hinten versetzt,
+// damit nur der äußere Teil am Gebäude vorbei sichtbar ist (wie die Hülle der Umgebungsgebäude)
+let L2KSM = null;
+function l2KonturMat() {
+  if (L2KSM) return L2KSM;
+  L2KSM = new T.ShaderMaterial({
+    uniforms: Object.assign({}, KON.U, { uB: { value: -0.35 } }),
+    side: T.DoubleSide,
+    vertexShader: KON.lm.vertexShader.replace('*uW*.5', '*uW'),
+    fragmentShader: KON.lm.fragmentShader,
+  });
+  return L2KSM;
+}
+/** Fette Silhouette je Bild (aus konPre): Kanten, an denen eine Fläche zur Kamera und die andere weg zeigt. */
+function l2KonturSil(cm) {
+  if (!cm) return;
+  const C = cm.position,
+    ck = [C.x, C.y, C.z, cm.isOrthographicCamera ? 1 : 0].map((v) => v.toFixed(2)).join(',');
+  L2KO.forEach((o) => {
+    if (!o.fett || !o.fett.visible || o.ck === ck) return;
+    o.ck = ck;
+    const p = o.p,
+      n = o.n,
+      sil = [],
+      d = new T.Vector3();
+    if (cm.isOrthographicCamera) cm.getWorldDirection(d).negate();
+    for (let i = 0; i < p.length / 6; i++) {
+      const mx = (p[i * 6] + p[i * 6 + 3]) / 2,
+        my = (p[i * 6 + 1] + p[i * 6 + 4]) / 2,
+        mz = (p[i * 6 + 2] + p[i * 6 + 5]) / 2,
+        vx = cm.isOrthographicCamera ? d.x : C.x - mx,
+        vy = cm.isOrthographicCamera ? d.y : C.y - my,
+        vz = cm.isOrthographicCamera ? d.z : C.z - mz,
+        f1 = n[i * 6] * vx + n[i * 6 + 1] * vy + n[i * 6 + 2] * vz > 0,
+        f2 = n[i * 6 + 3] * vx + n[i * 6 + 4] * vy + n[i * 6 + 5] * vz > 0;
+      if (f1 !== f2) for (let q = 0; q < 6; q++) sil.push(p[i * 6 + q]);
+    }
+    const g = konQuads(sil);
+    o.fett.geometry.dispose();
+    o.fett.geometry = g || new T.BufferGeometry();
+  });
 }
 /** Konturen der geplanten Gebäude aktuell halten (Takt aus 030-aktionen). */
 function l2Kontur() {
@@ -88,21 +201,19 @@ function l2Kontur() {
     let o = L2KO.get(b.id);
     if (!o || o.sig !== sig) {
       if (o) l2KonturWeg(o);
-      const ge = new T.BufferGeometry();
-      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(l2KonturPunkte(b)), 3));
+      const K = l2KonturPunkte(b),
+        ge = new T.BufferGeometry();
+      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(K.p), 3));
       const ln = new T.LineSegments(ge, new T.LineBasicMaterial({ color: 0x4a4a4a }));
       ln.userData.kont = 1;
       ln.raycast = () => {};
       G.l2.add(ln);
-      // fette Kontur: gleiche Kanten als breite Linie in der Gruppe der fetten Kontur
-      const fg = konQuads(Array.from(ge.attributes.position.array)),
-        fett = fg ? new T.Mesh(fg, KON.lm) : null;
-      if (fett) {
-        fett.frustumCulled = false;
-        fett.raycast = () => {};
-        KON.g.add(fett);
-      }
-      o = { sig, ln, fett };
+      // fette Kontur: Silhouette, je Bild aus den Kanten neu bestimmt (l2KonturSil)
+      const fett = new T.Mesh(new T.BufferGeometry(), l2KonturMat());
+      fett.frustumCulled = false;
+      fett.raycast = () => {};
+      KON.g.add(fett);
+      o = { sig, ln, fett, p: K.p, n: K.n, ck: '' };
       L2KO.set(b.id, o);
     }
     o.ln.visible = !S.noK && !ex;
