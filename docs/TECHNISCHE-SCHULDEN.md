@@ -232,4 +232,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - LOD 200: Gelände wird unter der Bodenplatte ausgespart (`pitBuild` nimmt in LOD 200 auch Gebäude ohne UG, Grundriss
   EG, 0,40 m unter `b._y`). Nur die äußere Kontur, Innenhöfe im EG bleiben vom Gelände bedeckt.
 - Innenräume haben kein eigenes Licht: Echte indirekte Beleuchtung (Lichtstreuung im Raum) ist im Browser in Echtzeit
-  nicht vorhanden. Infrage kämen Umgebungsverdeckung (SSAO/N8AO) oder Lichtberechnung im Hintergrund (Ray-Tracing).
+  nicht vorhanden. Eine eigene Umgebungsverdeckung (SSAO) wurde versucht und wegen starker Bildfehler wieder entfernt; offen bleibt eine
+  Lichtberechnung im Hintergrund (Ray-Tracing).

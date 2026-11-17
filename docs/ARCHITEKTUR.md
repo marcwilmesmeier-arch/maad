@@ -267,8 +267,9 @@ läuft wie bisher im Browser.
   in `fkAusr`). Abweichungen bleiben bestehen, wenn sich die Grundeinstellung ändert. Das Fenster ist `#fkWahl` des
   Gebäudekonfigurators (`fkWahlEl`).
 - Schneiden (`skx`, Modus `SK.schnitt` des Werkzeugs Teilen): Der Schnitt läuft senkrecht zur angeklickten Wand rund
-  ums Gebäude (Fassade, Dach, Fassade). `skSchnittDo` teilt jedes Geschoss mit `szSplitPoly` und legt den zweiten Teil
-  als eigenes Gebäude an (`skCloneB`).
+  ums Gebäude (Fassade, Dach, Fassade). `skSchnittDo` fügt in jedem Geschoss Teilungspunkte in die Kontur ein (wie
+  Teilen) und trennt die freien Dach- und Terrassenflächen in Teilflächen (`l.faces`). Es bleibt ein Gebäude, Decken
+  und Grundrisse bleiben ganz.
 - Seitenecken (`26-modellier-modus/150-ecken.js`): Im Auswahl-Werkzeug ist ein Klick nahe einer senkrechten Ecke der
   Eintrag `{ b, j, ek }`. `skEckGruppe` bildet daraus die Konturflucht über alle Geschosse. Eine gewählte Ecke
   anfassen und ziehen ist der Vorgang `SK.op.kind === 'e'` (Fang auf die Richtungen der angrenzenden Wände).
@@ -337,13 +338,3 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 `title` als `aria-label`. Anklickbare `div`/`span` macht es per Tastatur bedienbar (`role="button"`, `tabindex`,
 Enter/Leertaste). Ein MutationObserver erfasst auch alles, was die Panels später neu zeichnen. Die CSS liefert einen
 sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
-
-## Umgebungsverdeckung (Raumtiefe)
-
-`06-darstellung/050-umgebungsverdeckung.js`: `aoNach(scn, cm)` wird nach dem Rendern der Szene aus `mkRender`
-aufgerufen (nur 3D-Perspektive, nicht bei „Realistisch+“). Ablauf:
-- Normalen- und Tiefenbild in halber Auflösung (`MeshNormalMaterial`, ohne Linien, durchsichtige Flächen und
-  Einblendungen).
-- Daraus die Verdeckung mit 14 Abtastungen in einer Halbkugel, Radius 2 m.
-- Tiefenabhängige Glättung, dann multiplikativ über das Bild gelegt.
-Schalter „Raumtiefe“ unter Darstellung (`S.ao`, im Browser gemerkt).

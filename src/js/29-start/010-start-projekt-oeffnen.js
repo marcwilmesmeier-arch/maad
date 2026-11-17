@@ -99,12 +99,6 @@ function start() {
     mesh(b);
   });
   drInit();
-  // Umgebungsverdeckung: Schalter „Raumtiefe“ unter Darstellung (06-darstellung/050)
-  try {
-    aoUi();
-  } catch (e) {
-    logErr(e, 'start');
-  }
   // Zugänglichkeit: Symbol-Buttons beschriften, anklickbare div/span per Tastatur bedienbar (16-darstellung-erweitert/060)
   try {
     uiZugang();

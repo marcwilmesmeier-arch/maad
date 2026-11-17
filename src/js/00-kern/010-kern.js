@@ -84,7 +84,7 @@ const BA = [
   {
     k: 'skx',
     n: 'Schneiden',
-    t: 'Gebäude schneiden – Schnitt rund ums Gebäude (Fassade, Dach, Fassade) in zwei Baukörper: Wand anklicken · Fang Mitte und Ecken · Zahl + Enter = Abstand',
+    t: 'Gebäude schneiden – Fassaden und Dach rund ums Gebäude an einer Linie teilen (Decken und Grundrisse bleiben ganz): Wand anklicken · Fang Mitte und Ecken · Zahl + Enter = Abstand',
     p: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M12 2v20" stroke-dasharray="2.5 2"/>',
   },
   {

@@ -590,7 +590,7 @@ function skKontext() {
   if (r.width === 0) d.style.display = 'none';
 }
 
-// ---- Schneiden: Gebäude rund herum (Fassade – Dach – Fassade) senkrecht zur angeklickten Wand in zwei Baukörper teilen
+// ---- Schneiden: Gebäude rund herum (Fassade – Dach – Fassade) senkrecht zur angeklickten Wand teilen (ein Gebäude bleibt)
 /** Je Geschoss die zwei Teile [Plusseite, Minusseite] (eines davon null, wenn der Schnitt das Geschoss verfehlt). */
 function skSchnittTeile(lh) {
   const b = lh.en.b,
@@ -663,52 +663,77 @@ function skSchnittVorschau(lh) {
       (lh.fromEnd ? 'rechten' : 'linken') +
       ' Ecke' +
       (lh.lab ? ' · Fang: ' + lh.lab : '') +
-      ' · Klick = in zwei Baukörper schneiden · Zahl + Enter = Abstand';
+      ' · Klick = Fassaden und Dach an dieser Linie teilen · Zahl + Enter = Abstand';
   } catch (e) {
     logErr(e, 'skSchnittVorschau');
   }
 }
+/**
+ * Schneiden: kein zweites Gebäude – an der Schnittlinie werden in jedem Geschoss nur die Fassaden geteilt (Teilungspunkte
+ * in der Kontur, wie „Teilen“), und die freien Dach- bzw. Terrassenflächen werden in zwei Teilflächen getrennt. Decken
+ * und Grundrisse bleiben ganz.
+ */
 function skSchnittDo(lh) {
   const b = lh.en.b,
-    T2 = skSchnittTeile(lh),
-    hat = (k) => T2.map((o) => !!o[k]);
-  // jeder Teil muss vom untersten Geschoss an durchgehend sein (keine schwebenden Geschosse)
-  const ok = (k) => {
-    const h = hat(k),
-      last = h.lastIndexOf(true);
-    return h[0] && h.slice(0, last + 1).every(Boolean);
-  };
-  if (!T2.some((o) => o[0] && o[1]) || !ok(0) || !ok(1)) {
-    $('hud').textContent = 'Schneiden: hier entstehen keine zwei durchgehenden Baukörper';
+    n = skN(b, lh.en.j, lh.en.i),
+    P = lh.P,
+    D = [n[0], n[1]],
+    // Schnitte der Linie P + t·D mit dem Ring f: [Kantenindex, Punkt]
+    schnitte = (f) => {
+      const R = [];
+      for (let i = 0; i < f.length; i++) {
+        const a = f[i],
+          c = f[(i + 1) % f.length],
+          E = [c[0] - a[0], c[1] - a[1]],
+          den = E[0] * D[1] - E[1] * D[0];
+        if (Math.abs(den) < 1e-9) continue;
+        const AP = [P[0] - a[0], P[1] - a[1]],
+          sE = (AP[0] * D[1] - AP[1] * D[0]) / den;
+        if (sE > 0.02 && sE < 0.98) R.push([i, [a[0] + E[0] * sE, a[1] + E[1] * sE]]);
+      }
+      return R;
+    };
+  const plan = b.levels.map((l) => schnitte(lf(b, l)));
+  if (!plan.some((x) => x.length >= 2)) {
+    $('hud').textContent = 'Schneiden: die Linie trifft hier keine zwei Fassaden';
     return false;
   }
   hist();
-  const b2 = skCloneB(b),
-    teil = (bb, k) => {
-      const lv = [];
-      b.levels.forEach((l, j) => {
-        if (!T2[j][k]) return;
-        const c = JSON.parse(JSON.stringify(l));
-        c.fp = T2[j][k];
-        lv.push(c);
-      });
-      bb.levels = lv;
-      bb.fp = lv[0].fp.map((q) => q.slice());
-      bb.kind = 'free';
-      // Wandflächen-Teile und Hand-Öffnungen hängen an Kanten/Ansichten – beim Schneiden verworfen
-      bb.patches = [];
-      const m = cen(bb.fp);
-      bb.voids = (bb.voids || []).filter((v) => inP(cen(v.poly), bb.fp) || inP(m, v.poly));
-      bb._fv = null;
-      bb._fkSig = null;
-    };
-  teil(b2, 1);
-  teil(b, 0);
-  delete b2.fd;
-  b2.name = (b.name || 'Gebäude') + ' · Teil 2';
-  S.bld.push(b2);
+  // Fassaden: Teilungspunkte einfügen (von hinten, damit die Indizes stimmen)
+  b.levels.forEach((l, j) => {
+    const X = plan[j];
+    if (X.length < 2) return;
+    const fp = lf(b, l).map((q) => q.slice());
+    X.sort((x, y) => y[0] - x[0]).forEach(([i, M]) => fp.splice(i + 1, 0, M.slice(), M.slice()));
+    l.fp = fp;
+  });
+  if (b.levels.every((l) => l.fp) && JSON.stringify(b.fp) !== JSON.stringify(b.levels[0].fp))
+    b.fp = b.levels[0].fp.map((q) => q.slice());
+  if (b.kind === 'circ' || b.kind === 'rect') b.kind = 'free';
+  // Dach und Terrassen: freie Oberseiten jedes Geschosses (bei Flachdach) in zwei Teilflächen trennen
+  let nDach = 0;
+  b.levels.forEach((l, j) => {
+    if (!szFlat(b, j)) return;
+    let reg = [];
+    try {
+      reg = szExposed(b, j, null);
+    } catch (e) {
+      logErr(e, 'skSchnittDo');
+      return;
+    }
+    if (!reg.length) return;
+    const r = szSplitRegion(reg, P, [P[0] + D[0], P[1] + D[1]], P);
+    if (r.err || !r.pieces) return;
+    l.faces = l.faces || [];
+    r.pieces.forEach((p) => l.faces.push({ poly: p.map((q) => q.slice()), part: 1 }));
+    nDach++;
+  });
   mesh(b);
-  mesh(b2);
+  try {
+    szRefresh(b);
+  } catch (e) {
+    logErr(e, 'skSchnittDo');
+  }
   SK.lh = null;
   SKLN.visible = false;
   SK.sel = [];
@@ -717,17 +742,17 @@ function skSchnittDo(lh) {
   S.sel = b;
   H();
   hpos();
-  skSync();
   rr();
   skNachAktion(
     b,
-    'Gebäude geschnitten · „' +
-      b2.name +
-      '“ angelegt – jeden Teil einzeln wählen, ziehen oder in der Höhe ändern',
+    'Geschnitten · Fassaden in ' +
+      plan.filter((x) => x.length >= 2).length +
+      ' Geschossen geteilt' +
+      (nDach ? ' · Dach/Terrasse in Teilflächen getrennt' : '') +
+      ' – Teile einzeln wählen und ziehen',
   );
   return true;
 }
-
 /** Nach einer abgeschlossenen Aktion (Ziehen, Teilen, Schneiden, Verschieben): zurück ins Auswahl-Werkzeug,
     das Gebäude bleibt gewählt – der nächste Klick wählt wieder eine einzelne Fläche. */
 function skNachAktion(b, hud) {

@@ -152,10 +152,10 @@ function konLines(on) {
     const m = l.material,
       u = l.userData;
     if (!m) return;
-    if (u._kc == null) {
-      u._kc = m.color.getHex();
-      u._ko = m.opacity;
-    }
+    // Farbe und Deckkraft getrennt merken: _kc setzt auch der Layer „Gebäudekontur“ (bkApply), _ko nur hier –
+    // fehlte _ko, wurden die dünnen Linien beim Ausschalten der fetten Kontur unsichtbar (Deckkraft undefiniert)
+    if (u._kc == null) u._kc = m.color.getHex();
+    if (u._ko == null) u._ko = m.opacity != null ? m.opacity : 1;
     if (on) {
       m.color.setHex(0x80807e);
       if (u._ko < 1) m.opacity = Math.min(u._ko, 0.6);
