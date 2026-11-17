@@ -294,3 +294,9 @@ läuft wie bisher im Browser.
   (`okGrSegmentLoeschen`). „Ganze Linie entfernen“, „Felder verbinden“ und „Verbindung lösen“ ergänzen das.
 - Gruppen lassen sich auch über das × in der Liste löschen. Dabei werden Verweise und die Gebäudekonfiguration
   (`b.fk`) bereinigt.
+
+## LOD 200: Innenhöfe
+
+`l2Els` (`22-lod200-waende/020-ableitung…`) spart Innenhöfe (`b.voids`, `znVoidsAt`) aus der Geschossdecke aus, wenn
+der Hof über dem Geschoss weiterläuft oder es das oberste Geschoss ist (offen zum Himmel). Die Decke unter dem
+untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss, fehlt dort auch die Bodenplatte.

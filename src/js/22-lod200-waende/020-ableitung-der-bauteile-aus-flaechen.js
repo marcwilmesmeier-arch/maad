@@ -614,6 +614,18 @@ function l2GeoStufe1(b) {
       });
     }
     const holes = []; /* Treppenhaus/Schacht: Decke läuft durch (Öffnungen folgen mit dem Treppenelement) */
+    // ── Erweiterung aus 25-polygon-operationen/020-innenhoefe-und-dachflaechen-als-echte.js: Innenhöfe (b.voids)
+    // sparen die Decke aus, wenn der Hof darüber weiterläuft oder offen zum Himmel ist (oberstes Geschoss); der Hofboden
+    // (Decke unter dem untersten Hofgeschoss) bleibt. Beginnt der Hof im untersten Geschoss, fehlt dort die Bodenplatte.
+    const jB = b.levels.indexOf(lv.obj),
+      hofDecke = [],
+      hofBoden = [];
+    if (jB >= 0)
+      znVoidsAt(b, jB).forEach((v) => {
+        const ring = v.poly.map((q) => q.slice());
+        if (jB < v.j1 || jB === b.levels.length - 1) hofDecke.push(ring);
+        if (jB === v.j0 && li === 0) hofBoden.push(ring);
+      });
     const eS = (kind, fc, y0, T) => {
       sl(kind, [fc], y0, T);
       const e = R.els[R.els.length - 1];
@@ -639,8 +651,8 @@ function l2GeoStufe1(b) {
           }
           return dAW / 2;
         };
-    eS('DE', mk1(offR(outerD, slOff), holes), y + lv.h - dDE, l2T(DF.DE));
-    if (li === 0) eS('BP', mk1(outer.slice(), []), y - l2T(DF.BP).d, l2T(DF.BP));
+    eS('DE', mk1(offR(outerD, slOff), holes.concat(hofDecke)), y + lv.h - dDE, l2T(DF.DE));
+    if (li === 0) eS('BP', mk1(outer.slice(), hofBoden), y - l2T(DF.BP).d, l2T(DF.BP));
     R.lv.push({ li, name: lv.name, y0: y, h: lv.h, area: lv.area });
     prevOuter = outer;
     y += lv.h;
