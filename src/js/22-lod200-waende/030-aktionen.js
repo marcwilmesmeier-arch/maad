@@ -136,11 +136,8 @@ function l2MeshOrig(e) {
     const gg = new T.BufferGeometry();
     gg.setAttribute('position', new T.BufferAttribute(new Float32Array(e.tri), 3));
     gg.computeVertexNormals();
-    if (e.kind === 'RD') {
-      mat.polygonOffset = true;
-      mat.polygonOffsetFactor = -2;
-      mat.polygonOffsetUnits = -2;
-    }
+    // Dach ohne polygonOffset: Giebel- und Drempelwände enden ohne Oberseite unter der Dachfläche (020-ableitung),
+    // ein Versatz nach vorn ließe die Plattenkante durch die Giebelwand scheinen
     const m = new T.Mesh(gg, mat);
     m.castShadow = m.receiveShadow = true;
     m.raycast = () => {};

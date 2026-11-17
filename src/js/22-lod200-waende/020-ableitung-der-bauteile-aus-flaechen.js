@@ -858,7 +858,20 @@ function l2GeoStufe1(b) {
       // Dachplatte in den Drempel hinein und überlagert ihn. Ohne Stirnseiten: an Ortgang und Pultfirst liegen sie in der Ebene der
       // Giebelwand (Flimmern), den Rand schließen dort Giebel- und Drempelwände bis zur Dachfläche; an der Traufe ist die Platte 0 dick.
       const yTr = Math.max(0, Math.min(...trs.flat().map((P) => P[1] - yr))),
-        S2 = solid(trs, (P) => [P[0], Math.max(P[1] - tv, yTr), P[2]], false);
+        // Unterseite 3 cm zur Mitte gezogen: ihre Kante läge sonst nur Millimeter hinter der Giebelwand und schiene durch
+        cx = trs.reduce((s, t) => s + t[0][0] + t[1][0] + t[2][0], 0) / (3 * trs.length || 1),
+        cz = trs.reduce((s, t) => s + t[0][2] + t[1][2] + t[2][2], 0) / (3 * trs.length || 1),
+        S2 = solid(
+          trs,
+          (P) => {
+            const dx = cx - P[0],
+              dz = cz - P[2],
+              l = Math.hypot(dx, dz) || 1,
+              k = Math.min(0.03, l) / l;
+            return [P[0] + dx * k, Math.max(P[1] - tv, yTr), P[2] + dz * k];
+          },
+          false,
+        );
       R.els.push({
         bid: b.id,
         kind: 'RD',
