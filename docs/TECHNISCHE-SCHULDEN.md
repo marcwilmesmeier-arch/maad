@@ -234,3 +234,5 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Innenräume haben kein eigenes Licht: Echte indirekte Beleuchtung (Lichtstreuung im Raum) ist im Browser in Echtzeit
   nicht vorhanden. Eine eigene Umgebungsverdeckung (SSAO) wurde versucht und wegen starker Bildfehler wieder entfernt; offen bleibt eine
   Lichtberechnung im Hintergrund (Ray-Tracing).
+- Mehrkörper-Dächer nur bei rechtwinkligen Grundrissen (alle Kanten parallel zu den beiden Firstachsen). Schräge oder
+  runde Grundrisse bekommen ein Dach über den ganzen Grundriss in der Hauptrichtung.

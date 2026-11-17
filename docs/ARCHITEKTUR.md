@@ -347,3 +347,12 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - `fkAnwenden`: Reihen (Ansichtsfläche + Höhe), in denen eine Gruppe von Hand getauscht oder verschoben wurde, bleiben
   komplett erhalten, auch mit den automatisch gesetzten Nachbarn. Eigene Anordnungen (`b.fk.ab`) haben Vorrang vor
   der Gebäudeeinstellung.
+
+## Geneigte Dächer bei zusammengesetzten Grundrissen
+
+`roofRects` (01-modell-3d/020-mehrkoerper) zerlegt rechtwinklige Grundrisse in Rechtecke (Einzelkörper):
+- Hauptkörper ist der breiteste Körper (größte kürzere Seite), bei gleicher Breite der größte.
+- Jeder Körper bekommt einen eigenen First auf seiner Mittellinie, längs seiner längeren Seite. Ist die Firstrichtung
+  von Hand gesetzt (`b.roof.dir`), behält der Hauptkörper diese.
+- Die Dachhöhe ist das Maximum der Einzeldächer. Schmalere Flügel haben bei gleicher Neigung einen niedrigeren First
+  und laufen mit einer Kehle ins Hauptdach.

@@ -1,5 +1,7 @@
-// ---- Mehrkörper-Dächer (Satteldach/Walmdach): größte Geometrie bestimmt die Hauptfirstrichtung, kleinere Anbauten erhalten eigene Giebel
-function roofRects(fp, TT, SS) {
+// ---- Mehrkörper-Dächer (Satteldach/Walmdach): die Grundfläche wird in Rechtecke (Einzelkörper) zerlegt; jeder First
+// folgt der längeren Seite seines Körpers, an Anbauten treffen die Giebel aufeinander. fest = Firstrichtung von Hand
+// gesetzt: dann behält der Hauptkörper diese Richtung.
+function roofRects(fp, TT, SS, fest) {
   const pts = fp.map((p) => [TT(p), SS(p)]),
     n = pts.length;
   if (n < 4) return null;
@@ -53,9 +55,18 @@ function roofRects(fp, TT, SS) {
           }
   if (!cand.length) return null;
   const cov = fill.map((r) => r.map(() => false));
+  // Hauptkörper: der breiteste Körper (größte kürzere Seite = Gebäudetiefe), bei gleicher Breite der größte – sonst
+  // gewänne ein schmaler Streifen quer durch den Bau, und der breite Block bekäme keinen eigenen Giebel
   let m0 = cand[0];
+  const breit = (c) => Math.min(c.te, c.se);
   cand.forEach((c) => {
-    if (c.ar > m0.ar + 1e-6 || (Math.abs(c.ar - m0.ar) <= 1e-6 && c.te > m0.te)) m0 = c;
+    const db = breit(c) - breit(m0);
+    if (
+      db > 0.05 ||
+      (Math.abs(db) <= 0.05 && c.ar > m0.ar + 1e-6) ||
+      (Math.abs(db) <= 0.05 && Math.abs(c.ar - m0.ar) <= 1e-6 && c.te > m0.te)
+    )
+      m0 = c;
   });
   const rects = [m0],
     mark = (c) => {
@@ -92,18 +103,18 @@ function roofRects(fp, TT, SS) {
       te = t1 - t0,
       se = s1 - s0;
     let ax = te >= se ? 't' : 's';
-    if (k === 0) ax = 't';
-    else if (Math.abs(te - se) < 0.05) ax = 's';
+    if (k === 0 && (fest || Math.abs(te - se) < 0.05)) ax = 't';
+    else if (k > 0 && Math.abs(te - se) < 0.05) ax = 's';
     return { k, t0, t1, s0, s1, ax };
   });
   return R.length > 1 ? R : null;
 }
-function roofField(type, fp, TT, SS, a, bb, tn) {
+function roofField(type, fp, TT, SS, a, bb, tn, fest) {
   let hf,
     lines = [],
     vl = [];
   if (type === 'sattel' || type === 'walm') {
-    const RR = roofRects(fp, TT, SS);
+    const RR = roofRects(fp, TT, SS, fest);
     if (RR && RR.length > 1) {
       const Q = RR.map((q) => {
         const al = q.ax === 't' ? q.t0 : q.s0,
@@ -238,7 +249,7 @@ function roofGeo(b, yr, clip) {
     Cz = tc * tz + sc * sz,
     TT = (p) => (p[0] - Cx) * tx + (p[1] - Cz) * tz,
     SS = (p) => (p[0] - Cx) * sx + (p[1] - Cz) * sz;
-  const RF = roofField(r.type, fp, TT, SS, a, bb, tn),
+  const RF = roofField(r.type, fp, TT, SS, a, bb, tn, r.dir != null && r.dir !== ''),
     hf = RF.hf,
     lines = RF.lines.concat(RF.vl),
     vl = RF.vl,

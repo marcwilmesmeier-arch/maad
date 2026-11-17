@@ -242,7 +242,7 @@ function roofAreas(b) {
     Cz = tc * tz + sc * sz,
     TT = (p) => (p[0] - Cx) * tx + (p[1] - Cz) * tz,
     SS = (p) => (p[0] - Cx) * sx + (p[1] - Cz) * sz;
-  const hf = roofField(r.type, fp, TT, SS, a, bb, tn).hf;
+  const hf = roofField(r.type, fp, TT, SS, a, bb, tn, r.dir != null && r.dir !== '').hf;
   const st = Math.max(0.1, Math.sqrt(((x1 - x0) * (z1 - z0)) / 40000)),
     cell = st * st;
   let n2 = 0,
