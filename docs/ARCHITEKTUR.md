@@ -278,5 +278,5 @@ läuft wie bisher im Browser.
 - LOD-200-Außenkontur (`22-lod200-waende/110-aussenkontur.js`): `l2KonturPunkte(b)` berechnet aus den Grundrissen nur
   die echten Außenkanten. Das sind Ecken über 20° Knick, Fuß, Dachrand, Auskragungen und Rücksprünge zwischen den
   Geschossen sowie die Dachkanten geneigter Dächer. Unterteilungen von Wänden und Decken sind nicht dabei. Die Linien
-  sind `kont`-Linien (Schalter „Kontur“). Die fette Kontur erfasst LOD-200-Wände und -Decken über `userData.l2k`,
-  Fenster nicht.
+  sind `kont`-Linien (Schalter „Kontur“). Mit der fetten Kontur werden dieselben Kanten als breite Bildschirmlinie gezeichnet (`konQuads`, wie die Fußlinie).
+  Eine Hülle wie bei Umgebungsgebäuden schiene durch die Fensterlöcher.

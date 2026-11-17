@@ -121,7 +121,6 @@ function l2MeshOrig(e) {
       const P = grPrism(f, 0, hh || e.h),
         m = new T.Mesh(P.g, mat);
       m.castShadow = m.receiveShadow = true;
-      m.userData.l2k = 1; // fette Kontur (16-darstellung-erweitert/010)
       m.raycast = () => {};
       g.add(m);
       const lg = new T.BufferGeometry();
@@ -144,7 +143,6 @@ function l2MeshOrig(e) {
     }
     const m = new T.Mesh(gg, mat);
     m.castShadow = m.receiveShadow = true;
-    m.userData.l2k = 1;
     m.raycast = () => {};
     g.add(m);
     const go = new T.BufferGeometry();

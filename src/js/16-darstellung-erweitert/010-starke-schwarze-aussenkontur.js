@@ -100,8 +100,7 @@ function konSm(geo, groups) {
 function konSrc(o) {
   const u = o.userData || {};
   if (!o.isMesh || o.parent === KON.g || u._ov || u.ol || u.hl) return false;
-  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: auch LOD-200-Wände und -Decken (keine Fenster)
-  if (!(u.ctx || u.b || u.l2k)) return false;
+  if (!(u.ctx || u.b)) return false;
   const m = o.material;
   if (
     !m ||
@@ -171,9 +170,6 @@ function konSig() {
   for (const b of S.bld) {
     if (b._g) s += '|' + b._g.id + ':' + b._g.children.length;
   }
-  // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: LOD-200-Bauteile
-  if (G.l2)
-    s += '|l2:' + G.l2.children.length + ':' + G.l2.children.reduce((t, g) => t + g.children.length, 0);
   return s;
 }
 function konPre(scn, cm) {

@@ -1,8 +1,8 @@
 /* Außenkontur in LOD 200: nur die wirklichen Außenkanten des Baukörpers (echte Ecken über 20° Knick, Fuß, Dachrand,
    Auskragungen und Rücksprünge zwischen Geschossen, Dachkanten geneigter Dächer) – keine Unterteilungen der Wände,
    Decken oder Öffnungen. Sichtbar mit „Kontur“ (S.noK aus), in der Explosionsansicht ausgeblendet (dort zeigen die
-   Bauteile ihre eigenen Kanten). Die fette Kontur (16-darstellung-erweitert/010) erfasst die LOD-200-Bauteile über
-   userData.l2k. */
+   Bauteile ihre eigenen Kanten). Mit der fetten Kontur (16-darstellung-erweitert/010) werden dieselben Kanten zusätzlich als breite
+   Bildschirmlinie gezeichnet (wie die Fußlinie) – eine Hülle wie bei Umgebungsgebäuden schiene durch die Fensterlöcher. */
 const L2KO = new Map(); // Gebäude-ID → { sig, ln }
 /** Kantenpunkte [x, y, z, x, y, z, …] der Außenkontur von Gebäude b. */
 function l2KonturPunkte(b) {
@@ -87,25 +87,38 @@ function l2Kontur() {
     const sig = skSig(b) + '|' + JSON.stringify(b.roof || {}) + '|' + (b._rp ? b._rp.h : 0);
     let o = L2KO.get(b.id);
     if (!o || o.sig !== sig) {
-      if (o) {
-        G.l2.remove(o.ln);
-        o.ln.geometry.dispose();
-      }
+      if (o) l2KonturWeg(o);
       const ge = new T.BufferGeometry();
       ge.setAttribute('position', new T.BufferAttribute(new Float32Array(l2KonturPunkte(b)), 3));
       const ln = new T.LineSegments(ge, new T.LineBasicMaterial({ color: 0x4a4a4a }));
       ln.userData.kont = 1;
       ln.raycast = () => {};
       G.l2.add(ln);
-      o = { sig, ln };
+      // fette Kontur: gleiche Kanten als breite Linie in der Gruppe der fetten Kontur
+      const fg = konQuads(Array.from(ge.attributes.position.array)),
+        fett = fg ? new T.Mesh(fg, KON.lm) : null;
+      if (fett) {
+        fett.frustumCulled = false;
+        fett.raycast = () => {};
+        KON.g.add(fett);
+      }
+      o = { sig, ln, fett };
       L2KO.set(b.id, o);
     }
     o.ln.visible = !S.noK && !ex;
+    if (o.fett) o.fett.visible = !ex;
   });
   L2KO.forEach((o, id) => {
     if (da.has(id)) return;
-    G.l2.remove(o.ln);
-    o.ln.geometry.dispose();
+    l2KonturWeg(o);
     L2KO.delete(id);
   });
+}
+function l2KonturWeg(o) {
+  G.l2.remove(o.ln);
+  o.ln.geometry.dispose();
+  if (o.fett) {
+    KON.g.remove(o.fett);
+    o.fett.geometry.dispose();
+  }
 }
