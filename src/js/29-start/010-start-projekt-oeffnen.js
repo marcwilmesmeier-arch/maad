@@ -99,6 +99,12 @@ function start() {
     mesh(b);
   });
   drInit();
+  // Zugänglichkeit: Symbol-Buttons beschriften, anklickbare div/span per Tastatur bedienbar (16-darstellung-erweitert/060)
+  try {
+    uiZugang();
+  } catch (e) {
+    logErr(e, 'start');
+  }
   nav();
   setMode(1);
   $('b3').classList.add('on');

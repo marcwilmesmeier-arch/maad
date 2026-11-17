@@ -218,3 +218,14 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   bekommt sie, wenn mindestens 3 von 5 Prüfpunkten frei sind. Geländer nur in LOD 200, nicht in LOD 300.
 - Balkone und Loggien nur über Öffnungsgruppen (nicht frei an der Fassade) und nur in LOD 200. Sie gehen noch nicht in
   BGF/NGF, Abstandsflächen oder Mengen ein. Die Balkonplatte liegt an der Feldunterkante (Geschossboden der Gruppe).
+
+## Oberfläche: Prüfung nach web-design-guidelines (offen)
+
+- Zahlen werden mit `toFixed` + Komma-Ersetzung formatiert statt mit `Intl.NumberFormat('de-DE')`. Das ergibt keine
+  Tausenderpunkte und ist uneinheitlich. Umstellung über eine zentrale Formatierfunktion.
+- Rund 230 Eingabefelder ohne eigenes `<label>`/`aria-label`. Die meisten stehen neben einem sichtbaren Text, der nicht
+  mit dem Feld verknüpft ist (Klickfläche, Bildschirmleser).
+- 12 Löschvorgänge fragen mit `confirm()`. Besser wäre Rückgängig (`hist`) mit Hinweis statt eines Dialogs.
+- Klickbare `div`/`span` sind über `uiZugang` per Tastatur bedienbar gemacht; langfristig echte `<button>`.
+- Text unter 12 px in Panels (11 px Hinweise) und Klickflächen unter 44 px in den Leisten (Desktop-Werkzeug; für
+  Touch prüfen).

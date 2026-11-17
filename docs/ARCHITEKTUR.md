@@ -338,3 +338,10 @@ voll, so wird das Licht sichtbar, das durch die Fenster fällt.
 - In den Ansichten zeichnet `oegArtZeichnen` das Symbol: Geländer 1,00 m, beim Balkon die Platte.
 - In LOD 200 baut `22-lod200-waende/130-balkone.js` (`l2Balkone`, Takt aus 030-aktionen) je Gebäude die Platten
   (0,20 m) und die Stabgeländer (`l2Stabgelaender`).
+
+## Zugänglichkeit
+
+`16-darstellung-erweitert/060-zugaenglichkeit.js` (`uiZugang`, aus `start()`) beschriftet Symbol-Buttons mit ihrem
+`title` als `aria-label`. Anklickbare `div`/`span` macht es per Tastatur bedienbar (`role="button"`, `tabindex`,
+Enter/Leertaste). Ein MutationObserver erfasst auch alles, was die Panels später neu zeichnen. Die CSS liefert einen
+sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
