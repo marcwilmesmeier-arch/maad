@@ -337,3 +337,13 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 `title` als `aria-label`. Anklickbare `div`/`span` macht es per Tastatur bedienbar (`role="button"`, `tabindex`,
 Enter/Leertaste). Ein MutationObserver erfasst auch alles, was die Panels später neu zeichnen. Die CSS liefert einen
 sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
+
+## Umgebungsverdeckung (Raumtiefe)
+
+`06-darstellung/050-umgebungsverdeckung.js`: `aoNach(scn, cm)` wird nach dem Rendern der Szene aus `mkRender`
+aufgerufen (nur 3D-Perspektive, nicht bei „Realistisch+“). Ablauf:
+- Normalen- und Tiefenbild in halber Auflösung (`MeshNormalMaterial`, ohne Linien, durchsichtige Flächen und
+  Einblendungen).
+- Daraus die Verdeckung mit 14 Abtastungen in einer Halbkugel, Radius 2 m.
+- Tiefenabhängige Glättung, dann multiplikativ über das Bild gelegt.
+Schalter „Raumtiefe“ unter Darstellung (`S.ao`, im Browser gemerkt).

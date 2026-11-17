@@ -186,7 +186,11 @@ function mkRender(scn, cm) {
           logErr(e, 'mkRender');
         }
       if (!S.mkOn || !(S.mkA > 0) || scn !== sc) {
-        if (!atmRender(scn, cm)) ren.render(scn, cm);
+        if (!atmRender(scn, cm)) {
+          ren.render(scn, cm);
+          // ── Erweiterung aus 06-darstellung/050-umgebungsverdeckung.js
+          aoNach(scn, cm);
+        }
         return;
       }
       try {
@@ -205,7 +209,11 @@ function mkRender(scn, cm) {
         ren.render(scn, cm);
         return;
       }
-      if (!atmRender(scn, cm)) ren.render(scn, cm);
+      if (!atmRender(scn, cm)) {
+        ren.render(scn, cm);
+        // ── Erweiterung aus 06-darstellung/050-umgebungsverdeckung.js
+        aoNach(scn, cm);
+      }
       const ac = ren.autoClear,
         lm = cm.layers.mask,
         om = scn.overrideMaterial,
