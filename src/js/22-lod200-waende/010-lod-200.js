@@ -416,8 +416,9 @@ const L2K = {
   AW: { n: 'Außenwand', c: '#ffffff', c2: '#8a7f66', p: '#46433c' },
   TW: { n: 'Innenwand', c: '#ffffff', c2: '#5e7f92', p: '#5E7F92' },
   TH: { n: 'Treppenhauswand', c: '#ffffff', c2: '#3f6277', p: '#2e4d5f' },
-  RD: { n: 'Dach', c: '#ffffff', c2: '#6f6f6f', p: '#6f6f6f' },
-  DE: { n: 'Geschossdecke', c: '#ffffff', c2: '#6b665c', p: '#6b665c' },
+  // Dach und Decken hellgrau (die Oberseite liegt in der Sonne; reines Weiß wirkt dort überstrahlt)
+  RD: { n: 'Dach', c: '#d8d7d2', c2: '#6f6f6f', p: '#6f6f6f' },
+  DE: { n: 'Geschossdecke', c: '#d8d7d2', c2: '#6b665c', p: '#6b665c' },
   BP: { n: 'Bodenplatte', c: '#ffffff', c2: '#4c483f', p: '#4c483f' },
 };
 const L2AL = { l: 'links', m: 'Mitte', r: 'rechts' };
