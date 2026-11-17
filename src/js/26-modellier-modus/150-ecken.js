@@ -13,10 +13,55 @@ function skEckeBei(b, j, i, pt) {
     dc = Math.hypot(pt.x - c[0], pt.z - c[1]);
   if (Math.min(da, dc) > thr) return null;
   const v = da <= dc ? a : c;
-  // gleiche Stelle kann mehrfach vorkommen (Teilen legt doppelte Punkte an): ersten echten Eckpunkt nehmen
+  // gleiche Stelle kann mehrfach vorkommen (Teilen legt doppelte Punkte an): ersten echten Eckpunkt nehmen;
+  // eine Schnittlinie (Punkt auf gerader Wand) ist ebenso greifbar
   for (let q = 0; q < n; q++)
-    if (Math.hypot(f[q][0] - v[0], f[q][1] - v[1]) < 0.05 && skEckeEcht(f, q)) return q;
+    if (Math.hypot(f[q][0] - v[0], f[q][1] - v[1]) < 0.05 && (skEckeEcht(f, q) || skSchnittPunkt(f, q)))
+      return q;
   return null;
+}
+/** true, wenn Punkt q eine Schnittlinie ist: die Wand läuft dort gerade weiter (Knick unter 0,5°). */
+function skSchnittPunkt(f, q) {
+  const N = skEckeNachbarn(f, q);
+  if (!N) return false;
+  const [p, r] = N,
+    v = f[q],
+    u1 = [v[0] - p[0], v[1] - p[1]],
+    u2 = [r[0] - v[0], r[1] - v[1]],
+    l = Math.hypot(...u1) * Math.hypot(...u2) || 1,
+    cr = (u1[0] * u2[1] - u1[1] * u2[0]) / l,
+    dt = (u1[0] * u2[0] + u1[1] * u2[1]) / l;
+  return dt > 0 && Math.abs(Math.atan2(cr, dt)) < (0.5 * Math.PI) / 180;
+}
+/** Auswahl besteht nur aus Schnittlinien (gerade weiterlaufende Fassade) – dann kann der Schnitt entfernt werden. */
+function skSchnittAuswahl() {
+  const s = SK.sel;
+  return s.length > 0 && s.every((x) => x.ek != null && skSchnittPunkt(lf(x.b, x.b.levels[x.j]), x.ek));
+}
+/** Gewählte Schnittlinie(n) entfernen: Punkt aus den Grundrissen der gewählten Geschosse nehmen. */
+function skSchnittWeg() {
+  if (!skSchnittAuswahl()) return;
+  const b = SK.sel[0].b;
+  hist();
+  const pts = SK.sel.map((x) => lf(b, b.levels[x.j])[x.ek].slice()),
+    fertig = new Set();
+  SK.sel.forEach((x, k) => {
+    const l = b.levels[x.j],
+      f = lf(b, l);
+    if (fertig.has(f)) return; // gemeinsamer Grundriss (b.fp) nur einmal
+    fertig.add(f);
+    const v = pts[k],
+      q = f.findIndex((P, i) => Math.hypot(P[0] - v[0], P[1] - v[1]) < 0.05 && skSchnittPunkt(f, i));
+    if (q < 0 || f.length <= 3) return;
+    const neu = f.filter((_, i) => i !== q).map((P) => P.slice());
+    if (l.fp) l.fp = neu;
+    else b.fp = neu;
+  });
+  mesh(b);
+  H();
+  hpos();
+  rr();
+  skNachAktion(b, 'Schnitt entfernt · ' + SK.sel.length + ' Geschoss' + (SK.sel.length === 1 ? '' : 'e'));
 }
 /** true, wenn an Punkt q die Kontur deutlich abknickt (über 20° – flache Knicke einer Ausrundung zählen nicht). */
 function skEckeEcht(f, q) {
@@ -54,7 +99,7 @@ function skEckGruppe(en) {
   b.levels.forEach((l, j) => {
     const f = lf(b, l);
     for (let q = 0; q < f.length; q++)
-      if (Math.hypot(f[q][0] - v[0], f[q][1] - v[1]) < 0.05 && skEckeEcht(f, q)) {
+      if (Math.hypot(f[q][0] - v[0], f[q][1] - v[1]) < 0.05 && (skEckeEcht(f, q) || skSchnittPunkt(f, q))) {
         out.push({ b, j, ek: q });
         return;
       }

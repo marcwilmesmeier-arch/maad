@@ -128,6 +128,7 @@ const SKKL = {
   tf: ['mv', 'skp', 'skf', '|', 'del'],
   hof: ['skp', '|', 'oeg', 'fd', '|', 'del'],
   k: ['ekh', 'rund'],
+  ks: ['ekh', '|', 'skw'], // Schnittlinie (Punkt auf gerader Wand)
   m: ['skp', 'mv'],
 };
 const SKKN = {
@@ -185,7 +186,12 @@ function skKlName() {
     if (t === 'r') return teile('Flucht', s.length + ' Geschosse', mass);
     return teile(rund ? 'Rundung' : 'Wand', gn(s[0].j), mass);
   }
-  if (t === 'k') return teile('Seitenecke', s.length + ' Geschoss' + (s.length === 1 ? '' : 'e'), '');
+  if (t === 'k')
+    return teile(
+      skSchnittAuswahl() ? 'Schnittlinie' : 'Seitenecke',
+      s.length + ' Geschoss' + (s.length === 1 ? '' : 'e'),
+      '',
+    );
   if (t === 'd') return teile('Dach', 'Oberseite', '');
   if (t === 'tf') return teile('Dachfläche', 'gezeichnet', '');
   if (t === 'hof') return teile('Innenhof', '', '');
@@ -198,6 +204,8 @@ function skKlKnopf(k) {
     return `<label class="skkh" title="Geschosshöhe">H <input type="number" step="0.05" min="2" max="12" aria-label="Geschosshöhe in Metern" value="${(+s.b.levels[s.j].h).toFixed(2)}" onchange="skKlHoehe(this.value)"> m</label>`;
   }
   if (k === 'ekh') return '<span class="skkh">anfassen und ziehen = verschieben</span>';
+  if (k === 'skw')
+    return `<button class="skkdel" onclick="skSchnittWeg()" title="Schnitt entfernen – die Fassade läuft hier gerade durch" aria-label="Schnitt entfernen">${SVGI('<path d="M12 4v16"/><path d="M8 8l8 8M16 8l-8 8"/>', 16)}<span>Schnitt entfernen</span></button>`;
   if (k === 'rund')
     return `<label class="skkh" title="Radius der Ausrundung">R <input id="skkr" type="number" step="0.5" min="0.1" aria-label="Radius der Ausrundung in Metern" value="${skEckRadiusVorgabe()}" onkeydown="if(event.key==='Enter')skEckRunden(this.value)"> m</label><button onclick="skEckRunden(document.getElementById('skkr').value)" title="Ecke mit diesem Radius ausrunden (alle gewählten Geschosse)">${SVGI('<path d="M5 20V12a7 7 0 0 1 7-7h7"/>', 16)}<span>Ausrunden</span></button>`;
   if (k === 'oeg') {
@@ -629,7 +637,7 @@ function skKontext() {
       (GEO.blist ? GEO.blist.length : 0);
   if (d.dataset.sg !== sg) {
     d.dataset.sg = sg;
-    const ak = SKKL[t] || SKKL.m;
+    const ak = (t === 'k' && skSchnittAuswahl() ? SKKL.ks : SKKL[t]) || SKKL.m;
     // viele Aktionen: nur Symbole, Name im Tooltip
     d.classList.toggle('kompakt', ak.length > 6);
     d.innerHTML =
