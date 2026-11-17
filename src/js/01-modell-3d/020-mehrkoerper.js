@@ -388,8 +388,22 @@ function roofGeo(b, yr, clip) {
           yP = yr + d + hf(P),
           yQ = yr + d + hf(Q);
         if (yP - yr < 1e-4 && yQ - yr < 1e-4) continue;
-        tri3([P[0], yr, P[1]], [Q[0], yr, Q[1]], [Q[0], yQ, Q[1]], false);
-        tri3([P[0], yr, P[1]], [Q[0], yQ, Q[1]], [P[0], yP, P[1]], false);
+        // Giebel-/Drempelwand nach außen ausrichten (sonst zeigt die Fläche je nach Zeichenrichtung des Grundrisses nach
+        // innen: dunkler und mit Streifen aus dem eigenen Schatten)
+        const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]) || 1,
+          M = [(P[0] + Q[0]) / 2, (P[1] + Q[1]) / 2],
+          // Normale von (P,Q,Q↑) zeigt im Grundriss nach (−dz, dx); innen = im Dachgrundriss, nicht in einem Loch
+          nx = -(Q[1] - P[1]) / L,
+          nz = (Q[0] - P[0]) / L,
+          T0 = [M[0] + nx * 0.05, M[1] + nz * 0.05],
+          innen = inP(T0, cO) && !cH.some((h) => inP(T0, h));
+        if (!innen) {
+          tri3([P[0], yr, P[1]], [Q[0], yr, Q[1]], [Q[0], yQ, Q[1]], false);
+          tri3([P[0], yr, P[1]], [Q[0], yQ, Q[1]], [P[0], yP, P[1]], false);
+        } else {
+          tri3([P[0], yr, P[1]], [Q[0], yQ, Q[1]], [Q[0], yr, Q[1]], false);
+          tri3([P[0], yr, P[1]], [P[0], yP, P[1]], [Q[0], yQ, Q[1]], false);
+        }
       }
     }),
   );
