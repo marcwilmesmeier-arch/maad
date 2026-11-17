@@ -2713,7 +2713,9 @@ body.hpj #ic {
 #fap .wmx .mu {
   font-size: 11px;
 }
-/* ---- Modellieren: Auswahlfilter und Kontextleiste an der Auswahl (26-modellier-modus/140-kontextleiste.js) */
+/* ---- Modellieren: Auswahlfilter und Kontextleiste an der Auswahl (26-modellier-modus/140-kontextleiste.js)
+   Gestaltung: Glas wie die übrigen Panels; Orange nur für das, was mit der Auswahl im Modell verbunden ist
+   (Markierung, Bezugslinie), Schiefer für Einstellungen (Filter); Maße in Tabellenziffern. */
 #skflt {
   position: absolute;
   left: 50%;
@@ -2722,22 +2724,20 @@ body.hpj #ic {
   z-index: 7;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   padding: 3px;
-  background: var(--gl, #e9edefc9);
+  background: var(--gl);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--gb, #fff);
+  border: 1px solid var(--gb);
   border-radius: 12px;
   box-shadow: var(--sh);
   font-size: 12px;
 }
 #skflt .skfl {
-  padding: 0 8px 0 6px;
+  display: flex;
+  padding: 0 6px 0 7px;
   color: var(--mu);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 #skflt button {
   border: 0;
@@ -2749,32 +2749,71 @@ body.hpj #ic {
   font: inherit;
 }
 #skflt button:hover {
-  background: #ffffff99;
+  background: color-mix(in srgb, var(--rd) 14%, transparent);
 }
 #skflt button.on {
-  background: #f07a12;
+  background: var(--rd);
   color: #fff;
 }
+#skflt button:focus-visible,
+#skkl button:focus-visible {
+  outline: 2px solid var(--rd);
+  outline-offset: 1px;
+}
 #skkl {
+  --leit: #f07a12;
   position: absolute;
   z-index: 8;
   display: none;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   padding: 3px;
-  background: #ffffffeb;
-  border: 1px solid #f07a1255;
+  background: var(--gl);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gb);
   border-radius: 12px;
   box-shadow: var(--sh);
   font-size: 12px;
+  color: var(--tx);
   white-space: nowrap;
 }
+/* Benennung der Auswahl: Markierung in Auswahlfarbe, Art fett, Zusatz leise, Maß in Tabellenziffern */
 #skkl .skkn {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
   padding: 0 10px 0 8px;
-  color: #b4560a;
-  font-weight: 600;
-  border-right: 1px solid var(--ln);
-  margin-right: 2px;
+}
+#skkl .skkd {
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--leit);
+  flex: none;
+}
+#skkl .skkn b {
+  font-weight: 650;
+}
+#skkl .skkz {
+  color: var(--mu);
+}
+#skkl .skkm {
+  color: var(--mu);
+  font-variant-numeric: tabular-nums;
+}
+#skkl .skksep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 3px;
+  background: var(--ln);
+}
+#skkl .skkn + button,
+#skkl .skkn + label {
+  margin-left: 2px;
+  box-shadow: -1px 0 0 var(--ln);
+  border-radius: 0 9px 9px 0;
 }
 #skkl button {
   display: flex;
@@ -2788,8 +2827,9 @@ body.hpj #ic {
   cursor: pointer;
   font: inherit;
 }
-#skkl button:hover {
-  background: #f07a1222;
+#skkl button:hover,
+#skkl button.skkon {
+  background: color-mix(in srgb, var(--rd) 14%, transparent);
 }
 #skkl button.skkdel:hover {
   background: #c6282822;
@@ -2805,12 +2845,47 @@ body.hpj #ic {
 #skkl .skkh input {
   width: 58px;
   font: inherit;
+  font-variant-numeric: tabular-nums;
   padding: 3px 5px;
+  color: var(--tx);
+  background: var(--bg);
   border: 1px solid var(--ln);
   border-radius: 6px;
 }
-#skkl button.skkon {
-  background: #f07a1222;
+#skkl.kompakt button span {
+  display: none;
+}
+#skkl.kompakt button {
+  padding: 6px 8px;
+}
+/* Bezugslinie: haarfein in Auswahlfarbe von der Leiste zur Auswahl, Punkt am Ende */
+#skkl .skkleit {
+  position: absolute;
+  left: var(--lx, 50%);
+  top: 100%;
+  width: 1px;
+  height: var(--lh, 0);
+  background: var(--leit);
+  pointer-events: none;
+}
+#skkl .skkleit::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--leit);
+  box-shadow: 0 0 0 2px var(--gb);
+}
+#skkl.ohneleit .skkleit {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #skkl .skkleit {
+    transition: height 0.12s ease-out;
+  }
 }
 #fkWahl .skga {
   display: flex;
@@ -2856,9 +2931,11 @@ body.hpj #ic {
   background: #5e7f92;
   color: #fff;
 }
-#skkl.kompakt button span {
-  display: none;
-}
-#skkl.kompakt button {
-  padding: 6px 8px;
+@media (prefers-reduced-transparency: reduce) {
+  #skkl,
+  #skflt {
+    background: var(--pn);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }

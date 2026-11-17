@@ -80,7 +80,7 @@ function skFilterLeiste(neu) {
   if (!zeigen || (!neu && d.dataset.f === SK.flt)) return;
   d.dataset.f = SK.flt;
   d.innerHTML =
-    '<span class="skfl">Auswahl</span>' +
+    `<span class="skfl" title="Was ein Klick ins Modell wählt (der erste Klick wählt immer das Gebäude)">${SVGI('<path d="M5 3l14 7-6 2-2 6z"/>', 14)}</span>` +
     SKF.map(
       (x) =>
         `<button class="${SK.flt === x[0] ? 'on' : ''}" title="${x[2]}" onclick="skFilter('${x[0]}')">${x[1]}</button>`,
@@ -118,14 +118,15 @@ function skAuswTyp() {
   }
   return 'm';
 }
+// '|' trennt Gruppen mit eigener Bedeutung: Geometrie | Fassade und Daten | Entfernen
 const SKKL = {
-  g: ['mv', 'skc', 'ro', 'skx', 'ed', 'oeg', 'fd', 'gr', 'bst', 'del'],
-  s: ['skp', 'h', 'oeg', 'grl'],
-  f: ['skp', 'skl', 'oeg', 'fd'],
-  r: ['skp', 'skl', 'oeg', 'fd'],
+  g: ['mv', 'skc', 'ro', 'skx', 'ed', '|', 'oeg', 'fd', 'gr', '|', 'bst', 'del'],
+  s: ['skp', 'h', '|', 'oeg', 'grl'],
+  f: ['skp', 'skl', '|', 'oeg', 'fd'],
+  r: ['skp', 'skl', '|', 'oeg', 'fd'],
   d: ['skp', 'skl', 'skf', 'skr'],
-  tf: ['mv', 'skp', 'skf', 'del'],
-  hof: ['skp', 'del'],
+  tf: ['mv', 'skp', 'skf', '|', 'del'],
+  hof: ['skp', '|', 'del'],
   k: ['ekh', 'rund'],
   m: ['skp', 'mv'],
 };
@@ -164,42 +165,41 @@ function skKlBestand(b) {
     return [];
   }
 }
+/** Benennung der Auswahl in drei Teilen: Art (fett), Zusatz (Geschoss/Anzahl), Maß (Tabellenziffern). */
 function skKlName() {
   const t = skAuswTyp(),
     s = SK.sel,
     b = s[0].b,
     gn = (j) => lname(b, j),
-    m = (v) => f1(v, 1).replace('.', ',');
-  if (t === 'g') return (b.name || 'Gebäude') + ' · ' + b.levels.length + ' Geschosse';
-  if (t === 's') return gn(s[0].j) + ' · ' + m(b.levels[s[0].j].h) + ' m hoch';
+    m = (v) => f1(v, 2).replace('.', ','),
+    teile = (art, zu, mass) =>
+      `<b>${esc(art)}</b>${zu ? `<span class="skkz">${esc(zu)}</span>` : ''}${mass ? `<span class="skkm">${esc(mass)}</span>` : ''}`;
+  if (t === 'g') return teile(b.name || 'Gebäude', b.levels.length + ' Geschosse', '');
+  if (t === 's') return teile(gn(s[0].j), 'Geschoss', m(b.levels[s[0].j].h) + ' m hoch');
   if (t === 'f' || t === 'r') {
     const f = lf(b, b.levels[s[0].j]),
       lg = (x) => Math.hypot(f[(x.i + 1) % f.length][0] - f[x.i][0], f[(x.i + 1) % f.length][1] - f[x.i][1]),
       rund = t === 'f' && s.length > 1,
-      h = t === 'f' ? b.levels[s[0].j].h : s.reduce((t2, x) => t2 + b.levels[x.j].h, 0);
-    return (
-      (t === 'f' ? (rund ? 'Rundung · ' : 'Wand · ') + gn(s[0].j) : 'Flucht · ' + s.length + ' Geschosse') +
-      ' · ' +
-      m(rund ? s.reduce((t2, x) => t2 + lg(x), 0) : lg(s[0])) +
-      ' × ' +
-      m(h) +
-      ' m'
-    );
+      h = t === 'f' ? b.levels[s[0].j].h : s.reduce((t2, x) => t2 + b.levels[x.j].h, 0),
+      mass = m(rund ? s.reduce((t2, x) => t2 + lg(x), 0) : lg(s[0])) + ' × ' + m(h) + ' m';
+    if (t === 'r') return teile('Flucht', s.length + ' Geschosse', mass);
+    return teile(rund ? 'Rundung' : 'Wand', gn(s[0].j), mass);
   }
-  if (t === 'k') return 'Seitenecke · ' + s.length + ' Geschoss' + (s.length === 1 ? '' : 'e');
-  if (t === 'd') return 'Dach / Oberseite';
-  if (t === 'tf') return 'Dachfläche (gezeichnet)';
-  if (t === 'hof') return 'Innenhof';
-  return s.length + ' Flächen';
+  if (t === 'k') return teile('Seitenecke', s.length + ' Geschoss' + (s.length === 1 ? '' : 'e'), '');
+  if (t === 'd') return teile('Dach', 'Oberseite', '');
+  if (t === 'tf') return teile('Dachfläche', 'gezeichnet', '');
+  if (t === 'hof') return teile('Innenhof', '', '');
+  return teile(s.length + ' Flächen', '', '');
 }
 function skKlKnopf(k) {
+  if (k === '|') return '<i class="skksep" aria-hidden="true"></i>';
   if (k === 'h') {
     const s = SK.sel[0];
-    return `<label class="skkh" title="Geschosshöhe">H <input type="number" step="0.05" min="2" max="12" value="${(+s.b.levels[s.j].h).toFixed(2)}" onchange="skKlHoehe(this.value)"> m</label>`;
+    return `<label class="skkh" title="Geschosshöhe">H <input type="number" step="0.05" min="2" max="12" aria-label="Geschosshöhe in Metern" value="${(+s.b.levels[s.j].h).toFixed(2)}" onchange="skKlHoehe(this.value)"> m</label>`;
   }
   if (k === 'ekh') return '<span class="skkh">anfassen und ziehen = verschieben</span>';
   if (k === 'rund')
-    return `<label class="skkh" title="Radius der Ausrundung">R <input id="skkr" type="number" step="0.5" min="0.1" value="${skEckRadiusVorgabe()}" onkeydown="if(event.key==='Enter')skEckRunden(this.value)"> m</label><button onclick="skEckRunden(document.getElementById('skkr').value)" title="Ecke mit diesem Radius ausrunden (alle gewählten Geschosse)">${SVGI('<path d="M5 20V12a7 7 0 0 1 7-7h7"/>', 16)}<span>Ausrunden</span></button>`;
+    return `<label class="skkh" title="Radius der Ausrundung">R <input id="skkr" type="number" step="0.5" min="0.1" aria-label="Radius der Ausrundung in Metern" value="${skEckRadiusVorgabe()}" onkeydown="if(event.key==='Enter')skEckRunden(this.value)"> m</label><button onclick="skEckRunden(document.getElementById('skkr').value)" title="Ecke mit diesem Radius ausrunden (alle gewählten Geschosse)">${SVGI('<path d="M5 20V12a7 7 0 0 1 7-7h7"/>', 16)}<span>Ausrunden</span></button>`;
   if (k === 'oeg') {
     const z = skKlGruppenZiel();
     if (!z) return '';
@@ -212,7 +212,7 @@ function skKlKnopf(k) {
     return `<button title="Bestand ausblenden – ${n} Bestandsgebäude unter diesem Gebäude (wie „Bestand entfernen“ am Grundstück)" onclick="skKlDo('bst')">${SVGI('<path d="M4 20V10l6-4 6 4v10z"/><path d="M3 3l18 18"/>', 16)}<span>Bestand ausblenden</span></button>`;
   }
   const a = BA.find((x) => x.k === k);
-  return `<button title="${a ? a.t.replace(/"/g, '&quot;') : ''}" onclick="skKlDo('${k}')"${k === 'del' ? ' class="skkdel"' : ''}>${a ? baIc(a, 16) : ''}<span>${SKKN[k]}</span></button>`;
+  return `<button title="${a ? a.t.replace(/"/g, '&quot;') : ''}" aria-label="${SKKN[k]}" onclick="skKlDo('${k}')"${k === 'del' ? ' class="skkdel"' : ''}>${a ? baIc(a, 16) : ''}<span>${SKKN[k]}</span></button>`;
 }
 // ---- Fassadengruppen je Auswahl (Gebäude, Geschoss, Wand, Flucht) – Daten wie im Gebäudekonfigurator (b.fk)
 // Gebäude = Grundeinstellung (b.fk.st, eine Zeile für alle Geschosse; Abweichungen bleiben bestehen).
@@ -528,7 +528,13 @@ function skKontext() {
     const ak = SKKL[t] || SKKL.m;
     // viele Aktionen: nur Symbole, Name im Tooltip
     d.classList.toggle('kompakt', ak.length > 6);
-    d.innerHTML = '<span class="skkn">' + skKlName() + '</span>' + ak.map(skKlKnopf).join('');
+    d.innerHTML =
+      '<span class="skkn"><i class="skkd" aria-hidden="true"></i>' +
+      skKlName() +
+      '</span>' +
+      ak.map(skKlKnopf).join('') +
+      // Bezugslinie zur Auswahl (wie eine Planbeschriftung)
+      '<i class="skkleit" aria-hidden="true"></i>';
   }
   // Lage: über dem höchsten Punkt der Auswahl, mittig
   let x0 = 1e9,
@@ -576,6 +582,11 @@ function skKontext() {
     ly = Math.max(172, Math.min(m.height - hh - 110, y0 - m.top - hh - 18));
   d.style.left = lx + 'px';
   d.style.top = ly + 'px';
+  // Bezugslinie: von der Leistenmitte über der Auswahl senkrecht hinunter bis zu deren oberstem Punkt
+  const lh = y0 - m.top - (ly + hh);
+  d.style.setProperty('--lx', Math.max(14, Math.min(w - 14, cx - lx)) + 'px');
+  d.style.setProperty('--lh', Math.max(0, lh) + 'px');
+  d.classList.toggle('ohneleit', lh < 8);
   if (r.width === 0) d.style.display = 'none';
 }
 
