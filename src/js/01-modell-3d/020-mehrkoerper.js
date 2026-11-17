@@ -105,7 +105,9 @@ function roofRects(fp, TT, SS, fest) {
       se = s1 - s0;
     let ax = te >= se ? 't' : 's';
     if (k === 0) {
-      if (fest || Math.abs(te - se) < 0.05) ax = 't';
+      // fest: true/'t' = Firstrichtung von Hand längs t, 's' = längs s
+      if (fest === 's') ax = 's';
+      else if (fest || Math.abs(te - se) < 0.05) ax = 't';
     } else {
       // angeschlossener Flügel: First quer zum Körper, an dem er hängt (Zwerchgiebel läuft ins Hauptdach), auch wenn
       // der Flügel breiter als lang ist; nur wenn er an keinem Körper hängt, zählt die längere Seite
@@ -131,7 +133,35 @@ function roofField(type, fp, TT, SS, a, bb, tn, fest) {
     lines = [],
     vl = [];
   if (type === 'sattel' || type === 'walm') {
-    const RR = roofRects(fp, TT, SS, fest);
+    // zusammengesetzte Körper: jeder Flügel folgt seiner Form – eine Firstrichtung von Hand gilt nur für einfache Körper
+    let RR = roofRects(fp, TT, SS, false);
+    // Zerlegung scheitert, wenn die Firstrichtung (von Hand) nicht genau zu den Gebäudekanten passt: dann in den
+    // Achsen der längsten Gebäudekante zerlegen
+    if (!RR) {
+      let u = null,
+        bl = 0;
+      fp.forEach((p, i) => {
+        const q = fp[(i + 1) % fp.length],
+          l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+        if (l > bl) {
+          bl = l;
+          u = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+        }
+      });
+      const o = [TT([0, 0]), SS([0, 0])],
+        td = [TT([1, 0]) - o[0], TT([0, 1]) - o[0]],
+        dt = u ? Math.abs(u[0] * td[0] + u[1] * td[1]) : 1;
+      if (u && dt < 0.99999) {
+        const T2 = (p) => p[0] * u[0] + p[1] * u[1],
+          S2 = (p) => -p[0] * u[1] + p[1] * u[0],
+          R2 = roofRects(fp, T2, S2, false);
+        if (R2) {
+          RR = R2;
+          TT = T2;
+          SS = S2;
+        }
+      }
+    }
     if (RR && RR.length > 1) {
       const Q = RR.map((q) => {
         const al = q.ax === 't' ? q.t0 : q.s0,
@@ -220,7 +250,7 @@ function roofField(type, fp, TT, SS, a, bb, tn, fest) {
       });
       for (let i = 0; i < F.length; i++)
         for (let j = i + 1; j < F.length; j++) vl.push((p) => F[i].f(p) - F[j].f(p));
-      return { hf, lines, vl };
+      return { hf, lines, vl, mehr: F.length };
     }
   }
   if (type === 'sattel') {
@@ -366,7 +396,7 @@ function roofGeo(b, yr, clip) {
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
   g.computeVertexNormals();
-  return { geo: g, h: hmax, pw, pr, aR, aW, hf, d, ln: lines };
+  return { geo: g, h: hmax, pw, pr, aR, aW, hf, d, ln: lines, mehr: RF.mehr || 0 };
 }
 function roofSet(k, v) {
   const b = S.sel;
@@ -437,7 +467,7 @@ function roofCtl(b) {
     RT.map(([k, n]) => `<option value="${k}" ${k === r.type ? 'selected' : ''}>${n}</option>`).join('') +
     '</select>';
   if (r.type !== 'flat')
-    h += `Neigung (°)<input type="number" min="1" max="75" step="1" value="${r.angle}" onchange="roofSet('angle',this.value)">Drempelhöhe (m)<input type="number" min="0" max="3" step="0.05" value="${r.dremp || 0}" onchange="roofSet('dremp',this.value)">${r.type === 'pult' ? 'Richtung der Dachneigung' : 'Firstrichtung'} (°)<div style="display:flex;gap:4px"><input type="number" step="5" value="${roofDir(b)}" onchange="roofSet('dir',this.value)"><button class="sm" onclick="roofSet('dir',null)">Auto</button></div>${kv('Höhe Dachgeschoss', f1(b._roofH || 0, 2) + ' m')}`;
+    h += `Neigung (°)<input type="number" min="1" max="75" step="1" value="${r.angle}" onchange="roofSet('angle',this.value)">Drempelhöhe (m)<input type="number" min="0" max="3" step="0.05" value="${r.dremp || 0}" onchange="roofSet('dremp',this.value)">${b._rp && b._rp.mehr > 1 ? `Firstrichtung<div class="mu" style="font-size:11px;margin:2px 0 6px">Je Flügel automatisch (${b._rp.mehr} Flügel): jeder First folgt der längeren Seite seines Flügels, angeschlossene Flügel laufen quer ins Hauptdach.</div>` : `${r.type === 'pult' ? 'Richtung der Dachneigung' : 'Firstrichtung'} (°)<div style="display:flex;gap:4px"><input type="number" step="5" value="${roofDir(b)}" onchange="roofSet('dir',this.value)"><button class="sm" onclick="roofSet('dir',null)">Auto</button></div>`}${kv('Höhe Dachgeschoss', f1(b._roofH || 0, 2) + ' m')}`;
   h += `<button class="sm" style="margin-top:8px;width:100%" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner öffnen</button>`;
   return h;
 }

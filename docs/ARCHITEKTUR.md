@@ -353,8 +353,11 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 `roofRects` (01-modell-3d/020-mehrkoerper) zerlegt rechtwinklige Grundrisse in Rechtecke (Einzelkörper):
 
 - Hauptkörper ist der breiteste Körper (größte kürzere Seite), bei gleicher Breite der größte.
-- Jeder Körper bekommt einen eigenen First auf seiner Mittellinie, längs seiner längeren Seite. Ist die Firstrichtung
-  von Hand gesetzt (`b.roof.dir`), behält der Hauptkörper diese.
+- Jeder Körper bekommt einen eigenen First auf seiner Mittellinie, längs seiner längeren Seite.
+- Zerlegt wird in den Achsen der Gebäudekanten. Passt die Firstrichtung (auch eine von Hand gesetzte) nicht dazu,
+  nimmt `roofField` die Achsen der längsten Kante.
+- Eine Firstrichtung von Hand (`b.roof.dir`) gilt nur für einfache Körper. Bei mehreren Flügeln (`_rp.mehr`) zeigt
+  das Panel statt des Feldes einen Hinweis.
 - Ein angeschlossener Flügel hat seinen First immer quer zu dem Körper, an dem er hängt (Zwerchgiebel), auch wenn er
   breiter als lang ist. Nur frei stehende Körper richten sich nach ihrer längeren Seite.
 - Die Dachhöhe ist das Maximum der Einzeldächer. Schmalere Flügel haben bei gleicher Neigung einen niedrigeren First
