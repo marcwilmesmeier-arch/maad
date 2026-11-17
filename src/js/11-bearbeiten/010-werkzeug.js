@@ -480,6 +480,39 @@ function abstFinish(E, R, site) {
   });
   return walls;
 }
+/**
+ * Zwickel an nach außen gewölbten Knicken (z. B. Ausrundungen): zwischen den Rechtecken zweier anschließender
+ * Wandstücke bliebe ein Keil frei – er wird mit einem Bogensegment geschlossen. Rechte Winkel (über 45°) bleiben offen
+ * wie bisher (Abstandsflächen sind dort Rechtecke).
+ */
+function abstZwickel(walls, fp) {
+  const out = [];
+  walls.forEach((a) =>
+    walls.forEach((b) => {
+      if (a === b || Math.hypot(a.q[0] - b.p[0], a.q[1] - b.p[1]) > 0.06) return;
+      const cr = a.nx * b.nz - a.nz * b.nx,
+        dt = a.nx * b.nx + a.nz * b.nz,
+        w = Math.atan2(cr, dt);
+      if (Math.abs(w) < 0.01 || Math.abs(w) > Math.PI / 4 + 1e-3) return;
+      const J = a.q;
+      // nach außen gewölbt: zwischen beiden Normalen liegt kein Gebäude
+      const m = [a.nx + b.nx, a.nz + b.nz],
+        ml = Math.hypot(m[0], m[1]) || 1;
+      if (inP([J[0] + (m[0] / ml) * 0.1, J[1] + (m[1] / ml) * 0.1], fp)) return;
+      const a0 = Math.atan2(a.nz, a.nx),
+        k = Math.max(2, Math.ceil(Math.abs(w) / 0.1)),
+        poly = [J];
+      for (let s = 0; s <= k; s++) {
+        const t = s / k,
+          an = a0 + w * t,
+          d = a.d + (b.d - a.d) * t;
+        poly.push([J[0] + Math.cos(an) * d, J[1] + Math.sin(an) * d]);
+      }
+      out.push(poly);
+    }),
+  );
+  return out;
+}
 function abstWalls(T0, R, site) {
   const fp = T0.fp;
   if (area(fp) < 1) return null;
@@ -576,7 +609,7 @@ function abstPaint() {
       r.forEach(([x, z], i) => (i ? c.lineTo(X(x), X(z)) : c.moveTo(X(x), X(z))));
       c.closePath();
     };
-  const rects = A.all.flatMap((o) => o.walls.map((w) => w.rect)),
+  const rects = A.all.flatMap((o) => o.walls.map((w) => w.rect).concat(abstZwickel(o.walls, o.T.fp))),
     draw = (col) => {
       c.fillStyle = col;
       for (const r of rects) {

@@ -207,3 +207,10 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Ecke verschieben: keine Zahleneingabe für den genauen Abstand, Fang nur auf die Richtungen der angrenzenden Wände.
 - Die alten Kugelgriffe (`hc`, `handle`, `patchKnob`) sind im Modellier-Modus ausgeblendet, ihr Code ist aber noch
   vorhanden und sollte entfernt werden, sobald sicher ist, dass er nicht mehr gebraucht wird.
+- Schatten in LOD 200: Wände, Laibungen und Fenster empfangen jetzt immer Schatten (vorher nur in der
+  Explosionsansicht). Bei sehr flachem Sonnenstand auf Schattenakne an dünnen Schichten achten.
+- Im Schema-Modus gibt es Schatten nur mit eingeschalteter Sonne; das Himmelslicht ist stark, Schatten auf den Flächen
+  wirken daher hell (gewollt, keine Verstärkung).
+- Ausrundungen: Normalen werden an flachen Knicken (bis 25°) geglättet (`glattNormalen`), Kanten erst ab 20°.
+  Weiße Haarlinien an den Segmenten bleiben in der Darstellung sichtbar (Ursache nicht gefunden, laut Nutzer in
+  Ordnung).

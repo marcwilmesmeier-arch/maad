@@ -27,16 +27,18 @@ function skKlickListe(en, n, m) {
     if (n === 1 && !(SK.sel.length && SK.sel.every((x) => x.b === en.b))) return skBld(en.b);
     return skEckGruppe(en);
   }
+  // eine Fläche: bei Ausrundungen die ganze gerundete Fläche (150-ecken.js)
+  const eins = () => skGlattKette(en);
   if (f === 'g') return skBld(en.b);
   if (f === 's') return en.top ? [en] : lvl();
-  if (f === 'f') return [en];
+  if (f === 'f') return eins();
   if (f === 'r') return skGroup(en);
-  if (m !== 'rep') return n >= 3 ? lvl() : [en];
+  if (m !== 'rep') return n >= 3 ? lvl() : eins();
   if (n === 1) {
     const drin = SK.sel.length && SK.sel.every((x) => x.b === en.b);
-    return drin ? [en] : skBld(en.b);
+    return drin ? eins() : skBld(en.b);
   }
-  if (n === 2) return [en];
+  if (n === 2) return eins();
   if (n === 3) return en.top ? [en] : lvl();
   return skGroup(en);
 }
@@ -92,6 +94,11 @@ function skAuswTyp() {
   if (skWhole(b)) return 'g';
   if (s.every((x) => x.top)) return 'd';
   const js = new Set(s.map((x) => x.j));
+  // Ausrundung als eine Fläche
+  if (js.size === 1 && s.length > 1 && s.every((x) => x.i != null && !x.top)) {
+    const kk = skGlattKette(s[0]).map(skKey);
+    if (kk.length === s.length && s.every((x) => kk.includes(skKey(x)))) return 'f';
+  }
   if (js.size === 1) {
     const j = s[0].j,
       lv = skBld(b).filter((x) => x.j === j && !x.top);
@@ -161,13 +168,13 @@ function skKlName() {
   if (t === 's') return gn(s[0].j) + ' · ' + m(b.levels[s[0].j].h) + ' m hoch';
   if (t === 'f' || t === 'r') {
     const f = lf(b, b.levels[s[0].j]),
-      a = f[s[0].i],
-      c = f[(s[0].i + 1) % f.length],
-      h = s.reduce((t2, x) => t2 + b.levels[x.j].h, 0);
+      lg = (x) => Math.hypot(f[(x.i + 1) % f.length][0] - f[x.i][0], f[(x.i + 1) % f.length][1] - f[x.i][1]),
+      rund = t === 'f' && s.length > 1,
+      h = t === 'f' ? b.levels[s[0].j].h : s.reduce((t2, x) => t2 + b.levels[x.j].h, 0);
     return (
-      (t === 'f' ? 'Wand · ' + gn(s[0].j) : 'Flucht · ' + s.length + ' Geschosse') +
+      (t === 'f' ? (rund ? 'Rundung · ' : 'Wand · ') + gn(s[0].j) : 'Flucht · ' + s.length + ' Geschosse') +
       ' · ' +
-      m(Math.hypot(c[0] - a[0], c[1] - a[1])) +
+      m(rund ? s.reduce((t2, x) => t2 + lg(x), 0) : lg(s[0])) +
       ' × ' +
       m(h) +
       ' m'

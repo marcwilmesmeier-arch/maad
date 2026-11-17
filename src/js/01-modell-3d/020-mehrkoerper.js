@@ -463,6 +463,7 @@ function mesh(b) {
     if (rec.length) ge = pxCut(ge, b, i, rec, y0 - (i ? 0 : 3) + cum);
     if (recT.length) ge = pxCutCap(ge, lf(b, l), recT, dpt, true);
     if (recB.length) ge = pxCutCap(ge, lf(b, l), recB, 0, false);
+    glattNormalen(ge, 25);
     const m = new T.Mesh(
       ge,
       mat(b.ex ? 0xe6e6e6 : new T.Color(S.uses[l.use || b.use || 'Wohnen']), { emissive: 0x000000 }),
@@ -474,7 +475,8 @@ function mesh(b) {
     m.castShadow = m.receiveShadow = true;
     m.userData.b = b;
     m.userData.k = i;
-    const e = new T.LineSegments(new T.EdgesGeometry(ge), new T.LineBasicMaterial({ color: 0x4a4a4a }));
+    // Kanten erst ab 20° Knick: Ausrundungen (Segmente ~11°) wirken rund, ohne senkrechte Trennlinien
+    const e = new T.LineSegments(new T.EdgesGeometry(ge, 20), new T.LineBasicMaterial({ color: 0x4a4a4a }));
     e.userData.kont = 1;
     e.visible = !S.noK;
     e.position.copy(m.position);
@@ -528,4 +530,60 @@ function mesh(b) {
   } catch (e) {
     logErr(e, 'mesh');
   }
+}
+
+/**
+ * Weiche Schattierung an flachen Knicken (Ausrundungen): Normalen von Eckpunkten an derselben Stelle werden gemittelt,
+ * wenn ihre Flächen höchstens maxDeg Grad auseinander liegen. Kanten mit größerem Knick bleiben scharf.
+ */
+function glattNormalen(ge, maxDeg) {
+  const g = ge.index ? ge.toNonIndexed() : ge;
+  if (g !== ge) ge.copy(g);
+  if (!ge.attributes.normal) ge.computeVertexNormals();
+  const pa = ge.attributes.position,
+    na = ge.attributes.normal,
+    n = pa.count,
+    cmin = Math.cos((maxDeg * Math.PI) / 180),
+    key = (i) =>
+      Math.round(pa.getX(i) * 100) + ',' + Math.round(pa.getY(i) * 100) + ',' + Math.round(pa.getZ(i) * 100),
+    M = new Map();
+  for (let i = 0; i < n; i++) {
+    const k = key(i);
+    let l = M.get(k);
+    if (!l) M.set(k, (l = []));
+    l.push(i);
+  }
+  const alt = Float32Array.from(na.array),
+    neu = Float32Array.from(na.array);
+  M.forEach((l) => {
+    if (l.length < 2) return;
+    // verschiedene Flächenrichtungen an diesem Punkt (jede nur einmal, unabhängig von der Zahl der Dreiecke)
+    const U = [];
+    l.forEach((j) => {
+      const v = [alt[j * 3], alt[j * 3 + 1], alt[j * 3 + 2]];
+      if (!U.some((u) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2] > 0.9999)) U.push(v);
+    });
+    if (U.length < 2) return;
+    l.forEach((i) => {
+      const ax = alt[i * 3],
+        ay = alt[i * 3 + 1],
+        az = alt[i * 3 + 2];
+      let sx = 0,
+        sy = 0,
+        sz = 0;
+      U.forEach((u) => {
+        if (ax * u[0] + ay * u[1] + az * u[2] >= cmin) {
+          sx += u[0];
+          sy += u[1];
+          sz += u[2];
+        }
+      });
+      const L = Math.hypot(sx, sy, sz) || 1;
+      neu[i * 3] = sx / L;
+      neu[i * 3 + 1] = sy / L;
+      neu[i * 3 + 2] = sz / L;
+    });
+  });
+  ge.setAttribute('normal', new T.BufferAttribute(neu, 3));
+  return ge;
 }

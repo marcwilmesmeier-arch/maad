@@ -18,7 +18,7 @@ function skEckeBei(b, j, i, pt) {
     if (Math.hypot(f[q][0] - v[0], f[q][1] - v[1]) < 0.05 && skEckeEcht(f, q)) return q;
   return null;
 }
-/** true, wenn an Punkt q die Kontur abknickt (keine gerade Durchlaufstelle). */
+/** true, wenn an Punkt q die Kontur deutlich abknickt (über 20° – flache Knicke einer Ausrundung zählen nicht). */
 function skEckeEcht(f, q) {
   const N = skEckeNachbarn(f, q);
   if (!N) return false;
@@ -27,7 +27,8 @@ function skEckeEcht(f, q) {
     u1 = [v[0] - p[0], v[1] - p[1]],
     u2 = [r[0] - v[0], r[1] - v[1]],
     cr = (u1[0] * u2[1] - u1[1] * u2[0]) / (Math.hypot(...u1) * Math.hypot(...u2) || 1);
-  return Math.abs(cr) > 0.02;
+  const dt = (u1[0] * u2[0] + u1[1] * u2[1]) / (Math.hypot(...u1) * Math.hypot(...u2) || 1);
+  return Math.abs(Math.atan2(cr, dt)) > (20 * Math.PI) / 180;
 }
 /** Nächste vom Punkt q verschiedene Nachbarpunkte davor und danach. */
 function skEckeNachbarn(f, q) {
@@ -291,4 +292,43 @@ function skEckRadiusVorgabe() {
     logErr(e, 'skEckRadiusVorgabe');
     return '2';
   }
+}
+/** Alle Wandstücke eines Geschosses, die über flache Knicke (Ausrundung) mit der Wand en verbunden sind. */
+function skGlattKette(en) {
+  if (en.i == null || en.top || szSp(en)) return [en];
+  const b = en.b,
+    f = lf(b, b.levels[en.j]),
+    n = f.length,
+    lg = (i) => Math.hypot(f[(i + 1) % n][0] - f[i][0], f[(i + 1) % n][1] - f[i][1]),
+    // Knick an Punkt q in Grad
+    knick = (q) => {
+      const N = skEckeNachbarn(f, q);
+      if (!N) return 0;
+      const v = f[q],
+        u1 = [v[0] - N[0][0], v[1] - N[0][1]],
+        u2 = [N[1][0] - v[0], N[1][1] - v[1]];
+      return Math.abs(
+        (Math.atan2(u1[0] * u2[1] - u1[1] * u2[0], u1[0] * u2[0] + u1[1] * u2[1]) * 180) / Math.PI,
+      );
+    },
+    L0 = lg(en.i),
+    // Bogensegment: etwa gleich lang wie die angeklickte Wand, Übergang mit leichtem Knick (1°–20°)
+    passt = (i, q) => {
+      const k = knick(q);
+      return k > 1 && k <= 20 && Math.abs(lg(i) - L0) <= 0.25 * L0;
+    },
+    out = [{ b, j: en.j, i: en.i }];
+  for (let i = en.i, k = 1; k < n; k++) {
+    const pv = (i - 1 + n) % n;
+    if (pv === en.i || lg(pv) < 0.05 || !passt(pv, i)) break;
+    out.unshift({ b, j: en.j, i: pv });
+    i = pv;
+  }
+  for (let i = en.i, k = 1; k < n; k++) {
+    const nx = (i + 1) % n;
+    if (nx === en.i || out.some((x) => x.i === nx) || lg(nx) < 0.05 || !passt(nx, nx)) break;
+    out.push({ b, j: en.j, i: nx });
+    i = nx;
+  }
+  return out;
 }

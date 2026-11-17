@@ -45,33 +45,12 @@ function skQuadsBasis(ents, col, op, line) {
     const a = f[e.i],
       c = f[(e.i + 1) % f.length];
     pos.push(a[0], z0, a[1], c[0], z0, c[1], c[0], z1, c[1], a[0], z0, a[1], c[0], z1, c[1], a[0], z1, a[1]);
-    if (line)
-      lp.push(
-        a[0],
-        z0,
-        a[1],
-        c[0],
-        z0,
-        c[1],
-        c[0],
-        z0,
-        c[1],
-        c[0],
-        z1,
-        c[1],
-        c[0],
-        z1,
-        c[1],
-        a[0],
-        z1,
-        a[1],
-        a[0],
-        z1,
-        a[1],
-        a[0],
-        z0,
-        a[1],
-      );
+    if (line) {
+      lp.push(a[0], z0, a[1], c[0], z0, c[1], c[0], z1, c[1], a[0], z1, a[1]);
+      // senkrechte Kanten nur an echten Ecken – Ausrundungen sollen rund wirken (150-ecken.js)
+      if (skEckeEcht(f, (e.i + 1) % f.length)) lp.push(c[0], z0, c[1], c[0], z1, c[1]);
+      if (skEckeEcht(f, e.i)) lp.push(a[0], z1, a[1], a[0], z0, a[1]);
+    }
   });
   const o = [],
     P = pos.concat(tp);

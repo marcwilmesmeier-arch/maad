@@ -311,8 +311,9 @@ function l2Vis() {
       it.g.children.forEach((o) => {
         if (o.userData.off) return;
         if (o.isLineSegments && o.visible !== ex) o.visible = ex;
-        if (o.isMesh && o.receiveShadow !== ex) {
-          o.receiveShadow = ex;
+        // Wände, Laibungen und Fenster empfangen immer Schatten (Tiefe der Öffnungen, Selbstverschattung)
+        if (o.isMesh && !o.receiveShadow) {
+          o.receiveShadow = true;
           o.material.needsUpdate = true;
         }
       });
