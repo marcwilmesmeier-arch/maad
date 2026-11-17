@@ -366,9 +366,74 @@ function triGeo(b) {
       }
     }
   }
+  triAussen(b, pp, nn);
   g.setAttribute('position', new T.BufferAttribute(pp, 3));
   g.setAttribute('normal', new T.BufferAttribute(nn, 3));
   return g;
+}
+/**
+ * Dreiecke eines LOD2-Gebäudes nach außen ausrichten (Lage, Windung und Normale). In den Daten zeigen einzelne Flächen
+ * oft nach innen; die Normalen dort stimmen dann auch nicht. Folge: Der Schatten versetzt seinen Prüfpunkt ins Gebäude
+ * (normalBias), die Fläche beschattet sich selbst und wird dunkel (stark in Realistisch+). Regeln je Dreieck:
+ * geneigte und waagerechte Flächen über dem Fuß zeigen nach oben, am Fuß nach unten; Wände zeigen aus dem Grundriss
+ * (b.o) heraus. Flächennormale statt gemittelter Normalen.
+ */
+function triAussen(b, pp, nn) {
+  let y0 = Infinity;
+  for (let i = 1; i < pp.length; i += 3) y0 = Math.min(y0, pp[i]);
+  const fp = Array.isArray(b.o) && b.o.length > 2 ? b.o : null;
+  let mx = 0,
+    mz = 0;
+  for (let i = 0; i < pp.length; i += 3) {
+    mx += pp[i];
+    mz += pp[i + 2];
+  }
+  mx /= pp.length / 3 || 1;
+  mz /= pp.length / 3 || 1;
+  for (let a = 0; a + 8 < pp.length; a += 9) {
+    const ux = pp[a + 3] - pp[a],
+      uy = pp[a + 4] - pp[a + 1],
+      uz = pp[a + 5] - pp[a + 2],
+      vx = pp[a + 6] - pp[a],
+      vy = pp[a + 7] - pp[a + 1],
+      vz = pp[a + 8] - pp[a + 2];
+    let wx = uy * vz - uz * vy,
+      wy = uz * vx - ux * vz,
+      wz = ux * vy - uy * vx;
+    const wl = Math.hypot(wx, wy, wz);
+    if (wl < 1e-9) continue;
+    wx /= wl;
+    wy /= wl;
+    wz /= wl;
+    const cx = (pp[a] + pp[a + 3] + pp[a + 6]) / 3,
+      cy = (pp[a + 1] + pp[a + 4] + pp[a + 7]) / 3,
+      cz = (pp[a + 2] + pp[a + 5] + pp[a + 8]) / 3;
+    let raus;
+    if (Math.abs(wy) > 0.1) raus = cy - y0 > 0.3 ? wy > 0 : wy < 0;
+    else {
+      const hl = Math.hypot(wx, wz) || 1,
+        T0 = [cx + (wx / hl) * 0.25, cz + (wz / hl) * 0.25],
+        T1 = [cx - (wx / hl) * 0.25, cz - (wz / hl) * 0.25];
+      if (fp) {
+        const i0 = inP(T0, fp),
+          i1 = inP(T1, fp);
+        // nur eindeutige Fälle (an Innenhöfen und Anbauten liegen Wände nicht immer auf dem Grundrissrand)
+        raus = i0 === i1 ? (cx - mx) * wx + (cz - mz) * wz > 0 : !i0;
+      } else raus = (cx - mx) * wx + (cz - mz) * wz > 0;
+    }
+    const sg = raus ? 1 : -1;
+    if (!raus)
+      for (let j = 0; j < 3; j++) {
+        const x = pp[a + 3 + j];
+        pp[a + 3 + j] = pp[a + 6 + j];
+        pp[a + 6 + j] = x;
+      }
+    for (let j = 0; j < 3; j++) {
+      nn[a + j * 3] = wx * sg;
+      nn[a + j * 3 + 1] = wy * sg;
+      nn[a + j * 3 + 2] = wz * sg;
+    }
+  }
 }
 function cgBuilding(el, ctx) {
   const GM = '*',
