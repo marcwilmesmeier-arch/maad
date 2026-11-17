@@ -236,3 +236,7 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Lichtberechnung im Hintergrund (Ray-Tracing).
 - Mehrkörper-Dächer nur bei rechtwinkligen Grundrissen (alle Kanten parallel zu den beiden Firstachsen). Schräge oder
   runde Grundrisse bekommen ein Dach über den ganzen Grundriss in der Hauptrichtung.
+
+- Bibliothek für Öffnungstypen und Gruppen liegt nur im `localStorage` des Browsers (nicht auf dem Server, nicht
+  zwischen Rechnern geteilt). Bei Server-Betrieb wäre eine Bibliothek je Mandant sinnvoll.
+- Gruppen: früherer fester Sturzwert `G.sz.s` entfällt; der Sturz kommt jetzt aus der Zeichnung der Gruppe.

@@ -301,6 +301,8 @@ function okGrLoeschen() {
   if (n && !confirm(`„${G.n}“ ist ${n}× an Fassaden gesetzt. Gruppe und diese Stellen löschen?`)) return;
   hist();
   S.oeg = S.oeg.filter((x) => x !== G);
+  // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js
+  bibEntfernen('oeg', G.k);
   S.bld.forEach((b) => {
     Object.values(b.fd || {}).forEach((d) => {
       if (d && d.gr) d.gr = d.gr.filter((I) => I.g !== G.k);
@@ -352,7 +354,8 @@ function okGrRender() {
             `<div class="okt${x.k === OK.g ? ' on' : ''}" onclick="okGrWahl('${x.k}')">${oegSymbol(x, 48, 30)}<span>${esc(x.n)}<small>${fdFmt(x.l)} m · ${x.oe.length} Öffnung${x.oe.length === 1 ? '' : 'en'}${zahl[x.k] ? ' · ' + zahl[x.k] + '× gesetzt' : ''}</small></span><button class="okx" title="Gruppe löschen" onclick="event.stopPropagation();okGrWahl('${x.k}');okGrLoeschen()">×</button></div>`,
         )
         .join('') +
-      `<div class="okt" onclick="okGrNeu()"><span class="mu">+ Gruppe anlegen</span></div>`;
+      `<div class="okt" onclick="okGrNeu()"><span class="mu">+ Gruppe anlegen</span></div>` +
+      `<p class="okbib">Eigene Gruppen bleiben in diesem Browser gespeichert und stehen in neuen Projekten bereit.</p>`;
   const R = okE('okR');
   if (!R || (R.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)))
     return;

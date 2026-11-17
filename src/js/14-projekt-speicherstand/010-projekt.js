@@ -286,6 +286,9 @@ function projApplySet(x) {
     // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
     S.oet = x && x.oet && x.oet.length ? oeTypenPruefen(x.oet) : JSON.parse(JSON.stringify(OET0));
     S.oeg = x && Array.isArray(x.oeg) ? oegPruefen(x.oeg) : JSON.parse(JSON.stringify(OEG0));
+    // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: Bibliothek ergänzt, eigene Einträge des Projekts merken
+    bibErgaenzen(false);
+    bibMerken();
   } catch (e) {
     logErr(e, 'projApplySet');
   }

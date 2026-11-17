@@ -387,6 +387,8 @@ function oeTypWahl(k) {
 function oeAktualisieren() {
   FDS.ps = '';
   FDS.dirty = 1;
+  // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: eigene Typen und Gruppen für neue Projekte merken
+  bibMerken();
   try {
     if (FDS.open) fdTick(true);
     okRender();
@@ -413,6 +415,8 @@ function oeTypLoeschen(k) {
   if (n && !confirm(`${n} Öffnung${n === 1 ? '' : 'en'} dieses Typs ebenfalls löschen?`)) return;
   hist();
   S.oet = S.oet.filter((t) => t.k !== k);
+  // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js
+  bibEntfernen('oet', k);
   S.bld.forEach((b) =>
     Object.values(b.fd || {}).forEach((d) => {
       if (d && d.oe) d.oe = d.oe.filter((o) => o.t !== k);

@@ -19,7 +19,7 @@ const OKCSS = `#okDock{position:fixed;left:110px;top:70px;width:min(1120px,calc(
 #okDock .okl{width:230px;background:var(--pn,#E9EDEF);border-right:1px solid var(--ln,#dcdcdc);overflow:auto;padding:6px}
 #okDock .okl h5{margin:8px 4px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu,#7a7a7a)}
 #okDock .okt{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer}
-#okDock .okt:hover{background:#0000000d}#okDock .okt.on{background:#5E7F9233}
+#okDock .okbib{margin:12px 6px 4px;font-size:11px;line-height:1.4;color:var(--mu,#7a7a7a)}#okDock .okt:hover{background:#0000000d}#okDock .okt.on{background:#5E7F9233}
 #okDock .okt span{flex:1;min-width:0;line-height:1.25}#okDock .okt .okx{flex:none;border:0;background:none;color:var(--mu,#7a7a7a);font-size:15px;padding:0 4px;cursor:pointer;opacity:0}#okDock .okt:hover .okx,#okDock .okt.on .okx{opacity:1}#okDock .okt .okx:hover{color:#c62828}#okDock .okt small{display:block;color:var(--mu,#7a7a7a);font-size:11px}
 #okDock .okc{flex:1;position:relative;min-width:0}
 #okDock canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
@@ -257,19 +257,21 @@ function okRender() {
   // Liste nach Art
   const L = okE('okL');
   if (L)
-    L.innerHTML = Object.keys(OE_ARTEN)
-      .map((a) => {
-        const ts = S.oet.filter((t) => t.a === a);
-        return `<h5>${OE_ARTEN[a]}</h5>${ts
-          .map(
-            (t) =>
-              `<div class="okt${t.k === OK.k ? ' on' : ''}" onclick="okWahl('${t.k}')">${oeSymbol(t, 30, 30)}<span>${esc(t.n)}<small>${fdFmt(t.b)} × ${fdFmt(t.h)} m${zahl[t.k] ? ' · ' + zahl[t.k] + '× gesetzt' : ''}</small></span></div>`,
-          )
-          .join(
-            '',
-          )}<div class="okt" onclick="okNeu('${a}')" title="Neuen Typ dieser Art anlegen"><span class="mu">+ ${OE_ARTEN[a]} anlegen</span></div>`;
-      })
-      .join('');
+    L.innerHTML =
+      Object.keys(OE_ARTEN)
+        .map((a) => {
+          const ts = S.oet.filter((t) => t.a === a);
+          return `<h5>${OE_ARTEN[a]}</h5>${ts
+            .map(
+              (t) =>
+                `<div class="okt${t.k === OK.k ? ' on' : ''}" onclick="okWahl('${t.k}')">${oeSymbol(t, 30, 30)}<span>${esc(t.n)}<small>${fdFmt(t.b)} × ${fdFmt(t.h)} m${zahl[t.k] ? ' · ' + zahl[t.k] + '× gesetzt' : ''}</small></span></div>`,
+            )
+            .join(
+              '',
+            )}<div class="okt" onclick="okNeu('${a}')" title="Neuen Typ dieser Art anlegen"><span class="mu">+ ${OE_ARTEN[a]} anlegen</span></div>`;
+        })
+        .join('') +
+      `<p class="okbib">Eigene Fenster und Türen bleiben in diesem Browser gespeichert und stehen in neuen Projekten bereit.</p>`;
   const R = okE('okR');
   if (
     R &&
