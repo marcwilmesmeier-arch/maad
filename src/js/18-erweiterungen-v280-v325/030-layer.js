@@ -161,6 +161,8 @@ const LYG = [
   ['Grafikeffekte', 'fx'],
   ['Ansicht &amp; Zeichnen', ['mask', 'wire', 'fang']],
 ];
+// Analyse-Darstellungen: werden im Analysemenü bzw. über dessen Schalter ein- und ausgeblendet, nicht in der Layer-Liste
+const LY_ANALYSE = new Set(['son', 'erg', 'erh', 'scl', 'scp']);
 function wmPcSet(v) {
   S.wmPc = !!v;
   try {
@@ -200,7 +202,7 @@ function lyDGroup() {
     } else if (cur) cur.subs.push(n);
   }
   const byK = new Map(units.map((u) => [u.key, u])),
-    used = new Set(),
+    used = new Set([...LY_ANALYSE]),
     mode = (DAR.find((d) => d[0] === S.dar) || [0, ''])[1];
   el.innerHTML = '';
   el.insertAdjacentHTML(
