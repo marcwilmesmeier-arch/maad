@@ -3,9 +3,10 @@
 // über Gelände; die oberste Zeile gilt für alle Geschosse darüber). Eine Zeile kann mehrere Gruppen als Rhythmus
 // kombinieren (Liste, z. B. ['g1', 'g2'] = A–B–A–B …; wiederholt über das Feld). Ausrichtung je Zeile in b.fk.au
 // ('l' linksbündig, 'm' mittig = Rest gleichmäßig an beiden Enden, 'r' rechtsbündig), je Gebäudeseite in b.fk.auS
-// (Vorrang vor der Zeile; auch im Fassadendesigner beim Werkzeug „Gruppe“ einstellbar), Abweichungen je Seite (Ansicht), je Geschoss oder
-// je Seite und Geschoss (b.fk.ab = { 'Ansicht|Geschoss': Gruppe oder Rhythmus, 'Ansicht|*': …, '*|Geschoss': … }; '' = keine;
-// Ausrichtung dieser eigenen Anordnungen in b.fk.auA mit demselben Schlüssel, gesetzt aus der Kontextleiste im Modell).
+// (Vorrang vor der Zeile; im Fassadendesigner beim Werkzeug „Gruppe“ einstellbar). Abweichungen je Geschoss, Wand oder
+// Flucht werden im Modell gesetzt (Auswahl → Kontextleiste „Gruppen“, 26-modellier-modus/140): b.fk.ab =
+// { 'Ansicht|Geschoss': Gruppe oder Rhythmus, 'Ansicht|*': …, '*|Geschoss': … }, '' = keine; Ausrichtung in b.fk.auA mit
+// demselben Schlüssel. Die Karte zeigt davon nur die Anzahl und „alle entfernen“.
 // fkSync() platziert die Gruppen automatisch in allen Fassadenfeldern aller Ansichten (Verweise mit a: 1 in
 // b.fd[Ansicht].gr – gleiche Daten wie im Fassadendesigner, daher in Ansicht, 3D und Grundriss sichtbar). Von Hand
 // verschobene oder getauschte Verweise verlieren a und bleiben bei der nächsten Platzierung erhalten.
@@ -32,7 +33,9 @@ const FKCSS = `.fk .fkz{display:flex;align-items:center;gap:8px;padding:4px 0}
 #fkWahl .fkg div:hover{border-color:#5E7F92}#fkWahl .fkg div.on{border-color:#1f6fd1;background:#1f6fd114}
 .fk .fka{display:flex;flex:none;border:1px solid var(--ln);border-radius:6px;overflow:hidden}
 .fk .fka button{border:0;background:transparent;padding:2px 5px;cursor:pointer;font-size:11px;color:var(--mu)}
-.fk .fka button.on{background:#5E7F92;color:#fff}`;
+.fk .fka button.on{background:#5E7F92;color:#fff}
+.fk .fkvs{width:52px;flex:none;font-size:11px;padding:2px 4px;border:1px solid var(--ln);border-radius:6px}
+#fkWahl .skgvs{width:60px;font-size:12px;padding:2px 4px;border:1px solid var(--ln);border-radius:6px}`;
 
 /** Konfiguration eines Gebäudes (wird bei Bedarf angelegt). */
 function fkDaten(b, mk) {
@@ -54,6 +57,24 @@ function fkAusr(fk, vk, j) {
   const s = fk.auS && fk.auS[vk];
   if (s) return s;
   return (fk.au || [])[Math.min(j, Math.max(0, (fk.st || []).length - 1))] || 'm';
+}
+/**
+ * Versatz (m) zur Ausrichtung für Seite vk und Geschoss j: eigene Anordnung (b.fk.vsA) → Zeile des Stapels (b.fk.vs).
+ * Links: Abstand vom linken Rand, rechts: vom rechten Rand (positiv = nach innen), mittig: positiv = nach rechts.
+ */
+function fkVersatz(fk, vk, j) {
+  const A = fk.vsA || {},
+    ka = [vk + '|' + j, vk + '|*', '*|' + j].find((q) => fk.ab && q in fk.ab && q in A);
+  if (ka) return +A[ka] || 0;
+  return +(fk.vs || [])[Math.min(j, Math.max(0, (fk.st || []).length - 1))] || 0;
+}
+/** Versatz der Zeile i setzen (Eingabefeld der Karte). */
+function fkVersatzSetzen(i, v) {
+  const n = parseFloat(String(v).replace(',', '.'));
+  fkAendern((fk) => {
+    fk.vs = fk.vs || [];
+    fk.vs[i] = isFinite(n) ? Math.max(-50, Math.min(50, Math.round(n * 1000) / 1000)) : 0;
+  });
 }
 /** Ausrichtung je Gebäudeseite setzen ('' = wie Zeile). */
 function fkAusrSeite(b, vk, a) {
@@ -120,17 +141,22 @@ function fkAnwenden(b) {
         )
           return;
         // Rhythmus wiederholen, solange die nächste Gruppe noch passt; Rest gleichmäßig an beiden Enden
-        const folge = [];
+        // Ausrichtung mit Versatz: links/rechts verkürzt ein positiver Versatz den verfügbaren Platz am Rand
+        const au = fkAusr(fk, V.key, gs.j),
+          vs = fkVersatz(fk, V.key, gs.j),
+          rand = au === 'm' ? 0 : Math.max(0, vs),
+          folge = [];
         let lang = 0;
         for (let i = 0; i < 500; i++) {
           const G = R[i % R.length];
-          if (lang + G.l > c - a + 1e-6) break;
+          if (lang + G.l > c - a - rand + 1e-6) break;
           folge.push(G);
           lang += G.l;
         }
-        const au = fkAusr(fk, V.key, gs.j),
-          rest = c - a - lang;
-        let u = au === 'l' ? a : au === 'r' ? a + rest : a + rest / 2;
+        const rest = c - a - lang;
+        let u = au === 'l' ? a + vs : au === 'r' ? a + rest - vs : a + rest / 2 + vs;
+        // im Feld halten
+        u = Math.max(a, Math.min(a + rest, u));
         folge.forEach((G) => {
           L.push({ id: oegNeuId(), g: G.k, u, v: gs.v0, a: 1 });
           u += G.l;
@@ -178,13 +204,83 @@ function fkNeu(i) {
     fk.st.splice(i + 1, 0, Array.isArray(k) ? k.slice() : k);
     fk.au = fk.au || [];
     fk.au.splice(i + 1, 0, fk.au[i] || 'm');
+    fk.vs = fk.vs || [];
+    fk.vs.splice(i + 1, 0, fk.vs[i] || 0);
   });
 }
 function fkLoeschen(i) {
   fkAendern((fk) => {
     fk.st.splice(i, 1);
     if (fk.au) fk.au.splice(i, 1);
+    if (fk.vs) fk.vs.splice(i, 1);
   });
+}
+// ---- Fassadenmaterial je Geschoss (b.fk.mt, Stapel wie die Gruppen; oberste Zeile gilt für alle darüber).
+// Voreinstellung für Ansichtsflächen ohne eigenen Fassadentyp – Ansicht (040-fang) und Flächen nach Typ (fdStats).
+/** Material (Fassadentyp-Schlüssel) für das oberirdische Geschoss j, '' = keins. */
+function fkMaterial(b, j) {
+  const mt = (b && b.fk && b.fk.mt) || [];
+  if (!mt.length) return '';
+  const k = mt[Math.max(0, Math.min(j, mt.length - 1))];
+  return S.ft.some((t) => t.k === k && !t.df) ? k : '';
+}
+/** Fläche f einer Ansicht nach Geschossen der Voreinstellung aufteilen: [{ t, a }] (nur bei f.t === 'ohne'). */
+function fkMaterialAnteile(b, f) {
+  if (!b.fk || !b.fk.mt || !b.fk.mt.length || f.t !== 'ohne') return null;
+  const flaeche = (r, v0, v1) => Math.abs(fvPA(fwClip(fwClip(r, 0, 1, -v0, 1), 0, -1, v1, 1))),
+    out = [];
+  fkGeschosse(b).forEach((g, j) => {
+    const v1 = j === fkGeschosse(b).length - 1 ? 1e4 : g.v1,
+      a = flaeche(f.o, g.v0, v1) - (f.h || []).reduce((s, h) => s + flaeche(h, g.v0, v1), 0),
+      t = fkMaterial(b, j) || 'ohne';
+    if (a > 1e-4) out.push({ t, a, v0: g.v0, v1 });
+  });
+  return out;
+}
+function fkMtSetze(i, k) {
+  fkAendern((fk) => {
+    fk.mt = fk.mt || [];
+    fk.mt[i] = S.ft.some((t) => t.k === k) ? k : '';
+  });
+  FDS.dirty = 1;
+}
+function fkMtNeu(i) {
+  fkAendern((fk) => {
+    fk.mt = fk.mt || [];
+    const k = fk.mt.length
+      ? fk.mt[Math.max(0, Math.min(i, fk.mt.length - 1))]
+      : (S.ft.find((t) => !t.df) || {}).k || '';
+    fk.mt.splice(i + 1, 0, k);
+  });
+  FDS.dirty = 1;
+}
+function fkMtLoeschen(i) {
+  fkAendern((fk) => {
+    (fk.mt = fk.mt || []).splice(i, 1);
+  });
+  FDS.dirty = 1;
+}
+/** Abschnitt „Fassadenmaterial“ der Karte. */
+function fkMtHtml(fk, GS) {
+  const mt = fk.mt || [],
+    ft = S.ft.filter((t) => !t.df);
+  let h = `<div class="mu" style="font-size:11px;margin:12px 0 6px">Fassadenmaterial je Geschoss – Voreinstellung für alle Flächen ohne eigenen Fassadentyp (auch in der Fassadenansicht).</div>`;
+  if (!mt.length)
+    return (
+      h + `<button class="sm" style="width:100%" onclick="fkMtNeu(-1)">+ Material für alle Geschosse</button>`
+    );
+  for (let i = mt.length - 1; i >= 0; i--) {
+    if (i < GS.length - 1)
+      h += `<div class="fkp"><button onclick="fkMtNeu(${i})" title="Zeile darüber einfügen">+</button></div>`;
+    const lab = GS[i]
+        ? i === mt.length - 1 && i < GS.length - 1
+          ? 'ab ' + GS[i].name
+          : GS[i].name
+        : 'ab ' + (GS[GS.length - 1] || {}).name,
+      c = mt[i] ? fdT(mt[i]).c : '#f4f3f0';
+    h += `<div class="fkz"><span class="fkl">${esc(lab)}</span><span style="flex:none;width:56px;height:30px;border:1px solid var(--ln);border-radius:6px;background:${c}"></span><select class="fkn" style="flex:1;min-width:0" onchange="fkMtSetze(${i},this.value)"><option value="" ${!mt[i] ? 'selected' : ''}>— keins —</option>${ft.map((t) => `<option value="${t.k}" ${t.k === mt[i] ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select><button class="fkx" onclick="fkMtLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
+  }
+  return h;
 }
 /** Ausrichtung der Zeile i: 'l' links, 'm' mittig, 'r' rechts. */
 function fkAusrichtung(i, a) {
@@ -282,14 +378,17 @@ function fkAbweichung(vk, j, k) {
     if (k === null) {
       delete fk.ab[key];
       if (fk.auA) delete fk.auA[key];
+      if (fk.vsA) delete fk.vsA[key];
     } else fk.ab[key] = oegG(k) ? k : '';
   });
 }
-function fkAbweichungAusFormular() {
-  const sv = document.getElementById('fkSeite'),
-    gv = document.getElementById('fkGesch'),
-    kv = document.getElementById('fkGr');
-  if (sv && gv && kv) fkAbweichung(sv.value, gv.value, kv.value);
+/** Alle eigenen Anordnungen (Abweichungen je Geschoss, Wand, Flucht) des gewählten Gebäudes entfernen. */
+function fkAbweichungenWeg() {
+  fkAendern((fk) => {
+    fk.ab = {};
+    fk.auA = {};
+    fk.vsA = {};
+  });
 }
 
 // ---- Karte im Gebäudepanel (aus 07-analyse/010-analyse.js)
@@ -334,7 +433,7 @@ function fkCard(b) {
         )
         .join(
           '',
-        )}</span><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
+        )}</span><input type="number" step="0.05" class="fkvs" value="${+(+((fk.vs || [])[i] || 0)).toFixed(3)}" title="Versatz in m zur Ausrichtung: links/rechts = Abstand vom Rand (positiv nach innen), mittig = positiv nach rechts" onchange="fkVersatzSetzen(${i},this.value)"><button class="fkx" onclick="fkLoeschen(${i})" title="Zeile löschen">🗑</button></div>`;
       return h;
     };
   let h = `<h4>Fassade</h4><div class="card fk"><div class="mu" style="font-size:11px;margin-bottom:6px">Öffnungsgruppen je Geschoss, ab Erdgeschoss – die oberste Zeile gilt für alle Geschosse darüber. Wird in allen Ansichten platziert.</div>`;
@@ -347,40 +446,11 @@ function fkCard(b) {
       h += zeile(i);
     }
   }
-  // Abweichungen je Seite / Geschoss
-  const ab = fk.ab || {},
-    seite = (vk) =>
-      vk === '*' ? 'alle Seiten' : ((V.find((v) => v.key === vk) || {}).name || vk).replace('Ansicht ', ''),
-    gesch = (j) => (j === '*' ? 'alle Geschosse' : (GS[+j] || {}).name || j),
-    vorwahl = FDS.open && FDS.vk && FDS.vk !== '*' ? FDS.vk : '*';
-  h += `<div class="mu" style="font-size:11px;margin:10px 0 4px">Abweichung je Seite oder Geschoss</div>
-<div style="display:flex;gap:4px"><select id="fkSeite" title="Seite (Ansicht)"><option value="*">Alle Seiten</option>${V.map((v) => `<option value="${v.key}" ${v.key === vorwahl ? 'selected' : ''}>${esc(v.name.replace('Ansicht ', ''))}</option>`).join('')}</select><select id="fkGesch" title="Geschoss"><option value="*">Alle Geschosse</option>${GS.map((g) => `<option value="${g.j}">${esc(g.name)}</option>`).join('')}</select></div>
-<div style="display:flex;gap:4px;margin-top:4px"><select id="fkGr"><option value="">— keine —</option>${S.oeg.map((G) => `<option value="${G.k}">${esc(G.n)}</option>`).join('')}</select><button class="sm" onclick="fkAbweichungAusFormular()">Festlegen</button></div>`;
-  const keys = Object.keys(ab);
-  if (keys.length)
-    h += keys
-      .map((k) => {
-        const [vk, j] = k.split('|');
-        return `<div class="fkz"><span class="fkn">${esc(seite(vk))} · ${esc(gesch(j))}: <b>${esc(fkReihe(ab[k]).map(name).join(' – ') || name(''))}</b></span><button class="fkx" onclick="fkAbweichung('${vk}','${j}',null)" title="Abweichung entfernen">×</button></div>`;
-      })
-      .join('');
-  if (st.length)
-    h +=
-      `<div class="mu" style="font-size:11px;margin:10px 0 4px">Ausrichtung je Seite</div>` +
-      V.map((v) => {
-        const cur = (fk.auS || {})[v.key] || '';
-        return `<div class="fkz"><span class="fkn">${esc(v.name.replace('Ansicht ', ''))}</span><span class="fka">${[
-          ['', 'wie Zeile', 'Ausrichtung der Zeile'],
-          ['l', '⇤', 'linksbündig'],
-          ['m', '↔', 'mittig'],
-          ['r', '⇥', 'rechtsbündig'],
-        ]
-          .map(
-            ([k, z, tt]) =>
-              `<button class="${cur === k ? 'on' : ''}" onclick="fkAusrSeite(S.sel,'${v.key}','${k}')" title="${tt}">${z}</button>`,
-          )
-          .join('')}</span></div>`;
-      }).join('');
+  // Abweichungen je Geschoss, Wand oder Flucht werden im Modell gesetzt (Auswahl → Kontextleiste „Gruppen“);
+  // hier nur die Anzahl und „alle entfernen“
+  const nAb = Object.keys(fk.ab || {}).length;
+  h += `<div class="mu" style="font-size:11px;margin:10px 0 4px">${nAb ? nAb + ' eigene Anordnung' + (nAb === 1 ? '' : 'en') + ' im Modell gesetzt · ' : ''}Abweichungen je Geschoss oder Fläche: im Modell wählen → „Gruppen“${nAb ? ` · <a href="#" onclick="fkAbweichungenWeg();return false">alle entfernen</a>` : ''}</div>`;
+  h += fkMtHtml(fk, GS);
   h += `<div style="display:flex;gap:4px;margin-top:8px"><button class="sm" style="flex:1" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner</button><button class="sm" style="flex:1" onclick="okOpen(null,'gr')">Gruppen …</button></div></div>`;
   return h;
 }

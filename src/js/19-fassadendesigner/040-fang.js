@@ -311,6 +311,22 @@ function fdDrawView(g, b, V, ox, o) {
     });
     g.fillStyle = t.c;
     g.fill('evenodd');
+    // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Fassadenmaterial je Geschoss als
+    // Voreinstellung für Flächen ohne eigenen Fassadentyp
+    const vor = fkMaterialAnteile(b, f);
+    if (vor) {
+      g.save();
+      g.clip('evenodd');
+      const xs = f.o.map((p) => X(p[0]));
+      vor.forEach((m) => {
+        if (m.t === 'ohne') return;
+        g.fillStyle = fdT(m.t).c;
+        const ya = Y(Math.min(m.v1, 1e3)),
+          yb = Y(m.v0);
+        g.fillRect(Math.min(...xs), Math.min(ya, yb), Math.max(...xs) - Math.min(...xs), Math.abs(yb - ya));
+      });
+      g.restore();
+    }
     if (o.sel && o.sel.includes(i)) {
       g.fillStyle = '#1F2A3333';
       g.fill('evenodd');

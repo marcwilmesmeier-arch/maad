@@ -247,6 +247,7 @@ function skKlGruppenZiel() {
         eig: true,
         R: fkReihe(st[0]),
         au: (fk.au || [])[0] || 'm',
+        vs: +(fk.vs || [])[0] || 0,
         stapel: st.length > 1,
       };
     }
@@ -274,6 +275,7 @@ function skKlGruppenZiel() {
             (j === '*' ? 'alle Geschosse' : lname(b, s[0].j)),
       R: fkReihe(eig ? fk.ab[key] : fkGruppe(fk, vk, jj)),
       au: fkAusr(fk, vk, jj),
+      vs: fkVersatz(fk, vk, jj),
     };
   } catch (e) {
     logErr(e, 'skKlGruppenZiel');
@@ -334,7 +336,7 @@ function skKlGruppenZeichnen() {
       .join('');
   w.innerHTML = `<div class="fkwh"><b>Fassadengruppen · ${esc(z.name)}</b><button onclick="fkWahlZu()" title="Schließen (Esc)">×</button></div>
 <div class="mu" style="margin:-4px 0 8px">${hin}</div>
-<div class="skga"><span class="skgr">${reihe}</span><span class="fka skgau">${ausr}</span></div>
+<div class="skga"><span class="skgr">${reihe}</span><span class="fka skgau">${ausr}</span><input type="number" step="0.05" class="skgvs" value="${+z.vs.toFixed(3)}" title="Versatz in m zur Ausrichtung: links/rechts = Abstand vom Rand (positiv nach innen), mittig = positiv nach rechts" onchange="skKlVersatz(this.value)"></div>
 <div class="mu" style="margin:8px 0 4px">${platz >= R.length && R.length ? 'Gruppe anhängen' : R.length > 1 ? 'Gruppe für Platz ' + (platz + 1) : 'Gruppe'}</div>
 <div class="fkg">${S.oeg
     .map(
@@ -355,8 +357,9 @@ function skKlPlatz(i) {
   FK.kl.platz = i;
   skKlGruppenZeichnen();
 }
-/** Anordnung des Ziels schreiben (R Liste der Gruppen, au Ausrichtung; R null = eigene Anordnung entfernen). */
-function skKlSchreiben(z, R, au) {
+/** Anordnung des Ziels schreiben (R Liste der Gruppen, au Ausrichtung, vs Versatz; R null = eigene Anordnung entfernen). */
+function skKlSchreiben(z, R, au, vs) {
+  if (vs == null) vs = z.vs || 0;
   S.sel = z.b;
   const offen = FK.kl;
   fkAendern((fk) => {
@@ -364,16 +367,20 @@ function skKlSchreiben(z, R, au) {
     if (z.t === 'g') {
       fk.st = R && R.length ? [wert] : [];
       fk.au = [au || 'm'];
+      fk.vs = [vs];
       return;
     }
     fk.ab = fk.ab || {};
     fk.auA = fk.auA || {};
+    fk.vsA = fk.vsA || {};
     if (R === null) {
       delete fk.ab[z.key];
       delete fk.auA[z.key];
+      delete fk.vsA[z.key];
     } else {
       fk.ab[z.key] = wert;
       fk.auA[z.key] = au || 'm';
+      fk.vsA[z.key] = vs;
     }
   });
   // fkAendern schließt das Fenster – geöffnet lassen und neu zeichnen
@@ -408,6 +415,18 @@ function skKlAusr(a) {
   const z = skKlGruppenZiel();
   if (!z) return;
   skKlSchreiben(z, z.R.slice(), a);
+}
+/** Versatz zur Ausrichtung aus dem Eingabefeld (m). */
+function skKlVersatz(v) {
+  const z = skKlGruppenZiel(),
+    n = parseFloat(String(v).replace(',', '.'));
+  if (!z) return;
+  skKlSchreiben(
+    z,
+    z.R.slice(),
+    z.au,
+    isFinite(n) ? Math.max(-50, Math.min(50, Math.round(n * 1000) / 1000)) : 0,
+  );
 }
 function skKlDo(k) {
   try {
