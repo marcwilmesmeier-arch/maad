@@ -148,7 +148,8 @@ function okSet(f, v) {
         br: [0, 3],
         ol: [0, 1.5],
         ul: [0, 1.5],
-        pb: [0.03, 0.2],
+        pb: [0.02, 0.2],
+        pp: [0.02, 0.2],
         et: [0, 0.4],
         sr0: [0, 6],
         sr1: [0, 6],
@@ -313,9 +314,11 @@ function okTypFelderHtml(T, titel = 'Typ') {
   let h = `<h4>${titel}</h4><div class="okg"><span>Name</span><input type="text" value="${esc(T.n)}" onchange="okSet('n',this.value)">
 <span>Breite (m)</span>${z('b', T.b)}<span>Höhe (m)</span>${z('h', T.h)}
 ${tuer ? '' : `<span>Brüstung (m)</span>${z('br', T.br, 0.01, 'Abstand Unterkante zum Fußboden des Geschosses beim Setzen')}`}
-<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)"></div>`;
+<span>Rahmenfarbe</span><input type="color" value="${T.rf}" onchange="okSet('rf',this.value)">
+<span>Rahmenbreite (m)</span>${z('pb', T.pb || 0.07, 0.005, 'Ansichtsbreite des umlaufenden Rahmens')}</div>`;
   if (T.a !== 'to')
     h += `<h4>Aufteilung</h4><div class="okg"><span>Flügel</span><span style="display:flex;gap:4px;align-items:center"><button onclick="okFluegel(-1)" title="Flügel entfernen">−</button><b style="flex:1;text-align:center">${SP.length}</b><button onclick="okFluegel(1)" title="Flügel hinzufügen">+</button></span>
+<span>Pfosten und Riegel (m)</span>${z('pp', T.pp > 0 ? T.pp : T.pb || 0.07, 0.005, 'Ansichtsbreite der Pfosten zwischen den Flügeln und der Riegel an Ober- und Unterlicht und an Teilungen')}
 <span>Oberlicht (m, 0 = ohne)</span>${z('ol', T.ol || 0)}${tuer ? '' : `<span>Unterlicht (m, 0 = ohne)</span>${z('ul', T.ul || 0)}`}</div>
 <div class="okb">${SP.length > 1 ? '<button onclick="okGleich()" title="Alle Flügel gleich breit">Gleich verteilen</button>' : ''}</div>`;
   return h;
@@ -479,8 +482,8 @@ function okGriffe(T) {
   for (let i = 0; i < F.length - 1; i++)
     G.push({ id: 'p' + i, art: 'x', i, a: F[i].x1, b: F[i + 1].x0, y0: F[i].y0, y1: F[i].y1 });
   A.oben.forEach((f) => {
-    if (f.i === 'ol') G.push({ id: 'ol', art: 'y', a: f.y0 - A.pb, b: f.y0, x0: f.x0, x1: f.x1 });
-    if (f.i === 'ul') G.push({ id: 'ul', art: 'y', a: f.y1, b: f.y1 + A.pb, x0: f.x0, x1: f.x1 });
+    if (f.i === 'ol') G.push({ id: 'ol', art: 'y', a: f.y0 - A.pp, b: f.y0, x0: f.x0, x1: f.x1 });
+    if (f.i === 'ul') G.push({ id: 'ul', art: 'y', a: f.y1, b: f.y1 + A.pp, x0: f.x0, x1: f.x1 });
   });
   // Stege der Unterteilungen einzelner Felder (zuerst, sie liegen innen)
   return A.ns.concat(G);
@@ -664,7 +667,7 @@ function okMove(e) {
     const A = oeAufteilung(T),
       F = A.oben.filter((f) => typeof f.i === 'number'),
       f0 = F[z.i],
-      x = r(P.iX(px)) - A.pb / 2;
+      x = r(P.iX(px)) - A.pp / 2;
     okBreite(T, z.i, x - f0.x0);
   } else if (z.id === 'ol') T.ol = Math.max(0.15, r(T.h - okPb(T) - P.iY(py)));
   else if (z.id === 'ul') T.ul = Math.max(0.15, r(P.iY(py) - (oeTuer(T) ? 0 : okPb(T))));

@@ -11,7 +11,8 @@
 
 const OE_ARTEN = { fe: 'Fenster', ft: 'Fenstertür', tu: 'Tür', fv: 'Festverglasung', to: 'Tor' };
 const OE_OEFFNUNG = { dk: 'Dreh-Kipp', d: 'Dreh', k: 'Kipp', f: 'Fest', s: 'Schiebe' };
-// k Schlüssel, n Name, a Art, b Breite, h Höhe, br Brüstung (Vorgabe beim Setzen), rf Rahmenfarbe, pb Profilbreite,
+// k Schlüssel, n Name, a Art, b Breite, h Höhe, br Brüstung (Vorgabe beim Setzen), rf Rahmenfarbe, pb Rahmenbreite,
+// pp Breite von Pfosten und Riegel (ohne Angabe wie pb),
 // et Einbautiefe von der Außenseite (alle Maße in m). Einteilung: sp Flügel [{ w Anteil, oa Öffnungsart, an Anschlag
 // 'l'/'r', fu Füllung 'g' Glas / 'p' Paneel }], ol Oberlicht (Höhe, 0 = ohne) mit olOa, ul Unterlicht mit ulFu,
 // sr Sprossen [waagerecht, senkrecht] je Flügel. Ältere Typen ohne sp: fl (Anzahl) und oa (für alle Flügel).
@@ -140,6 +141,7 @@ function oeAufteilung(T) {
   const b = T.b,
     h = T.h,
     pb = Math.max(0.02, Math.min(T.pb || 0.07, b / 6, h / 6)),
+    pp = Math.max(0.02, Math.min(T.pp > 0 ? T.pp : pb, b / 6, h / 6)),
     stege = [],
     felder = [],
     tuer = oeTuer(T);
@@ -147,13 +149,13 @@ function oeAufteilung(T) {
   if (!tuer) stege.push([pb, b - pb, 0, pb]);
   let yb = tuer ? 0 : pb,
     yt = h - pb;
-  const ul = T.ul > 0 && T.a !== 'to' ? Math.min(T.ul, yt - yb - 0.3 - pb) : 0;
+  const ul = T.ul > 0 && T.a !== 'to' ? Math.min(T.ul, yt - yb - 0.3 - pp) : 0;
   if (ul > 0.05) {
     felder.push({ x0: pb, x1: b - pb, y0: yb, y1: yb + ul, oa: 'f', an: 'l', fu: T.ulFu || 'p', i: 'ul' });
-    stege.push([pb, b - pb, yb + ul, yb + ul + pb]);
-    yb += ul + pb;
+    stege.push([pb, b - pb, yb + ul, yb + ul + pp]);
+    yb += ul + pp;
   }
-  const ol = T.ol > 0 && T.a !== 'to' ? Math.min(T.ol, yt - yb - 0.3 - pb) : 0;
+  const ol = T.ol > 0 && T.a !== 'to' ? Math.min(T.ol, yt - yb - 0.3 - pp) : 0;
   if (ol > 0.05) {
     felder.push({
       x0: pb,
@@ -165,12 +167,12 @@ function oeAufteilung(T) {
       fu: T.olFu || 'g',
       i: 'ol',
     });
-    stege.push([pb, b - pb, yt - ol - pb, yt - ol]);
-    yt -= ol + pb;
+    stege.push([pb, b - pb, yt - ol - pp, yt - ol]);
+    yt -= ol + pp;
   }
   const SP = oeSpalten(T),
     n = SP.length,
-    innen = b - 2 * pb - (n - 1) * pb,
+    innen = b - 2 * pb - (n - 1) * pp,
     sw = SP.reduce((s, c) => s + (c.w > 0 ? c.w : 1), 0) || 1;
   let x = pb;
   SP.forEach((c, i) => {
@@ -178,15 +180,15 @@ function oeAufteilung(T) {
     felder.push({ x0: x, x1: x + w, y0: yb, y1: yt, oa: c.oa, an: c.an, fu: c.fu || 'g', i, sr: T.sr });
     x += w;
     if (i < n - 1) {
-      stege.push([x, x + pb, yb, yt]);
-      x += pb;
+      stege.push([x, x + pp, yb, yt]);
+      x += pp;
     }
   });
   // Unterteilungen einzelner Felder (T.ut, je Feld ein Baum aus Teilungen): Teilfelder, Stege, ziehbare Stege
   const aus = [],
     ns = [];
-  felder.forEach((f) => oeTeilBaum(f, (T.ut || {})[String(f.i)], f.i, '', pb, aus, stege, ns));
-  return { pb, stege, felder: aus, oben: felder, ns };
+  felder.forEach((f) => oeTeilBaum(f, (T.ut || {})[String(f.i)], f.i, '', pp, aus, stege, ns));
+  return { pb, pp, stege, felder: aus, oben: felder, ns };
 }
 /**
  * Feld f nach dem Teilungsbaum knoten aufteilen. Knoten: { a: 'x'|'y', r: Lage 0–1, k: [Kind, Kind] }, Blatt: { fu }.
@@ -701,6 +703,8 @@ function oeTypenPruefen(L) {
     if (!OE_ARTEN[o.a]) o.a = 'fe';
     if (!OE_OEFFNUNG[o.oa]) o.oa = 'f';
     if (!/^#[0-9a-f]{6}$/i.test(o.rf)) o.rf = v.rf;
+    if (isFinite(+o.pp) && +o.pp > 0) o.pp = Math.max(0.02, Math.min(0.2, +o.pp));
+    else delete o.pp;
     o.sp = Array.isArray(o.sp)
       ? o.sp.slice(0, 8).map((c) => ({
           w: isFinite(+c.w) && +c.w > 0 ? +c.w : 1,
