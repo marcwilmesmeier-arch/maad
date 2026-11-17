@@ -54,14 +54,16 @@ function fdViews(b) {
   const sg = fdSig(b);
   if (b._fv && b._fv.s === sg) return b._fv.V;
   const P = fdPieces(b),
-    cl = [];
+    cl = [],
+    hofNr = (p) => (p.hof == null ? -1 : p.hof);
   P.slice()
     .sort((a, c) => c.ar - a.ar)
     .forEach((p) => {
       p.ang = fdAng(p.nx, p.nz);
-      let c = cl.find((q) => fdAD(q.ang, p.ang) <= 15);
+      // Innenhöfe bilden eigene Ansichten (je Hof und Richtung)
+      let c = cl.find((q) => q.hof === hofNr(p) && fdAD(q.ang, p.ang) <= 15);
       if (!c) {
-        c = { ang: p.ang, sx: 0, sz: 0, ps: [] };
+        c = { ang: p.ang, sx: 0, sz: 0, ps: [], hof: hofNr(p) };
         cl.push(c);
       }
       c.ps.push(p);
@@ -75,6 +77,7 @@ function fdViews(b) {
       bd = 1e9;
     for (let i = 0; i < cl.length; i++)
       for (let j = i + 1; j < cl.length; j++) {
+        if (cl[i].hof !== cl[j].hof) continue;
         const d = fdAD(cl[i].ang, cl[j].ang);
         if (d < bd) {
           bd = d;
@@ -82,6 +85,7 @@ function fdViews(b) {
           bj = j;
         }
       }
+    if (bd >= 1e9) break;
     const a = cl[bi],
       c = cl[bj];
     a.ps = a.ps.concat(c.ps);
@@ -102,7 +106,7 @@ function fdViews(b) {
         let bi = -1,
           bd = 35;
         cl.forEach((o, j) => {
-          if (j === k || o.ar < c.ar) return;
+          if (j === k || o.ar < c.ar || o.hof !== c.hof) return;
           const d = fdAD(o.ang, c.ang);
           if (d < bd) {
             bd = d;
@@ -136,6 +140,8 @@ function fdViews(b) {
       // alle von dieser Richtung sichtbaren (zugewandten) Teilflächen, in Ansichtskoordinaten (u,v) mit Tiefenebene s=a·u+b·v+c0
       const C = [];
       P.forEach((p) => {
+        // Hofansicht: nur Wände desselben Hofs; Außenansicht: keine Hofwände
+        if (hofNr(p) !== c.hof) return;
         const dt = p.nx * nx + p.nz * nz;
         if (dt <= 0.05 && !own.has(p)) return;
         const ring = p.pts.map((q) => [q[0] * tx + q[1] * tz, q[2]]),
@@ -253,6 +259,7 @@ function fdViews(b) {
       const sMax = Math.max(...c.ps.map((p) => Math.max(...p.pts.map((q) => q[0] * nx + q[1] * nz))));
       return {
         dir,
+        hof: c.hof >= 0 ? c.hof : null,
         ang: c.ang,
         n: [nx, nz],
         pcs,
@@ -269,9 +276,21 @@ function fdViews(b) {
     })
     .filter(Boolean);
   const cnt = {};
-  V.forEach((v) => (cnt[v.dir] = (cnt[v.dir] || 0) + 1));
-  const seen = {};
+  V.forEach((v) => (cnt[v.dir] = (cnt[v.dir] || 0) + (v.hof == null ? 1 : 0)));
+  const seen = {},
+    hcnt = {},
+    hseen = {};
+  V.forEach((v) => v.hof != null && (hcnt[v.hof + v.dir] = (hcnt[v.hof + v.dir] || 0) + 1));
   V.forEach((v) => {
+    if (v.hof != null) {
+      // Innenhof: Schlüssel H<Nr><Richtung>, Name „Innenhof 1 · Süd“
+      const k = v.hof + v.dir;
+      hseen[k] = (hseen[k] || 0) + 1;
+      const nr = hcnt[k] > 1 ? ' ' + hseen[k] : '';
+      v.key = 'H' + (v.hof + 1) + v.dir + (hcnt[k] > 1 ? hseen[k] : '');
+      v.name = 'Innenhof ' + (v.hof + 1) + ' · ' + (XLDN[v.dir] || v.dir) + nr;
+      return;
+    }
     if (cnt[v.dir] > 1) {
       seen[v.dir] = (seen[v.dir] || 0) + 1;
       v.key = v.dir + seen[v.dir];

@@ -91,6 +91,45 @@ function fdPieces(b) {
       });
     });
   });
+  // Innenhöfe (b.voids): Wände zum Hof, Normale in den Hof hinein; hof = Nummer des Hofs (eigene Ansichten)
+  (b.voids || []).forEach((vd, hi) => {
+    const R = vd && vd.poly;
+    if (!R || R.length < 3) return;
+    let sa = 0;
+    R.forEach((p, j) => {
+      const q = R[(j + 1) % R.length];
+      sa += p[0] * q[1] - q[0] * p[1];
+    });
+    const sg = sa > 0 ? -1 : 1;
+    let v = 0;
+    b.levels.forEach((l, i) => {
+      if (i < u) return;
+      const v0 = v,
+        v1 = v + l.h;
+      v = v1;
+      if (i < vd.j0 || i > vd.j1) return;
+      R.forEach((a, j) => {
+        const c = R[(j + 1) % R.length],
+          dx = c[0] - a[0],
+          dz = c[1] - a[1],
+          len = Math.hypot(dx, dz);
+        if (len < 0.05) return;
+        out.push({
+          lv: i,
+          hof: hi,
+          nx: (sg * dz) / len,
+          nz: (-sg * dx) / len,
+          ar: len * l.h,
+          pts: [
+            [a[0], a[1], v0],
+            [c[0], c[1], v0],
+            [c[0], c[1], v1],
+            [a[0], a[1], v1],
+          ],
+        });
+      });
+    });
+  });
   // Giebel, Drempel und Dachwände (aus dem Dachmodell)
   const rp = b._rp;
   if (rp && rp.pw && rp.pw.length && b._y != null) {
@@ -143,5 +182,6 @@ function fdSig(b) {
     b.roof,
     b._rp ? b._rp.pw.length + ':' + b._rp.aW.toFixed(3) : 0,
     b._y,
+    b.voids || 0,
   ]);
 }

@@ -126,7 +126,7 @@ const SKKL = {
   r: ['skp', 'skl', '|', 'oeg', 'fd'],
   d: ['skp', 'skl', 'skf', 'skr'],
   tf: ['mv', 'skp', 'skf', '|', 'del'],
-  hof: ['skp', '|', 'del'],
+  hof: ['skp', '|', 'oeg', 'fd', '|', 'del'],
   k: ['ekh', 'rund'],
   m: ['skp', 'mv'],
 };
@@ -224,6 +224,7 @@ function skKlAnsicht(b, j, i) {
   let best = null,
     bd = -2;
   fdViews(b).forEach((v) => {
+    if (v.hof != null) return; // Hofansichten nur für Hofwände (skKlHofAnsicht)
     const d = v.n[0] * n[0] + v.n[1] * n[1];
     if (d > bd) {
       bd = d;
@@ -232,15 +233,66 @@ function skKlAnsicht(b, j, i) {
   });
   return best;
 }
+/** Hofwand vd/i: Kante im Hofpolygon und Ansicht des Hofs (Normale in den Hof hinein). */
+function skKlHofAnsicht(b, vd, i) {
+  const R = ((b.voids || [])[vd] || {}).poly;
+  if (!R || R.length < 3) return null;
+  const p = R[i],
+    q = R[(i + 1) % R.length];
+  if (!p || !q) return null;
+  const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  let best = null,
+    bd = 1e9;
+  fdViews(b).forEach((v) => {
+    if (v.hof !== vd) return;
+    // Hofwand liegt auf der Seite, deren Normale senkrecht zur Kante steht und in den Hof zeigt
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
+      quer = Math.abs((v.n[0] * (q[0] - p[0]) + v.n[1] * (q[1] - p[1])) / L),
+      tief = Math.min(
+        ...v.pcs.map((c) => (c.pd == null ? 1e9 : Math.abs(c.pd - (m[0] * v.n[0] + m[1] * v.n[1])))),
+      ),
+      d = quer * 10 + tief;
+    if (d < bd) {
+      bd = d;
+      best = v;
+    }
+  });
+  return best ? { V: best, p, q } : null;
+}
 /** Ziel der Gruppenwahl: { t, b, vk, j, key, name, eig, R (Rhythmus), au (Ausrichtung) }. */
 function skKlGruppenZiel() {
   try {
     const t = skAuswTyp(),
       s = SK.sel;
-    if (!'gsfr'.includes(t || '-')) return null;
+    if (!'gsfr'.includes(t || '-') && t !== 'hof') return null;
     const b = s[0].b,
       u = ugN(b),
       fk = fkDaten(b) || { st: [], ab: {} };
+    // Hofwand: wie eine Flucht (alle Geschosse des Hofs), Abschnitt entlang der Hofansicht
+    if (t === 'hof') {
+      const H = s[0].i != null ? skKlHofAnsicht(b, s[0].vd, s[0].i) : null;
+      if (!H) return null;
+      const V = H.V,
+        key = V.key + '|*',
+        uu = (P) => P[0] * V.n[1] - P[1] * V.n[0],
+        u0 = Math.min(uu(H.p), uu(H.q)),
+        u1 = Math.max(uu(H.p), uu(H.q)),
+        A = ((fk.abU || {})[key] || []).find((o) => Math.abs(o.u0 - u0) < 0.05 && Math.abs(o.u1 - u1) < 0.05);
+      return {
+        t,
+        b,
+        vk: V.key,
+        j: '*',
+        key,
+        u0,
+        u1,
+        eig: !!A,
+        name: V.name + ' · ' + fdFmt(u1 - u0) + ' m',
+        R: fkReihe(A ? A.R : fkGruppe(fk, V.key, 0)),
+        au: A ? A.au || 'm' : fkAusr(fk, V.key, 0),
+        vs: A ? +A.vs || 0 : fkVersatz(fk, V.key, 0),
+      };
+    }
     if (t === 'g') {
       const st = fk.st || [];
       return {
@@ -505,7 +557,8 @@ function skKlDo(k) {
       return;
     }
     if (k === 'fd' && b && s[0].i != null) {
-      const best = skKlAnsicht(b, s[0].j, s[0].i);
+      const best =
+        s[0].vd != null ? (skKlHofAnsicht(b, s[0].vd, s[0].i) || {}).V : skKlAnsicht(b, s[0].j, s[0].i);
       fdOpen(b.id, best ? best.key : undefined);
       return;
     }
