@@ -281,3 +281,16 @@ läuft wie bisher im Browser.
   sind `kont`-Linien (Schalter „Kontur“). Die fette Kontur ist wie bei Umgebungsgebäuden nur die Silhouette. `l2KonturSil(cm)` (aus `konPre`) sucht je Bild
   die Kanten, an denen eine angrenzende Fläche zur Kamera und die andere weg zeigt. Diese werden als breite Linie leicht
   hinter dem Gebäude gezeichnet. Eine Hülle schiene durch die Fensterlöcher.
+
+## Konfigurator: feldweise Teilungen
+
+- Fenster und Türen: `T.ut` enthält je oberstem Feld (Flügel `0…`, `ol`, `ul`) einen Teilungsbaum. Ein Knoten ist
+  `{ a: 'x'|'y', r: Lage 0–1, k: [Kind, Kind] }`, ein Blatt `{ fu: 'g'|'p' }`. `oeAufteilung` liefert weiterhin
+  `felder` und `stege`, dazu `oben` (oberste Felder für Flügelbreiten und Pfosten) und `ns` (ziehbare Stege der
+  Unterteilungen). Teilfelder heißen `oben.pfad`. „Senkrecht/Waagerecht teilen“ teilt nur das angeklickte Feld
+  (`okFeldTeilen`).
+- Gruppen: `G.vb` enthält verbundene Felder als Rechtecke auf Teilungslinien. `oegZellen` fasst die Rasterfelder
+  darin zu einem Feld zusammen. Eine Teilung anklicken wählt nur das Stück zwischen zwei Feldern, Entf verbindet sie
+  (`okGrSegmentLoeschen`). „Ganze Linie entfernen“, „Felder verbinden“ und „Verbindung lösen“ ergänzen das.
+- Gruppen lassen sich auch über das × in der Liste löschen. Dabei werden Verweise und die Gebäudekonfiguration
+  (`b.fk`) bereinigt.

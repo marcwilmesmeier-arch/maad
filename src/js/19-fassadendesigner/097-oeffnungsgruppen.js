@@ -110,6 +110,13 @@ function oegTyp(G, q, H) {
   const h = Math.max(0.3, (H || G.h) - (+G.sz.s || 0) - q.v);
   return Math.abs(h - T.h) < 1e-4 ? T : { ...T, h };
 }
+/** Verbundene Felder der Gruppe (geprüft). */
+function oegVerbunden(G) {
+  return (Array.isArray(G.vb) ? G.vb : []).filter(
+    (r) =>
+      r && isFinite(r.x0) && isFinite(r.x1) && isFinite(r.y0) && isFinite(r.y1) && r.x1 > r.x0 && r.y1 > r.y0,
+  );
+}
 /** Teilungen einer Gruppe (sortiert, mit Rändern). */
 function oegTeilung(G) {
   const r = (L, m) =>
@@ -118,13 +125,45 @@ function oegTeilung(G) {
       .filter((x, i, A) => !i || x - A[i - 1] > 0.005);
   return { xs: r(G.xs, G.l), ys: r(G.ys, G.h) };
 }
-/** Felder der Gruppe (Raster aus den Teilungen) mit Tiefe d und Material t (eigenes, sonst das der Gruppe). */
+/**
+ * Felder der Gruppe (Raster aus den Teilungen) mit Tiefe d und Material t (eigenes, sonst das der Gruppe).
+ * Verbundene Felder (G.vb: Rechtecke, deren Ränder auf Teilungslinien liegen) sind ein Feld – dort ist die Teilung
+ * feldweise entfernt.
+ */
 function oegZellen(G) {
   const { xs, ys } = oegTeilung(G),
-    Z = [];
+    Z0 = [];
   for (let j = 0; j < ys.length - 1; j++)
     for (let i = 0; i < xs.length - 1; i++)
-      Z.push({ i, j, x0: xs[i], x1: xs[i + 1], y0: ys[j], y1: ys[j + 1], d: 0, k: 'g', t: '' });
+      Z0.push({ i, j, x0: xs[i], x1: xs[i + 1], y0: ys[j], y1: ys[j + 1], d: 0, k: 'g', t: '' });
+  const auf = (v, L) => L.some((x) => Math.abs(x - v) < 0.004),
+    Z = [];
+  oegVerbunden(G).forEach((r) => {
+    if (![r.x0, r.x1].every((v) => auf(v, xs)) || ![r.y0, r.y1].every((v) => auf(v, ys))) return;
+    const drin = Z0.filter(
+      (z) =>
+        !z.weg &&
+        z.x0 >= r.x0 - 0.004 &&
+        z.x1 <= r.x1 + 0.004 &&
+        z.y0 >= r.y0 - 0.004 &&
+        z.y1 <= r.y1 + 0.004,
+    );
+    if (drin.length < 2) return;
+    drin.forEach((z) => (z.weg = 1));
+    Z.push({
+      i: drin[0].i,
+      j: drin[0].j,
+      x0: r.x0,
+      x1: r.x1,
+      y0: r.y0,
+      y1: r.y1,
+      d: 0,
+      k: 'g',
+      t: '',
+      vb: 1,
+    });
+  });
+  Z0.forEach((z) => !z.weg && Z.push(z));
   (G.fe || []).forEach((f) => {
     const z = Z.find((c) => f.p[0] > c.x0 && f.p[0] < c.x1 && f.p[1] > c.y0 && f.p[1] < c.y1);
     if (z) {
@@ -612,5 +651,8 @@ function oegFelderPruefen(G) {
     ys.push(+r.v, +r.v + +r.h);
     fe.push({ p: [+r.x + r.b / 2, +r.v + r.h / 2], d: Math.max(-1, Math.min(1, +r.d || 0)), t: '' });
   });
-  return { xs, ys, fe };
+  const vb = (Array.isArray(G.vb) ? G.vb : [])
+    .map((r) => ({ x0: +r.x0, x1: +r.x1, y0: +r.y0, y1: +r.y1 }))
+    .filter((r) => [r.x0, r.x1, r.y0, r.y1].every((v) => isFinite(v)) && r.x1 > r.x0 && r.y1 > r.y0);
+  return { xs, ys, fe, vb };
 }

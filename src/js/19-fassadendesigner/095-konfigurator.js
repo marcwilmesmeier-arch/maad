@@ -20,7 +20,7 @@ const OKCSS = `#okDock{position:fixed;left:110px;top:70px;width:min(1120px,calc(
 #okDock .okl h5{margin:8px 4px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu,#7a7a7a)}
 #okDock .okt{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer}
 #okDock .okt:hover{background:#0000000d}#okDock .okt.on{background:#5E7F9233}
-#okDock .okt span{flex:1;min-width:0;line-height:1.25}#okDock .okt small{display:block;color:var(--mu,#7a7a7a);font-size:11px}
+#okDock .okt span{flex:1;min-width:0;line-height:1.25}#okDock .okt .okx{flex:none;border:0;background:none;color:var(--mu,#7a7a7a);font-size:15px;padding:0 4px;cursor:pointer;opacity:0}#okDock .okt:hover .okx,#okDock .okt.on .okx{opacity:1}#okDock .okt .okx:hover{color:#c62828}#okDock .okt small{display:block;color:var(--mu,#7a7a7a);font-size:11px}
 #okDock .okc{flex:1;position:relative;min-width:0}
 #okDock canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
 #okDock .okhint{position:absolute;left:10px;bottom:8px;right:10px;font-size:11px;color:var(--mu,#7a7a7a);pointer-events:none}
@@ -165,7 +165,7 @@ function okSet(f, v) {
 /** Breite des Flügels i (m) setzen; der rechte Nachbar (beim letzten der linke) gleicht aus. */
 function okBreite(T, i, w) {
   const L = oeAufteilung(T),
-    F = L.felder.filter((f) => typeof f.i === 'number'),
+    F = L.oben.filter((f) => typeof f.i === 'number'),
     SP = okSpSicher(T);
   if (!isFinite(w) || F.length < 2) return;
   const j = i < F.length - 1 ? i + 1 : i - 1,
@@ -278,7 +278,7 @@ function okRender() {
     const F = OK.feld != null && oeAufteilung(T).felder.find((f) => f.i === OK.feld);
     let h =
       (F
-        ? `<h4>${F.i === 'ol' ? 'Oberlicht' : F.i === 'ul' ? 'Unterlicht' : (F.fu === 'p' ? 'Paneel ' : 'Flügel ') + (F.i + 1)}${F.i === 'ol' || F.i === 'ul' ? (F.fu === 'p' ? ' · Paneel' : ' · Flügel') : ''} · ${fdFmt(F.x1 - F.x0)} × ${fdFmt(F.y1 - F.y0)} m</h4><div class="okb" style="margin-top:0">${[
+        ? `<h4>${typeof F.i === 'string' && F.i.includes('.') ? 'Teilfeld · ' + (F.fu === 'p' ? 'Paneel' : 'Flügel') : F.i === 'ol' ? 'Oberlicht' : F.i === 'ul' ? 'Unterlicht' : (F.fu === 'p' ? 'Paneel ' : 'Flügel ') + (F.i + 1)}${F.i === 'ol' || F.i === 'ul' ? (F.fu === 'p' ? ' · Paneel' : ' · Flügel') : ''} · ${fdFmt(F.x1 - F.x0)} × ${fdFmt(F.y1 - F.y0)} m</h4><div class="okb" style="margin-top:0">${[
             ['g', 'Flügel'],
             ['p', 'Paneel'],
           ]
@@ -293,7 +293,7 @@ function okRender() {
         : '') +
       okTypFelderHtml(T) +
       (T.a !== 'to'
-        ? `<div class="mu" style="margin-top:6px">In der Ansicht zeichnen: „Senkrecht teilen“ setzt Pfosten, „Waagerecht teilen“ Ober-/Unterlicht; blaue Linien ziehen, Entf entfernt.</div>`
+        ? `<div class="mu" style="margin-top:6px">In der Ansicht zeichnen: „Senkrecht teilen“ bzw. „Waagerecht teilen“ teilt nur den angeklickten Flügel oder das Paneel; blaue Stege ziehen, Entf entfernt.</div>`
         : '');
     h += `<div class="okb" style="margin-top:14px"><button onclick="okSetzen()" title="Typ im Fassadendesigner setzen">Im Fassadendesigner setzen</button><button onclick="okKopie()">Kopie</button>${S.oet.length > 1 ? '<button onclick="okLoeschen()">Löschen</button>' : ''}</div>
 <div class="mu" style="margin-top:6px">${zahl[T.k] ? zahl[T.k] + '× gesetzt – ' : ''}Änderungen gelten für alle gesetzten Öffnungen dieses Typs.</div>`;
@@ -409,11 +409,11 @@ function okZeichnen() {
       }
     };
   kette([P.X(0), P.X(T.b), P.Y(0) + 46], true, fdFmt(T.b) + ' m');
-  const SPf = A.felder.filter((f) => typeof f.i === 'number');
+  const SPf = A.oben.filter((f) => typeof f.i === 'number');
   if (SPf.length > 1)
     SPf.forEach((f) => kette([P.X(f.x0), P.X(f.x1), P.Y(0) + 22], true, fdFmt(f.x1 - f.x0)));
   kette([P.Y(0), P.Y(T.h), P.X(T.b) + 44], false, fdFmt(T.h) + ' m');
-  A.felder
+  A.oben
     .filter((f) => f.i === 'ol' || f.i === 'ul')
     .forEach((f) => kette([P.Y(f.y0), P.Y(f.y1), P.X(T.b) + 18], false, fdFmt(f.y1 - f.y0)));
   if (T.br > 0) {
@@ -427,9 +427,9 @@ function okZeichnen() {
   if (hint)
     hint.textContent =
       OK.owz === 'x'
-        ? 'Klick ins Fenster = Pfosten setzen (neuer Flügel) · Esc = zurück zu „Auswählen“'
+        ? 'Klick in einen Flügel oder ein Paneel = senkrecht teilen (nur dieses Feld) · Esc = zurück zu „Auswählen“'
         : OK.owz === 'y'
-          ? 'Klick in die obere Hälfte = Oberlicht, in die untere = Unterlicht · Esc = zurück zu „Auswählen“'
+          ? 'Klick in einen Flügel oder ein Paneel = waagerecht teilen (nur dieses Feld) · Esc = zurück zu „Auswählen“'
           : 'Unterteilung anklicken: Flügel oder Paneel · Pfosten/Riegel (blau) ziehen, Entf = entfernen · Ansicht von außen';
   // Vorschau der neuen Teilung
   if (
@@ -474,15 +474,16 @@ function okZeichnen() {
 /** Ziehbare Stege: Pfosten zwischen Flügeln (art 'x') und Riegel von Oberlicht/Unterlicht (art 'y'). */
 function okGriffe(T) {
   const A = oeAufteilung(T),
-    F = A.felder.filter((f) => typeof f.i === 'number'),
+    F = A.oben.filter((f) => typeof f.i === 'number'),
     G = [];
   for (let i = 0; i < F.length - 1; i++)
     G.push({ id: 'p' + i, art: 'x', i, a: F[i].x1, b: F[i + 1].x0, y0: F[i].y0, y1: F[i].y1 });
-  A.felder.forEach((f) => {
+  A.oben.forEach((f) => {
     if (f.i === 'ol') G.push({ id: 'ol', art: 'y', a: f.y0 - A.pb, b: f.y0, x0: f.x0, x1: f.x1 });
     if (f.i === 'ul') G.push({ id: 'ul', art: 'y', a: f.y1, b: f.y1 + A.pb, x0: f.x0, x1: f.x1 });
   });
-  return G;
+  // Stege der Unterteilungen einzelner Felder (zuerst, sie liegen innen)
+  return A.ns.concat(G);
 }
 function okPos(e) {
   const r = okE('okCv').getBoundingClientRect();
@@ -509,39 +510,67 @@ function okOwz(w) {
   OK.ovor = null;
   okZeichnen();
 }
-/** Senkrecht teilen: Flügel an der Stelle x (lokal, m) in zwei Flügel teilen. */
-function okTeilenX(T, x) {
-  const A = oeAufteilung(T),
-    F = A.felder.filter((f) => typeof f.i === 'number'),
-    f = F.find((q) => x > q.x0 + 0.12 && x < q.x1 - 0.12);
-  if (!f || F.length >= 8) return;
-  const SP = okSpSicher(T);
-  F.forEach((q, k) => (SP[k].w = q.x1 - q.x0));
-  const c = SP[f.i],
-    w1 = x - A.pb / 2 - f.x0,
-    w2 = f.x1 - (x + A.pb / 2);
-  SP.splice(f.i, 1, { ...c, w: w1 }, { ...c, w: w2, an: c.an === 'l' ? 'r' : 'l' });
-  T.fl = SP.length;
+/** Teilungsbaum des obersten Feldes oben und Knoten am Pfad (fehlende Knoten werden mit mk angelegt). */
+function okBaum(T, oben, pfad) {
+  T.ut = T.ut || {};
+  let n = T.ut[oben] || null;
+  for (const c of pfad) {
+    if (!n || !n.a) return null;
+    n = n.k[+c];
+  }
+  return n;
 }
-/** Waagerecht teilen: Oberlicht (obere Hälfte) bzw. Unterlicht (untere Hälfte) bis zur Stelle y. */
-function okTeilenY(T, y) {
-  if (T.a === 'to') return;
-  const pb = okPb(T),
-    unten = oeTuer(T) ? 0 : pb;
-  if (y > T.h / 2) T.ol = Math.max(0.15, Math.round((T.h - pb - y - pb / 2) * 100) / 100);
-  else if (!oeTuer(T)) T.ul = Math.max(0.15, Math.round((y - unten - pb / 2) * 100) / 100);
+/** Knoten am Pfad ersetzen (pfad '' = Wurzel des Feldes). */
+function okBaumSetzen(T, oben, pfad, neu) {
+  T.ut = T.ut || {};
+  if (!pfad) {
+    if (neu) T.ut[oben] = neu;
+    else delete T.ut[oben];
+    return;
+  }
+  const p = okBaum(T, oben, pfad.slice(0, -1));
+  if (p && p.a) p.k[+pfad.slice(-1)] = neu;
+}
+/**
+ * Angeklicktes Feld (Flügel oder Paneel) senkrecht (a 'x') bzw. waagerecht (a 'y') an der Stelle v teilen – nur dieses
+ * Feld, die übrigen bleiben unverändert. Beide Teile übernehmen die Füllung.
+ */
+function okFeldTeilen(T, f, a, v) {
+  const lo = a === 'x' ? f.x0 : f.y0,
+    hi = a === 'x' ? f.x1 : f.y1;
+  if (v < lo + 0.1 || v > hi - 0.1) return false;
+  const id = String(f.i),
+    oben = f.oben != null ? String(f.oben) : id,
+    pfad = id.includes('.') ? id.split('.')[1] : '';
+  okBaumSetzen(T, oben, pfad, {
+    a,
+    r: Math.round(((v - lo) / (hi - lo)) * 1000) / 1000,
+    k: [{ fu: f.fu }, { fu: f.fu }],
+  });
+  return true;
 }
 /** Gewählten Pfosten bzw. Riegel entfernen (Flügel zusammenlegen, Ober-/Unterlicht weg). */
 function okOeEntf() {
   const T = okTyp(),
     id = OK.ogr;
   if (!T || !id) return;
-  if (id === 'ol') T.ol = 0;
+  if (id.startsWith('n:')) {
+    // Unterteilung im Feld entfernen: Teilfelder wieder zu einem (Füllung des ersten Teils)
+    const [, oben, pfad] = id.split(':'),
+      n = okBaum(T, oben, pfad),
+      blatt = (x) => (x && x.a ? blatt(x.k[0]) : x);
+    okBaumSetzen(
+      T,
+      oben,
+      pfad,
+      pfad || (blatt(n) && blatt(n).fu) ? { fu: (blatt(n) || {}).fu || 'g' } : null,
+    );
+  } else if (id === 'ol') T.ol = 0;
   else if (id === 'ul') T.ul = 0;
   else {
     const i = +id.slice(1),
       A = oeAufteilung(T),
-      F = A.felder.filter((f) => typeof f.i === 'number'),
+      F = A.oben.filter((f) => typeof f.i === 'number'),
       SP = okSpSicher(T);
     if (!F[i + 1]) return;
     F.forEach((q, k) => (SP[k].w = q.x1 - q.x0));
@@ -560,9 +589,10 @@ function okDown(e) {
     x = Math.round(P.iX(px) * 100) / 100,
     y = Math.round(P.iY(py) * 100) / 100;
   if (OK.owz === 'x' || OK.owz === 'y') {
-    if (x > 0 && x < T.b && y > 0 && y < T.h) {
-      if (OK.owz === 'x') okTeilenX(T, x);
-      else okTeilenY(T, y);
+    // nur das angeklickte Feld teilen
+    const f = oeAufteilung(T).felder.find((q) => x >= q.x0 && x <= q.x1 && y >= q.y0 && y <= q.y1);
+    if (f && T.a !== 'to' && okFeldTeilen(T, f, OK.owz, OK.owz === 'x' ? x : y)) {
+      OK.feld = null;
       oeAktualisieren();
     }
     return;
@@ -585,7 +615,12 @@ function okFeldFuellung(v) {
   const T = okTyp(),
     i = OK.feld;
   if (!T || i == null || !OE_FUELL[v]) return;
-  if (i === 'ol') T.olFu = v;
+  if (typeof i === 'string' && i.includes('.')) {
+    // Teilfeld einer Unterteilung
+    const [oben, pfad] = i.split('.');
+    okBaumSetzen(T, oben, pfad, { fu: v });
+  } else if (T.ut && T.ut[String(i)] && !T.ut[String(i)].a) T.ut[String(i)] = { fu: v };
+  else if (i === 'ol') T.olFu = v;
   else if (i === 'ul') T.ulFu = v;
   else {
     const SP = okSpSicher(T);
@@ -617,9 +652,17 @@ function okMove(e) {
     return;
   }
   const r = (v) => Math.round(v * 100) / 100;
-  if (z.art === 'x') {
+  if (z.id && z.id.startsWith('n:')) {
+    const n = okBaum(T, z.oben, z.pfad);
+    if (n && n.a) {
+      const v = z.art === 'x' ? P.iX(px) : P.iY(py),
+        lo = z.art === 'x' ? z.px0 : z.py0,
+        hi = z.art === 'x' ? z.px1 : z.py1;
+      n.r = Math.max(0.05, Math.min(0.95, Math.round(((v - lo) / (hi - lo)) * 1000) / 1000));
+    }
+  } else if (z.art === 'x') {
     const A = oeAufteilung(T),
-      F = A.felder.filter((f) => typeof f.i === 'number'),
+      F = A.oben.filter((f) => typeof f.i === 'number'),
       f0 = F[z.i],
       x = r(P.iX(px)) - A.pb / 2;
     okBreite(T, z.i, x - f0.x0);

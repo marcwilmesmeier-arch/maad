@@ -107,6 +107,7 @@ function okGrTeilungZurueck() {
   G.xs = [];
   G.ys = [];
   G.fe = [];
+  G.vb = [];
   OK.gzel = [];
   OK.glin = null;
   oeAktualisieren();
@@ -118,6 +119,65 @@ function okGrLinieLoeschen() {
   const k = l.a === 'x' ? 'xs' : 'ys';
   G[k] = (G[k] || []).filter((x) => Math.abs(x - l.v) > 0.004);
   OK.glin = null;
+  OK.gzel = [];
+  oeAktualisieren();
+}
+/** Zwei oder mehr Felder zu einem verbinden (Rechteck aus den Feldern); Feldeinstellung des ersten bleibt. */
+function okGrVerbinden(Z) {
+  const G = okGr();
+  if (!G || !Z || Z.length < 2) return false;
+  const r = {
+      x0: Math.min(...Z.map((z) => z.x0)),
+      x1: Math.max(...Z.map((z) => z.x1)),
+      y0: Math.min(...Z.map((z) => z.y0)),
+      y1: Math.max(...Z.map((z) => z.y1)),
+    },
+    fl = Z.reduce((s, z) => s + (z.x1 - z.x0) * (z.y1 - z.y0), 0);
+  // nur lückenlose Rechtecke (keine L-Formen)
+  if (Math.abs(fl - (r.x1 - r.x0) * (r.y1 - r.y0)) > 1e-4) {
+    try {
+      okE('okHint').textContent = 'Nur Felder, die zusammen ein Rechteck bilden, lassen sich verbinden';
+    } catch (e) {
+      logErr(e, 'okGrVerbinden');
+    }
+    return false;
+  }
+  const innen = (q) =>
+    q.x0 >= r.x0 - 0.004 && q.x1 <= r.x1 + 0.004 && q.y0 >= r.y0 - 0.004 && q.y1 <= r.y1 + 0.004;
+  G.vb = oegVerbunden(G).filter((q) => !innen(q));
+  G.vb.push(r);
+  // Tiefe/Material: das erste Feld gibt vor
+  const e0 = (G.fe || []).find(
+    (f) => f.p[0] > Z[0].x0 && f.p[0] < Z[0].x1 && f.p[1] > Z[0].y0 && f.p[1] < Z[0].y1,
+  );
+  G.fe = (G.fe || []).filter((f) => !(f.p[0] > r.x0 && f.p[0] < r.x1 && f.p[1] > r.y0 && f.p[1] < r.y1));
+  if (e0) G.fe.push({ ...e0, p: [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2] });
+  OK.gzel = [[(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]];
+  OK.glin = null;
+  oeAktualisieren();
+  return true;
+}
+/** Teilungslinie nur zwischen den zwei Feldern an der gewählten Stelle entfernen (feldweise). */
+function okGrSegmentLoeschen() {
+  const l = OK.glin;
+  if (!l || !l.A || !l.B) return;
+  okGrVerbinden([l.A, l.B]);
+}
+/** Verbindung des gewählten Feldes lösen (wieder einzelne Felder). */
+function okGrVerbindungLoesen() {
+  const G = okGr(),
+    Z = okGrZellenWahl().filter((z) => z.vb);
+  if (!G || !Z.length) return;
+  G.vb = oegVerbunden(G).filter(
+    (r) =>
+      !Z.some(
+        (z) =>
+          Math.abs(z.x0 - r.x0) < 0.004 &&
+          Math.abs(z.x1 - r.x1) < 0.004 &&
+          Math.abs(z.y0 - r.y0) < 0.004 &&
+          Math.abs(z.y1 - r.y1) < 0.004,
+      ),
+  );
   OK.gzel = [];
   oeAktualisieren();
 }
@@ -147,10 +207,12 @@ function okGrMaterial(v) {
   G.t = S.ft.some((x) => x.k === v) ? v : '';
   oeAktualisieren();
 }
-/** Entf im Reiter „Gruppen“: Linie, sonst Öffnung entfernen. */
+/** Entf im Reiter „Gruppen“: Teilung nur an dieser Stelle (feldweise), sonst Öffnung entfernen. */
 function okGrEntf() {
-  if (OK.glin) okGrLinieLoeschen();
-  else if (OK.go) okGrOeLoeschen();
+  if (OK.glin) {
+    if (OK.glin.A && OK.glin.B) okGrSegmentLoeschen();
+    else okGrLinieLoeschen();
+  } else if (OK.go) okGrOeLoeschen();
 }
 /** Wie oft ein Öffnungstyp vorkommt: frei gesetzt und über Gruppen (je Verweis). */
 function oeTypZahl(k) {
@@ -237,11 +299,21 @@ function okGrLoeschen() {
   if (n && !confirm(`„${G.n}“ ist ${n}× an Fassaden gesetzt. Gruppe und diese Stellen löschen?`)) return;
   hist();
   S.oeg = S.oeg.filter((x) => x !== G);
-  S.bld.forEach((b) =>
+  S.bld.forEach((b) => {
     Object.values(b.fd || {}).forEach((d) => {
       if (d && d.gr) d.gr = d.gr.filter((I) => I.g !== G.k);
-    }),
-  );
+    });
+    // Gebäudekonfiguration (Stapel, eigene Anordnungen): Gruppe aus Rhythmen entfernen
+    const fk = b.fk;
+    if (fk) {
+      const ohne = (x) => {
+        const R = fkReihe(x).filter((k) => k !== G.k);
+        return R.length > 1 ? R : R[0] || '';
+      };
+      fk.st = (fk.st || []).map(ohne);
+      Object.keys(fk.ab || {}).forEach((k) => (fk.ab[k] = ohne(fk.ab[k])));
+    }
+  });
   OK.g = S.oeg.length ? S.oeg[0].k : null;
   OK.go = null;
   oeAktualisieren();
@@ -275,7 +347,7 @@ function okGrRender() {
       S.oeg
         .map(
           (x) =>
-            `<div class="okt${x.k === OK.g ? ' on' : ''}" onclick="okGrWahl('${x.k}')">${oegSymbol(x, 48, 30)}<span>${esc(x.n)}<small>${fdFmt(x.l)} m · ${x.oe.length} Öffnung${x.oe.length === 1 ? '' : 'en'}${zahl[x.k] ? ' · ' + zahl[x.k] + '× gesetzt' : ''}</small></span></div>`,
+            `<div class="okt${x.k === OK.g ? ' on' : ''}" onclick="okGrWahl('${x.k}')">${oegSymbol(x, 48, 30)}<span>${esc(x.n)}<small>${fdFmt(x.l)} m · ${x.oe.length} Öffnung${x.oe.length === 1 ? '' : 'en'}${zahl[x.k] ? ' · ' + zahl[x.k] + '× gesetzt' : ''}</small></span><button class="okx" title="Gruppe löschen" onclick="event.stopPropagation();okGrWahl('${x.k}');okGrLoeschen()">×</button></div>`,
         )
         .join('') +
       `<div class="okt" onclick="okGrNeu()"><span class="mu">+ Gruppe anlegen</span></div>`;
@@ -340,8 +412,10 @@ ${G.sz && G.sz.an ? `<span>Sturz bis Geschossoberkante (m)</span>${z('szs', G.sz
       .join('')}</select>
 <span>Material</span><select onchange="okGrFeldSet('t',this.value)">${gleichT ? mat(t0, '— wie Gruppe —') : '<option value="" selected>gemischt</option>' + mat(null, '— wie Gruppe —').replace(/selected/g, '')}</select></div>
 <div class="okb"><button onclick="okGrFeldSet('d',-5)">−5 cm vor</button><button onclick="okGrFeldSet('d',0)">bündig</button><button onclick="okGrFeldSet('d',5)">5 cm zurück</button></div>`;
+    if (Z.length > 1 || Z.some((z) => z.vb))
+      h += `<div class="okb">${Z.length > 1 ? '<button onclick="okGrVerbinden(okGrZellenWahl())" title="Gewählte Felder zu einem Feld verbinden (müssen ein Rechteck bilden)">Felder verbinden</button>' : ''}${Z.some((z) => z.vb) ? '<button onclick="okGrVerbindungLoesen()" title="Verbundenes Feld wieder in einzelne Felder teilen">Verbindung lösen</button>' : ''}</div>`;
   } else if (OK.glin)
-    h += `<div class="okb" style="margin-top:8px"><span class="mu">${OK.glin.a === 'x' ? 'Senkrechte' : 'Waagerechte'} Teilung bei ${fdFmt(OK.glin.v)} m</span><button onclick="okGrLinieLoeschen()">Entfernen</button></div>`;
+    h += `<div class="mu" style="margin-top:8px">${OK.glin.a === 'x' ? 'Senkrechte' : 'Waagerechte'} Teilung bei ${fdFmt(OK.glin.v)} m</div><div class="okb">${OK.glin.A && OK.glin.B ? '<button onclick="okGrSegmentLoeschen()" title="Nur zwischen diesen beiden Feldern entfernen (Entf)">Hier entfernen</button>' : ''}<button onclick="okGrLinieLoeschen()" title="Teilungslinie über die ganze Gruppe entfernen">Ganze Linie entfernen</button></div>`;
   else
     h += `<div class="mu" style="margin-top:8px">Mit den Werkzeugen über der Ansicht teilen, dann Feld anklicken (Umschalt = mehrere) und Tiefe oder Material festlegen.</div>`;
   h += `<div class="okb" style="margin-top:14px"><button onclick="okGrSetzen()">Im Fassadendesigner setzen</button><button onclick="okGrKopie()">Kopie</button><button onclick="okGrLoeschen()">Löschen</button></div>
@@ -419,29 +493,41 @@ function okGrZeichnen() {
       );
     }
   });
-  // Teilungslinien
-  const tl = oegTeilung(G);
+  // Teilungslinien feldweise: rechte und obere Kante jedes Feldes (verbundene Felder ohne innere Linien)
   g.save();
   g.setLineDash([4, 3]);
+  g.strokeStyle = '#475569';
   g.lineWidth = 1;
-  tl.xs.slice(1, -1).forEach((x) => {
-    const an = OK.glin && OK.glin.a === 'x' && Math.abs(OK.glin.v - x) < 0.004;
-    g.strokeStyle = an ? '#1f6fd1' : '#475569';
-    g.lineWidth = an ? 2.5 : 1;
-    g.beginPath();
-    g.moveTo(P.X(x), P.Y(0));
-    g.lineTo(P.X(x), P.Y(G.h));
-    g.stroke();
+  g.beginPath();
+  oegZellen(G).forEach((z) => {
+    if (z.x1 < G.l - 0.004) {
+      g.moveTo(P.X(z.x1), P.Y(z.y0));
+      g.lineTo(P.X(z.x1), P.Y(z.y1));
+    }
+    if (z.y1 < G.h - 0.004) {
+      g.moveTo(P.X(z.x0), P.Y(z.y1));
+      g.lineTo(P.X(z.x1), P.Y(z.y1));
+    }
   });
-  tl.ys.slice(1, -1).forEach((y) => {
-    const an = OK.glin && OK.glin.a === 'y' && Math.abs(OK.glin.v - y) < 0.004;
-    g.strokeStyle = an ? '#1f6fd1' : '#475569';
-    g.lineWidth = an ? 2.5 : 1;
+  g.stroke();
+  // gewählte Teilung: nur das Stück zwischen den zwei Feldern (ganze Linie, wenn keine Felder anliegen)
+  const gl = OK.glin;
+  if (gl) {
+    const s0 = gl.s0 != null ? gl.s0 : 0,
+      s1 = gl.s1 != null ? gl.s1 : gl.a === 'x' ? G.h : G.l;
+    g.setLineDash([]);
+    g.strokeStyle = '#1f6fd1';
+    g.lineWidth = 3;
     g.beginPath();
-    g.moveTo(P.X(0), P.Y(y));
-    g.lineTo(P.X(G.l), P.Y(y));
+    if (gl.a === 'x') {
+      g.moveTo(P.X(gl.v), P.Y(s0));
+      g.lineTo(P.X(gl.v), P.Y(s1));
+    } else {
+      g.moveTo(P.X(s0), P.Y(gl.v));
+      g.lineTo(P.X(s1), P.Y(gl.v));
+    }
     g.stroke();
-  });
+  }
   g.restore();
   // gewählte Felder
   okGrZellenWahl().forEach((z) => {
@@ -514,7 +600,7 @@ function okGrZeichnen() {
     hint.textContent =
       OK.gwz === 'x' || OK.gwz === 'y'
         ? 'Klick = Teilungslinie setzen (rastet an Fensterkanten ein, Umschalt = frei) · Esc = zurück zu „Auswählen“'
-        : 'Öffnung ziehen · Feld anklicken (Umschalt = mehrere) · Linie anklicken + Entf = entfernen · gestrichelt: Länge der Gruppe';
+        : 'Öffnung ziehen · Feld anklicken (Umschalt = mehrere) · Teilung anklicken + Entf = nur an dieser Stelle entfernen · gestrichelt: Länge der Gruppe';
   // Werkzeugleiste über der Ansicht
   let wz = okE('okGwz');
   if (!wz) {
@@ -585,16 +671,32 @@ function okGrDown(e) {
     OK.gzug = { dx: q.x - x, dv: q.v - y };
     okE('okCv').setPointerCapture(e.pointerId);
   } else {
-    // Teilungslinie (6 px) oder Feld
-    const tl = oegTeilung(G),
-      tol = 6 / P.s,
-      lx = y >= 0 && y <= G.h ? tl.xs.slice(1, -1).find((v) => Math.abs(v - x) < tol) : undefined,
-      ly = x >= 0 && x <= G.l ? tl.ys.slice(1, -1).find((v) => Math.abs(v - y) < tol) : undefined;
-    if (lx !== undefined) {
-      OK.glin = { a: 'x', v: lx };
+    // Teilungslinie (6 px) zwischen zwei Feldern – gewählt wird nur das Stück an dieser Stelle – oder Feld
+    const tol = 6 / P.s,
+      ZZ = oegZellen(G),
+      lx = ZZ.find((z) => z.x1 < G.l - 0.004 && Math.abs(z.x1 - x) < tol && y > z.y0 && y < z.y1),
+      ly = ZZ.find((z) => z.y1 < G.h - 0.004 && Math.abs(z.y1 - y) < tol && x > z.x0 && x < z.x1);
+    if (lx) {
+      const B = ZZ.find((z) => Math.abs(z.x0 - lx.x1) < 0.004 && y > z.y0 && y < z.y1);
+      OK.glin = {
+        a: 'x',
+        v: lx.x1,
+        A: lx,
+        B,
+        s0: B ? Math.max(lx.y0, B.y0) : lx.y0,
+        s1: B ? Math.min(lx.y1, B.y1) : lx.y1,
+      };
       OK.gzel = [];
-    } else if (ly !== undefined) {
-      OK.glin = { a: 'y', v: ly };
+    } else if (ly) {
+      const B = ZZ.find((z) => Math.abs(z.y0 - ly.y1) < 0.004 && x > z.x0 && x < z.x1);
+      OK.glin = {
+        a: 'y',
+        v: ly.y1,
+        A: ly,
+        B,
+        s0: B ? Math.max(ly.x0, B.x0) : ly.x0,
+        s1: B ? Math.min(ly.x1, B.x1) : ly.x1,
+      };
       OK.gzel = [];
     } else if (x > 0 && x < G.l && y > 0 && y < G.h) {
       const z = oegZellen(G).find((c) => x > c.x0 && x < c.x1 && y > c.y0 && y < c.y1),

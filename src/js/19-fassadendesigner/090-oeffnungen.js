@@ -182,7 +182,58 @@ function oeAufteilung(T) {
       x += pb;
     }
   });
-  return { pb, stege, felder };
+  // Unterteilungen einzelner Felder (T.ut, je Feld ein Baum aus Teilungen): Teilfelder, Stege, ziehbare Stege
+  const aus = [],
+    ns = [];
+  felder.forEach((f) => oeTeilBaum(f, (T.ut || {})[String(f.i)], f.i, '', pb, aus, stege, ns));
+  return { pb, stege, felder: aus, oben: felder, ns };
+}
+/**
+ * Feld f nach dem Teilungsbaum knoten aufteilen. Knoten: { a: 'x'|'y', r: Lage 0–1, k: [Kind, Kind] }, Blatt: { fu }.
+ * Teilfelder heißen „oben.pfad“ (pfad aus 0/1 je Ebene, z. B. „0.10“), ziehbare Stege „n:oben:pfad“.
+ */
+function oeTeilBaum(f, knoten, oben, pfad, pb, aus, stege, ns) {
+  if (!knoten || !knoten.a) {
+    const fu = knoten && OE_FUELL[knoten.fu] ? knoten.fu : f.fu;
+    aus.push(pfad ? { ...f, i: oben + '.' + pfad, fu, oben } : { ...f, fu });
+    return;
+  }
+  const r = Math.max(0.05, Math.min(0.95, +knoten.r || 0.5)),
+    k = knoten.k || [],
+    gr = {
+      id: 'n:' + oben + ':' + pfad,
+      art: knoten.a,
+      oben,
+      pfad,
+      px0: f.x0,
+      px1: f.x1,
+      py0: f.y0,
+      py1: f.y1,
+    };
+  if (knoten.a === 'x') {
+    const m = f.x0 + (f.x1 - f.x0) * r;
+    stege.push([m - pb / 2, m + pb / 2, f.y0, f.y1]);
+    ns.push({ ...gr, a: m - pb / 2, b: m + pb / 2, y0: f.y0, y1: f.y1 });
+    oeTeilBaum({ ...f, x1: m - pb / 2 }, k[0], oben, pfad + '0', pb, aus, stege, ns);
+    oeTeilBaum({ ...f, x0: m + pb / 2 }, k[1], oben, pfad + '1', pb, aus, stege, ns);
+  } else {
+    const m = f.y0 + (f.y1 - f.y0) * r;
+    stege.push([f.x0, f.x1, m - pb / 2, m + pb / 2]);
+    ns.push({ ...gr, a: m - pb / 2, b: m + pb / 2, x0: f.x0, x1: f.x1 });
+    oeTeilBaum({ ...f, y1: m - pb / 2 }, k[0], oben, pfad + '0', pb, aus, stege, ns);
+    oeTeilBaum({ ...f, y0: m + pb / 2 }, k[1], oben, pfad + '1', pb, aus, stege, ns);
+  }
+}
+/** Teilungsbaum prüfen (Laden): nur gültige Knoten und Blätter, Tiefe begrenzt. */
+function oeBaumPruefen(n, tiefe) {
+  if (!n || typeof n !== 'object' || tiefe > 8) return null;
+  if (n.a === 'x' || n.a === 'y')
+    return {
+      a: n.a,
+      r: Math.max(0.05, Math.min(0.95, +n.r || 0.5)),
+      k: [oeBaumPruefen((n.k || [])[0], tiefe + 1), oeBaumPruefen((n.k || [])[1], tiefe + 1)],
+    };
+  return OE_FUELL[n.fu] ? { fu: n.fu } : null;
 }
 /** Füllfarbe eines Feldes in der Ansicht. */
 // Glas weiß, 80 % durchsichtig (wie im 3D-Modell); Paneel in der Rahmenfarbe
@@ -662,6 +713,14 @@ function oeTypenPruefen(L) {
     o.sr = Array.isArray(o.sr)
       ? [Math.max(0, Math.min(6, +o.sr[0] || 0)), Math.max(0, Math.min(6, +o.sr[1] || 0))]
       : [0, 0];
+    if (o.ut && typeof o.ut === 'object') {
+      const ut = {};
+      Object.keys(o.ut).forEach((k) => {
+        const n = oeBaumPruefen(o.ut[k], 0);
+        if (n) ut[k] = n;
+      });
+      o.ut = ut;
+    } else delete o.ut;
     return o;
   });
 }
