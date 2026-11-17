@@ -1,6 +1,6 @@
 /* Außenkontur in LOD 200: nur die wirklichen Außenkanten des Baukörpers (echte Ecken über 20° Knick, Fuß, Dachrand,
    Auskragungen und Rücksprünge zwischen Geschossen, Dachkanten geneigter Dächer) – keine Unterteilungen der Wände,
-   Decken oder Öffnungen. Sichtbar mit „Kontur“ (S.noK aus), in der Explosionsansicht ausgeblendet (dort zeigen die
+   Decken oder Öffnungen. Sichtbar mit dem Layer „Gebäudekontur“ (bkont, S.noK aus), in der Explosionsansicht ausgeblendet (dort zeigen die
    Bauteile ihre eigenen Kanten).
    Fette Kontur (16-darstellung-erweitert/010): wie bei Umgebungsgebäuden nur die Silhouette, hinter dem Gebäude. Eine
    Hülle schiene durch die Fensterlöcher; deshalb werden je Bild die Kanten gesucht, an denen eine angrenzende Fläche
@@ -191,7 +191,10 @@ function l2KonturSil(cm) {
 }
 /** Konturen der geplanten Gebäude aktuell halten (Takt aus 030-aktionen). */
 function l2Kontur() {
-  const an = l2on(),
+  // dünne Linien folgen dem Layer „Gebäudekontur“ (bkont), die fette Silhouette dem Schalter „Fette Außenkontur“
+  const lk = LY.find((l) => l[1] === 'bkont'),
+    duenn = !lk || !!lk[2],
+    an = l2on(),
     ex = !!(S.expl && S.expl.cur > 0.05) || l23(),
     da = new Set();
   S.bld.forEach((b) => {
@@ -216,7 +219,7 @@ function l2Kontur() {
       o = { sig, ln, fett, p: K.p, n: K.n, ck: '' };
       L2KO.set(b.id, o);
     }
-    o.ln.visible = !S.noK && !ex;
+    o.ln.visible = duenn && !S.noK && !ex;
     if (o.fett) o.fett.visible = !ex;
   });
   L2KO.forEach((o, id) => {

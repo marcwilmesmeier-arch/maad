@@ -412,7 +412,7 @@ document
   .getElementById('darBase')
   .insertAdjacentHTML(
     'afterbegin',
-    '<label id="konL" title="Starke schwarze Außenkontur aus Betrachterrichtung – gilt nur für diese Darstellung">Starke Außenkontur <input type="checkbox" id="konck"></label>',
+    '<label id="konL" title="Fette Außenkontur (Silhouette) aus Betrachterrichtung – gilt nur für diese Darstellung, unabhängig von der dünnen Gebäudekontur">Fette Außenkontur <input type="checkbox" id="konck"></label>',
   );
 function konMode() {
   return S.dar === 'wm' ? 'wm' : 'sch';
