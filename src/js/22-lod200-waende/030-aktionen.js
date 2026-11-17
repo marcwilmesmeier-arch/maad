@@ -188,24 +188,26 @@ function l2MeshOrig(e) {
   return { g, mat };
 }
 /**
- * Stabgeländer über einer Terrassenwand (LOD 200): senkrechte Stäbe (Abstand 0,12 m) und Handlauf auf der Mittellinie
- * der Attika, von deren Oberkante bis 1,00 m über der Geschossoberkante. Eine Geometrie je Wand.
+ * Stabgeländer an einer Terrassenwand (LOD 200): innen vor der Attika auf dem Terrassenboden, senkrechte Stäbe alle
+ * 0,24 m, Fußleiste und Handlauf, Oberkante 1,00 m über der Geschossoberkante. Eine Geometrie je Wand.
  */
 function l2Gelaender(e) {
   const pos = [],
-    y0 = e.h + (e.hTop || 0) + e.hAt,
-    y1 = e.h + (e.hTop || 0) + 1.0,
-    box = (x0, x1, ya, yb, z0, z1) => {
-      // Quader in lokalen Koordinaten (Achsen: u entlang der Wand, y, w quer) → wird über die Wandrichtung abgebildet
+    yb = e.h + (e.hTop || 0), // Oberkante Geschoss = Terrassenboden
+    y1 = yb + 1.0,
+    bb = S.bld.find((x) => x.id === e.bid),
+    mz = bb ? cen(bb.fp) : null,
+    box = (x0, x1, ya, yc, z0, z1) => {
+      // Quader in lokalen Koordinaten (u entlang der Wand, y, w quer zur Wand)
       const P = [
         [x0, ya, z0],
         [x1, ya, z0],
         [x1, ya, z1],
         [x0, ya, z1],
-        [x0, yb, z0],
-        [x1, yb, z0],
-        [x1, yb, z1],
-        [x0, yb, z1],
+        [x0, yc, z0],
+        [x1, yc, z0],
+        [x1, yc, z1],
+        [x0, yc, z1],
       ];
       [
         [0, 2, 1, 0, 3, 2],
@@ -217,23 +219,36 @@ function l2Gelaender(e) {
       ].forEach((f) => f.forEach((i) => pos.push(P[i])));
     };
   (e.quads || []).forEach((q) => {
-    // Mittellinie der Attika aus den vier Ecken der Wand im Grundriss
-    const A = [(q[0][0] + q[3][0]) / 2, (q[0][1] + q[3][1]) / 2],
-      B = [(q[1][0] + q[2][0]) / 2, (q[1][1] + q[2][1]) / 2],
+    // Innenseite der Attika: die der Gebäudemitte nähere Wandseite; Geländer 3 cm davor auf dem Terrassenboden
+    const s1 = [q[0], q[1]],
+      s2 = [q[3], q[2]],
+      mid = (s) => [(s[0][0] + s[1][0]) / 2, (s[0][1] + s[1][1]) / 2],
+      d = (s) => (mz ? Math.hypot(mid(s)[0] - mz[0], mid(s)[1] - mz[1]) : 0),
+      [aus, inn] = d(s1) < d(s2) ? [s2, s1] : [s1, s2],
+      A = inn[0],
+      B = inn[1],
       L = Math.hypot(B[0] - A[0], B[1] - A[1]);
-    if (L < 0.2 || y1 <= y0 + 0.1) return;
+    if (L < 0.2) return;
     const ux = (B[0] - A[0]) / L,
       uz = (B[1] - A[1]) / L,
+      // Richtung nach innen (von der Außen- zur Innenseite)
+      ix = mid(inn)[0] - mid(aus)[0],
+      iz = mid(inn)[1] - mid(aus)[1],
+      il = Math.hypot(ix, iz) || 1,
+      sw = (-uz * ix + ux * iz) / il > 0 ? 1 : -1,
+      off = 0.03 + 0.02,
       n0 = pos.length,
-      k = Math.max(1, Math.round(L / 0.12));
+      k = Math.max(1, Math.round(L / 0.24));
     for (let i = 0; i <= k; i++) {
       const t = Math.min(L - 0.01, Math.max(0.01, (i / k) * L));
-      box(t - 0.01, t + 0.01, y0, y1 - 0.04, -0.015, 0.015);
+      box(t - 0.01, t + 0.01, yb + 0.05, y1 - 0.04, off - 0.015, off + 0.015);
     }
-    box(0, L, y1 - 0.04, y1, -0.03, 0.03); // Handlauf
+    box(0, L, y1 - 0.04, y1, off - 0.03, off + 0.03); // Handlauf
+    box(0, L, yb + 0.05, yb + 0.09, off - 0.02, off + 0.02); // Fußleiste
     for (let i = n0; i < pos.length; i++) {
-      const [u, y, w] = pos[i];
-      pos[i] = [A[0] + ux * u - uz * w, y, A[1] + uz * u + ux * w];
+      const [u, y, w] = pos[i],
+        ww = w * sw;
+      pos[i] = [A[0] + ux * u - uz * ww, y, A[1] + uz * u + ux * ww];
     }
   });
   const ge = new T.BufferGeometry();
