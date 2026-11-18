@@ -166,12 +166,13 @@ const OEG_GEL = {
   pa: 'Alu-Paneel',
   ma: 'Massive Brüstung',
 };
-const OEG_GEL0 = { ga: 'st', gh: 1.0, gc: '#a9aeb3' };
+const OEG_GEL0 = { ga: 'st', gh: 1.0, gc: '#a9aeb3', gm: 'auf' }; // gm Montage: 'auf' aufgesetzt, 'se' seitlich (Balkon)
 /** Geländer eines Felds (mit Vorgaben). */
 const oegGel = (f) => ({
   ga: OEG_GEL[f && f.ga] ? f.ga : OEG_GEL0.ga,
   gh: f && +f.gh > 0.3 ? +f.gh : OEG_GEL0.gh,
   gc: f && /^#[0-9a-f]{6}$/i.test(f.gc || '') ? f.gc : OEG_GEL0.gc,
+  gm: f && f.gm === 'se' ? 'se' : 'auf',
 });
 /** Verbundene Felder der Gruppe (geprüft). */
 function oegVerbunden(G) {
@@ -246,7 +247,14 @@ function oegZellen(G) {
 function oegFlaechenG(G) {
   const Z = oegZellen(G).map((z) => ({ ...z, t: z.t || G.t || '' })),
     key = (z) =>
-      z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t + '|' + (z.a || '') + (z.a ? '|' + z.ga + z.gh + z.gc : ''),
+      z.d +
+      '|' +
+      (z.d ? z.k : 'g') +
+      '|' +
+      z.t +
+      '|' +
+      (z.a || '') +
+      (z.a ? '|' + z.ga + z.gh + z.gc + z.gm : ''),
     zeilen = [];
   // waagerecht zusammenfassen
   const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
@@ -322,6 +330,7 @@ function oegFlaechen(b, V) {
         ga: r.ga,
         gh: r.gh,
         gc: r.gc,
+        gm: r.gm,
         id: I.id + ':f' + k,
         gi: I,
       }),

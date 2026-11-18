@@ -150,9 +150,32 @@ function l2Balkone() {
           };
         // Platte von der Fassade bis zur Vorderkante
         l2Quader(pl, A, B, n, t / 2, t, x.y0 - 0.2, x.y0);
-        l2Gelaender(teil, ein(Av, A), ein(Bv, B), x.y0, x.gel);
-        l2Gelaender(teil, ein(A, B), ein(Av, Bv), x.y0, x.gel);
-        l2Gelaender(teil, ein(B, A), ein(Bv, Av), x.y0, x.gel);
+        if (x.gel.gm === 'se') {
+          // seitlich: außen vor der Plattenstirn, ab Plattenunterkante (Höhe über der Platte bleibt gleich)
+          const aus = (p, q) => {
+              const L2 = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
+              return [p[0] - ((q[0] - p[0]) / L2) * 0.03, p[1] - ((q[1] - p[1]) / L2) * 0.03];
+            },
+            seite = (P, Q, nn) => [
+              [P[0] + nn[0] * 0.03, P[1] + nn[1] * 0.03],
+              [Q[0] + nn[0] * 0.03, Q[1] + nn[1] * 0.03],
+            ],
+            gs = { ...x.gel, gh: x.gel.gh + 0.2 },
+            d = [B[0] - A[0], B[1] - A[1]],
+            dl = Math.hypot(...d) || 1,
+            u = [d[0] / dl, d[1] / dl];
+          // vorn (in Plattenrichtung n), links und rechts (quer)
+          const [f0, f1] = seite(aus(Av, Bv), aus(Bv, Av), n);
+          l2Gelaender(teil, f0, f1, x.y0 - 0.2, gs);
+          const [l0, l1] = seite(A, Av, [-u[0], -u[1]]);
+          l2Gelaender(teil, l0, [l1[0] + n[0] * 0.03, l1[1] + n[1] * 0.03], x.y0 - 0.2, gs);
+          const [r0, r1] = seite(B, Bv, u);
+          l2Gelaender(teil, r0, [r1[0] + n[0] * 0.03, r1[1] + n[1] * 0.03], x.y0 - 0.2, gs);
+        } else {
+          l2Gelaender(teil, ein(Av, A), ein(Bv, B), x.y0, x.gel);
+          l2Gelaender(teil, ein(A, B), ein(Av, Bv), x.y0, x.gel);
+          l2Gelaender(teil, ein(B, A), ein(Bv, Av), x.y0, x.gel);
+        }
       } else {
         // Loggia: Geländer knapp hinter der Fassadenebene
         const ri = [A[0] - n[0] * 0.08, A[1] - n[1] * 0.08],

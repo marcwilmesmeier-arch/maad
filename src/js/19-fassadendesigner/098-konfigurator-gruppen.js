@@ -200,6 +200,7 @@ function okGrFeldSet(f, v) {
       if (isFinite(n)) e.gh = Math.max(50, Math.min(200, n)) / 100;
     }
     if (f === 'gc' && /^#[0-9a-f]{6}$/i.test(v)) e.gc = v;
+    if (f === 'gm') e.gm = v === 'se' ? 'se' : 'auf';
     if (f === 'd') {
       const n = +String(v).replace(',', '.');
       // bis 3 m: Loggien und Balkone sind meist 1,5–2,5 m tief
@@ -444,7 +445,11 @@ ${
           )
           .join(
             '',
-          )}</select><span>Geländerhöhe (cm)</span><input type="number" step="5" min="50" max="200" value="${gleich('gh') ? Math.round(G0.gh * 100) : ''}" placeholder="gemischt" onchange="okGrFeldSet('gh',this.value)"><span>Geländerfarbe</span><input type="color" value="${G0.gc}" onchange="okGrFeldSet('gc',this.value)" title="Farbe von Stäben, Pfosten, Handlauf bzw. Paneel; beim Glasgeländer Handlauf und Halter">`;
+          )}</select><span>Geländerhöhe (cm)</span><input type="number" step="5" min="50" max="200" value="${gleich('gh') ? Math.round(G0.gh * 100) : ''}" placeholder="gemischt" onchange="okGrFeldSet('gh',this.value)"><span>Geländerfarbe</span><input type="color" value="${G0.gc}" onchange="okGrFeldSet('gc',this.value)" title="Farbe von Stäben, Pfosten, Handlauf bzw. Paneel; beim Glasgeländer Handlauf und Halter">${
+          Z.every((z) => z.a === 'ba')
+            ? `<span>Montage</span><select onchange="okGrFeldSet('gm',this.value)" title="Aufgesetzt: auf der Balkonplatte · seitlich: außen vor der Plattenstirn, ab Plattenunterkante"><option value="auf" ${G0.gm !== 'se' ? 'selected' : ''}>aufgesetzt</option><option value="se" ${G0.gm === 'se' ? 'selected' : ''}>seitlich</option></select>`
+            : ''
+        }`;
       })()
     : ''
 }

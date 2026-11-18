@@ -91,6 +91,8 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Rückwand und Seitenwände in Außenwandstärke statt eines vollen Körpers; Fenster darin messen Einbautiefe und Laibung
   an der Rückwand (`oeInnenseite`). Rück- und Seitenwände werden an den Loggia-Räumen des ganzen Gebäudes beschnitten
   (`oeLoggiaBeschnitt`, Ecken). Feldtiefen bis ±3 m.
+- Geländer an Loggia und Balkon (Feld `ga` Art, `gh` Höhe, `gc` Farbe, `gm` Montage, `oegGel` mit Vorgaben;
+  `OEG_GEL` Arten): Ansichtssymbol `oegArtZeichnen`, LOD 200 `l2Gelaender` (`22-lod200-waende/130-balkone.js`).
 - Fassadengruppen je Abschnitt: Fläche/Flucht in der Kontextleiste schreibt `b.fk.abU['Seite|Geschoss'] =
 [{ u0, u1, R, au, vs }]` (Bereich entlang der Ansicht, Geschoss `*` = Flucht). `fkAnwenden` teilt jedes Band an
   diesen Grenzen und füllt die Teile einzeln – so tragen die Hälften einer geschnittenen Flucht eigene Gruppen.
