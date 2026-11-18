@@ -734,7 +734,7 @@ function oegFelderPruefen(G) {
       .filter((f) => f && Array.isArray(f.p))
       .map((f) => ({
         p: [+f.p[0] || 0, +f.p[1] || 0],
-        d: Math.max(-1, Math.min(1, +f.d || 0)),
+        d: Math.max(-3, Math.min(3, +f.d || 0)),
         k: f.k === 'l' || f.k === 'r' ? f.k : 'g',
         t: String(f.t || ''),
         a: f.a === 'lo' || f.a === 'ba' ? f.a : '',
@@ -743,7 +743,7 @@ function oegFelderPruefen(G) {
     if (!r || !(+r.b > 0) || !(+r.h > 0)) return;
     xs.push(+r.x, +r.x + +r.b);
     ys.push(+r.v, +r.v + +r.h);
-    fe.push({ p: [+r.x + r.b / 2, +r.v + r.h / 2], d: Math.max(-1, Math.min(1, +r.d || 0)), t: '' });
+    fe.push({ p: [+r.x + r.b / 2, +r.v + r.h / 2], d: Math.max(-3, Math.min(3, +r.d || 0)), t: '' });
   });
   const vb = (Array.isArray(G.vb) ? G.vb : [])
     .map((r) => ({ x0: +r.x0, x1: +r.x1, y0: +r.y0, y1: +r.y1 }))

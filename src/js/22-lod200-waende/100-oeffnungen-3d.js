@@ -135,6 +135,18 @@ function oeWandOeffnungen(e) {
         aus = Math.max(0, -t, t - l2);
       return q + aus * 10;
     };
+  // Loggia-Räume des ganzen Gebäudes (Grundriss, Höhe relativ zu dieser Wand): Rück- und Seitenwände einer Loggia
+  // werden daran beschnitten, damit sie an Ecken nicht in die Loggia der Nachbarseite ragen
+  const lraeume = L.filter((o) => o.r > 0.3).map((o) => ({
+    o: [
+      o.p0,
+      o.p1,
+      [o.p1[0] - o.n[0] * (o.rr ?? o.r), o.p1[1] - o.n[1] * (o.rr ?? o.r)],
+      [o.p0[0] - o.n[0] * (o.rl ?? o.r), o.p0[1] - o.n[1] * (o.rl ?? o.r)],
+    ],
+    y0: o.y0 - e.y0,
+    y1: o.y1 - e.y0,
+  }));
   L.forEach((o) => {
     const ich = abstand(e, o);
     if (ich >= 1e9 || W.some((w) => w !== e && abstand(w, o) < ich - 1e-6)) return;
@@ -164,6 +176,7 @@ function oeWandOeffnungen(e) {
       r: o.r,
       A,
       voll: o.y1 - e.y0 <= e.h + 0.01,
+      lv: o.r ? lraeume : null,
     });
   });
   // Fenster in einem Rücksprung: Tiefe des Rücksprungs merken (Rahmen sitzt entsprechend weiter innen bzw. außen)
@@ -273,6 +286,34 @@ function oeRuecksprungKoerper(O) {
       zurueck = Math.max(rs.ra, rs.re) > 0,
       P = (t, s) => [A.d[0] * t + A.n[0] * s, A.d[1] * t + A.n[1] * s],
       L = O.filter((o) => !o.r && o.t1 > rs.t0 && o.t0 < rs.t1 && o.y1 > rs.y0 && o.y0 < rs.y1);
+    const tw = A.sA - A.sI;
+    if (zurueck && oeLoggia(rs, A)) {
+      // Loggia (Rücksprung tiefer als die Wand): Rückwand in Wandstärke hinter der zurückversetzten Fläche (mit den
+      // Öffnungen) und zwei Seitenwände neben dem Rücksprung, von der Wandinnenseite bis hinter die Rückwand
+      oeRechteckOhne(rs.t0, rs.t1, rs.y0, rs.y1, L).forEach(([a, c, ya, yb]) => {
+        const da = oeTiefeBei(rs, a),
+          dc = oeTiefeBei(rs, c);
+        oeLoggiaBeschnitt(
+          [P(a, A.sA - da - tw), P(c, A.sA - dc - tw), P(c, A.sA - dc), P(a, A.sA - da)],
+          rs,
+          ya,
+          yb,
+        ).forEach((f) => R.push([f, ya, yb]));
+      });
+      [
+        [rs.t0 - tw, rs.t0, rs.ra],
+        [rs.t1, rs.t1 + tw, rs.re],
+      ].forEach(([a, c, d]) => {
+        if (d > tw + 0.01)
+          oeLoggiaBeschnitt(
+            [P(a, A.sI), P(c, A.sI), P(c, A.sA - d - tw), P(a, A.sA - d - tw)],
+            rs,
+            rs.y0,
+            rs.y1,
+          ).forEach((f) => R.push([f, rs.y0, rs.y1]));
+      });
+      return;
+    }
     oeRechteckOhne(rs.t0, rs.t1, rs.y0, rs.y1, L).forEach(([a, c, ya, yb]) => {
       // Rücksprung: von der Wandinnenseite bis zur (ggf. schrägen) zurückversetzten Fläche; Vorsprung: von der
       // Außenfläche bis zur vorstehenden Fläche
@@ -290,6 +331,33 @@ function oeRuecksprungKoerper(O) {
     });
   });
   return R;
+}
+/**
+ * Wandstück Q (Grundriss) einer Loggia ohne die Loggia-Räume des Gebäudes in gleicher Höhe (rs.lv). Ergebnis: Flächen
+ * { o, h } für die Extrusion bzw. den Grundriss.
+ */
+function oeLoggiaBeschnitt(Q, rs, ya, yb) {
+  const V = (rs.lv || []).filter((v) => v.y0 < yb - 0.01 && v.y1 > ya + 0.01).map((v) => bpP(v.o));
+  if (!V.length) return [bpP(Q)];
+  try {
+    return boolOp([bpP(Q)], V, 'd').filter((r) => r.o && r.o.length >= 3);
+  } catch (e) {
+    logErr(e, 'oeLoggiaBeschnitt');
+    return [bpP(Q)];
+  }
+}
+/** Loggia: Rücksprung tiefer als die Wand – bekommt Rück- und Seitenwände in Wandstärke statt eines vollen Körpers. */
+function oeLoggia(rs, A) {
+  return Math.max(rs.ra, rs.re) > A.sA - A.sI + 0.01;
+}
+/**
+ * Innenseite der Wand, in der eine Öffnung sitzt: in einer Loggia die Innenseite der Rückwand (Wandstärke hinter der
+ * zurückversetzten Fläche), sonst die der Außenwand.
+ */
+function oeInnenseite(o, A) {
+  const tw = A.sA - A.sI,
+    rk = o.rk || 0;
+  return rk > tw + 0.01 ? A.sA - rk - tw : A.sI;
 }
 /** Tiefe eines (ggf. schrägen) Rücksprungs an der Achsstelle t. */
 function oeTiefeBei(rs, t) {
@@ -332,7 +400,7 @@ function oeKoerper(O) {
       A = o.A,
       tief = 0.08,
       sAo = A.sA - (o.rk || 0), // Außenfläche am Fenster (im Rücksprung zurückversetzt)
-      sV = sAo - Math.min(T_.et, Math.max(0, sAo - A.sI - tief)),
+      sV = sAo - Math.min(T_.et, Math.max(0, sAo - oeInnenseite(o, A) - tief)),
       sH = sV - tief,
       sm = (sH + sV) / 2,
       R = feld(T_.rf),
@@ -421,6 +489,52 @@ function oeGrundriss(x, wl, wandFarbe) {
       const a = [o.t0, A.sA - oeTiefeBei(o, o.t0)],
         c = [o.t1, A.sA - oeTiefeBei(o, o.t1)],
         flaeche = [P(o.t0, A.sA), P(o.t1, A.sA), P(c[0], c[1]), P(a[0], a[1])];
+      if (oeLoggia(o, A)) {
+        // Loggia: Fläche frei (draußen), Rück- und Seitenwände in Wandstärke als Wand gezeichnet
+        const tw = A.sA - A.sI,
+          wand = [
+            [P(o.t0 - tw, A.sI), P(o.t0, A.sI), P(a[0], a[1]), P(a[0], a[1] - tw), P(o.t0 - tw, a[1] - tw)],
+            [P(o.t1, A.sI), P(o.t1 + tw, A.sI), P(o.t1 + tw, c[1] - tw), P(c[0], c[1] - tw), P(c[0], c[1])],
+            [P(a[0], a[1]), P(c[0], c[1]), P(c[0], c[1] - tw), P(a[0], a[1] - tw)],
+          ];
+        x.globalCompositeOperation = 'destination-out';
+        zug(flaeche);
+        x.closePath();
+        x.fill();
+        x.globalCompositeOperation = 'source-over';
+        x.fillStyle = wandFarbe;
+        wand.forEach((w) =>
+          oeLoggiaBeschnitt(w, o, o.y0, o.y1).forEach((f) => {
+            [f.o].concat(f.h || []).forEach((ring) => {
+              zug(ring);
+              x.closePath();
+              x.fill();
+            });
+          }),
+        );
+        x.strokeStyle = '#111';
+        x.lineWidth = 1.6;
+        // Außenkontur um die Loggia und Innenkontur der Wände dahinter
+        zug([P(o.t0, A.sA), P(a[0], a[1]), P(c[0], c[1]), P(o.t1, A.sA)]);
+        x.stroke();
+        // Innenkontur nur außerhalb der Loggia-Räume (an Ecken liegt die Nachbarloggia darüber)
+        x.save();
+        x.beginPath();
+        x.rect(-1e5, -1e5, 2e5, 2e5);
+        (o.lv || [])
+          .filter((v) => v.y0 < o.y1 - 0.01 && v.y1 > o.y0 + 0.01)
+          .forEach((v) =>
+            v.o.forEach((p, i) => {
+              const [X, Y] = grTf(p[0], p[1]);
+              i ? x.lineTo(X, Y) : x.moveTo(X, Y);
+            }),
+          );
+        x.clip('evenodd');
+        zug([P(o.t0 - tw, A.sI), P(o.t0 - tw, a[1] - tw), P(c[0] + tw, c[1] - tw), P(o.t1 + tw, A.sI)]);
+        x.stroke();
+        x.restore();
+        return;
+      }
       if (Math.max(o.ra, o.re) > 0) {
         x.globalCompositeOperation = 'destination-out';
         zug(flaeche);
@@ -441,7 +555,8 @@ function oeGrundriss(x, wl, wandFarbe) {
     O.filter((o) => !o.r).forEach((o) => {
       const T = o.T,
         sAo = A.sA - (o.rk || 0),
-        sV = sAo - Math.min(T.et, Math.max(0, sAo - A.sI - 0.08)),
+        sIo = oeInnenseite(o, A),
+        sV = sAo - Math.min(T.et, Math.max(0, sAo - sIo - 0.08)),
         sH = sV - 0.08,
         t0 = o.t0,
         t1 = o.t1;
@@ -450,7 +565,7 @@ function oeGrundriss(x, wl, wandFarbe) {
         x.strokeStyle = '#333';
         x.lineWidth = 1;
         x.setLineDash([4, 3]);
-        zug([P(t0, A.sI), P(t1, A.sI), P(t1, sAo), P(t0, sAo)]);
+        zug([P(t0, sIo), P(t1, sIo), P(t1, sAo), P(t0, sAo)]);
         x.closePath();
         x.stroke();
         x.setLineDash([]);
@@ -458,16 +573,16 @@ function oeGrundriss(x, wl, wandFarbe) {
       }
       // Wand aussparen (von innen bis zur ggf. versetzten Außenfläche)
       x.globalCompositeOperation = 'destination-out';
-      zug([P(t0, A.sI - 0.01), P(t1, A.sI - 0.01), P(t1, sAo + 0.01), P(t0, sAo + 0.01)]);
+      zug([P(t0, sIo - 0.01), P(t1, sIo - 0.01), P(t1, sAo + 0.01), P(t0, sAo + 0.01)]);
       x.closePath();
       x.fill();
       x.globalCompositeOperation = 'source-over';
       // Laibungen
       x.strokeStyle = '#111';
       x.lineWidth = 1.6;
-      zug([P(t0, A.sI), P(t0, sAo)]);
+      zug([P(t0, sIo), P(t0, sAo)]);
       x.stroke();
-      zug([P(t1, A.sI), P(t1, sAo)]);
+      zug([P(t1, sIo), P(t1, sAo)]);
       x.stroke();
       // Rahmen
       x.strokeStyle = '#222';

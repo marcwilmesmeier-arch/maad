@@ -246,3 +246,6 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - LOD 200: an Stoßstellen der Wandstücke (Öffnungen, Geschossdecken) entstehen 1-Pixel-Risse (T-Stöße ohne gemeinsame
   Eckpunkte), sichtbar als feine Punkte entlang der Geschosslinien. Behebung: Wandstücke mit gemeinsamen Eckpunkten
   erzeugen oder Stöße minimal überlappen lassen.
+- Loggien an Gebäudeecken: liegen auf beiden Seiten einer Ecke Loggien näher an der Ecke als ihre Tiefe, reichen
+  Fenster der einen in die Loggia der anderen (Wände werden beschnitten, Fenster nicht). Abhilfe: Gruppen mit Versatz
+  bzw. Abstand zur Ecke setzen; später Eckregel beim Platzieren (fkAnwenden).

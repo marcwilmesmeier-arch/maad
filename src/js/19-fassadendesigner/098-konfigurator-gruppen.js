@@ -195,7 +195,11 @@ function okGrFeldSet(f, v) {
     }
     if (f === 'd') {
       const n = +String(v).replace(',', '.');
-      if (isFinite(n)) e.d = Math.max(-100, Math.min(100, n)) / 100;
+      // bis 3 m: Loggien und Balkone sind meist 1,5–2,5 m tief
+      if (isFinite(n)) e.d = Math.max(-300, Math.min(300, n)) / 100;
+      // Loggia bleibt Rücksprung, Balkon Auskragung (Vorzeichen wie bei der Wahl der Art)
+      if (e.a === 'lo') e.d = Math.abs(e.d);
+      if (e.a === 'ba') e.d = Math.abs(e.d);
     }
     if (f === 't') e.t = S.ft.some((x) => x.k === v) ? v : '';
   });

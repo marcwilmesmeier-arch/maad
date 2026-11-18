@@ -87,6 +87,10 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `S.vanim`, Rand einer Seite = Kante/Ecke, Ziehen = drehen.
 - Schnittlinien (Punkte auf gerader Wand, `skSchnittPunkt` in `26-modellier-modus/150-ecken.js`) sind wie Ecken wählbar
   und ziehbar; „Schnitt entfernen“ (`skSchnittWeg`) nimmt sie aus den Grundrissen.
+- Loggien in LOD 200 (`22-lod200-waende/100-oeffnungen-3d.js`): Rücksprünge tiefer als die Wand (`oeLoggia`) bekommen
+  Rückwand und Seitenwände in Außenwandstärke statt eines vollen Körpers; Fenster darin messen Einbautiefe und Laibung
+  an der Rückwand (`oeInnenseite`). Rück- und Seitenwände werden an den Loggia-Räumen des ganzen Gebäudes beschnitten
+  (`oeLoggiaBeschnitt`, Ecken). Feldtiefen bis ±3 m.
 - Fassadengruppen je Abschnitt: Fläche/Flucht in der Kontextleiste schreibt `b.fk.abU['Seite|Geschoss'] =
 [{ u0, u1, R, au, vs }]` (Bereich entlang der Ansicht, Geschoss `*` = Flucht). `fkAnwenden` teilt jedes Band an
   diesen Grenzen und füllt die Teile einzeln – so tragen die Hälften einer geschnittenen Flucht eigene Gruppen.
