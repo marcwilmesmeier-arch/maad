@@ -662,6 +662,36 @@ function okGrZeichnen() {
     if (pk[i + 1] - pk[i] > 0.01 && (pk[i + 1] - pk[i]) * P.s > 26)
       g.fillText(fdFmt(pk[i + 1] - pk[i]), P.X((pk[i] + pk[i + 1]) / 2), y1 + 4);
   g.fillText(fdFmt(G.l) + ' m', P.X(G.l / 2), y2 + 4);
+  // Maßketten der Teilungen: oben die senkrechten (entlang der Länge), links die waagerechten (entlang der Höhe)
+  const { xs: TX, ys: TY } = oegTeilung(G),
+    yo = P.Y(G.h) - 22,
+    xl = P.X(0) - 22;
+  g.beginPath();
+  TX.forEach((x) => {
+    g.moveTo(P.X(x), yo - 5);
+    g.lineTo(P.X(x), yo + 5);
+  });
+  g.moveTo(P.X(0), yo);
+  g.lineTo(P.X(G.l), yo);
+  TY.forEach((y) => {
+    g.moveTo(xl - 5, P.Y(y));
+    g.lineTo(xl + 5, P.Y(y));
+  });
+  g.moveTo(xl, P.Y(0));
+  g.lineTo(xl, P.Y(G.h));
+  g.stroke();
+  g.textBaseline = 'bottom';
+  for (let i = 0; i < TX.length - 1; i++)
+    if ((TX[i + 1] - TX[i]) * P.s > 26)
+      g.fillText(fdFmt(TX[i + 1] - TX[i]), P.X((TX[i] + TX[i + 1]) / 2), yo - 3);
+  for (let i = 0; i < TY.length - 1; i++)
+    if ((TY[i + 1] - TY[i]) * P.s > 26) {
+      g.save();
+      g.translate(xl - 3, P.Y((TY[i] + TY[i + 1]) / 2));
+      g.rotate(-Math.PI / 2);
+      g.fillText(fdFmt(TY[i + 1] - TY[i]), 0, 0);
+      g.restore();
+    }
   const hint = okE('okHint');
   if (hint)
     hint.textContent =
