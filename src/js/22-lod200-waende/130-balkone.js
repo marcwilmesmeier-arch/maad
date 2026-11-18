@@ -1,4 +1,4 @@
-/* Balkone und Loggien aus den Öffnungsgruppen in LOD 200 (Feldart a: 'ba' Balkon, 'lo' Loggia; 097-oeffnungsgruppen).
+/* Balkone und Loggien aus den Öffnungsgruppen in LOD 200 (dazu die Eckpfosten der Pfosten-Riegel-Fassaden) (Feldart a: 'ba' Balkon, 'lo' Loggia; 097-oeffnungsgruppen).
    Balkon: Platte 0,20 m an der Feldunterkante, kragt um tb vor die Fassade aus, Stabgeländer an den drei freien Seiten.
    Loggia: der Rücksprung selbst kommt aus der Wandableitung (oeWelt/oeRuecksprungKoerper); hier nur das Geländer in der
    Fassadenebene. Geländer je Feld (oegGel: Art, Höhe, Farbe): Alu-Stäbe, Relinggeländer, Glas, Paneel oder massive
@@ -217,6 +217,12 @@ function l2Balkone() {
         l2Gelaender(teil, ri, rj, x.y0, x.gel);
       }
     });
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Eckpfosten der Pfosten-Riegel-Fassaden über Eck
+    oeEcken(b).forEach((e) => {
+      const A = [e.c[0] - e.n1[0] * (e.s / 2), e.c[1] - e.n1[1] * (e.s / 2)],
+        B = [A[0] - e.n2[0] * e.s, A[1] - e.n2[1] * e.s];
+      l2Quader(teil(e.rf), A, B, e.n1, 0, e.s, e.y0, e.y1);
+    });
     const g = new T.Group(),
       mesh = (arr, farbe) => {
         if (!arr.length) return;
@@ -282,6 +288,14 @@ function l2BalkonGrundriss(x, b, wl) {
     };
   x.save();
   x.globalAlpha = 1;
+  // Eckpfosten der Pfosten-Riegel-Fassaden in Schnitthöhe
+  const sh = y0 + (+S.gro.sh || 1.2);
+  oeEcken(b).forEach((e) => {
+    if (e.y0 > sh || e.y1 < sh) return;
+    x.fillStyle = '#222';
+    zug(oeEckQuadrat(e), true);
+    x.fill();
+  });
   l2BalkonListe(b).forEach((q) => {
     const dy = q.y0 - y0,
       hier = Math.abs(dy) < 0.3,

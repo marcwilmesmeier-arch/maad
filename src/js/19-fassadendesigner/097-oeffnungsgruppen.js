@@ -106,9 +106,10 @@ function oegOeffnungen(b, V) {
   const R = [],
     B = fdStoreys(b);
   (oegDaten(b, V.key) || []).forEach((I) => {
-    const G = oegG(I.g);
+    let G = oegG(I.g);
     if (!G) return;
     const H = oegHoehe(B, I, G);
+    G = oegAngepasst(G, I);
     // ── Erweiterung: Pfosten-Riegel und Einsätze (oegElemente), Randprofile halb an Pfosten-Riegel-Nachbarn
     oegElemente(G, H, oegPr(G) ? oegPrRand(b, V, B, I, G, H) : null).forEach((q) => {
       const T = q.T,
@@ -210,6 +211,52 @@ function oegPr(G) {
 }
 /** Einbautiefe der Pfosten-Riegel-Ebene von der Außenseite der Wand (Profile stehen bündig mit der Außenfläche). */
 const OEG_PR_ET = 0.0;
+/**
+ * Länge eines Gruppenverweises: I.l (angepasstes letztes Element einer Pfosten-Riegel-Reihe, damit die Fassade bis
+ * zum Ende der Fläche durchläuft), sonst die Länge der Gruppe.
+ */
+const oegL = (I, G) => (I && I.l > 0.3 && oegPr(G) ? I.l : G.l);
+/**
+ * Gruppe in der Länge des Verweises: bei angepasster Länge eine Kopie, in der nur das letzte Feld länger (bzw.
+ * kürzer) ist – Raster, Felder und Öffnungen bleiben; Teilungen jenseits der neuen Länge entfallen. Sonst die Gruppe.
+ */
+function oegAngepasst(G, I) {
+  const L = oegL(I, G);
+  if (Math.abs(L - G.l) < 1e-4) return G;
+  return {
+    ...G,
+    l: L,
+    xs: (G.xs || []).filter((x) => x < L - 0.3),
+    vb: (G.vb || []).map((r) => (r.x1 > G.l - 0.004 ? { ...r, x1: L } : r)).filter((r) => r.x0 < L - 0.3),
+  };
+}
+/**
+ * Reihe von Gruppen auf [a, c] verteilen (Füllen, Gebäudekonfigurator): folge = Gruppen in Reihenfolge, u0 = linke
+ * Kante der ersten, nx = nächste Gruppe im Rhythmus. Pfosten-Riegel soll bis zum Ende der Fläche durchlaufen: die
+ * Reihe beginnt bei a und nur das letzte Element wird um den Rest verlängert (oegAngepasst: letztes Feld länger);
+ * passt keine ganze Gruppe, füllt eine verkürzte die Fläche. Ergebnis: [{ G, u, l? }]
+ */
+function oegReihe(folge, u0, a, c, nx) {
+  const letzte = folge[folge.length - 1],
+    R = [];
+  if (letzte ? oegPr(letzte) : nx && oegPr(nx)) {
+    if (c - a < 0.3) return R;
+    if (!letzte) return [{ G: nx, u: a, l: c - a }];
+    let u = a;
+    folge.forEach((G) => {
+      R.push({ G, u });
+      u += G.l;
+    });
+    if (c - u > 0.01) R[R.length - 1].l = letzte.l + (c - u);
+    return R;
+  }
+  let u = u0;
+  folge.forEach((G) => {
+    R.push({ G, u });
+    u += G.l;
+  });
+  return R;
+}
 /** Randprofile ohne Nachbarn: überall voll. */
 const OEG_PR_RAND = { l: 1, r: 1, o: 1, u: 1 };
 /**
@@ -224,10 +271,12 @@ function oegPrRand(b, V, B, I, G, H) {
     const G2 = J !== I && oegG(J.g);
     if (!G2 || !oegPr(G2)) return;
     const H2 = oegHoehe(B, J, G2),
+      l1 = oegL(I, G),
+      l2 = oegL(J, G2),
       ueH = Math.min(I.v + H, J.v + H2) - Math.max(I.v, J.v) > 0.05,
-      ueL = Math.min(I.u + G.l, J.u + G2.l) - Math.max(I.u, J.u) > 0.05;
-    if (ueH && Math.abs(J.u + G2.l - I.u) < e) R.l = 0.5;
-    if (ueH && Math.abs(I.u + G.l - J.u) < e) R.r = 0.5;
+      ueL = Math.min(I.u + l1, J.u + l2) - Math.max(I.u, J.u) > 0.05;
+    if (ueH && Math.abs(J.u + l2 - I.u) < e) R.l = 0.5;
+    if (ueH && Math.abs(I.u + l1 - J.u) < e) R.r = 0.5;
     if (ueL && Math.abs(J.v - (I.v + H)) < 0.05) R.o = 0.5;
     if (ueL && Math.abs(J.v + H2 - I.v) < 0.05) R.u = 0.5;
   });
@@ -323,8 +372,7 @@ function oegPrAufteilung(T) {
 function oegElemente(G, H, rd) {
   const R = [];
   if (oegPr(G)) {
-    const T = oegPrTyp(G, H, rd),
-      P = oegPr(G);
+    const T = oegPrTyp(G, H, rd);
     R.push({ id: 'pr', t: T.k, x: 0, v: 0, T });
     oegPrFelder(G, H, rd).forEach((f, i) => {
       if (f.pf !== 'e' || !f.pe || !S.oet.some((t) => t.k === f.pe)) return;
@@ -338,7 +386,7 @@ function oegElemente(G, H, rd) {
         t: f.pe,
         x: f.x0,
         v: f.y0,
-        T: { ...T0, b, h: hh, et: OEG_PR_ET + Math.max(0, (P.pt - 0.08) / 2) },
+        T: { ...T0, b, h: hh, et: OEG_PR_ET }, // Rahmen in der Glasebene (OE_PR_LAGE)
       });
     });
   }
@@ -655,7 +703,7 @@ function oegTreffer(b, V, u, v) {
   for (let i = L.length - 1; i >= 0; i--) {
     const I = L[i],
       G = oegG(I.g);
-    if (G && u >= I.u && u <= I.u + G.l && v >= I.v && v <= I.v + oegHoehe(B, I, G)) return I;
+    if (G && u >= I.u && u <= I.u + oegL(I, G) && v >= I.v && v <= I.v + oegHoehe(B, I, G)) return I;
   }
   return null;
 }
@@ -673,7 +721,7 @@ function oegFang(b, V, u, v, G, frei, ohneId) {
     (oegDaten(b, V.key) || []).forEach((I) => {
       const H = oegG(I.g);
       if (!H || I.id === ohneId) return;
-      [I.u + H.l, I.u - G.l].forEach((k) => {
+      [I.u + oegL(I, H), I.u - G.l].forEach((k) => {
         if (Math.abs(k - u) < tol) U = k;
       });
     });
@@ -719,17 +767,21 @@ function oegFuellen() {
         if (!r || !grInFace(f, (r[0] + r[1]) / 2, v0 + 0.5)) continue;
         const [a, c] = r,
           k = Math.floor((c - a + 1e-6) / G.l);
+        if (!k && !oegPr(G)) continue;
         // bisherige Gruppen in diesem Bereich ersetzen
         for (let i = L.length - 1; i >= 0; i--) {
           const H = oegG(L[i].g),
-            m = L[i].u + (H ? H.l : 0) / 2;
+            m = L[i].u + (H ? oegL(L[i], H) : 0) / 2;
           if (Math.abs(L[i].v - v0) < 0.01 && m >= a && m <= c) L.splice(i, 1);
         }
         const au = oegAusr(b, V),
           rest = c - a - k * G.l,
           s = au === 'l' ? a : au === 'r' ? a + rest : a + rest / 2;
-        for (let i = 0; i < k; i++) L.push({ id: oegNeuId(), g: G.k, u: s + i * G.l, v: v0 });
-        n += k;
+        // Pfosten-Riegel: letztes Element bis zum Ende der Fläche (oegReihe)
+        oegReihe(Array(k).fill(G), s, a, c, G).forEach((o) =>
+          L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, ...(o.l ? { l: o.l } : {}) }),
+        );
+        n += Math.max(k, oegPr(G) ? 1 : 0);
       }
     });
   });
@@ -896,7 +948,8 @@ function oegZeichnen(g, b, V, ox, o) {
     const B = fdStoreys(b);
     (oegDaten(b, V.key) || []).forEach((I) => {
       const G = oegG(I.g);
-      if (G) rahmen(I.u, I.v, G, o.sel !== undefined && FDS.gi === I.id, 1, oegHoehe(B, I, G));
+      if (G)
+        rahmen(I.u, I.v, oegAngepasst(G, I), o.sel !== undefined && FDS.gi === I.id, 1, oegHoehe(B, I, G));
     });
   }
   const p = FDS.grVor;

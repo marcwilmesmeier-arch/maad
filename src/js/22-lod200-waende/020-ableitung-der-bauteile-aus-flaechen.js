@@ -23,6 +23,13 @@ function l2GeoStufe1(b) {
   } catch (e) {
     logErr(e, 'l2Geo');
   }
+  // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Decken hinter Pfosten-Riegel-Fassaden ausgespart
+  let prZ = [];
+  try {
+    prZ = oeDeckenZonen(b);
+  } catch (e) {
+    logErr(e, 'l2Geo>oeDeckenZonen');
+  }
   const key =
     grSig(b) +
     '|' +
@@ -36,6 +43,7 @@ function l2GeoStufe1(b) {
     // Öffnungen (fd[..].oe) ändern die Wandableitung nicht – nur die Wandkörper (100-oeffnungen-3d.js)
     JSON.stringify(b.fd || 0, (k, v) => (k === 'oe' || k === 'gr' ? undefined : v)) +
     JSON.stringify(S.ft.map((t) => t.k + t.n)) +
+    JSON.stringify(prZ) +
     (l23()
       ? '|d' + JSON.stringify([b._l2ref || 0, (b.l2 && b.l2.rw) || 0, (b.l2 && b.l2.cn) || 0])
       : '|c' + JSON.stringify([(b.l2 && b.l2.c) || 0, (b.l2 && b.l2.rwc) || 0]));
@@ -691,7 +699,11 @@ function l2GeoStufe1(b) {
           }
           return dAW / 2;
         };
-    eS('DE', mk1(offR(outerD, slOff), holes.concat(hofDecke)), y + lv.h - dDE, l2T(DF.DE));
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: hinter Pfosten-Riegel-Fassaden, die ins nächste
+    // Geschoss weiterlaufen, springt die Decke zurück (oeDeckenZonen)
+    const fDE = oeDeckeAussparen([mk1(offR(outerD, slOff), holes.concat(hofDecke))], y + lv.h, prZ);
+    sl('DE', fDE, y + lv.h - dDE, l2T(DF.DE));
+    R.els[R.els.length - 1].flatTop = li === L.length - 1 && flat;
     if (li === 0) eS('BP', mk1(outer.slice(), hofBoden), y - l2T(DF.BP).d, l2T(DF.BP));
     R.lv.push({ li, name: lv.name, y0: y, h: lv.h, area: lv.area });
     prevOuter = outer;

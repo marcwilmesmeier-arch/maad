@@ -63,9 +63,109 @@ function oeWelt(b) {
       }),
     );
   }
-  b._oeW = { s: sg, L };
+  b._oeW = { s: sg, L, E: oeEckenFinden(L) };
   return L;
 }
+/**
+ * Pfosten-Riegel über Eck: stoßen zwei Pfosten-Riegel-Öffnungen an einer Außenecke zusammen (gemeinsamer Eckpunkt,
+ * Höhen überlappen, andere Richtung, die andere Fassade liegt hinter der Ebene der ersten), entfällt dort das
+ * Randprofil beider (T._rd = 0) und ein Eckpfosten verbindet sie. Ergebnis: [{ c, n1, n2, y0, y1, s, rf }]
+ */
+function oeEckenFinden(L) {
+  const E = [],
+    P = L.filter((o) => o.T && o.T.a === 'pr'),
+    nah = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05;
+  P.forEach((o1) =>
+    P.forEach((o2) => {
+      if (o1 === o2 || o1.n[0] * o2.n[0] + o1.n[1] * o2.n[1] > 0.7) return;
+      if (Math.min(o1.y1, o2.y1) - Math.max(o1.y0, o2.y0) < 0.1) return;
+      // Ende von o1 (p1) trifft Anfang von o2 (p0) – jede Ecke so genau einmal
+      if (!nah(o1.p1, o2.p0)) return;
+      const c = o1.p1,
+        m2 = [(o2.p0[0] + o2.p1[0]) / 2, (o2.p0[1] + o2.p1[1]) / 2];
+      if ((m2[0] - c[0]) * o1.n[0] + (m2[1] - c[1]) * o1.n[1] > -0.01) return; // Innenecke: Profile bleiben
+      o1.T = { ...o1.T, _rd: { ...o1.T._rd, r: 0 } };
+      o2.T = { ...o2.T, _rd: { ...o2.T._rd, l: 0 } };
+      E.push({
+        c,
+        n1: o1.n,
+        n2: o2.n,
+        y0: Math.max(o1.y0, o2.y0),
+        y1: Math.min(o1.y1, o2.y1),
+        s: Math.max(0.1, 2 * o1.T.pb),
+        rf: o1.T.rf,
+      });
+    }),
+  );
+  return E;
+}
+/** Abstand der zurückgesetzten Deckenstirn hinter der Bautiefe der Pfosten-Riegel-Profile (m). */
+const OE_PR_DECKE = 0.1;
+/**
+ * Aussparungen der Geschossdecken hinter durchgehenden Pfosten-Riegel-Fassaden: wo ein Pfosten-Riegel-Abschnitt im
+ * Geschoss darüber weiterläuft (gleiche Fassadenebene, Unterkante = Oberkante des unteren), springt die Decke um
+ * Bautiefe + OE_PR_DECKE hinter die Außenfläche zurück – die Fassaden beider Geschosse treffen sich vor der
+ * Deckenstirn. Ergebnis: [{ y, r }] (y = Höhe der Geschossgrenze, r = Rechteck im Grundriss, nach außen verlängert).
+ */
+function oeDeckenZonen(b) {
+  const P = oeWelt(b).filter((o) => o.T && o.T.a === 'pr'),
+    R = [];
+  P.forEach((u) =>
+    P.forEach((o) => {
+      if (u === o || Math.abs(u.y1 - o.y0) > 0.05 || u.n[0] * o.n[0] + u.n[1] * o.n[1] < 0.99) return;
+      const d = [u.p1[0] - u.p0[0], u.p1[1] - u.p0[1]],
+        l = Math.hypot(d[0], d[1]) || 1,
+        e = [d[0] / l, d[1] / l],
+        t = (p) => (p[0] - u.p0[0]) * e[0] + (p[1] - u.p0[1]) * e[1],
+        q = (o.p0[0] - u.p0[0]) * u.n[0] + (o.p0[1] - u.p0[1]) * u.n[1];
+      if (Math.abs(q) > 0.05) return; // nicht in derselben Ebene
+      const a = Math.max(0, Math.min(t(o.p0), t(o.p1))),
+        c = Math.min(l, Math.max(t(o.p0), t(o.p1)));
+      if (c - a < 0.05) return;
+      const D = (u.T.pt || 0.16) + OE_PR_DECKE,
+        X = (k, s) => [u.p0[0] + e[0] * k + u.n[0] * s, u.p0[1] + e[1] * k + u.n[1] * s];
+      R.push({ y: u.y1, r: [X(a, 0.5), X(c, 0.5), X(c, -D), X(a, -D)] });
+    }),
+  );
+  return R;
+}
+/** Deckenflächen (faces) auf Höhe der Geschossgrenze y ohne die Aussparungen hinter Pfosten-Riegel-Fassaden. */
+function oeDeckeAussparen(faces, y, Z) {
+  const V = Z.filter((z) => Math.abs(z.y - y) < 0.05).map((z) => bpP(z.r));
+  if (!V.length) return faces;
+  try {
+    return boolOp(
+      faces.map((f) => ({ o: f.o, h: f.h || [] })),
+      V,
+      'd',
+    )
+      .filter((r) => r.o && r.o.length >= 3)
+      .map((r) => ({
+        o: r.o,
+        h: r.h || [],
+        a: l2QA(r.o) - (r.h || []).reduce((x, h) => x + l2QA(h), 0),
+        fa: 'ge',
+      }));
+  } catch (e) {
+    logErr(e, 'oeDeckeAussparen');
+    return faces;
+  }
+}
+/** Eckpfosten der Pfosten-Riegel-Fassaden eines Gebäudes (oeEckenFinden). */
+function oeEcken(b) {
+  oeWelt(b);
+  return (b._oeW && b._oeW.E) || [];
+}
+/** Grundriss eines Eckpfostens: Quadrat der Seitenlänge s von der Außenecke nach innen. */
+function oeEckQuadrat(e) {
+  const P = (k1, k2) => [e.c[0] - e.n1[0] * k1 - e.n2[0] * k2, e.c[1] - e.n1[1] * k1 - e.n2[1] * k2];
+  return [P(0, 0), P(e.s, 0), P(e.s, e.s), P(0, e.s)];
+}
+/**
+ * Lage der Schichten einer Pfosten-Riegel-Fassade (Abstand von der Außenfläche): außen Deckleiste, dahinter das
+ * Glas, dann das tiefe Profil bis zur Bautiefe (wie im Feld: Pressleiste – Verglasung – Pfosten).
+ */
+const OE_PR_LAGE = { dl: 0.02, g0: 0.023, g1: 0.047, p0: 0.05 };
 /** Kennung der Öffnungen eines Gebäudes (für den Abgleich in l2Sync). */
 function oeGebSig(b) {
   if (!b.fd) return '';
@@ -409,20 +509,44 @@ function oeKoerper(O) {
       ky = Math.min(1, (o.y1 - o.y0) / T_.h),
       Tt = (x) => o.t0 + x * ((o.t1 - o.t0) / T_.b),
       Yy = (y) => o.y0 + y * ky;
+    const pr = T_.a === 'pr',
+      Q = OE_PR_LAGE;
     // 5. Wert eines Stegs: Anteil der Tiefe (Riegel der Pfosten-Riegel-Fassade, außen bündig mit den Pfosten)
-    L.stege.forEach(([a, c, d, e, k]) =>
-      quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), k ? sV - tief * k : sH, sV),
-    );
+    L.stege.forEach(([a, c, d, e, k]) => {
+      if (c - a < 1e-4 || e - d < 1e-4) return; // Randprofil entfällt (Eckpfosten)
+      if (pr) {
+        // Deckleiste vor dem Glas, Profil dahinter bis zur Bautiefe
+        quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), sV - Q.dl, sV);
+        quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), sV - tief * (k || 1), sV - Q.p0);
+      } else quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), k ? sV - tief * k : sH, sV);
+    });
     L.felder.forEach((f) => {
       if (f.fu === 'l') return; // Feld mit Einsatz (eigene Öffnung)
       const x0 = Tt(f.x0),
         x1 = Tt(f.x1),
         y0 = Yy(f.y0),
         y1 = Yy(f.y1);
+      // Pfosten-Riegel: Glas bzw. Paneel in der Glasebene hinter der Deckleiste (bis unter die Profile)
+      const fx0 = pr ? Tt(Math.max(0, f.x0 - L.pb / 2)) : x0,
+        fx1 = pr ? Tt(Math.min(T_.b, f.x1 + L.pb / 2)) : x1,
+        fy0 = pr ? Yy(Math.max(0, f.y0 - L.pb / 2)) : y0,
+        fy1 = pr ? Yy(Math.min(T_.h, f.y1 + L.pb / 2)) : y1,
+        g0 = pr ? sV - Q.g1 : sm - 0.005,
+        g1 = pr ? sV - Q.g0 : sm + 0.005;
       if (T_.a === 'to' || f.fu === 'p')
-        quader(feld(T_.a === 'to' ? '#c6cbd0' : T_.rf), A, x0, x1, y0, y1, sm - 0.025, sm + 0.025); // Paneel in Rahmenfarbe
+        // Paneel in Rahmenfarbe
+        quader(
+          feld(T_.a === 'to' ? '#c6cbd0' : T_.rf),
+          A,
+          fx0,
+          fx1,
+          fy0,
+          fy1,
+          pr ? g0 : sm - 0.025,
+          pr ? g1 : sm + 0.025,
+        );
       else {
-        quader(feld('glas'), A, x0, x1, y0, y1, sm - 0.005, sm + 0.005);
+        quader(feld('glas'), A, fx0, fx1, fy0, fy1, g0, g1);
         // Sprossen vor dem Glas
         const sr = f.sr || [0, 0],
           sb = 0.025;
@@ -589,12 +713,14 @@ function oeGrundriss(x, wl, wandFarbe) {
       x.stroke();
       zug([P(t1, sIo), P(t1, sAo)]);
       x.stroke();
-      // Rahmen
+      // Rahmen (Pfosten-Riegel: Profile einzeln, siehe unten)
       x.strokeStyle = '#222';
       x.lineWidth = 1;
-      zug([P(t0, sH), P(t1, sH), P(t1, sV), P(t0, sV)]);
-      x.closePath();
-      x.stroke();
+      if (T.a !== 'pr') {
+        zug([P(t0, sH), P(t1, sH), P(t1, sV), P(t0, sV)]);
+        x.closePath();
+        x.stroke();
+      }
       if (oeTuer(T)) {
         // Türblatt nach innen mit Aufschlag (Viertelkreis)
         const b = t1 - t0,
@@ -623,16 +749,28 @@ function oeGrundriss(x, wl, wandFarbe) {
         x.setLineDash([]);
       } else {
         if (T.a === 'pr') {
-          // Pfosten-Riegel: geschnittene Pfosten als volle Profile
+          // Pfosten-Riegel im Schnitt: Deckleiste außen, Glas, Pfostenprofil dahinter
           const ys = sh - o.y0,
-            k = (o.t1 - o.t0) / T.b;
+            k = (o.t1 - o.t0) / T.b,
+            Q = OE_PR_LAGE;
           x.fillStyle = '#222';
           oeAufteilung(T).stege.forEach(([a, c, d, e2, kk]) => {
-            if (kk || ys < d || ys > e2) return;
-            zug([P(t0 + a * k, sH), P(t0 + c * k, sH), P(t0 + c * k, sV), P(t0 + a * k, sV)]);
-            x.closePath();
-            x.fill();
+            if (kk || ys < d || ys > e2 || c - a < 1e-4) return;
+            [
+              [sV - Q.dl, sV],
+              [sH, sV - Q.p0],
+            ].forEach(([s0, s1]) => {
+              zug([P(t0 + a * k, s0), P(t0 + c * k, s0), P(t0 + c * k, s1), P(t0 + a * k, s1)]);
+              x.closePath();
+              x.fill();
+            });
           });
+          x.lineWidth = 0.7;
+          zug([P(t0, sV - Q.g0), P(t1, sV - Q.g0)]);
+          x.stroke();
+          zug([P(t0, sV - Q.g1), P(t1, sV - Q.g1)]);
+          x.stroke();
+          return;
         }
         // Glas: zwei feine Linien in der Rahmenmitte
         const sm = (sH + sV) / 2;

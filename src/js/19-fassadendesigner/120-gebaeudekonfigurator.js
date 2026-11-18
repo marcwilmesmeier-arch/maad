@@ -133,7 +133,7 @@ function fkAnwenden(b) {
       F0 = fdFaces(b, V),
       feld = (I) => {
         const H = oegG(I.g);
-        return F0.findIndex((f) => grInFace(f, I.u + (H ? H.l : 0) / 2, I.v + 0.5));
+        return F0.findIndex((f) => grInFace(f, I.u + (H ? oegL(I, H) : 0) / 2, I.v + 0.5));
       },
       // Reihen (Ansichtsfläche + Höhe), in denen von Hand getauscht/verschoben wurde, bleiben komplett so wie sie
       // sind – auch die automatisch gesetzten Gruppen daneben (sonst verschwänden sie beim nächsten Platzieren)
@@ -158,10 +158,10 @@ function fkAnwenden(b) {
       let u = au === 'l' ? a + vs : au === 'r' ? a + rest - vs : a + rest / 2 + vs;
       // im Feld halten
       u = Math.max(a, Math.min(a + rest, u));
-      folge.forEach((G) => {
-        L.push({ id: oegNeuId(), g: G.k, u, v: v0, a: 1 });
-        u += G.l;
-      });
+      // Pfosten-Riegel am Ende: letztes Element bis zum Rand verlängert (oegReihe)
+      oegReihe(folge, u, a, c, R[folge.length % R.length]).forEach((o) =>
+        L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, a: 1, ...(o.l ? { l: o.l } : {}) }),
+      );
     };
     const reihe = (x) => fkReihe(x).map(oegG).filter(Boolean);
     fdFaces(b, V).forEach((f) =>
@@ -178,7 +178,7 @@ function fkAnwenden(b) {
         if (
           hand.some((I) => {
             const H = oegG(I.g),
-              m = I.u + (H ? H.l : 0) / 2;
+              m = I.u + (H ? oegL(I, H) : 0) / 2;
             return Math.abs(I.v - gs.v0) < 0.01 && m >= a && m <= c;
           })
         )

@@ -370,6 +370,15 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   `pr` `oegPrAufteilung` zurück (Steg mit 5. Wert = Tiefenanteil, Feld `fu: 'l'` = leer). Damit laufen Wandausschnitt,
   Ansicht, 3D (`oeKoerper`, Tiefe `T.pt`) und Grundriss über die Wege der Fenster. `oegFlaechenG` liefert bei
   Pfosten-Riegel keine Flächen (keine Rück-/Vorsprünge).
+- Aufbau wie im Feld (`OE_PR_LAGE`, `oeKoerper`): außen Deckleiste, dahinter Glas bzw. Paneel, dann das Profil bis zur
+  Bautiefe; im Grundriss-Schnitt ebenso. Einsätze sitzen in der Glasebene.
+- Letztes Element einer Reihe (`oegReihe`, Füllen und Gebäudekonfigurator): endet die Reihe mit Pfosten-Riegel, wird
+  nur die letzte Gruppe verlängert (`I.l`, `oegL`/`oegAngepasst`: nur ihr letztes Feld wird länger), damit die Fassade
+  bis zum Ende der Fläche durchläuft.
+- Über Eck (`oeEckenFinden` in `oeWelt`): an Außenecken entfallen die Randprofile, ein Eckpfosten verbindet beide
+  Fassaden (3D in `l2Balkone`, Grundriss in `l2BalkonGrundriss`).
+- Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
+  zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Grundriss: Balkone
