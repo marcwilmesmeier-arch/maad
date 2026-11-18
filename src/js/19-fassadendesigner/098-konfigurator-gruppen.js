@@ -187,9 +187,13 @@ function okGrFeldSet(f, v) {
     if (!e) G.fe.push((e = { p: [(z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2], d: 0, k: 'g', t: '' }));
     if (f === 'k') e.k = v === 'l' || v === 'r' ? v : 'g';
     if (f === 'a') {
-      // Loggia: Rücksprung (Standard 1,50 m), Balkon: Auskragung (Standard 1,50 m)
-      e.a = v === 'lo' || v === 'ba' ? v : '';
-      if (e.a && !(Math.abs(e.d) > 0.05)) e.d = 1.5;
+      // Loggia: Rücksprung (Standard 1,50 m), Balkon: Auskragung (Standard 1,50 m),
+      // Balkon + Loggia: Rücksprung d (Standard 0,60 m) und Auskragung tb (Standard 1,20 m)
+      e.a = v === 'lo' || v === 'ba' || v === 'bl' ? v : '';
+      if (e.a === 'bl') {
+        e.d = Math.abs(e.d) > 0.05 && Math.abs(e.d) < 1.5 ? Math.abs(e.d) : 0.6;
+        if (!(e.tb > 0.05)) e.tb = 1.2;
+      } else if (e.a && !(Math.abs(e.d) > 0.05)) e.d = 1.5;
       if (e.a === 'lo' && e.d < 0) e.d = -e.d;
       if (e.a === 'ba') e.d = Math.abs(e.d);
     }
@@ -207,8 +211,12 @@ function okGrFeldSet(f, v) {
       // bis 3 m: Loggien und Balkone sind meist 1,5–2,5 m tief
       if (isFinite(n)) e.d = Math.max(-300, Math.min(300, n)) / 100;
       // Loggia bleibt Rücksprung, Balkon Auskragung (Vorzeichen wie bei der Wahl der Art)
-      if (e.a === 'lo') e.d = Math.abs(e.d);
-      if (e.a === 'ba') e.d = Math.abs(e.d);
+      if (e.a === 'lo' || e.a === 'ba' || e.a === 'bl') e.d = Math.abs(e.d);
+    }
+    // Balkon + Loggia: Auskragung der Platte (cm)
+    if (f === 'tb') {
+      const n = +String(v).replace(',', '.');
+      if (isFinite(n)) e.tb = Math.max(20, Math.min(300, Math.abs(n))) / 100;
     }
     if (f === 't') e.t = S.ft.some((x) => x.k === v) ? v : '';
   });
@@ -425,6 +433,7 @@ ${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante de
       ['', 'Fläche'],
       ['lo', 'Loggia'],
       ['ba', 'Balkon'],
+      ['bl', 'Balkon + Loggia'],
     ]
       .map(
         ([k, n]) =>
@@ -432,7 +441,11 @@ ${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante de
       )
       .join(
         '',
-      )}</select><span>${Z.every((z) => z.a === 'ba') ? 'Auskragung (cm)' : 'Tiefe (cm)'}</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig · beim Balkon: Auskragung">
+      )}</select><span>${Z.every((z) => z.a === 'ba') ? 'Auskragung (cm)' : Z.every((z) => z.a === 'bl') ? 'Rücksprung Loggia (cm)' : 'Tiefe (cm)'}</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig · beim Balkon: Auskragung · bei Balkon + Loggia: wie weit die Fassade hinter dem Balkon zurückspringt">${
+      Z.every((z) => z.a === 'bl')
+        ? `<span>Auskragung Balkon (cm)</span><input type="number" step="1" value="${Z.every((z) => z.tb === Z[0].tb) ? Math.round((Z[0].tb || 1.2) * 100) : ''}" placeholder="gemischt" onchange="okGrFeldSet('tb',this.value)" title="Wie weit die Balkonplatte vor die Fassade auskragt">`
+        : ''
+    }
 ${
   Z.every((z) => z.a)
     ? (() => {
@@ -447,7 +460,7 @@ ${
           .join(
             '',
           )}</select><span>Geländerhöhe (cm)</span><input type="number" step="5" min="50" max="200" value="${gleich('gh') ? Math.round(G0.gh * 100) : ''}" placeholder="gemischt" onchange="okGrFeldSet('gh',this.value)"><span>Geländerfarbe</span><input type="color" value="${G0.gc}" onchange="okGrFeldSet('gc',this.value)" title="Farbe von Stäben, Pfosten, Handlauf bzw. Paneel; beim Glasgeländer Handlauf und Halter">${
-          Z.every((z) => z.a === 'ba')
+          Z.every((z) => z.a === 'ba' || z.a === 'bl')
             ? `<span>Montage</span><select onchange="okGrFeldSet('gm',this.value)" title="Aufgesetzt: auf der Balkonplatte · seitlich: außen vor der Plattenstirn, ab Plattenunterkante"><option value="auf" ${G0.gm !== 'se' ? 'selected' : ''}>aufgesetzt</option><option value="se" ${G0.gm === 'se' ? 'selected' : ''}>seitlich</option></select>`
             : ''
         }<span>im Erdgeschoss ohne Geländer</span><input type="checkbox" style="justify-self:end;width:auto" ${G0.eg ? 'checked' : ''} onchange="okGrFeldSet('eg',this.checked)" title="Im Erdgeschoss (Feld auf Fußbodenhöhe) kein Geländer, in den Geschossen darüber wie eingestellt">`;
@@ -554,7 +567,16 @@ function okGrZeichnen() {
       g.fillText(
         r.a === 'ba'
           ? 'Balkon ' + Math.round(Math.abs(r.d) * 100) + ' cm'
-          : (r.a === 'lo' ? 'Loggia ' : '') + (r.d > 0 ? '−' : '+') + Math.round(Math.abs(r.d) * 100) + ' cm',
+          : r.a === 'bl'
+            ? 'Balkon ' +
+              Math.round((r.tb || 1.2) * 100) +
+              ' · Loggia −' +
+              Math.round(Math.abs(r.d) * 100) +
+              ' cm'
+            : (r.a === 'lo' ? 'Loggia ' : '') +
+              (r.d > 0 ? '−' : '+') +
+              Math.round(Math.abs(r.d) * 100) +
+              ' cm',
         P.X(r.x1) - 4,
         P.Y(r.y1) + 4,
       );
@@ -784,6 +806,7 @@ function okGrDown(e) {
         s1: B ? Math.min(lx.y1, B.y1) : lx.y1,
       };
       OK.gzel = [];
+      okGrLinieGreifen(G, 'x', lx.x1, e);
     } else if (ly) {
       const B = ZZ.find((z) => Math.abs(z.y0 - ly.y1) < 0.004 && x > z.x0 && x < z.x1);
       OK.glin = {
@@ -795,6 +818,7 @@ function okGrDown(e) {
         s1: B ? Math.min(ly.x1, B.x1) : ly.x1,
       };
       OK.gzel = [];
+      okGrLinieGreifen(G, 'y', ly.y1, e);
     } else if (x > 0 && x < G.l && y > 0 && y < G.h) {
       const z = oegZellen(G).find((c) => x > c.x0 && x < c.x1 && y > c.y0 && y < c.y1),
         p = z && [(z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2];
@@ -810,6 +834,49 @@ function okGrDown(e) {
   okGrRender();
   okGrZeichnen();
 }
+/**
+ * Teilungslinie anfassen (Ziehen verschiebt die ganze Linie): a 'x' senkrecht, 'y' waagerecht, v Lage. Grenzen sind
+ * die Nachbarlinien bzw. Gruppenränder.
+ */
+function okGrLinieGreifen(G, a, v, e) {
+  const k = a === 'x' ? 'xs' : 'ys',
+    i = (G[k] || []).findIndex((w) => Math.abs(w - v) < 0.004);
+  if (i < 0) return;
+  const T = oegTeilung(G)[k].filter((w) => Math.abs(w - v) >= 0.004);
+  OK.glzug = {
+    a,
+    k,
+    i,
+    v,
+    lo: Math.max(...T.filter((w) => w < v)),
+    hi: Math.min(...T.filter((w) => w > v)),
+    mv: 0,
+  };
+  okE('okCv').setPointerCapture(e.pointerId);
+}
+/**
+ * Teilungslinie von v0 nach v1 verschieben: Feldeinstellungen (gemerkt über einen Punkt im Feld) und verbundene Felder
+ * wandern mit, damit sie bei ihrem Feld bleiben.
+ */
+function okGrLinieSchieben(G, z, v1) {
+  const v0 = z.v,
+    ax = z.a === 'x' ? 0 : 1,
+    abb = (p) =>
+      p > z.lo && p < v0
+        ? z.lo + ((p - z.lo) * (v1 - z.lo)) / (v0 - z.lo)
+        : p > v0 && p < z.hi
+          ? v1 + ((p - v0) * (z.hi - v1)) / (z.hi - v0)
+          : p;
+  G[z.k][z.i] = v1;
+  (G.fe || []).forEach((f) => (f.p[ax] = abb(f.p[ax])));
+  (G.vb || []).forEach((r) => {
+    const [a0, a1] = z.a === 'x' ? ['x0', 'x1'] : ['y0', 'y1'];
+    if (Math.abs(r[a0] - v0) < 0.004) r[a0] = v1;
+    if (Math.abs(r[a1] - v0) < 0.004) r[a1] = v1;
+  });
+  z.v = v1;
+  if (OK.glin) OK.glin.v = v1;
+}
 function okGrMove(e) {
   const P = okGrAnsicht(),
     G = okGr(),
@@ -819,6 +886,17 @@ function okGrMove(e) {
   const [px, py] = okPos(e),
     x = P.iX(px),
     y = P.iY(py);
+  // Teilungslinie ziehen (Fang an Fensterkanten wie beim Setzen, Umschalt = frei), zwischen den Nachbarlinien
+  if (OK.glzug) {
+    const L = OK.glzug,
+      v = Math.max(L.lo + 0.05, Math.min(L.hi - 0.05, okGrFang(G, L.a, L.a === 'x' ? x : y, e.shiftKey)));
+    if (Math.abs(v - L.v) > 1e-4) {
+      okGrLinieSchieben(G, L, Math.round(v * 1000) / 1000);
+      L.mv = 1;
+      okGrZeichnen();
+    }
+    return;
+  }
   if (OK.gwz === 'x' || OK.gwz === 'y') {
     const a = OK.gwz;
     OK.gvor = { a, v: okGrFang(G, a, a === 'x' ? x : y, e.shiftKey) };
@@ -869,6 +947,12 @@ function okGrMove(e) {
   okGrZeichnen();
 }
 function okGrUp() {
+  if (OK.glzug) {
+    const L = OK.glzug;
+    OK.glzug = null;
+    if (L.mv) oeAktualisieren(); // Gruppe an allen Stellen neu
+    return;
+  }
   if (!OK.gzug) return;
   OK.gzug = null;
   oeAktualisieren();

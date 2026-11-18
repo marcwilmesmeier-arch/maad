@@ -147,7 +147,8 @@ function l2Balkone() {
       const n = x.n,
         A = x.p0,
         B = x.p1;
-      if (x.a === 'ba') {
+      // Balkon und Balkon + Loggia (Rücksprung dahinter kommt aus der Wandableitung): Platte und Geländer vorn
+      if (x.a === 'ba' || x.a === 'bl') {
         const t = x.tb,
           Av = [A[0] + n[0] * t, A[1] + n[1] * t],
           Bv = [B[0] + n[0] * t, B[1] + n[1] * t],

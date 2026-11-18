@@ -70,11 +70,12 @@ function lbFlaechen(b) {
         if (!x.a || gesehen.has(x.id)) return;
         gesehen.add(x.id);
         const br = Math.max(0, x.u1 - x.u0),
-          ti = x.a === 'ba' ? x.tb || 0 : Math.abs(x.d || 0);
+          ti =
+            x.a === 'ba' ? x.tb || 0 : x.a === 'bl' ? (x.tb || 0) + Math.abs(x.d || 0) : Math.abs(x.d || 0);
         if (br < 0.05 || ti < 0.05) return;
         let k = B.findIndex((v, i) => i < B.length - 1 && x.v0 >= v - 0.05 && x.v0 < B[i + 1] - 0.05);
         if (k < 0) k = 0;
-        out.push({ art: x.a === 'ba' ? 'Balkon' : 'Loggia', j: k + u, br, ti, area: br * ti });
+        out.push({ art: x.a === 'lo' ? 'Loggia' : 'Balkon', j: k + u, br, ti, area: br * ti });
       }),
     );
   } catch (e) {

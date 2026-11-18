@@ -241,7 +241,8 @@ function oegZellen(G) {
       z.d = f.d || 0;
       z.k = f.k === 'l' || f.k === 'r' ? f.k : 'g';
       z.t = f.t || '';
-      z.a = f.a === 'lo' || f.a === 'ba' ? f.a : ''; // Art: Loggia, Balkon (sonst Fläche)
+      z.a = ['lo', 'ba', 'bl'].includes(f.a) ? f.a : ''; // Art: Loggia, Balkon, Balkon + Loggia (sonst Fläche)
+      if (z.a === 'bl') z.tb = +f.tb > 0 ? +f.tb : 1.2; // Auskragung der Balkonplatte
       if (z.a) Object.assign(z, oegGel(f)); // Geländer
     }
   });
@@ -261,7 +262,7 @@ function oegFlaechenG(G) {
       z.t +
       '|' +
       (z.a || '') +
-      (z.a ? '|' + z.ga + z.gh + z.gc + z.gm + z.eg : ''),
+      (z.a ? '|' + z.ga + z.gh + z.gc + z.gm + z.eg + (z.tb || '') : ''),
     zeilen = [];
   // waagerecht zusammenfassen
   const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
@@ -285,6 +286,7 @@ function oegFlaechenG(G) {
           gc: z.gc,
           gm: z.gm,
           eg: z.eg,
+          tb: z.tb,
         };
         zeilen.push(cur);
       }
@@ -335,7 +337,7 @@ function oegFlaechen(b, V) {
         dr: r.dr,
         t: r.t,
         a: r.a || '',
-        tb: r.a === 'ba' ? Math.abs(r.d) || 1.5 : 0, // Auskragung des Balkons
+        tb: r.a === 'ba' ? Math.abs(r.d) || 1.5 : r.a === 'bl' ? r.tb || 1.2 : 0, // Auskragung des Balkons
         ga: r.ga,
         gh: r.gh,
         gc: r.gc,
@@ -411,7 +413,7 @@ function oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel) {
   g.lineWidth = 1;
   if (G.ga === 'ke') {
     // ohne Geländer: nur die Balkonplatte
-    if (art === 'ba') {
+    if (art === 'ba' || art === 'bl') {
       g.fillStyle = '#94a3b8';
       g.fillRect(x0 - 2, yb, x1 - x0 + 4, Math.max(3, Y(v0 - 0.2) - yb));
     }
@@ -451,7 +453,7 @@ function oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel) {
   g.moveTo(x0, yh);
   g.lineTo(x1, yh);
   g.stroke();
-  if (art === 'ba') {
+  if (art === 'ba' || art === 'bl') {
     // Balkonplatte (0,20 m) unter dem Geländer
     g.fillStyle = '#94a3b8';
     g.fillRect(x0 - 2, yb, x1 - x0 + 4, Math.max(3, Y(v0 - 0.2) - yb));
@@ -820,8 +822,9 @@ function oegFelderPruefen(G) {
         d: Math.max(-3, Math.min(3, +f.d || 0)),
         k: f.k === 'l' || f.k === 'r' ? f.k : 'g',
         t: String(f.t || ''),
-        a: f.a === 'lo' || f.a === 'ba' ? f.a : '',
-        ...(f.a === 'lo' || f.a === 'ba' ? oegGel(f) : {}),
+        a: ['lo', 'ba', 'bl'].includes(f.a) ? f.a : '',
+        ...(['lo', 'ba', 'bl'].includes(f.a) ? oegGel(f) : {}),
+        ...(f.a === 'bl' ? { tb: Math.max(0.2, Math.min(3, +f.tb || 1.2)) } : {}),
       }));
   (Array.isArray(G.rs) ? G.rs : []).forEach((r) => {
     if (!r || !(+r.b > 0) || !(+r.h > 0)) return;

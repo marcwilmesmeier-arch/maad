@@ -91,6 +91,10 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Rückwand und Seitenwände in Außenwandstärke statt eines vollen Körpers; Fenster darin messen Einbautiefe und Laibung
   an der Rückwand (`oeInnenseite`). Rück- und Seitenwände werden an den Loggia-Räumen des ganzen Gebäudes beschnitten
   (`oeLoggiaBeschnitt`, Ecken). Feldtiefen bis ±3 m.
+- Feldart „Balkon + Loggia“ (`a: 'bl'`): Rücksprung `d` wie eine Loggia (Wandableitung) und Auskragung `tb` der
+  Balkonplatte mit Geländer davor (`130-balkone.js`); Fläche = Breite × (Auskragung + Rücksprung).
+- Gruppen-Konfigurator: Teilungslinien ziehen (`okGrLinieGreifen`/`okGrLinieSchieben`) verschiebt die ganze Linie,
+  Feldeinstellungen und verbundene Felder wandern mit; Maßketten der Teilungen oben und links.
 - Geländer an Loggia und Balkon (Feld `ga` Art, `gh` Höhe, `gc` Farbe, `gm` Montage, `oegGel` mit Vorgaben;
   `OEG_GEL` Arten): Ansichtssymbol `oegArtZeichnen`, LOD 200 `l2Gelaender` (`22-lod200-waende/130-balkone.js`).
 - Terrassenfläche (`bM`, `07-analyse/020-flaechen-rauminhalte.js`): Absätze der Geschosse (`terrOf`) plus Loggien und
