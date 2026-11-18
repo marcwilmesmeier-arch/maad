@@ -217,37 +217,50 @@ const OEG_PR_ET = 0.0;
  */
 const oegL = (I, G) => (I && I.l > 0.3 && oegPr(G) ? I.l : G.l);
 /**
- * Gruppe in der Länge des Verweises: bei angepasster Länge eine Kopie, in der nur das letzte Feld länger (bzw.
- * kürzer) ist – Raster, Felder und Öffnungen bleiben; Teilungen jenseits der neuen Länge entfallen. Sonst die Gruppe.
+ * Gruppe in der Länge des Verweises: bei angepasster Länge eine Kopie, in der nur die Randfelder länger (bzw. kürzer)
+ * sind – I.lv = Änderung am linken Rand (erstes Feld), der Rest bis I.l am rechten (letztes Feld). Raster, Felder und
+ * Öffnungen dazwischen bleiben; Teilungen, die dabei aus der Gruppe fallen, entfallen. Sonst die Gruppe selbst.
  */
 function oegAngepasst(G, I) {
-  const L = oegL(I, G);
-  if (Math.abs(L - G.l) < 1e-4) return G;
+  const L = oegL(I, G),
+    lv = L !== G.l && isFinite(+I.lv) ? +I.lv : 0;
+  if (Math.abs(L - G.l) < 1e-4 && !lv) return G;
+  const x = (v) => (v < 0.004 ? 0 : v > G.l - 0.004 ? L : v + lv);
   return {
     ...G,
     l: L,
-    xs: (G.xs || []).filter((x) => x < L - 0.3),
-    vb: (G.vb || []).map((r) => (r.x1 > G.l - 0.004 ? { ...r, x1: L } : r)).filter((r) => r.x0 < L - 0.3),
+    xs: (G.xs || []).map((v) => v + lv).filter((v) => v > 0.3 && v < L - 0.3),
+    fe: (G.fe || []).map((e) => ({ ...e, p: [Math.max(0.01, Math.min(L - 0.01, e.p[0] + lv)), e.p[1]] })),
+    vb: (G.vb || []).map((r) => ({ ...r, x0: x(r.x0), x1: x(r.x1) })).filter((r) => r.x1 - r.x0 > 0.3),
+    oe: G.oe.map((q) => ({ ...q, x: q.x + lv })),
   };
 }
 /**
  * Reihe von Gruppen auf [a, c] verteilen (Füllen, Gebäudekonfigurator): folge = Gruppen in Reihenfolge, u0 = linke
- * Kante der ersten, nx = nächste Gruppe im Rhythmus. Pfosten-Riegel soll bis zum Ende der Fläche durchlaufen: die
- * Reihe beginnt bei a und nur das letzte Element wird um den Rest verlängert (oegAngepasst: letztes Feld länger);
- * passt keine ganze Gruppe, füllt eine verkürzte die Fläche. Ergebnis: [{ G, u, l? }]
+ * Kante der ersten, nx = nächste Gruppe im Rhythmus, au = Ausrichtung ('l', 'r', sonst mittig). Pfosten-Riegel soll
+ * bis zum Ende der Fläche durchlaufen: die Reihe füllt [a, c], den Rest nehmen die Randfelder auf – links
+ * ausgerichtet das letzte Feld rechts, rechts ausgerichtet das erste Feld links, mittig beide je zur Hälfte (länger
+ * oder, wenn keine ganze Gruppe passt, kürzer). Ergebnis: [{ G, u, l?, lv? }]
  */
-function oegReihe(folge, u0, a, c, nx) {
-  const letzte = folge[folge.length - 1],
-    R = [];
-  if (letzte ? oegPr(letzte) : nx && oegPr(nx)) {
+function oegReihe(folge, u0, a, c, nx, au) {
+  const R = [];
+  if (folge.some((G) => oegPr(G)) || (!folge.length && nx && oegPr(nx))) {
     if (c - a < 0.3) return R;
-    if (!letzte) return [{ G: nx, u: a, l: c - a }];
+    const F = folge.length ? folge : [nx],
+      rest = c - a - F.reduce((x, G) => x + G.l, 0),
+      links = au === 'l' ? 0 : au === 'r' ? rest : rest / 2; // Anteil am linken Rand
     let u = a;
-    folge.forEach((G) => {
-      R.push({ G, u });
-      u += G.l;
+    F.forEach((G, i) => {
+      const o = { G, u },
+        dl = i === 0 ? links : 0,
+        dr = i === F.length - 1 ? rest - links : 0;
+      if (Math.abs(dl) > 0.005 || Math.abs(dr) > 0.005) {
+        o.l = G.l + dl + dr;
+        if (Math.abs(dl) > 0.005) o.lv = dl;
+      }
+      R.push(o);
+      u += o.l || G.l;
     });
-    if (c - u > 0.01) R[R.length - 1].l = letzte.l + (c - u);
     return R;
   }
   let u = u0;
@@ -777,9 +790,9 @@ function oegFuellen() {
         const au = oegAusr(b, V),
           rest = c - a - k * G.l,
           s = au === 'l' ? a : au === 'r' ? a + rest : a + rest / 2;
-        // Pfosten-Riegel: letztes Element bis zum Ende der Fläche (oegReihe)
-        oegReihe(Array(k).fill(G), s, a, c, G).forEach((o) =>
-          L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, ...(o.l ? { l: o.l } : {}) }),
+        // Pfosten-Riegel: bis zu den Enden der Fläche, Randfelder je nach Ausrichtung angepasst (oegReihe)
+        oegReihe(Array(k).fill(G), s, a, c, G, au).forEach((o) =>
+          L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, ...(o.l ? { l: o.l, lv: o.lv || 0 } : {}) }),
         );
         n += Math.max(k, oegPr(G) ? 1 : 0);
       }

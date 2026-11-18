@@ -372,9 +372,9 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Pfosten-Riegel keine Flächen (keine Rück-/Vorsprünge).
 - Aufbau wie im Feld (`OE_PR_LAGE`, `oeKoerper`): außen Deckleiste, dahinter Glas bzw. Paneel, dann das Profil bis zur
   Bautiefe; im Grundriss-Schnitt ebenso. Einsätze sitzen in der Glasebene.
-- Letztes Element einer Reihe (`oegReihe`, Füllen und Gebäudekonfigurator): endet die Reihe mit Pfosten-Riegel, wird
-  nur die letzte Gruppe verlängert (`I.l`, `oegL`/`oegAngepasst`: nur ihr letztes Feld wird länger), damit die Fassade
-  bis zum Ende der Fläche durchläuft.
+- Randfelder einer Reihe (`oegReihe`, Füllen und Gebäudekonfigurator): Pfosten-Riegel füllt die Fläche bis zu beiden
+  Enden; den Rest nehmen je nach Ausrichtung das letzte Feld (links), das erste Feld (rechts) oder beide je zur Hälfte
+  (mittig) auf – länger oder kürzer. Am Verweis: `I.l` Länge, `I.lv` Änderung am linken Rand (`oegL`/`oegAngepasst`).
 - Über Eck (`oeEckenFinden` in `oeWelt`): an Außenecken entfallen die Randprofile, ein Eckpfosten verbindet beide
   Fassaden (3D in `l2Balkone`, Grundriss in `l2BalkonGrundriss`).
 - Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm

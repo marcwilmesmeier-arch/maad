@@ -158,9 +158,9 @@ function fkAnwenden(b) {
       let u = au === 'l' ? a + vs : au === 'r' ? a + rest - vs : a + rest / 2 + vs;
       // im Feld halten
       u = Math.max(a, Math.min(a + rest, u));
-      // Pfosten-Riegel am Ende: letztes Element bis zum Rand verlängert (oegReihe)
-      oegReihe(folge, u, a, c, R[folge.length % R.length]).forEach((o) =>
-        L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, a: 1, ...(o.l ? { l: o.l } : {}) }),
+      // Pfosten-Riegel: bis zu den Enden der Fläche, Randfelder je nach Ausrichtung angepasst (oegReihe)
+      oegReihe(folge, u, a, c, R[folge.length % R.length], au).forEach((o) =>
+        L.push({ id: oegNeuId(), g: o.G.k, u: o.u, v: v0, a: 1, ...(o.l ? { l: o.l, lv: o.lv || 0 } : {}) }),
       );
     };
     const reihe = (x) => fkReihe(x).map(oegG).filter(Boolean);
