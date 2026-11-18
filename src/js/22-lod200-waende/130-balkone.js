@@ -23,7 +23,15 @@ function l2BalkonListe(b) {
         const s = (uu - pc.ua) / pc.dot;
         return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
       };
-      R.push({ a: x.a, p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, n: V.n, tb: x.tb || 1.5, gel: oegGel(x) });
+      R.push({
+        a: x.a,
+        p0: W(x.u0),
+        p1: W(x.u1),
+        y0: base + x.v0,
+        n: V.n,
+        tb: x.tb || 1.5,
+        gel: oegGelBei(x, x.v0),
+      });
     }),
   );
   return R;
@@ -79,7 +87,7 @@ function l2Stabgelaender(pos, A, B, yb) {
  */
 function l2Gelaender(teil, A, B, yb, gel) {
   const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
-  if (L < 0.1) return;
+  if (L < 0.1 || gel.ga === 'ke') return; // kein Geländer (z. B. Erdgeschoss)
   const ux = (B[0] - A[0]) / L,
     uz = (B[1] - A[1]) / L,
     q = [-uz, ux],

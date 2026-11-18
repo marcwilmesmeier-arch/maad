@@ -201,6 +201,7 @@ function okGrFeldSet(f, v) {
     }
     if (f === 'gc' && /^#[0-9a-f]{6}$/i.test(v)) e.gc = v;
     if (f === 'gm') e.gm = v === 'se' ? 'se' : 'auf';
+    if (f === 'eg') e.eg = !!v;
     if (f === 'd') {
       const n = +String(v).replace(',', '.');
       // bis 3 m: Loggien und Balkone sind meist 1,5–2,5 m tief
@@ -449,7 +450,7 @@ ${
           Z.every((z) => z.a === 'ba')
             ? `<span>Montage</span><select onchange="okGrFeldSet('gm',this.value)" title="Aufgesetzt: auf der Balkonplatte · seitlich: außen vor der Plattenstirn, ab Plattenunterkante"><option value="auf" ${G0.gm !== 'se' ? 'selected' : ''}>aufgesetzt</option><option value="se" ${G0.gm === 'se' ? 'selected' : ''}>seitlich</option></select>`
             : ''
-        }`;
+        }<span>im Erdgeschoss ohne Geländer</span><input type="checkbox" style="justify-self:end;width:auto" ${G0.eg ? 'checked' : ''} onchange="okGrFeldSet('eg',this.checked)" title="Im Erdgeschoss (Feld auf Fußbodenhöhe) kein Geländer, in den Geschossen darüber wie eingestellt">`;
       })()
     : ''
 }

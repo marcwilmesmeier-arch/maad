@@ -165,6 +165,7 @@ const OEG_GEL = {
   gl: 'Glasgeländer',
   pa: 'Alu-Paneel',
   ma: 'Massive Brüstung',
+  ke: 'kein Geländer', // z. B. Loggia im Erdgeschoss
 };
 const OEG_GEL0 = { ga: 'st', gh: 1.0, gc: '#a9aeb3', gm: 'auf' }; // gm Montage: 'auf' aufgesetzt, 'se' seitlich (Balkon)
 /** Geländer eines Felds (mit Vorgaben). */
@@ -173,7 +174,13 @@ const oegGel = (f) => ({
   gh: f && +f.gh > 0.3 ? +f.gh : OEG_GEL0.gh,
   gc: f && /^#[0-9a-f]{6}$/i.test(f.gc || '') ? f.gc : OEG_GEL0.gc,
   gm: f && f.gm === 'se' ? 'se' : 'auf',
+  eg: !!(f && f.eg), // im Erdgeschoss (Feld auf Fußbodenhöhe) ohne Geländer
 });
+/** Geländer an einer Stelle: im Erdgeschoss auf Fußbodenhöhe (v0 ≈ 0) mit Haken „eg“ kein Geländer. */
+const oegGelBei = (f, v0) => {
+  const G = oegGel(f);
+  return G.eg && v0 < 0.05 ? { ...G, ga: 'ke' } : G;
+};
 /** Verbundene Felder der Gruppe (geprüft). */
 function oegVerbunden(G) {
   return (Array.isArray(G.vb) ? G.vb : []).filter(
@@ -254,7 +261,7 @@ function oegFlaechenG(G) {
       z.t +
       '|' +
       (z.a || '') +
-      (z.a ? '|' + z.ga + z.gh + z.gc + z.gm : ''),
+      (z.a ? '|' + z.ga + z.gh + z.gc + z.gm + z.eg : ''),
     zeilen = [];
   // waagerecht zusammenfassen
   const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
@@ -276,6 +283,8 @@ function oegFlaechenG(G) {
           ga: z.ga,
           gh: z.gh,
           gc: z.gc,
+          gm: z.gm,
+          eg: z.eg,
         };
         zeilen.push(cur);
       }
@@ -331,6 +340,7 @@ function oegFlaechen(b, V) {
         gh: r.gh,
         gc: r.gc,
         gm: r.gm,
+        eg: r.eg,
         id: I.id + ':f' + k,
         gi: I,
       }),
@@ -390,7 +400,7 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art, gel)
 }
 /** Ansichtssymbol für Balkon (Platte und Geländer vor der Wand) bzw. Loggia (Geländer in der Öffnung) – je Geländerart. */
 function oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel) {
-  const G = oegGel(gel),
+  const G = oegGelBei(gel, v0),
     x0 = X(u0),
     x1 = X(u1),
     yb = Y(v0),
@@ -399,6 +409,15 @@ function oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel) {
   g.save();
   g.strokeStyle = '#475569';
   g.lineWidth = 1;
+  if (G.ga === 'ke') {
+    // ohne Geländer: nur die Balkonplatte
+    if (art === 'ba') {
+      g.fillStyle = '#94a3b8';
+      g.fillRect(x0 - 2, yb, x1 - x0 + 4, Math.max(3, Y(v0 - 0.2) - yb));
+    }
+    g.restore();
+    return;
+  }
   if (G.ga === 'gl') {
     g.fillStyle = 'rgba(160,190,205,.35)';
     g.fillRect(x0, yh, x1 - x0, yb - yh);
