@@ -30,17 +30,15 @@ function okGrSet(f, v) {
   if (!G) return;
   if (f === 'n') G.n = String(v).slice(0, 60) || G.n;
   else if (f === 'szan') G.sz = { an: !!v };
-  else if (f === 'pran') {
-    // Pfosten-Riegel ein: ohne Teilung zunächst ein Raster von etwa 1,35 m
-    G.pr = { ...OEG_PR0, ...(G.pr || {}), an: !!v };
-    if (v && !(G.xs && G.xs.length)) okGrRaster(1.35, true);
-  } else if (f === 'prrf') {
+  else if (f === 'prrf') {
     if (/^#[0-9a-f]{6}$/i.test(v)) G.pr = { ...OEG_PR0, ...(G.pr || {}), rf: v };
-  } else if (f === 'prpb' || f === 'prpt') {
+  } else if (f === 'prpb' || f === 'prpt' || f === 'prrt') {
+    // Ansichtsbreite, Bautiefe Pfosten, Bautiefe Riegel (cm)
     const n = +String(v).replace(',', '.');
     if (!isFinite(n) || n <= 0) return;
-    G.pr = { ...OEG_PR0, ...(G.pr || {}), [f === 'prpb' ? 'pb' : 'pt']: n / 100 };
-    G.pr = { ...oegPr(G) };
+    G.pr = { ...OEG_PR0, ...(G.pr || {}), [f.slice(2)]: n / 100 };
+    const P = oegPr(G);
+    G.pr = { pb: P.pb, pt: P.pt, rt: P.rt, rf: P.rf };
   } else {
     const n = +String(v).replace(',', '.');
     if (!isFinite(n)) return;
@@ -267,6 +265,11 @@ function okGrMaterial(v) {
   const G = okGr();
   if (!G) return;
   G.t = S.ft.some((x) => x.k === v) ? v : '';
+  // Pfosten-Riegel-Fassade: Profile mit Vorgaben, ohne Teilung zunächst ein Pfostenraster von etwa 1,35 m
+  if (G.t === 'pr') {
+    G.pr = { ...OEG_PR0, ...(G.pr || {}) };
+    if (!(G.xs && G.xs.length)) okGrRaster(1.35, true);
+  }
   oeAktualisieren();
 }
 /** Entf im Reiter „Gruppen“: Teilung nur an dieser Stelle (feldweise), sonst Öffnung entfernen. */
@@ -433,19 +436,19 @@ function okGrRender() {
   let h = `<h4>Gruppe</h4><div class="okg"><span>Name</span><input type="text" value="${esc(G.n)}" onchange="okGrSet('n',this.value)">
 <span>Länge (m)</span>${z('l', G.l)}<span title="An der Fassade reicht die Gruppe immer über das ganze Geschoss">Zeichenhöhe (m)</span>${z('h', G.h)}
 <span title="In höheren Geschossen: Fenster werden höher und der Sturz bleibt. Ohne Haken bleibt das Fenster und der Sturz wird höher.">Fensterhöhe über festen Sturz</span><input type="checkbox" style="justify-self:end;width:auto" ${G.sz && G.sz.an ? 'checked' : ''} onchange="okGrSet('szan',this.checked)">
-<span>Material</span><select onchange="okGrMaterial(this.value)" title="Fassadentyp der ganzen Gruppe (einzelne Felder können abweichen)"><option value="" ${!G.t ? 'selected' : ''}>— wie Fassade —</option>${S.ft
+<span>Material</span><select onchange="okGrMaterial(this.value)" title="Fassadentyp der ganzen Gruppe (einzelne Felder können abweichen) – „Pfosten-Riegel-Fassade“ macht die Gruppe zur Glasfassade mit Pfosten und Riegeln auf den Teilungen"><option value="" ${!G.t ? 'selected' : ''}>— wie Fassade —</option>${S.ft
     .filter((x) => !x.df)
     .map((x) => `<option value="${x.k}" ${x.k === G.t ? 'selected' : ''}>${esc(x.n)}</option>`)
     .join('')}</select></div>
-<div class="okg" style="margin-top:8px"><span title="Glasfassade aus Profilen: auf jeder senkrechten Teilung ein Pfosten, auf jeder waagerechten ein Riegel">Pfosten-Riegel-Fassade</span><input type="checkbox" style="justify-self:end;width:auto" ${oegPr(G) ? 'checked' : ''} onchange="okGrSet('pran',this.checked)">${
+<div class="okg" style="margin-top:8px">${
     oegPr(G)
       ? (() => {
           const P = oegPr(G);
-          return `<span>Ansichtsbreite (cm)</span><input type="number" step="0.5" min="3" max="20" value="${+(P.pb * 100).toFixed(1)}" onchange="okGrSet('prpb',this.value)" title="Breite der Pfosten und Riegel in der Ansicht (üblich 5–6 cm)"><span>Bautiefe (cm)</span><input type="number" step="1" min="5" max="40" value="${Math.round(P.pt * 100)}" onchange="okGrSet('prpt',this.value)" title="Tiefe der Pfosten; Riegel 80 % davon"><span>Profilfarbe</span><input type="color" value="${P.rf}" onchange="okGrSet('prrf',this.value)" title="Farbe von Pfosten, Riegeln und Paneelen"><span>Pfostenraster (m)</span><span style="display:flex;gap:4px"><input type="number" id="okGrRa" step="0.05" min="0.3" value="${fdFmt(oegTeilung(G).xs[1] || G.l).replace(',', '.')}" title="Achsmaß der Pfosten – die Länge wird in gleiche Felder geteilt"><button onclick="okGrRaster(okE('okGrRa').value)" title="Senkrechte Teilungen gleichmäßig neu setzen">Teilen</button></span>`;
+          return `<span>Ansichtsbreite (cm)</span><input type="number" step="0.5" min="3" max="20" value="${+(P.pb * 100).toFixed(1)}" onchange="okGrSet('prpb',this.value)" title="Breite der Pfosten und Riegel in der Ansicht (üblich 5–6 cm); am Anschluss an eine andere Pfosten-Riegel-Gruppe ist das Randprofil halb so breit"><span>Bautiefe Pfosten (cm)</span><input type="number" step="1" min="5" max="40" value="${Math.round(P.pt * 100)}" onchange="okGrSet('prpt',this.value)" title="Tiefe der Pfosten von außen nach innen"><span>Bautiefe Riegel (cm)</span><input type="number" step="1" min="5" max="40" value="${Math.round(P.rt * 100)}" onchange="okGrSet('prrt',this.value)" title="Tiefe der Riegel – meist etwas geringer als die der Pfosten"><span>Profilfarbe</span><input type="color" value="${P.rf}" onchange="okGrSet('prrf',this.value)" title="Farbe von Pfosten, Riegeln und Paneelen"><span>Pfostenraster (m)</span><span style="display:flex;gap:4px"><input type="number" id="okGrRa" step="0.05" min="0.3" value="${fdFmt(oegTeilung(G).xs[1] || G.l).replace(',', '.')}" title="Achsmaß der Pfosten – die Länge wird in gleiche Felder geteilt"><button onclick="okGrRaster(okE('okGrRa').value)" title="Senkrechte Teilungen gleichmäßig neu setzen">Teilen</button></span>`;
         })()
       : ''
   }</div>
-<div class="mu" style="margin-top:6px">${oegPr(G) ? 'Teilungslinien sind Pfosten (senkrecht) und Riegel (waagerecht). Verbundene Felder haben keinen Pfosten dazwischen. Feld anklicken: Glas, Paneel oder Fenster/Tür einsetzen. ' : ''}An der Fassade reicht die Gruppe über das ganze Geschoss. ${G.sz && G.sz.an ? 'Fenster behalten Brüstung und Sturz wie gezeichnet und werden in höheren Geschossen höher.' : 'Fenster bleiben wie gezeichnet, in höheren Geschossen wird der Sturz höher.'}</div>
+<div class="mu" style="margin-top:6px">${oegPr(G) ? 'Pfosten-Riegel-Fassade: Teilungslinien sind Pfosten (senkrecht) und Riegel (waagerecht). Verbundene Felder haben keinen Pfosten dazwischen. Feld anklicken: Glas, Paneel oder Fenster/Tür einsetzen. ' : ''}An der Fassade reicht die Gruppe über das ganze Geschoss. ${G.sz && G.sz.an ? 'Fenster behalten Brüstung und Sturz wie gezeichnet und werden in höheren Geschossen höher.' : 'Fenster bleiben wie gezeichnet, in höheren Geschossen wird der Sturz höher.'}</div>
 <h4>Öffnungen</h4><div class="okg"><select onchange="okE('okGrT').dataset.t=this.value">${opt(S.oet[0] && S.oet[0].k)}</select><button id="okGrT" onclick="okGrOeNeu(this.dataset.t||'${S.oet[0] ? S.oet[0].k : ''}')">Hinzufügen</button></div>
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
   if (q) {
@@ -466,7 +469,7 @@ ${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante de
     mat = (cur, leer) =>
       `<option value="" ${!cur ? 'selected' : ''}>${leer}</option>` +
       S.ft
-        .filter((x) => !x.df)
+        .filter((x) => !x.df && x.k !== 'pr') // Pfosten-Riegel nur für die ganze Gruppe
         .map((x) => `<option value="${x.k}" ${x.k === cur ? 'selected' : ''}>${esc(x.n)}</option>`)
         .join('');
   h += `<h4>Flächen</h4><div class="okb"><button onclick="okGrTeilenFenster()" title="Teilungslinien an allen Fensterkanten, an Brüstung und Sturz">An Fenstern teilen</button>${(G.xs && G.xs.length) || (G.ys && G.ys.length) ? '<button onclick="okGrTeilungZurueck()" title="Alle Teilungen und Feldeinstellungen entfernen">Teilung zurücksetzen</button>' : ''}</div>`;

@@ -360,7 +360,9 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 
 ## Pfosten-Riegel-Fassade in Gruppen
 
-- `G.pr = { an, pb, pt, rf }` (`19-…/097-oeffnungsgruppen.js`, `oegPr`): die Gruppe wird eine Glasfassade. Senkrechte
+- Material der Gruppe `G.t = 'pr'` (Fassadentyp „Pfosten-Riegel-Fassade“) schaltet sie ein (`oegPr`, `19-…/097-oeffnungsgruppen.js`),
+  `G.pr = { pb, pt, rt, rf }` hält Ansichtsbreite, Bautiefe Pfosten/Riegel und Farbe. Randprofile an
+  anschließenden Pfosten-Riegel-Gruppen derselben Ansicht sind halb so breit (`oegPrRand` → `T._rd`), an Wänden voll. Die Gruppe wird eine Glasfassade. Senkrechte
   Teilungen = Pfosten, waagerechte = Riegel (Tiefe 80 %), außen Rahmen; verbundene Felder ohne Profil dazwischen.
 - Felder: `fe[].pf` Füllung (`g` Glas, `p` Paneel, `e` Einsatz) und `fe[].pe` Öffnungstyp des Einsatzes (auf das
   Lichtmaß des Feldes gebracht, Rahmen mittig in der Profiltiefe).
@@ -368,7 +370,7 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   `pr` `oegPrAufteilung` zurück (Steg mit 5. Wert = Tiefenanteil, Feld `fu: 'l'` = leer). Damit laufen Wandausschnitt,
   Ansicht, 3D (`oeKoerper`, Tiefe `T.pt`) und Grundriss über die Wege der Fenster. `oegFlaechenG` liefert bei
   Pfosten-Riegel keine Flächen (keine Rück-/Vorsprünge).
-- Konfigurator: Schalter und Maße im Abschnitt „Gruppe“, `okGrRaster` teilt in gleiche Achsen.
+- Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Grundriss: Balkone
 

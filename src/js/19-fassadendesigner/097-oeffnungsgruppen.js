@@ -109,8 +109,8 @@ function oegOeffnungen(b, V) {
     const G = oegG(I.g);
     if (!G) return;
     const H = oegHoehe(B, I, G);
-    // ── Erweiterung: Pfosten-Riegel und Einsätze (oegElemente)
-    oegElemente(G, H).forEach((q) => {
+    // ── Erweiterung: Pfosten-Riegel und Einsätze (oegElemente), Randprofile halb an Pfosten-Riegel-Nachbarn
+    oegElemente(G, H, oegPr(G) ? oegPrRand(b, V, B, I, G, H) : null).forEach((q) => {
       const T = q.T,
         u0 = I.u + q.x,
         v0 = I.v + q.v;
@@ -183,30 +183,58 @@ const oegGelBei = (f, v0) => {
   return G.eg && v0 < 0.05 ? { ...G, ga: 'ke' } : G;
 };
 /**
- * Pfosten-Riegel-Fassade (G.pr): die Gruppe ist eine Glasfassade aus Profilen. Auf jeder senkrechten Teilung steht ein
+ * Pfosten-Riegel-Fassade (Material der Gruppe G.t = 'pr', Maße in G.pr): die Gruppe ist eine Glasfassade aus Profilen. Auf jeder senkrechten Teilung steht ein
  * Pfosten, auf jeder waagerechten liegt ein Riegel, am Rand umläuft ein Rahmen; verbundene Felder haben keinen Pfosten
  * bzw. Riegel dazwischen. Felder: Füllung pf 'g' Glas (fest), 'p' Paneel, 'e' Einsatz (Fenster oder Tür pe aus dem
- * Katalog, auf die Feldgröße gebracht). Einstellungen: pb Ansichtsbreite, pt Bautiefe der Pfosten (Riegel 80 %),
- * rf Profilfarbe. Als eine Öffnung über die ganze Gruppe (Art 'pr') erzeugt: Wandausschnitt, Ansicht, 3D und Grundriss
+ * Katalog, auf die Feldgröße gebracht). Einstellungen: pb Ansichtsbreite, pt Bautiefe der Pfosten, rt der Riegel,
+ * rf Profilfarbe. Grenzt die Gruppe links/rechts/oben/unten an eine andere Pfosten-Riegel-Gruppe, ist das Randprofil
+ * dort halb so breit (beide zusammen = ein Profil); an der Wand bleibt es voll (oegPrRand). Als eine Öffnung über die ganze Gruppe (Art 'pr') erzeugt: Wandausschnitt, Ansicht, 3D und Grundriss
  * laufen damit über dieselben Wege wie Fenster (oeAufteilung → oegPrAufteilung).
  */
-const OEG_PR0 = { pb: 0.06, pt: 0.16, rf: '#3b3f44' };
+const OEG_PR0 = { pb: 0.06, pt: 0.16, rt: 0.13, rf: '#3b3f44' };
 const OEG_PR_FU = { g: 'Glas fest', p: 'Paneel', e: 'Fenster/Tür einsetzen' };
-/** Pfosten-Riegel-Einstellungen einer Gruppe (geprüft) oder null. */
+/**
+ * Pfosten-Riegel-Einstellungen einer Gruppe (geprüft) oder null. Eingeschaltet über das Material der Gruppe
+ * (Fassadentyp 'pr' „Pfosten-Riegel-Fassade“); G.pr hält nur die Maße und die Farbe.
+ */
 function oegPr(G) {
-  const p = G && G.pr;
-  if (!p || !p.an) return null;
+  if (!G || G.t !== 'pr') return null;
+  const p = G.pr || {};
   return {
     an: true,
     pb: Math.max(0.03, Math.min(0.2, +p.pb || OEG_PR0.pb)),
     pt: Math.max(0.05, Math.min(0.4, +p.pt || OEG_PR0.pt)),
+    rt: Math.max(0.05, Math.min(0.4, +p.rt || OEG_PR0.rt)),
     rf: /^#[0-9a-f]{6}$/i.test(p.rf || '') ? p.rf : OEG_PR0.rf,
   };
 }
 /** Einbautiefe der Pfosten-Riegel-Ebene von der Außenseite der Wand (Profile stehen bündig mit der Außenfläche). */
 const OEG_PR_ET = 0.0;
-/** Öffnungstyp „Pfosten-Riegel“ einer Gruppe in der Höhe H (b = Gruppenlänge). */
-function oegPrTyp(G, H) {
+/** Randprofile ohne Nachbarn: überall voll. */
+const OEG_PR_RAND = { l: 1, r: 1, o: 1, u: 1 };
+/**
+ * Randprofile eines Gruppenverweises I (Höhe H) in der Ansicht V: 0,5 an Seiten, an denen eine andere
+ * Pfosten-Riegel-Gruppe derselben Ansicht anschließt (links/rechts mit Höhenüberlappung, oben/unten mit
+ * Längenüberlappung), sonst 1.
+ */
+function oegPrRand(b, V, B, I, G, H) {
+  const R = { ...OEG_PR_RAND },
+    e = 0.02;
+  (oegDaten(b, V.key) || []).forEach((J) => {
+    const G2 = J !== I && oegG(J.g);
+    if (!G2 || !oegPr(G2)) return;
+    const H2 = oegHoehe(B, J, G2),
+      ueH = Math.min(I.v + H, J.v + H2) - Math.max(I.v, J.v) > 0.05,
+      ueL = Math.min(I.u + G.l, J.u + G2.l) - Math.max(I.u, J.u) > 0.05;
+    if (ueH && Math.abs(J.u + G2.l - I.u) < e) R.l = 0.5;
+    if (ueH && Math.abs(I.u + G.l - J.u) < e) R.r = 0.5;
+    if (ueL && Math.abs(J.v - (I.v + H)) < 0.05) R.o = 0.5;
+    if (ueL && Math.abs(J.v + H2 - I.v) < 0.05) R.u = 0.5;
+  });
+  return R;
+}
+/** Öffnungstyp „Pfosten-Riegel“ einer Gruppe in der Höhe H (b = Gruppenlänge, rd Randprofile). */
+function oegPrTyp(G, H, rd) {
   const P = oegPr(G);
   return {
     k: 'pr:' + G.k,
@@ -221,53 +249,59 @@ function oegPrTyp(G, H) {
     pt: P.pt,
     et: OEG_PR_ET,
     _g: G,
+    _rd: rd || OEG_PR_RAND,
   };
 }
 /**
  * Felder der Pfosten-Riegel-Fassade in der Höhe H: Zelle (Achsmaß) und Glasfeld (Lichtmaß zwischen den Profilen).
- * Außen voller Rahmen pb, innen je Seite pb/2.
+ * Außen Rahmen pb (an Pfosten-Riegel-Nachbarn halb, rd), innen je Seite pb/2.
  */
-function oegPrFelder(G, H) {
+function oegPrFelder(G, H, rd) {
   const P = oegPr(G),
     Y = oegYAbb(G, H),
     h2 = P.pb / 2,
-    rand = (v, m) => v < 0.004 || v > m - 0.004;
+    r = rd || OEG_PR_RAND;
   return oegZellen(G).map((z) => {
     const y0 = Y(z.y0),
       y1 = Y(z.y1);
     return {
       z,
-      x0: z.x0 + (rand(z.x0, G.l) ? P.pb : h2),
-      x1: z.x1 - (rand(z.x1, G.l) ? P.pb : h2),
-      y0: y0 + (z.y0 < 0.004 ? P.pb : h2),
-      y1: y1 - (z.y1 > G.h - 0.004 ? P.pb : h2),
+      x0: z.x0 + (z.x0 < 0.004 ? P.pb * r.l : h2),
+      x1: z.x1 - (z.x1 > G.l - 0.004 ? P.pb * r.r : h2),
+      y0: y0 + (z.y0 < 0.004 ? P.pb * r.u : h2),
+      y1: y1 - (z.y1 > G.h - 0.004 ? P.pb * r.o : h2),
       pf: z.pf || 'g',
       pe: z.pe || '',
     };
   });
 }
-/** Einteilung des Typs „Pfosten-Riegel“ (wie oeAufteilung): Rahmen, Pfosten, Riegel (5. Wert: Tiefe 0,8) und Felder. */
+/**
+ * Einteilung des Typs „Pfosten-Riegel“ (wie oeAufteilung): Rahmen, Pfosten, Riegel (5. Wert: Tiefe relativ zur
+ * Pfostentiefe) und Felder. Randprofile nach T._rd (halb an Pfosten-Riegel-Nachbarn).
+ */
 function oegPrAufteilung(T) {
   const G = T._g,
     P = oegPr(G),
+    r = T._rd || OEG_PR_RAND,
     b = T.b,
     h = T.h,
     pb = P.pb,
+    kr = P.rt / P.pt,
     Y = oegYAbb(G, h),
     stege = [
-      [0, pb, 0, h],
-      [b - pb, b, 0, h],
-      [pb, b - pb, h - pb, h, 0.8],
-      [pb, b - pb, 0, pb, 0.8],
+      [0, pb * r.l, 0, h],
+      [b - pb * r.r, b, 0, h],
+      [pb * r.l, b - pb * r.r, h - pb * r.o, h, kr],
+      [pb * r.l, b - pb * r.r, 0, pb * r.u, kr],
     ];
   // je Feld die rechte (Pfosten) und obere (Riegel) Kante, sofern innen
   oegZellen(G).forEach((z) => {
     const y0 = Y(z.y0),
       y1 = Y(z.y1);
     if (z.x1 < G.l - 0.004) stege.push([z.x1 - pb / 2, z.x1 + pb / 2, y0, y1]);
-    if (z.y1 < G.h - 0.004) stege.push([z.x0, z.x1, y1 - pb / 2, y1 + pb / 2, 0.8]);
+    if (z.y1 < G.h - 0.004) stege.push([z.x0, z.x1, y1 - pb / 2, y1 + pb / 2, kr]);
   });
-  const felder = oegPrFelder(G, h)
+  const felder = oegPrFelder(G, h, r)
     .filter((f) => f.x1 - f.x0 > 0.01 && f.y1 - f.y0 > 0.01)
     .map((f, i) => ({
       x0: f.x0,
@@ -284,15 +318,15 @@ function oegPrAufteilung(T) {
 }
 /**
  * Alle Elemente einer Gruppe in der Höhe H in Gruppenkoordinaten: { id, x, v, T } – Pfosten-Riegel (über die ganze
- * Gruppe), Einsätze in seinen Feldern und die gezeichneten Öffnungen.
+ * Gruppe), Einsätze in seinen Feldern und die gezeichneten Öffnungen. rd: Randprofile (oegPrRand), ohne = voll.
  */
-function oegElemente(G, H) {
+function oegElemente(G, H, rd) {
   const R = [];
   if (oegPr(G)) {
-    const T = oegPrTyp(G, H),
+    const T = oegPrTyp(G, H, rd),
       P = oegPr(G);
     R.push({ id: 'pr', t: T.k, x: 0, v: 0, T });
-    oegPrFelder(G, H).forEach((f, i) => {
+    oegPrFelder(G, H, rd).forEach((f, i) => {
       if (f.pf !== 'e' || !f.pe || !S.oet.some((t) => t.k === f.pe)) return;
       const T0 = oeT(f.pe),
         b = f.x1 - f.x0,
@@ -986,9 +1020,17 @@ function oegPruefen(L) {
     oe: (Array.isArray(G.oe) ? G.oe : [])
       .filter((q) => q && q.t)
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
-    t: S.ft.some((x) => x.k === G.t) ? G.t : '',
+    // früher: Schalter G.pr.an statt Material 'pr'
+    t: G.pr && G.pr.an ? 'pr' : S.ft.some((x) => x.k === G.t) ? G.t : '',
     sz: G.sz ? { an: !!G.sz.an } : undefined,
-    pr: G.pr && G.pr.an ? oegPr(G) : undefined,
+    pr: G.pr
+      ? {
+          pb: +G.pr.pb || OEG_PR0.pb,
+          pt: +G.pr.pt || OEG_PR0.pt,
+          rt: +G.pr.rt || (+G.pr.pt ? +G.pr.pt * 0.8 : OEG_PR0.rt),
+          rf: G.pr.rf || OEG_PR0.rf,
+        }
+      : undefined,
     ...oegFelderPruefen(G),
   }));
 }
