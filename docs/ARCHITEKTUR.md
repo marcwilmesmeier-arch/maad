@@ -358,6 +358,23 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Außenwandstärke in der Karte „Fassade“ (`fkWandstaerke`): setzt `b.l2.c.AW` (Standardstärke LOD 200 wie im
   Bauteilkonfigurator) und setzt Einzelwerte der Außenwände zurück.
 
+## Pfosten-Riegel-Fassade in Gruppen
+
+- `G.pr = { an, pb, pt, rf }` (`19-…/097-oeffnungsgruppen.js`, `oegPr`): die Gruppe wird eine Glasfassade. Senkrechte
+  Teilungen = Pfosten, waagerechte = Riegel (Tiefe 80 %), außen Rahmen; verbundene Felder ohne Profil dazwischen.
+- Felder: `fe[].pf` Füllung (`g` Glas, `p` Paneel, `e` Einsatz) und `fe[].pe` Öffnungstyp des Einsatzes (auf das
+  Lichtmaß des Feldes gebracht, Rahmen mittig in der Profiltiefe).
+- Umsetzung als eine Öffnung der Art `pr` über die ganze Gruppe (`oegPrTyp`, `oegElemente`): `oeAufteilung` gibt für
+  `pr` `oegPrAufteilung` zurück (Steg mit 5. Wert = Tiefenanteil, Feld `fu: 'l'` = leer). Damit laufen Wandausschnitt,
+  Ansicht, 3D (`oeKoerper`, Tiefe `T.pt`) und Grundriss über die Wege der Fenster. `oegFlaechenG` liefert bei
+  Pfosten-Riegel keine Flächen (keine Rück-/Vorsprünge).
+- Konfigurator: Schalter und Maße im Abschnitt „Gruppe“, `okGrRaster` teilt in gleiche Achsen.
+
+## Grundriss: Balkone
+
+- `l2BalkonGrundriss` (`22-…/130-balkone.js`, aus `l2Draw`): Balkonplatte mit Geländer im Geschoss auf Plattenhöhe,
+  Balkon des Geschosses darüber gestrichelt, Loggia-Geländer in der Fassadenebene.
+
 ## LOD 200: Ruhephase bei Bewegung
 
 - `l2Unruhig(b)` (`22-lod200-waende/030-aktionen.js`): ändert sich Grundriss/Lage eines Gebäudes (`skSig(b)` + `b._y`),

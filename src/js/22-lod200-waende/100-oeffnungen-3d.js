@@ -398,7 +398,7 @@ function oeKoerper(O) {
   O.forEach((o) => {
     const T_ = o.T,
       A = o.A,
-      tief = 0.08,
+      tief = T_.pt || 0.08, // Pfosten-Riegel: Bautiefe der Profile
       sAo = A.sA - (o.rk || 0), // Außenfläche am Fenster (im Rücksprung zurückversetzt)
       sV = sAo - Math.min(T_.et, Math.max(0, sAo - oeInnenseite(o, A) - tief)),
       sH = sV - tief,
@@ -409,8 +409,12 @@ function oeKoerper(O) {
       ky = Math.min(1, (o.y1 - o.y0) / T_.h),
       Tt = (x) => o.t0 + x * ((o.t1 - o.t0) / T_.b),
       Yy = (y) => o.y0 + y * ky;
-    L.stege.forEach(([a, c, d, e]) => quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), sH, sV));
+    // 5. Wert eines Stegs: Anteil der Tiefe (Riegel der Pfosten-Riegel-Fassade, außen bündig mit den Pfosten)
+    L.stege.forEach(([a, c, d, e, k]) =>
+      quader(R, A, Tt(a), Tt(c), Yy(d), Yy(e), k ? sV - tief * k : sH, sV),
+    );
     L.felder.forEach((f) => {
+      if (f.fu === 'l') return; // Feld mit Einsatz (eigene Öffnung)
       const x0 = Tt(f.x0),
         x1 = Tt(f.x1),
         y0 = Yy(f.y0),
@@ -556,8 +560,9 @@ function oeGrundriss(x, wl, wandFarbe) {
       const T = o.T,
         sAo = A.sA - (o.rk || 0),
         sIo = oeInnenseite(o, A),
-        sV = sAo - Math.min(T.et, Math.max(0, sAo - sIo - 0.08)),
-        sH = sV - 0.08,
+        tief = T.pt || 0.08, // Pfosten-Riegel: Bautiefe der Profile
+        sV = sAo - Math.min(T.et, Math.max(0, sAo - sIo - tief)),
+        sH = sV - tief,
         t0 = o.t0,
         t1 = o.t1;
       if (!imSchnitt(o)) {
@@ -617,6 +622,18 @@ function oeGrundriss(x, wl, wandFarbe) {
         x.stroke();
         x.setLineDash([]);
       } else {
+        if (T.a === 'pr') {
+          // Pfosten-Riegel: geschnittene Pfosten als volle Profile
+          const ys = sh - o.y0,
+            k = (o.t1 - o.t0) / T.b;
+          x.fillStyle = '#222';
+          oeAufteilung(T).stege.forEach(([a, c, d, e2, kk]) => {
+            if (kk || ys < d || ys > e2) return;
+            zug([P(t0 + a * k, sH), P(t0 + c * k, sH), P(t0 + c * k, sV), P(t0 + a * k, sV)]);
+            x.closePath();
+            x.fill();
+          });
+        }
         // Glas: zwei feine Linien in der Rahmenmitte
         const sm = (sH + sV) / 2;
         x.lineWidth = 0.7;

@@ -250,6 +250,80 @@ function l2Balkone() {
     L2BK.delete(id);
   });
 }
+/**
+ * Balkone und Loggien im Grundriss (LOD 200, aus l2Draw): im Geschoss, dessen Fußboden auf Höhe der Platte liegt,
+ * die Balkonplatte mit Geländer bzw. bei der Loggia das Geländer in der Fassadenebene; der Balkon des Geschosses
+ * darüber gestrichelt (überdeckt die Fläche davor).
+ * @param {CanvasRenderingContext2D} x  Zeichenfläche des Grundrisses (Weltkoordinaten über grTf)
+ * @param {object} b  Gebäude
+ * @param {object[]} wl  Wände des Geschosses (l2Els)
+ */
+function l2BalkonGrundriss(x, b, wl) {
+  const aw = wl.filter((e) => e.kind === 'AW' && isFinite(e.y0));
+  if (!aw.length) return;
+  const y0 = Math.min(...aw.map((e) => e.y0)),
+    hg = Math.max(...aw.map((e) => e.h || 0)),
+    zug = (pts, zu) => {
+      x.beginPath();
+      pts.forEach((p, i) => {
+        const [X, Y] = grTf(p[0], p[1]);
+        i ? x.lineTo(X, Y) : x.moveTo(X, Y);
+      });
+      if (zu) x.closePath();
+    },
+    // Geländer im Grundriss: Glas als feine Doppellinie, sonst eine kräftige Linie
+    gel = (pts, G) => {
+      if (!G || G.ga === 'ke') return;
+      x.setLineDash([]);
+      x.strokeStyle = G.ga === 'gl' ? '#5b7f95' : '#222';
+      x.lineWidth = G.ga === 'ma' ? 2.4 : G.ga === 'gl' ? 0.8 : 1.4;
+      zug(pts);
+      x.stroke();
+    };
+  x.save();
+  x.globalAlpha = 1;
+  l2BalkonListe(b).forEach((q) => {
+    const dy = q.y0 - y0,
+      hier = Math.abs(dy) < 0.3,
+      oben = Math.abs(dy - hg) < 0.3;
+    if (!hier && !oben) return;
+    const n = q.n,
+      A = q.p0,
+      B = q.p1,
+      P = (p, s) => [p[0] + n[0] * s, p[1] + n[1] * s],
+      L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1,
+      u = [(B[0] - A[0]) / L, (B[1] - A[1]) / L],
+      E = (p, k) => [p[0] + u[0] * k, p[1] + u[1] * k];
+    if (q.a === 'ba' || q.a === 'bl') {
+      const t = q.tb,
+        platte = [A, B, P(B, t), P(A, t)];
+      if (oben) {
+        // Balkon darüber: nur gestrichelter Umriss
+        x.setLineDash([5, 3]);
+        x.strokeStyle = '#555';
+        x.lineWidth = 0.9;
+        zug([A, P(A, t), P(B, t), B]);
+        x.stroke();
+        x.setLineDash([]);
+        return;
+      }
+      x.fillStyle = 'rgba(236,235,231,0.95)';
+      zug(platte, true);
+      x.fill();
+      x.strokeStyle = '#111';
+      x.lineWidth = 1.2;
+      zug([A, P(A, t), P(B, t), B]);
+      x.stroke();
+      // Geländer: aufgesetzt 5 cm innerhalb der Plattenkante, seitlich außen davor
+      const k = q.gel.gm === 'se' ? -0.03 : 0.05;
+      gel([E(A, k), E(P(A, t - k), k), E(P(B, t - k), -k), E(B, -k)], q.gel);
+    } else if (hier) {
+      // Loggia: Geländer knapp hinter der Fassadenebene
+      gel([P(A, -0.08), P(B, -0.08)], q.gel);
+    }
+  });
+  x.restore();
+}
 function l2BalkoneWeg(o) {
   G.l2.remove(o.g);
   o.g.traverse((m) => {

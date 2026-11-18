@@ -30,7 +30,18 @@ function okGrSet(f, v) {
   if (!G) return;
   if (f === 'n') G.n = String(v).slice(0, 60) || G.n;
   else if (f === 'szan') G.sz = { an: !!v };
-  else {
+  else if (f === 'pran') {
+    // Pfosten-Riegel ein: ohne Teilung zunächst ein Raster von etwa 1,35 m
+    G.pr = { ...OEG_PR0, ...(G.pr || {}), an: !!v };
+    if (v && !(G.xs && G.xs.length)) okGrRaster(1.35, true);
+  } else if (f === 'prrf') {
+    if (/^#[0-9a-f]{6}$/i.test(v)) G.pr = { ...OEG_PR0, ...(G.pr || {}), rf: v };
+  } else if (f === 'prpb' || f === 'prpt') {
+    const n = +String(v).replace(',', '.');
+    if (!isFinite(n) || n <= 0) return;
+    G.pr = { ...OEG_PR0, ...(G.pr || {}), [f === 'prpb' ? 'pb' : 'pt']: n / 100 };
+    G.pr = { ...oegPr(G) };
+  } else {
     const n = +String(v).replace(',', '.');
     if (!isFinite(n)) return;
     if (f === 'l') G.l = Math.max(0.5, Math.min(40, n));
@@ -219,9 +230,37 @@ function okGrFeldSet(f, v) {
       if (isFinite(n)) e.tb = Math.max(20, Math.min(300, Math.abs(n))) / 100;
     }
     if (f === 't') e.t = S.ft.some((x) => x.k === v) ? v : '';
+    // Pfosten-Riegel: Füllung (Glas, Paneel, Einsatz) und eingesetzter Typ
+    if (f === 'pf') {
+      e.pf = OEG_PR_FU[v] ? v : 'g';
+      if (e.pf === 'e' && !S.oet.some((t) => t.k === e.pe))
+        e.pe = (S.oet.find((t) => t.a === 'fe') || S.oet[0]).k;
+    }
+    if (f === 'pe' && S.oet.some((t) => t.k === v)) {
+      e.pe = v;
+      e.pf = 'e';
+    }
   });
-  G.fe = G.fe.filter((e) => e.d || e.t || e.a);
+  G.fe = G.fe.filter((e) => e.d || e.t || e.a || (e.pf && e.pf !== 'g'));
   oeAktualisieren();
+}
+/**
+ * Senkrechte Teilung in gleiche Felder mit einem Achsmaß von etwa a (m) – z. B. das Pfostenraster einer
+ * Pfosten-Riegel-Fassade. Waagerechte Teilungen bleiben; Feldeinstellungen, die nicht mehr passen, entfallen.
+ */
+function okGrRaster(a, still) {
+  const G = okGr(),
+    n0 = +String(a).replace(',', '.');
+  if (!G || !(n0 > 0.2)) return;
+  const n = Math.max(1, Math.round(G.l / n0)),
+    e = G.l / n;
+  G.xs = Array.from({ length: n - 1 }, (_, i) => Math.round(e * (i + 1) * 1000) / 1000);
+  G.vb = (G.vb || []).filter((r) =>
+    [r.x0, r.x1].every((x) => x < 0.004 || x > G.l - 0.004 || G.xs.some((q) => Math.abs(q - x) < 0.004)),
+  );
+  OK.gzel = [];
+  OK.glin = null;
+  if (!still) oeAktualisieren();
 }
 /** Material der ganzen Gruppe. */
 function okGrMaterial(v) {
@@ -372,7 +411,7 @@ function okGrRender() {
       S.oeg
         .map(
           (x) =>
-            `<div class="okt${x.k === OK.g ? ' on' : ''}" onclick="okGrWahl('${x.k}')">${oegSymbol(x, 48, 30)}<span>${esc(x.n)}<small>${fdFmt(x.l)} m · ${x.oe.length} Öffnung${x.oe.length === 1 ? '' : 'en'}${zahl[x.k] ? ' · ' + zahl[x.k] + '× gesetzt' : ''}</small></span><button class="okx" title="Gruppe löschen" onclick="event.stopPropagation();okGrWahl('${x.k}');okGrLoeschen()">×</button></div>`,
+            `<div class="okt${x.k === OK.g ? ' on' : ''}" onclick="okGrWahl('${x.k}')">${oegSymbol(x, 48, 30)}<span>${esc(x.n)}<small>${fdFmt(x.l)} m · ${oegPr(x) ? 'Pfosten-Riegel' : x.oe.length + ' Öffnung' + (x.oe.length === 1 ? '' : 'en')}${zahl[x.k] ? ' · ' + zahl[x.k] + '× gesetzt' : ''}</small></span><button class="okx" title="Gruppe löschen" onclick="event.stopPropagation();okGrWahl('${x.k}');okGrLoeschen()">×</button></div>`,
         )
         .join('') +
       `<div class="okt" onclick="okGrNeu()"><span class="mu">+ Gruppe anlegen</span></div>` +
@@ -398,7 +437,15 @@ function okGrRender() {
     .filter((x) => !x.df)
     .map((x) => `<option value="${x.k}" ${x.k === G.t ? 'selected' : ''}>${esc(x.n)}</option>`)
     .join('')}</select></div>
-<div class="mu" style="margin-top:6px">An der Fassade reicht die Gruppe über das ganze Geschoss. ${G.sz && G.sz.an ? 'Fenster behalten Brüstung und Sturz wie gezeichnet und werden in höheren Geschossen höher.' : 'Fenster bleiben wie gezeichnet, in höheren Geschossen wird der Sturz höher.'}</div>
+<div class="okg" style="margin-top:8px"><span title="Glasfassade aus Profilen: auf jeder senkrechten Teilung ein Pfosten, auf jeder waagerechten ein Riegel">Pfosten-Riegel-Fassade</span><input type="checkbox" style="justify-self:end;width:auto" ${oegPr(G) ? 'checked' : ''} onchange="okGrSet('pran',this.checked)">${
+    oegPr(G)
+      ? (() => {
+          const P = oegPr(G);
+          return `<span>Ansichtsbreite (cm)</span><input type="number" step="0.5" min="3" max="20" value="${+(P.pb * 100).toFixed(1)}" onchange="okGrSet('prpb',this.value)" title="Breite der Pfosten und Riegel in der Ansicht (üblich 5–6 cm)"><span>Bautiefe (cm)</span><input type="number" step="1" min="5" max="40" value="${Math.round(P.pt * 100)}" onchange="okGrSet('prpt',this.value)" title="Tiefe der Pfosten; Riegel 80 % davon"><span>Profilfarbe</span><input type="color" value="${P.rf}" onchange="okGrSet('prrf',this.value)" title="Farbe von Pfosten, Riegeln und Paneelen"><span>Pfostenraster (m)</span><span style="display:flex;gap:4px"><input type="number" id="okGrRa" step="0.05" min="0.3" value="${fdFmt(oegTeilung(G).xs[1] || G.l).replace(',', '.')}" title="Achsmaß der Pfosten – die Länge wird in gleiche Felder geteilt"><button onclick="okGrRaster(okE('okGrRa').value)" title="Senkrechte Teilungen gleichmäßig neu setzen">Teilen</button></span>`;
+        })()
+      : ''
+  }</div>
+<div class="mu" style="margin-top:6px">${oegPr(G) ? 'Teilungslinien sind Pfosten (senkrecht) und Riegel (waagerecht). Verbundene Felder haben keinen Pfosten dazwischen. Feld anklicken: Glas, Paneel oder Fenster/Tür einsetzen. ' : ''}An der Fassade reicht die Gruppe über das ganze Geschoss. ${G.sz && G.sz.an ? 'Fenster behalten Brüstung und Sturz wie gezeichnet und werden in höheren Geschossen höher.' : 'Fenster bleiben wie gezeichnet, in höheren Geschossen wird der Sturz höher.'}</div>
 <h4>Öffnungen</h4><div class="okg"><select onchange="okE('okGrT').dataset.t=this.value">${opt(S.oet[0] && S.oet[0].k)}</select><button id="okGrT" onclick="okGrOeNeu(this.dataset.t||'${S.oet[0] ? S.oet[0].k : ''}')">Hinzufügen</button></div>
 <div class="okb">${G.oe.length > 1 ? '<button onclick="okGrVerteilen()" title="Gleiche Abstände zwischen den Öffnungen und zu den Enden">Gleichmäßig verteilen</button>' : ''}</div>`;
   if (q) {
@@ -423,7 +470,23 @@ ${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante de
         .map((x) => `<option value="${x.k}" ${x.k === cur ? 'selected' : ''}>${esc(x.n)}</option>`)
         .join('');
   h += `<h4>Flächen</h4><div class="okb"><button onclick="okGrTeilenFenster()" title="Teilungslinien an allen Fensterkanten, an Brüstung und Sturz">An Fenstern teilen</button>${(G.xs && G.xs.length) || (G.ys && G.ys.length) ? '<button onclick="okGrTeilungZurueck()" title="Alle Teilungen und Feldeinstellungen entfernen">Teilung zurücksetzen</button>' : ''}</div>`;
-  if (Z.length) {
+  if (Z.length && oegPr(G)) {
+    // Pfosten-Riegel: Füllung je Feld
+    const pf = Z.every((z) => (z.pf || 'g') === (Z[0].pf || 'g')) ? Z[0].pf || 'g' : '',
+      pe = Z.every((z) => z.pe === Z[0].pe) ? Z[0].pe : '',
+      a = Z.reduce((s2, z) => s2 + (z.x1 - z.x0) * (z.y1 - z.y0), 0);
+    h += `<div class="mu" style="margin-top:8px">${Z.length === 1 ? 'Feld' : Z.length + ' Felder'} · ${fdFmt(a)} m² (Achsmaß)</div><div class="okg" style="margin-top:4px"><span>Füllung</span><select onchange="okGrFeldSet('pf',this.value)">${pf ? '' : '<option selected>gemischt</option>'}${Object.entries(
+      OEG_PR_FU,
+    )
+      .map(([k, n]) => `<option value="${k}" ${pf === k ? 'selected' : ''}>${n}</option>`)
+      .join('')}</select>${
+      pf === 'e'
+        ? `<span>Einsatz</span><select onchange="okGrFeldSet('pe',this.value)" title="Fenster oder Tür aus dem Katalog – wird auf das Lichtmaß des Feldes gebracht, Einteilung und Rahmen wie im Typ">${pe ? '' : '<option selected>gemischt</option>'}${opt(pe)}</select>`
+        : ''
+    }</div>`;
+    if (Z.length > 1 || Z.some((z) => z.vb))
+      h += `<div class="okb">${Z.length > 1 ? '<button onclick="okGrVerbinden(okGrZellenWahl())" title="Gewählte Felder zu einem Feld verbinden – ohne Pfosten bzw. Riegel dazwischen">Felder verbinden</button>' : ''}${Z.some((z) => z.vb) ? '<button onclick="okGrVerbindungLoesen()" title="Verbundenes Feld wieder teilen">Verbindung lösen</button>' : ''}</div>`;
+  } else if (Z.length) {
     const d0 = Z[0].d,
       t0 = Z[0].t,
       gleichD = Z.every((z) => z.d === d0),
@@ -582,13 +645,18 @@ function okGrZeichnen() {
       );
     }
   });
+  // Pfosten-Riegel mit Einsätzen (die Profile zeigen die Teilung – dann keine gestrichelten Linien)
+  const pr = !!oegPr(G);
+  oegElemente(G, G.h).forEach((q) => {
+    if (q.id === 'pr' || q.id.startsWith('pe')) oeZeichneEine(g, P.X, P.Y, q.x, q.x + q.T.b, q.v, q.T, {});
+  });
   // Teilungslinien feldweise: rechte und obere Kante jedes Feldes (verbundene Felder ohne innere Linien)
   g.save();
   g.setLineDash([4, 3]);
   g.strokeStyle = '#475569';
   g.lineWidth = 1;
   g.beginPath();
-  oegZellen(G).forEach((z) => {
+  (pr ? [] : oegZellen(G)).forEach((z) => {
     if (z.x1 < G.l - 0.004) {
       g.moveTo(P.X(z.x1), P.Y(z.y0));
       g.lineTo(P.X(z.x1), P.Y(z.y1));

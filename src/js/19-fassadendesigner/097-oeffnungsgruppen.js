@@ -109,8 +109,9 @@ function oegOeffnungen(b, V) {
     const G = oegG(I.g);
     if (!G) return;
     const H = oegHoehe(B, I, G);
-    G.oe.forEach((q) => {
-      const T = oegTyp(G, q, H),
+    // ── Erweiterung: Pfosten-Riegel und Einsätze (oegElemente)
+    oegElemente(G, H).forEach((q) => {
+      const T = q.T,
         u0 = I.u + q.x,
         v0 = I.v + q.v;
       R.push({
@@ -181,6 +182,135 @@ const oegGelBei = (f, v0) => {
   const G = oegGel(f);
   return G.eg && v0 < 0.05 ? { ...G, ga: 'ke' } : G;
 };
+/**
+ * Pfosten-Riegel-Fassade (G.pr): die Gruppe ist eine Glasfassade aus Profilen. Auf jeder senkrechten Teilung steht ein
+ * Pfosten, auf jeder waagerechten liegt ein Riegel, am Rand umläuft ein Rahmen; verbundene Felder haben keinen Pfosten
+ * bzw. Riegel dazwischen. Felder: Füllung pf 'g' Glas (fest), 'p' Paneel, 'e' Einsatz (Fenster oder Tür pe aus dem
+ * Katalog, auf die Feldgröße gebracht). Einstellungen: pb Ansichtsbreite, pt Bautiefe der Pfosten (Riegel 80 %),
+ * rf Profilfarbe. Als eine Öffnung über die ganze Gruppe (Art 'pr') erzeugt: Wandausschnitt, Ansicht, 3D und Grundriss
+ * laufen damit über dieselben Wege wie Fenster (oeAufteilung → oegPrAufteilung).
+ */
+const OEG_PR0 = { pb: 0.06, pt: 0.16, rf: '#3b3f44' };
+const OEG_PR_FU = { g: 'Glas fest', p: 'Paneel', e: 'Fenster/Tür einsetzen' };
+/** Pfosten-Riegel-Einstellungen einer Gruppe (geprüft) oder null. */
+function oegPr(G) {
+  const p = G && G.pr;
+  if (!p || !p.an) return null;
+  return {
+    an: true,
+    pb: Math.max(0.03, Math.min(0.2, +p.pb || OEG_PR0.pb)),
+    pt: Math.max(0.05, Math.min(0.4, +p.pt || OEG_PR0.pt)),
+    rf: /^#[0-9a-f]{6}$/i.test(p.rf || '') ? p.rf : OEG_PR0.rf,
+  };
+}
+/** Einbautiefe der Pfosten-Riegel-Ebene von der Außenseite der Wand (Profile stehen bündig mit der Außenfläche). */
+const OEG_PR_ET = 0.0;
+/** Öffnungstyp „Pfosten-Riegel“ einer Gruppe in der Höhe H (b = Gruppenlänge). */
+function oegPrTyp(G, H) {
+  const P = oegPr(G);
+  return {
+    k: 'pr:' + G.k,
+    n: 'Pfosten-Riegel',
+    a: 'pr',
+    b: G.l,
+    h: H,
+    br: 0,
+    rf: P.rf,
+    pb: P.pb,
+    pp: P.pb,
+    pt: P.pt,
+    et: OEG_PR_ET,
+    _g: G,
+  };
+}
+/**
+ * Felder der Pfosten-Riegel-Fassade in der Höhe H: Zelle (Achsmaß) und Glasfeld (Lichtmaß zwischen den Profilen).
+ * Außen voller Rahmen pb, innen je Seite pb/2.
+ */
+function oegPrFelder(G, H) {
+  const P = oegPr(G),
+    Y = oegYAbb(G, H),
+    h2 = P.pb / 2,
+    rand = (v, m) => v < 0.004 || v > m - 0.004;
+  return oegZellen(G).map((z) => {
+    const y0 = Y(z.y0),
+      y1 = Y(z.y1);
+    return {
+      z,
+      x0: z.x0 + (rand(z.x0, G.l) ? P.pb : h2),
+      x1: z.x1 - (rand(z.x1, G.l) ? P.pb : h2),
+      y0: y0 + (z.y0 < 0.004 ? P.pb : h2),
+      y1: y1 - (z.y1 > G.h - 0.004 ? P.pb : h2),
+      pf: z.pf || 'g',
+      pe: z.pe || '',
+    };
+  });
+}
+/** Einteilung des Typs „Pfosten-Riegel“ (wie oeAufteilung): Rahmen, Pfosten, Riegel (5. Wert: Tiefe 0,8) und Felder. */
+function oegPrAufteilung(T) {
+  const G = T._g,
+    P = oegPr(G),
+    b = T.b,
+    h = T.h,
+    pb = P.pb,
+    Y = oegYAbb(G, h),
+    stege = [
+      [0, pb, 0, h],
+      [b - pb, b, 0, h],
+      [pb, b - pb, h - pb, h, 0.8],
+      [pb, b - pb, 0, pb, 0.8],
+    ];
+  // je Feld die rechte (Pfosten) und obere (Riegel) Kante, sofern innen
+  oegZellen(G).forEach((z) => {
+    const y0 = Y(z.y0),
+      y1 = Y(z.y1);
+    if (z.x1 < G.l - 0.004) stege.push([z.x1 - pb / 2, z.x1 + pb / 2, y0, y1]);
+    if (z.y1 < G.h - 0.004) stege.push([z.x0, z.x1, y1 - pb / 2, y1 + pb / 2, 0.8]);
+  });
+  const felder = oegPrFelder(G, h)
+    .filter((f) => f.x1 - f.x0 > 0.01 && f.y1 - f.y0 > 0.01)
+    .map((f, i) => ({
+      x0: f.x0,
+      x1: f.x1,
+      y0: f.y0,
+      y1: f.y1,
+      oa: 'f',
+      an: 'l',
+      // Einsatz: das Feld bleibt leer, Fenster/Tür sitzt darin (oegElemente)
+      fu: f.pf === 'p' ? 'p' : f.pf === 'e' && f.pe ? 'l' : 'g',
+      i,
+    }));
+  return { pb, pp: pb, stege, felder, oben: felder, ns: [] };
+}
+/**
+ * Alle Elemente einer Gruppe in der Höhe H in Gruppenkoordinaten: { id, x, v, T } – Pfosten-Riegel (über die ganze
+ * Gruppe), Einsätze in seinen Feldern und die gezeichneten Öffnungen.
+ */
+function oegElemente(G, H) {
+  const R = [];
+  if (oegPr(G)) {
+    const T = oegPrTyp(G, H),
+      P = oegPr(G);
+    R.push({ id: 'pr', t: T.k, x: 0, v: 0, T });
+    oegPrFelder(G, H).forEach((f, i) => {
+      if (f.pf !== 'e' || !f.pe || !S.oet.some((t) => t.k === f.pe)) return;
+      const T0 = oeT(f.pe),
+        b = f.x1 - f.x0,
+        hh = f.y1 - f.y0;
+      if (b < 0.2 || hh < 0.2) return;
+      // Fenster/Tür füllt das Feld; Rahmen mittig in der Profiltiefe
+      R.push({
+        id: 'pe' + i,
+        t: f.pe,
+        x: f.x0,
+        v: f.y0,
+        T: { ...T0, b, h: hh, et: OEG_PR_ET + Math.max(0, (P.pt - 0.08) / 2) },
+      });
+    });
+  }
+  G.oe.forEach((q) => R.push({ id: q.id, t: q.t, x: q.x, v: q.v, T: oegTyp(G, q, H) }));
+  return R;
+}
 /** Verbundene Felder der Gruppe (geprüft). */
 function oegVerbunden(G) {
   return (Array.isArray(G.vb) ? G.vb : []).filter(
@@ -244,6 +374,8 @@ function oegZellen(G) {
       z.a = ['lo', 'ba', 'bl'].includes(f.a) ? f.a : ''; // Art: Loggia, Balkon, Balkon + Loggia (sonst Fläche)
       if (z.a === 'bl') z.tb = +f.tb > 0 ? +f.tb : 1.2; // Auskragung der Balkonplatte
       if (z.a) Object.assign(z, oegGel(f)); // Geländer
+      if (OEG_PR_FU[f.pf]) z.pf = f.pf; // Pfosten-Riegel: Füllung und Einsatz
+      if (f.pe) z.pe = String(f.pe);
     }
   });
   return Z;
@@ -253,6 +385,8 @@ function oegZellen(G) {
  * nebeneinander/übereinander werden zu einem Rechteck – keine Seitenflächen zwischen ihnen).
  */
 function oegFlaechenG(G) {
+  // Pfosten-Riegel: die Felder sind Glas/Paneel in einer Ebene – keine Wandflächen, Rück- oder Vorsprünge
+  if (oegPr(G)) return [];
   const Z = oegZellen(G).map((z) => ({ ...z, t: z.t || G.t || '' })),
     key = (z) =>
       z.d +
@@ -734,8 +868,8 @@ function oegZeichnen(g, b, V, ox, o) {
   const p = FDS.grVor;
   if (p && FDS.tool === 'gr' && !FDS.grZug && o.sel !== undefined && !ox) {
     rahmen(p.u, p.v, p.G, true, 0.7);
-    p.G.oe.forEach((q) => {
-      const T = oeT(q.t);
+    oegElemente(p.G, p.G.h).forEach((q) => {
+      const T = q.T;
       oeZeichneEine(g, X, Y, p.u + q.x, p.u + q.x + T.b, p.v + q.v, T, { alpha: 0.5 });
     });
   }
@@ -750,13 +884,19 @@ function oegSymbol(G, w = 44, h = 22) {
     s += `<rect x="${ox + r.x0 * k}" y="${oy - r.y1 * k}" width="${(r.x1 - r.x0) * k}" height="${(r.y1 - r.y0) * k}" fill="${r.t ? fdT(r.t).c : r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
   });
   // Öffnungen mit Einteilung (Rahmen, Pfosten, Riegel – wie in der Ansicht, Mindeststärke 0,6 px)
-  G.oe.forEach((q) => {
-    const T = oegTyp(G, q, G.h),
+  oegElemente(G, G.h).forEach((q) => {
+    const T = q.T,
       x0 = ox + q.x * k,
       y0 = oy - (q.v + T.h) * k;
-    s += `<rect x="${x0}" y="${y0}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : '#fff'}"/>`;
+    s += `<rect x="${x0}" y="${y0}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : T.a === 'pr' ? '#dce8ee' : '#fff'}"/>`;
     try {
-      oeAufteilung(T).stege.forEach(([a, c, d, e]) => {
+      const A = oeAufteilung(T);
+      // Paneele (Pfosten-Riegel)
+      A.felder.forEach((f) => {
+        if (f.fu === 'p')
+          s += `<rect x="${x0 + f.x0 * k}" y="${y0 + (T.h - f.y1) * k}" width="${(f.x1 - f.x0) * k}" height="${(f.y1 - f.y0) * k}" fill="${T.rf}" opacity=".75"/>`;
+      });
+      A.stege.forEach(([a, c, d, e]) => {
         s += `<rect x="${x0 + a * k}" y="${y0 + (T.h - e) * k}" width="${Math.max(0.6, (c - a) * k)}" height="${Math.max(0.6, (e - d) * k)}" fill="${T.rf}"/>`;
       });
     } catch (e) {
@@ -813,7 +953,7 @@ function oegBibliothekHtml() {
       ? S.oeg
           .map(
             (G) =>
-              `<div class="li${FDS.grT === G.k ? ' on' : ''}" onclick="oegWahl('${G.k}')" title="Wählen – dann in die Ansicht klicken (Umschalt: ohne Einrasten)">${oegSymbol(G, 48, 26)}<span>${esc(G.n)}<small>${fdFmt(G.l)} m · ${G.oe.length} Öffnung${G.oe.length === 1 ? '' : 'en'}${zahl[G.k] ? ' · ' + zahl[G.k] + '× gesetzt' : ''}</small></span></div>`,
+              `<div class="li${FDS.grT === G.k ? ' on' : ''}" onclick="oegWahl('${G.k}')" title="Wählen – dann in die Ansicht klicken (Umschalt: ohne Einrasten)">${oegSymbol(G, 48, 26)}<span>${esc(G.n)}<small>${fdFmt(G.l)} m · ${oegPr(G) ? 'Pfosten-Riegel' : G.oe.length + ' Öffnung' + (G.oe.length === 1 ? '' : 'en')}${zahl[G.k] ? ' · ' + zahl[G.k] + '× gesetzt' : ''}</small></span></div>`,
           )
           .join('')
       : '<div class="leer">Noch keine Gruppe – im Konfigurator anlegen.</div>') +
@@ -848,6 +988,7 @@ function oegPruefen(L) {
       .map((q, i) => ({ id: String(q.id || 'o' + i), t: String(q.t), x: +q.x || 0, v: +q.v || 0 })),
     t: S.ft.some((x) => x.k === G.t) ? G.t : '',
     sz: G.sz ? { an: !!G.sz.an } : undefined,
+    pr: G.pr && G.pr.an ? oegPr(G) : undefined,
     ...oegFelderPruefen(G),
   }));
 }
@@ -866,6 +1007,8 @@ function oegFelderPruefen(G) {
         a: ['lo', 'ba', 'bl'].includes(f.a) ? f.a : '',
         ...(['lo', 'ba', 'bl'].includes(f.a) ? oegGel(f) : {}),
         ...(f.a === 'bl' ? { tb: Math.max(0.2, Math.min(3, +f.tb || 1.2)) } : {}),
+        ...(OEG_PR_FU[f.pf] ? { pf: f.pf } : {}),
+        ...(f.pe ? { pe: String(f.pe) } : {}),
       }));
   (Array.isArray(G.rs) ? G.rs : []).forEach((r) => {
     if (!r || !(+r.b > 0) || !(+r.h > 0)) return;

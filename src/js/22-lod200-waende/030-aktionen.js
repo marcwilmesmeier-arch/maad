@@ -551,6 +551,12 @@ function l2Draw() {
   } catch (err) {
     logErr(err, 'l2Draw>oeGrundriss');
   }
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone und Loggia-Geländer
+  try {
+    l2BalkonGrundriss(x, b, wl);
+  } catch (err) {
+    logErr(err, 'l2Draw>l2BalkonGrundriss');
+  }
   wl.forEach((e) => {
     if (!isSel(e)) return;
     x.strokeStyle = '#3b7bd8';

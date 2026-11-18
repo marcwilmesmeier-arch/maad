@@ -197,6 +197,8 @@ function oeSpalten(T) {
  * Felder: { x0, x1, y0, y1, oa, an, fu, i (Flügelnummer oder 'ol'/'ul'), sr (Sprossen) }.
  */
 function oeAufteilung(T) {
+  // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Pfosten-Riegel-Fassade einer Gruppe
+  if (T.a === 'pr') return oegPrAufteilung(T);
   const b = T.b,
     h = T.h,
     pb = Math.max(0.02, Math.min(T.pb || 0.07, b / 6, h / 6)),
@@ -298,7 +300,17 @@ function oeBaumPruefen(n, tiefe) {
 }
 /** Füllfarbe eines Feldes in der Ansicht. */
 // Glas weiß, 80 % durchsichtig (wie im 3D-Modell); Paneel in der Rahmenfarbe
-const oeFeldFarbe = (T, f) => (T.a === 'to' ? '#c6cbd0' : f.fu === 'p' ? T.rf : 'rgba(255,255,255,0.2)');
+// Leer ('l'): Feld einer Pfosten-Riegel-Fassade mit eingesetztem Fenster bzw. Tür
+const oeFeldFarbe = (T, f) =>
+  f.fu === 'l'
+    ? 'rgba(0,0,0,0)'
+    : T.a === 'to'
+      ? '#c6cbd0'
+      : f.fu === 'p'
+        ? T.rf
+        : T.a === 'pr'
+          ? 'rgba(178,205,220,0.55)' // Glasfassade: leicht getönt, damit sie sich von der Wand abhebt
+          : 'rgba(255,255,255,0.2)';
 
 /** Gespeicherte Öffnungen einer Ansicht (Liste wird bei Bedarf angelegt). */
 function oeDaten(b, vk, mk) {
