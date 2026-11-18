@@ -416,6 +416,14 @@ function hlApply() {
             g.add(tm);
           }
         });
+      // Böden der Balkone und Loggien (zählen zur Terrassenfläche)
+      if (k === 'terr')
+        lbBoeden(b).forEach((o) => {
+          const [a, c, d, e] = o.pts,
+            y = o.y + 0.04,
+            pos = [a, c, d, a, d, e].flatMap((p) => [p[0], y, p[1]]);
+          g.add(new T.Mesh(gm(pos), mt));
+        });
       if (k === 'fas' || k === 'terr')
         pxPolys(b).forEach((o) => {
           const d = +o.p.d || 0;

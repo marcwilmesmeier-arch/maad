@@ -703,23 +703,44 @@ function okGrZeichnen() {
   g.lineTo(xl, P.Y(G.h));
   g.stroke();
   g.textBaseline = 'bottom';
-  for (let i = 0; i < TX.length - 1; i++)
-    if ((TX[i + 1] - TX[i]) * P.s > 26)
-      g.fillText(fdFmt(TX[i + 1] - TX[i]), P.X((TX[i] + TX[i + 1]) / 2), yo - 3);
-  for (let i = 0; i < TY.length - 1; i++)
+  // Klickflächen der Maßzahlen (Eingabe per Klick, okGrMassEingabe): Abschnitt i von a0 bis a1
+  OK.gmass = [];
+  for (let i = 0; i < TX.length - 1; i++) {
+    const cx = P.X((TX[i] + TX[i + 1]) / 2);
+    if ((TX[i + 1] - TX[i]) * P.s > 26) g.fillText(fdFmt(TX[i + 1] - TX[i]), cx, yo - 3);
+    OK.gmass.push({
+      a: 'x',
+      i,
+      a0: TX[i],
+      a1: TX[i + 1],
+      n: TX.length - 1,
+      r: [cx - 24, yo - 18, cx + 24, yo + 4],
+    });
+  }
+  for (let i = 0; i < TY.length - 1; i++) {
+    const cy = P.Y((TY[i] + TY[i + 1]) / 2);
     if ((TY[i + 1] - TY[i]) * P.s > 26) {
       g.save();
-      g.translate(xl - 3, P.Y((TY[i] + TY[i + 1]) / 2));
+      g.translate(xl - 3, cy);
       g.rotate(-Math.PI / 2);
       g.fillText(fdFmt(TY[i + 1] - TY[i]), 0, 0);
       g.restore();
     }
+    OK.gmass.push({
+      a: 'y',
+      i,
+      a0: TY[i],
+      a1: TY[i + 1],
+      n: TY.length - 1,
+      r: [xl - 18, cy - 24, xl + 4, cy + 24],
+    });
+  }
   const hint = okE('okHint');
   if (hint)
     hint.textContent =
       OK.gwz === 'x' || OK.gwz === 'y'
         ? 'Klick = Teilungslinie setzen (rastet an Fensterkanten ein, Umschalt = frei) · Esc = zurück zu „Auswählen“'
-        : 'Öffnung ziehen · Feld anklicken (Umschalt = mehrere) · Teilung anklicken + Entf = nur an dieser Stelle entfernen · gestrichelt: Länge der Gruppe';
+        : 'Öffnung ziehen · Feld anklicken (Umschalt = mehrere) · Teilung ziehen = verschieben, anklicken + Entf = nur an dieser Stelle entfernen · Maß oben/links anklicken = eingeben';
   // Werkzeugleiste über der Ansicht
   let wz = okE('okGwz');
   if (!wz) {
@@ -763,6 +784,14 @@ function okGrDown(e) {
   const [px, py] = okPos(e),
     x = P.iX(px),
     y = P.iY(py);
+  // Klick auf eine Maßzahl der Teilungsketten: Eingabefeld
+  const mk = (OK.gmass || []).find((m) => px >= m.r[0] && px <= m.r[2] && py >= m.r[1] && py <= m.r[3]);
+  if (mk && mk.n > 1) {
+    // erst nach dem Klick anlegen: sonst nimmt der Klick dem Feld gleich wieder den Fokus
+    e.preventDefault();
+    setTimeout(() => okGrMassEingabe(mk, px, py), 0);
+    return;
+  }
   // Teilungslinie setzen
   if (OK.gwz === 'x' || OK.gwz === 'y') {
     const a = OK.gwz,
@@ -835,6 +864,56 @@ function okGrDown(e) {
   okGrZeichnen();
 }
 /**
+ * Maß eines Abschnitts der Teilungskette eingeben: verschiebt die Teilung am Ende des Abschnitts (beim letzten die am
+ * Anfang – der Gruppenrand bleibt). Feldeinstellungen wandern mit (okGrLinieSchieben).
+ */
+function okGrMassEingabe(m, px, py) {
+  const cw = okE('okCw');
+  if (!cw) return;
+  let inp = okE('okGmass');
+  if (inp) inp.remove();
+  inp = document.createElement('input');
+  inp.id = 'okGmass';
+  inp.type = 'text';
+  inp.inputMode = 'decimal';
+  inp.value = fdFmt(m.a1 - m.a0);
+  inp.setAttribute('aria-label', (m.a === 'x' ? 'Breite' : 'Höhe') + ' des Abschnitts in Metern');
+  inp.style.cssText = `position:absolute;left:${Math.round(px - 34)}px;top:${Math.round(py - 13)}px;width:68px;height:24px;font:12px system-ui,sans-serif;text-align:center;font-variant-numeric:tabular-nums;border:1px solid #f07a12;border-radius:6px;background:#fff;z-index:3`;
+  cw.appendChild(inp);
+  inp.focus();
+  inp.select();
+  let zu = false;
+  const fertig = (ok) => {
+    // nur einmal: das Entfernen löst selbst noch ein blur aus
+    if (zu) return;
+    zu = true;
+    const v = parseFloat(inp.value.replace(',', '.'));
+    inp.remove();
+    if (!ok || !isFinite(v)) return;
+    const G = okGr();
+    if (!G) return;
+    // letzter Abschnitt: Teilung am Anfang verschieben, sonst die am Ende
+    const ende = m.i < m.n - 1,
+      lage = ende ? m.a0 + v : m.a1 - v,
+      alt = ende ? m.a1 : m.a0,
+      k = m.a === 'x' ? 'xs' : 'ys',
+      T = oegTeilung(G)[k].filter((w) => Math.abs(w - alt) >= 0.004),
+      lo = Math.max(...T.filter((w) => w < alt)),
+      hi = Math.min(...T.filter((w) => w > alt)),
+      i = (G[k] || []).findIndex((w) => Math.abs(w - alt) < 0.004);
+    if (i < 0) return;
+    const neu = Math.max(lo + 0.05, Math.min(hi - 0.05, lage));
+    okGrLinieSchieben(G, { a: m.a, k, i, v: alt, lo, hi }, Math.round(neu * 1000) / 1000);
+    oeAktualisieren();
+  };
+  inp.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') fertig(true);
+    if (e.key === 'Escape') fertig(false);
+  });
+  inp.addEventListener('blur', () => fertig(true));
+}
+/**
  * Teilungslinie anfassen (Ziehen verschiebt die ganze Linie): a 'x' senkrecht, 'y' waagerecht, v Lage. Grenzen sind
  * die Nachbarlinien bzw. Gruppenränder.
  */
@@ -905,6 +984,13 @@ function okGrMove(e) {
     return;
   }
   if (!z || !q) {
+    // Maßzahl der Teilungsketten: anklicken = eingeben
+    if (
+      (OK.gmass || []).some((m) => m.n > 1 && px >= m.r[0] && px <= m.r[2] && py >= m.r[1] && py <= m.r[3])
+    ) {
+      e.currentTarget.style.cursor = 'text';
+      return;
+    }
     const an = G.oe.some(
       (o) => x >= o.x && x <= o.x + oegTyp(G, o, G.h).b && y >= o.v && y <= o.v + oegTyp(G, o, G.h).h,
     );

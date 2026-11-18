@@ -991,10 +991,16 @@ function dimLabels() {
       if (k === 'fas' && !ug) FA.push([f, z0, z1]);
     });
     if (k === 'fas') zoFasLab(FA).forEach((o) => out.push(o));
-    if (k === 'terr')
+    if (k === 'terr') {
       terrOf(b).lv.forEach((L2) =>
         out.push({ p: new T.Vector3(L2.cx, L2.y, L2.cz), t: f1(L2.area, 1) + ' m²' }),
       );
+      // Balkone und Loggien
+      lbBoeden(b).forEach((o) => {
+        const c = cen(o.pts);
+        out.push({ p: new T.Vector3(c[0], o.y + 0.3, c[1]), t: f1(o.area, 1) + ' m²' });
+      });
+    }
     const L = b.levels.at(-1),
       c = L ? cen(lf(b, L)) : [0, 0],
       top = b._y + b._h,

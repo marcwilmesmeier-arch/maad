@@ -29,12 +29,37 @@ function l2BalkonListe(b) {
         p1: W(x.u1),
         y0: base + x.v0,
         n: V.n,
+        d: Math.abs(x.d || 0),
         tb: x.tb || 1.5,
         gel: oegGelBei(x, x.v0),
       });
     }),
   );
   return R;
+}
+/**
+ * Bodenflächen der Balkone und Loggien (für die Terrassen-Hervorhebung der Metriken): je Feld ein Rechteck im
+ * Grundriss auf Höhe des Bodens – Balkon vor der Fassade (Auskragung), Loggia dahinter (Rücksprung), beides bei
+ * Balkon + Loggia. [{ pts, y, area }]
+ */
+function lbBoeden(b) {
+  const out = [];
+  try {
+    l2BalkonListe(b).forEach((x) => {
+      const n = x.n,
+        A = x.p0,
+        B = x.p1,
+        vor = x.a === 'ba' || x.a === 'bl' ? x.tb : 0,
+        zur = x.a === 'lo' || x.a === 'bl' ? x.d : 0,
+        P = (p, s) => [p[0] + n[0] * s, p[1] + n[1] * s];
+      if (vor + zur < 0.05) return;
+      const pts = [P(A, -zur), P(B, -zur), P(B, vor), P(A, vor)];
+      out.push({ pts, y: x.y0, area: Math.hypot(B[0] - A[0], B[1] - A[1]) * (vor + zur) });
+    });
+  } catch (e) {
+    logErr(e, 'lbBoeden');
+  }
+  return out;
 }
 /** Quader zwischen den Grundrisspunkten (Strecke A–B, Breite w quer, versetzt um o nach n) von ya bis yb. */
 function l2Quader(pos, A, B, n, o, w, ya, yb) {
