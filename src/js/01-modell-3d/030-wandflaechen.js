@@ -1376,7 +1376,7 @@ const edv = () => {
 function drawOv(cur) {
   // ── Erweiterung aus 11-bearbeiten/030-riegel.js: Vorschau des Riegels (Band um die Mittellinie)
   if (S.tool === 'f' && S.shape === 'rieg' && !S.closed)
-    S.prev = S.draft.length ? rgBand(cur ? S.draft.concat([cur]) : S.draft, rgWerte().w) : null;
+    S.prev = S.draft.length ? rgBand(cur ? S.draft.concat([cur]) : S.draft, rgWerte().w, rgWerte().au) : null;
   drawOv0(cur);
   updRM();
   if (S.tool === 'f' && S.shape === 'rieg' && !S.closed) {

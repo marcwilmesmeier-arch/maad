@@ -8,23 +8,31 @@
 
 const RG = { el: null, svg: null, zug: null };
 // Eingabefelder des Riegels im Zeichen-Panel (leer = Vorgabe)
-Object.assign(S.num, { rb: '', rg: '', rh: '' });
+Object.assign(S.num, { rb: '', rg: '', rh: '', ra: 'm' });
 /** Eingaben des Riegels im Panel (mit Vorgaben). */
 function rgWerte() {
   const n = (k, d, a, z) => {
     const v = parseFloat(String(S.num[k] ?? '').replace(',', '.'));
     return isFinite(v) ? Math.max(a, Math.min(z, v)) : d;
   };
-  return { w: n('rb', 12, 2, 60), ng: Math.round(n('rg', 4, 1, 40)), gh: n('rh', 3, 2, 8) };
+  return {
+    w: n('rb', 12, 2, 60),
+    ng: Math.round(n('rg', 4, 1, 40)),
+    gh: n('rh', 3, 2, 8),
+    au: ['l', 'r'].includes(S.num.ra) ? S.num.ra : 'm',
+  };
 }
 /**
  * Umriss eines Riegels: Linie pts um w/2 nach beiden Seiten versetzt, Gehrung an den Ecken (bei sehr spitzen Winkeln
  * begrenzt). Ergebnis: geschlossener Umriss oder null.
  */
-function rgBand(pts, w) {
+function rgBand(pts, w, au = 'm') {
   const P = pts.filter((q, i, a) => !i || Math.hypot(q[0] - a[i - 1][0], q[1] - a[i - 1][1]) > 0.05);
   if (P.length < 2 || !(w > 0)) return null;
-  const h = w / 2,
+  // Ausrichtung zur Linie: m mittig, l linksbündig (Linie = linke Kante in Zeichenrichtung), r rechtsbündig
+  // (Normale m zeigt in Zeichenrichtung nach rechts, da z nach Süden zeigt: linksbündig = Körper auf der m-Seite)
+  const hl = au === 'l' ? w : au === 'r' ? 0 : w / 2,
+    hr = w - hl,
     n = P.length,
     L = [],
     R = [],
@@ -44,8 +52,8 @@ function rgBand(pts, w) {
         c = Math.max(0.25, (s[0] * n1[0] + s[1] * n1[1]) / sl);
       m = [s[0] / sl / c, s[1] / sl / c];
     }
-    L.push([P[i][0] + m[0] * h, P[i][1] + m[1] * h]);
-    R.push([P[i][0] - m[0] * h, P[i][1] - m[1] * h]);
+    L.push([P[i][0] + m[0] * hl, P[i][1] + m[1] * hl]);
+    R.push([P[i][0] - m[0] * hr, P[i][1] - m[1] * hr]);
   }
   return L.concat(R.reverse());
 }
@@ -53,7 +61,7 @@ function rgBand(pts, w) {
 function rgFertig() {
   const P = S.draft.filter((q, i, a) => !i || Math.hypot(q[0] - a[i - 1][0], q[1] - a[i - 1][1]) > 0.3);
   const W = rgWerte(),
-    fp = rgBand(P, W.w);
+    fp = rgBand(P, W.w, W.au);
   if (!fp || area(fp) < 1) {
     szMsg('Riegel: mindestens zwei Punkte der Mittellinie klicken');
     return;
@@ -73,7 +81,7 @@ function rgFertig() {
     ref: S.refH != null ? S.refH : gh(P[0][0], P[0][1]),
     levels: Array.from({ length: W.ng }, (_, i) => ({ name: i ? i + '.OG' : 'EG', h: W.gh })),
     roof: mkRoof(),
-    riegel: { pts: P.map((q) => q.slice()), w: W.w },
+    riegel: { pts: P.map((q) => q.slice()), w: W.w, au: W.au },
   };
   S.n++;
   S.bld.push(b);
@@ -90,7 +98,7 @@ function rgFertig() {
 }
 /** Riegel neu aufbauen (nach Ziehen eines Punkts oder geänderter Breite/Geschosse). */
 function rgNeu(b) {
-  const fp = rgBand(b.riegel.pts, b.riegel.w);
+  const fp = rgBand(b.riegel.pts, b.riegel.w, b.riegel.au);
   if (!fp) return;
   b.fp = fp;
   b.levels.forEach((l) => {
@@ -104,11 +112,29 @@ function rgNeu(b) {
 function rgCard(b) {
   if (!b || !rgAbgleich(b)) return '';
   const h = b.levels.length ? b.levels[b.levels.length - 1].h : 3;
-  return `<h4>Riegel</h4><div class="card"><div class="okg" style="display:grid;grid-template-columns:1fr 90px;gap:6px;align-items:center"><span>Breite (m)</span><input type="number" step="0.1" value="${+b.riegel.w.toFixed(2)}" onchange="rgSetze('w',this.value)"><span>Geschosse</span><input type="number" step="1" min="1" value="${b.levels.length}" onchange="rgSetze('ng',this.value)"><span>Geschosshöhe (m)</span><input type="number" step="0.05" value="${+(+h).toFixed(2)}" onchange="rgSetze('gh',this.value)"></div><div class="mu" style="margin-top:6px">Mittellinie im Modell: End- und Eckpunkte ziehen (Fang wie beim Zeichnen, Shift = frei).</div></div>`;
+  return `<h4>Riegel</h4><div class="card"><div class="okg" style="display:grid;grid-template-columns:1fr 90px;gap:6px;align-items:center"><span>Breite (m)</span><input type="number" step="0.1" value="${+b.riegel.w.toFixed(2)}" onchange="rgSetze('w',this.value)"><span>Geschosse</span><input type="number" step="1" min="1" value="${b.levels.length}" onchange="rgSetze('ng',this.value)"><span>Geschosshöhe (m)</span><input type="number" step="0.05" value="${+(+h).toFixed(2)}" onchange="rgSetze('gh',this.value)"><span>Ausrichtung zur Linie</span>${rgAusrWahl(b.riegel.au || 'm', "rgSetze('au',this.value)")}</div><div class="mu" style="margin-top:6px">Mittellinie im Modell: End- und Eckpunkte ziehen (Fang wie beim Zeichnen, Shift = frei).</div></div>`;
+}
+/** Auswahl der Ausrichtung (mittig, linksbündig, rechtsbündig). */
+function rgAusrWahl(cur, fn) {
+  return `<select onchange="${fn}" title="Lage des Körpers zur gezeichneten Linie (links/rechts in Zeichenrichtung)">${[
+    ['m', 'mittig'],
+    ['l', 'linksbündig'],
+    ['r', 'rechtsbündig'],
+  ]
+    .map(([k, n]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${n}</option>`)
+    .join('')}</select>`;
 }
 function rgSetze(k, v) {
   const b = S.sel;
   if (!b || !b.riegel) return;
+  if (k === 'au') {
+    hist();
+    b.riegel.au = ['l', 'r'].includes(v) ? v : 'm';
+    rgNeu(b);
+    hpos();
+    rr();
+    return;
+  }
   const n = parseFloat(String(v).replace(',', '.'));
   if (!isFinite(n)) return;
   hist();
@@ -133,7 +159,7 @@ function rgAbgleich(b) {
   if (!b || !b.riegel) return false;
   const sig = JSON.stringify(b.fp);
   if (b._rgSig === sig) return true;
-  const A = rgBand(b.riegel.pts, b.riegel.w),
+  const A = rgBand(b.riegel.pts, b.riegel.w, b.riegel.au),
     B = b.fp,
     passt = (X) =>
       X && X.length === B.length && X.every((p, i) => Math.hypot(p[0] - B[i][0], p[1] - B[i][1]) < 0.05);

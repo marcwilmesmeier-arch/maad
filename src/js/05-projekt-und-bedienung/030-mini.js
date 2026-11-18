@@ -242,7 +242,7 @@ function shapePanel() {
             : sh === 'poly'
               ? 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Seitenzahl tippen, z. B. 8s + Enter.'
               : 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Oder Radius tippen + Enter.';
-  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh === 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh === 'circ' ? inp('r', 'Radius (m)', 'frei') : sh === 'rieg' ? inp('rb', 'Breite (m)', '12') + (S.dm === 'area' ? '' : inp('rg', 'Geschosse', '4') + inp('rh', 'Geschosshöhe (m)', '3')) : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh !== 'free' && sh !== 'rieg' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
+  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh === 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh === 'circ' ? inp('r', 'Radius (m)', 'frei') : sh === 'rieg' ? inp('rb', 'Breite (m)', '12') + (S.dm === 'area' ? '' : inp('rg', 'Geschosse', '4') + inp('rh', 'Geschosshöhe (m)', '3')) + 'Ausrichtung zur Linie' + rgAusrWahl(S.num.ra || 'm', 'S.num.ra=this.value;drawOv()') : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh !== 'free' && sh !== 'rieg' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
 }
 function cutMove(e) {
   const c = S.cut,

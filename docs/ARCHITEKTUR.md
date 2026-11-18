@@ -97,8 +97,8 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Balkone der Fassadengruppen (`lbFlaechen`: Breite × Rücksprung bzw. Auskragung); im Excel-Blatt Terrassen je
   Geschoss und Art.
 - Riegel (`11-bearbeiten/030-riegel.js`, Zeichenform `rieg` in `SHP`): Mittellinie wie die Freiform zeichnen (gleiche
-  Fänge, Abschluss in `draftClose` → `rgFertig`), Umriss `rgBand` (Breite, Gehrung). Gebäude merkt sich `b.riegel =
-  { pts, w }` (Verlauf, Speichern, Kopie); gewählt: Mittellinie mit ziehbaren Punkten (`rgTakt`, DOM über der Ansicht),
+  Fänge, Abschluss in `draftClose` → `rgFertig`), Umriss `rgBand` (Breite, Gehrung, Ausrichtung mittig/linksbündig/rechtsbündig in Zeichenrichtung). Gebäude merkt sich `b.riegel =
+{ pts, w }` (Verlauf, Speichern, Kopie); gewählt: Mittellinie mit ziehbaren Punkten (`rgTakt`, DOM über der Ansicht),
   Karte „Riegel“ (Breite, Geschosse, Geschosshöhe). `rgAbgleich` nimmt die Linie bei Verschieben/Drehen mit und löst
   sie, wenn der Umriss anders verändert wurde.
 - Fassadengruppen je Abschnitt: Fläche/Flucht in der Kontextleiste schreibt `b.fk.abU['Seite|Geschoss'] =
