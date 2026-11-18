@@ -1374,8 +1374,18 @@ const edv = () => {
   return a && ((a === S.draft && S.dk === 'circ') || (S.sel && S.sel.kind === 'circ' && isCt(a))) ? null : a;
 };
 function drawOv(cur) {
+  // ── Erweiterung aus 11-bearbeiten/030-riegel.js: Vorschau des Riegels (Band um die Mittellinie)
+  if (S.tool === 'f' && S.shape === 'rieg' && !S.closed)
+    S.prev = S.draft.length ? rgBand(cur ? S.draft.concat([cur]) : S.draft, rgWerte().w) : null;
   drawOv0(cur);
   updRM();
+  if (S.tool === 'f' && S.shape === 'rieg' && !S.closed) {
+    $('hud').textContent =
+      'Riegel: Mittellinie klicken (auch über Eck) · Enter/Doppelklick = fertig · Breite ' +
+      f1(rgWerte().w, 1).replace('.', ',') +
+      ' m';
+    return;
+  }
   if (S.tool === 'f' && S.shape !== 'free' && !S.closed)
     $('hud').textContent =
       S.hs ||

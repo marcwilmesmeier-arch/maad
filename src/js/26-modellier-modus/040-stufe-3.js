@@ -18,6 +18,7 @@ function skCloneB(b) {
       fk: b.fk, // Gebäudekonfigurator (19-fassadendesigner/120)
       l2: b.l2,
       voids: b.voids,
+      riegel: b.riegel,
     }),
   );
   do {

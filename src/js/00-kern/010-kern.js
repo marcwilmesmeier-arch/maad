@@ -125,6 +125,7 @@ const SHP = [
   { k: 'rect', l: 'r', n: 'Rechteck', ic: '▭' },
   { k: 'circ', l: 'c', n: 'Kreis', ic: '◯' },
   { k: 'poly', l: 'p', n: 'Polygon', ic: '⬡' },
+  { k: 'rieg', l: 'g', n: 'Riegel', ic: '▬' }, // Mittellinie zeichnen (11-bearbeiten/030-riegel.js)
 ];
 const SHL = { free: 'f', rect: 'r', circ: 'c', poly: 'p' };
 

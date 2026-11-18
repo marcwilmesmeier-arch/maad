@@ -99,6 +99,12 @@ function start() {
     mesh(b);
   });
   drInit();
+  // Riegel: Mittellinie und Punkte des gewählten Riegels (11-bearbeiten/030)
+  try {
+    rgInit();
+  } catch (e) {
+    logErr(e, 'start');
+  }
   // Navigationswürfel unten rechts (16-darstellung-erweitert/070)
   try {
     nwInit();

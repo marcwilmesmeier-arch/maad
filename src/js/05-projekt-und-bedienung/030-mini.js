@@ -233,14 +233,16 @@ function shapePanel() {
     inp = (k, t, ph) =>
       `${t}<input type="number" step="0.1" placeholder="${ph}" value="${S.num[k]}" oninput="S.num.${k}=this.value;if(S.lastQ)shapeUpd(S.lastQ)" onkeydown="if(event.key=='Enter')shapeOk()">`,
     hint =
-      sh === 'free'
-        ? 'Punkte klicken, Enter oder Doppelklick schließt. Nahe Punkte, Kanten und rechte Winkel rasten ein (Shift = frei).'
-        : sh === 'rect'
-          ? '1. Klick = erste Ecke, 2. Klick = gegenüberliegende Ecke. Oder nach dem 1. Klick Länge;Breite tippen + Enter.'
-          : sh === 'poly'
-            ? 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Seitenzahl tippen, z. B. 8s + Enter.'
-            : 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Oder Radius tippen + Enter.';
-  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh === 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh === 'circ' ? inp('r', 'Radius (m)', 'frei') : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh !== 'free' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
+      sh === 'rieg'
+        ? 'Mittellinie klicken (auch über Eck), Enter oder Doppelklick beendet. Fänge wie bei der Freiform (Shift = frei). Danach lassen sich End- und Eckpunkte ziehen.'
+        : sh === 'free'
+          ? 'Punkte klicken, Enter oder Doppelklick schließt. Nahe Punkte, Kanten und rechte Winkel rasten ein (Shift = frei).'
+          : sh === 'rect'
+            ? '1. Klick = erste Ecke, 2. Klick = gegenüberliegende Ecke. Oder nach dem 1. Klick Länge;Breite tippen + Enter.'
+            : sh === 'poly'
+              ? 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Seitenzahl tippen, z. B. 8s + Enter.'
+              : 'Mittelpunkt klicken, Radius ziehen, Klick = fertig. Oder Radius tippen + Enter.';
+  return `<h4>${S.dm === 'area' ? 'Fläche zeichnen' : 'Gebäude zeichnen'}</h4><div class="card"><div style="display:flex;gap:4px;margin-bottom:6px">${SHP.map((x) => btn(x.k, x.n)).join('')}</div>${sh === 'rect' ? inp('l', 'Länge (m)', 'frei') + inp('w', 'Breite (m)', 'frei') + inp('a', 'Drehung (°)', '0') : sh === 'circ' ? inp('r', 'Radius (m)', 'frei') : sh === 'rieg' ? inp('rb', 'Breite (m)', '12') + (S.dm === 'area' ? '' : inp('rg', 'Geschosse', '4') + inp('rh', 'Geschosshöhe (m)', '3')) : ''}<div style="color:var(--mu);margin-top:6px">${hint}</div>${sh !== 'free' && sh !== 'rieg' ? '<button class="pri" onclick="shapeOk()">Fläche erzeugen</button>' : ''}</div>`;
 }
 function cutMove(e) {
   const c = S.cut,
@@ -1303,7 +1305,8 @@ cv.addEventListener('pointerup', (e) => {
   const g = ground(e);
   if (!g) return;
   const A = edv();
-  if (S.tool === 'f' && !S.closed && S.shape !== 'free') {
+  // Riegel sammelt Punkte wie die Freiform (11-bearbeiten/030-riegel.js)
+  if (S.tool === 'f' && !S.closed && S.shape !== 'free' && S.shape !== 'rieg') {
     shapeClick(e);
     return;
   }
@@ -1486,6 +1489,11 @@ function draftClose() {
       streetFinish();
       return;
     }
+    // ── Erweiterung aus 11-bearbeiten/030-riegel.js: Mittellinie → Gebäude bzw. Fläche
+    if (S.shape === 'rieg') {
+      rgFertig();
+      return;
+    }
     S.draft = S.draft.filter((q, i, a) => !i || Math.hypot(q[0] - a[i - 1][0], q[1] - a[i - 1][1]) > 0.3);
     if (S.draft.length > 2 && area(S.draft) > 1) {
       S.closed = true;
@@ -1523,6 +1531,7 @@ function hist() {
         fk: b.fk, // Gebäudekonfigurator (19-fassadendesigner/120)
         l2: b.l2,
         voids: b.voids,
+        riegel: b.riegel, // Mittellinie (11-bearbeiten/030-riegel.js)
       })),
     ),
   );

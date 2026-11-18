@@ -247,7 +247,7 @@ function rr() {
         const sf = selOk(),
           sk = sf && sf.b === b ? sf.k : -1;
         h =
-          `<h4>Gebäude</h4>${refInp(b)}Name<input type="text" value="${esc(b.name || b.id)}" onchange="rn(this.value)"><h4>Auswertung</h4><div class="card">${kv('Grundfläche (EG)', f1(larea(b, b.levels[0]) + (PXM.lv[0] || 0)) + ' m²')}${kv('BGF', f1(bgfOf(b)) + ' m²')}${kv('Höhe (inkl. Dach)', f1(b._h + (b._roofH || 0), 2) + ' m')}${kv('Geschosse', b.levels.length)}</div>${ruleCard(b)}${roofCard(b)}${fkCard(b)}${patchCard()}<h4>Nutzung</h4><div class="card" style="padding:8px 10px"><div style="color:var(--mu);font-size:11px;margin-bottom:4px">Für alle Geschosse und das Dach setzen (überschreibt einzelne Nutzungen)</div>${useSel(b)}</div><h4>Geschosse</h4>` +
+          `<h4>Gebäude</h4>${refInp(b)}Name<input type="text" value="${esc(b.name || b.id)}" onchange="rn(this.value)"><h4>Auswertung</h4><div class="card">${kv('Grundfläche (EG)', f1(larea(b, b.levels[0]) + (PXM.lv[0] || 0)) + ' m²')}${kv('BGF', f1(bgfOf(b)) + ' m²')}${kv('Höhe (inkl. Dach)', f1(b._h + (b._roofH || 0), 2) + ' m')}${kv('Geschosse', b.levels.length)}</div>${rgCard(b)}${ruleCard(b)}${roofCard(b)}${fkCard(b)}${patchCard()}<h4>Nutzung</h4><div class="card" style="padding:8px 10px"><div style="color:var(--mu);font-size:11px;margin-bottom:4px">Für alle Geschosse und das Dach setzen (überschreibt einzelne Nutzungen)</div>${useSel(b)}</div><h4>Geschosse</h4>` +
           roofRow(b) +
           b.levels
             .map((l, i) => {
@@ -440,6 +440,7 @@ const snapB = () =>
     fk: b.fk, // Gebäudekonfigurator (19-fassadendesigner/120)
     l2: b.l2,
     voids: b.voids,
+    riegel: b.riegel, // Mittellinie (11-bearbeiten/030-riegel.js)
   }));
 addEventListener('keydown', (e) => {
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable) return;
