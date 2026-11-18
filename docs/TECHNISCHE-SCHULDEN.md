@@ -249,3 +249,8 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Loggien an Gebäudeecken: liegen auf beiden Seiten einer Ecke Loggien näher an der Ecke als ihre Tiefe, reichen
   Fenster der einen in die Loggia der anderen (Wände werden beschnitten, Fenster nicht). Abhilfe: Gruppen mit Versatz
   bzw. Abstand zur Ecke setzen; später Eckregel beim Platzieren (fkAnwenden).
+
+- Server-Browsertest (`npm run check`): bleibt gelegentlich mit „page.click: Timeout 30000ms“ hängen und besteht beim
+  zweiten Lauf. Ursache noch nicht gefunden (vermutlich Zeitverhalten beim Seitenwechsel).
+- Pfosten-Riegel an spitzen/stumpfen Ecken: Eckpfosten und Kürzung der Fassaden sind winkelgerecht; der Anschluss der
+  Attika darüber ist nur an einfachen Ecken geprüft.
