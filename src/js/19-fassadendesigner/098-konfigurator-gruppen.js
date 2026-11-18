@@ -193,6 +193,13 @@ function okGrFeldSet(f, v) {
       if (e.a === 'lo' && e.d < 0) e.d = -e.d;
       if (e.a === 'ba') e.d = Math.abs(e.d);
     }
+    // Geländer (Loggia, Balkon): Art, Höhe (cm), Farbe
+    if (f === 'ga' && OEG_GEL[v]) e.ga = v;
+    if (f === 'gh') {
+      const n = +String(v).replace(',', '.');
+      if (isFinite(n)) e.gh = Math.max(50, Math.min(200, n)) / 100;
+    }
+    if (f === 'gc' && /^#[0-9a-f]{6}$/i.test(v)) e.gc = v;
     if (f === 'd') {
       const n = +String(v).replace(',', '.');
       // bis 3 m: Loggien und Balkone sind meist 1,5–2,5 m tief
@@ -424,6 +431,23 @@ ${oeTuer(T) ? '' : `<span title="Freiraum über dem Fenster bis zur Oberkante de
       .join(
         '',
       )}</select><span>${Z.every((z) => z.a === 'ba') ? 'Auskragung (cm)' : 'Tiefe (cm)'}</span><input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="okGrFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig · beim Balkon: Auskragung">
+${
+  Z.every((z) => z.a)
+    ? (() => {
+        const G0 = oegGel(Z[0]),
+          gleich = (k) => Z.every((z) => oegGel(z)[k] === G0[k]);
+        return `<span>Geländer</span><select onchange="okGrFeldSet('ga',this.value)" title="Geländer der Loggia bzw. des Balkons">${Object.entries(
+          OEG_GEL,
+        )
+          .map(
+            ([k, n]) => `<option value="${k}" ${gleich('ga') && G0.ga === k ? 'selected' : ''}>${n}</option>`,
+          )
+          .join(
+            '',
+          )}</select><span>Geländerhöhe (cm)</span><input type="number" step="5" min="50" max="200" value="${gleich('gh') ? Math.round(G0.gh * 100) : ''}" placeholder="gemischt" onchange="okGrFeldSet('gh',this.value)"><span>Geländerfarbe</span><input type="color" value="${G0.gc}" onchange="okGrFeldSet('gc',this.value)" title="Farbe von Stäben, Pfosten, Handlauf bzw. Paneel; beim Glasgeländer Handlauf und Halter">`;
+      })()
+    : ''
+}
 <span>Verlauf</span><select onchange="okGrFeldSet('k',this.value)" title="Schräg: eine Seite springt zurück, die andere bleibt bündig">${[
       ['g', 'gleichmäßig'],
       ['l', 'schräg – links tief'],
@@ -501,7 +525,21 @@ function okGrZeichnen() {
     g.fillRect(P.X(0), P.Y(G.h), G.l * P.s, G.h * P.s);
   }
   oegFlaechenG(G).forEach((r) => {
-    oegRueckZeichneEins(g, P.X, P.Y, r.x0, r.x1, r.y0, r.y1, r.d, false, r.t ? fdT(r.t).c : null, r.k, r.a);
+    oegRueckZeichneEins(
+      g,
+      P.X,
+      P.Y,
+      r.x0,
+      r.x1,
+      r.y0,
+      r.y1,
+      r.d,
+      false,
+      r.t ? fdT(r.t).c : null,
+      r.k,
+      r.a,
+      r,
+    );
     if (r.d && (r.x1 - r.x0) * P.s > 40) {
       g.fillStyle = '#334155';
       g.font = '10px system-ui,sans-serif';

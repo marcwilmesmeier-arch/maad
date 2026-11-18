@@ -1,7 +1,8 @@
 /* Balkone und Loggien aus den Öffnungsgruppen in LOD 200 (Feldart a: 'ba' Balkon, 'lo' Loggia; 097-oeffnungsgruppen).
    Balkon: Platte 0,20 m an der Feldunterkante, kragt um tb vor die Fassade aus, Stabgeländer an den drei freien Seiten.
    Loggia: der Rücksprung selbst kommt aus der Wandableitung (oeWelt/oeRuecksprungKoerper); hier nur das Geländer in der
-   Fassadenebene. Geländer: Stäbe alle 0,24 m, Handlauf und Fußleiste, 1,00 m über der Feldunterkante. */
+   Fassadenebene. Geländer je Feld (oegGel: Art, Höhe, Farbe): Alu-Stäbe, Relinggeländer, Glas, Paneel oder massive
+   Brüstung, mit Handlauf. */
 const L2BK = new Map(); // Gebäude-ID → { sig, g }
 /** Balkone und Loggien eines Gebäudes in Weltkoordinaten: { a, p0, p1, y0, n, tb }. */
 function l2BalkonListe(b) {
@@ -22,7 +23,7 @@ function l2BalkonListe(b) {
         const s = (uu - pc.ua) / pc.dot;
         return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
       };
-      R.push({ a: x.a, p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, n: V.n, tb: x.tb || 1.5 });
+      R.push({ a: x.a, p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, n: V.n, tb: x.tb || 1.5, gel: oegGel(x) });
     }),
   );
   return R;
@@ -71,6 +72,51 @@ function l2Stabgelaender(pos, A, B, yb) {
   l2Quader(pos, A, B, q, 0, 0.06, yt - 0.04, yt); // Handlauf
   l2Quader(pos, A, B, q, 0, 0.04, yb + 0.05, yb + 0.09); // Fußleiste
 }
+/**
+ * Geländer entlang A–B (Grundriss), Fuß bei yb, je Art (gel.ga): 'st' Stäbe, 'ho' waagerechte Stäbe zwischen Pfosten,
+ * 'gl' Glasscheibe mit Handlauf, 'pa' Paneel mit Pfosten, 'ma' massive Brüstung. teil(farbe) liefert das Positionsfeld
+ * je Farbe ('glas' = Glas, 'wand' = Brüstung in Wandfarbe).
+ */
+function l2Gelaender(teil, A, B, yb, gel) {
+  const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+  if (L < 0.1) return;
+  const ux = (B[0] - A[0]) / L,
+    uz = (B[1] - A[1]) / L,
+    q = [-uz, ux],
+    h = gel.gh,
+    yt = yb + h,
+    F = teil(gel.gc),
+    bei = (t) => [A[0] + ux * t, A[1] + uz * t],
+    pfosten = (t, w) =>
+      l2Quader(F, bei(Math.max(0, t - w / 2)), bei(Math.min(L, t + w / 2)), q, 0, w, yb + 0.02, yt - 0.04),
+    pfostenReihe = (abst, w) => {
+      const k = Math.max(1, Math.round(L / abst));
+      for (let i = 0; i <= k; i++) pfosten(Math.min(L - w / 2, Math.max(w / 2, (i / k) * L)), w);
+    };
+  if (gel.ga === 'ma') {
+    // Brüstung 0,20 m stark in Wandfarbe
+    l2Quader(teil('wand'), A, B, q, 0, 0.2, yb, yt);
+    return;
+  }
+  if (gel.ga === 'gl') {
+    // Glas 2 cm in Haltern, oben Handlauf
+    l2Quader(teil('glas'), A, B, q, 0, 0.02, yb + 0.06, yt - 0.04);
+    l2Quader(F, A, B, q, 0, 0.06, yb, yb + 0.06); // Bodenprofil
+  } else if (gel.ga === 'pa') {
+    pfostenReihe(1.2, 0.04);
+    l2Quader(F, A, B, q, 0, 0.02, yb + 0.1, yt - 0.08);
+  } else if (gel.ga === 'ho') {
+    pfostenReihe(1.2, 0.04);
+    for (let i = 1; i <= 5; i++) {
+      const y = yb + 0.08 + ((yt - 0.12 - (yb + 0.08)) * i) / 5;
+      l2Quader(F, A, B, q, 0, 0.015, y - 0.0075, y + 0.0075);
+    }
+  } else {
+    pfostenReihe(0.12, 0.02);
+    l2Quader(F, A, B, q, 0, 0.04, yb + 0.05, yb + 0.09); // Fußleiste
+  }
+  l2Quader(F, A, B, q, 0, 0.06, yt - 0.04, yt); // Handlauf
+}
 /** Balkone/Loggien der geplanten Gebäude aktuell halten (Takt aus 030-aktionen, nur LOD 200). */
 function l2Balkone() {
   const an = l2on() && !l23(),
@@ -83,8 +129,12 @@ function l2Balkone() {
     if (o && o.sig === sig) return;
     if (o) l2BalkoneWeg(o);
     const L = l2BalkonListe(b),
-      gel = [],
-      pl = [];
+      pl = [],
+      teile = new Map(),
+      teil = (k) => {
+        if (!teile.has(k)) teile.set(k, []);
+        return teile.get(k);
+      };
     L.forEach((x) => {
       const n = x.n,
         A = x.p0,
@@ -100,14 +150,14 @@ function l2Balkone() {
           };
         // Platte von der Fassade bis zur Vorderkante
         l2Quader(pl, A, B, n, t / 2, t, x.y0 - 0.2, x.y0);
-        l2Stabgelaender(gel, ein(Av, A), ein(Bv, B), x.y0);
-        l2Stabgelaender(gel, ein(A, B), ein(Av, Bv), x.y0);
-        l2Stabgelaender(gel, ein(B, A), ein(Bv, Av), x.y0);
+        l2Gelaender(teil, ein(Av, A), ein(Bv, B), x.y0, x.gel);
+        l2Gelaender(teil, ein(A, B), ein(Av, Bv), x.y0, x.gel);
+        l2Gelaender(teil, ein(B, A), ein(Bv, Av), x.y0, x.gel);
       } else {
         // Loggia: Geländer knapp hinter der Fassadenebene
         const ri = [A[0] - n[0] * 0.08, A[1] - n[1] * 0.08],
           rj = [B[0] - n[0] * 0.08, B[1] - n[1] * 0.08];
-        l2Stabgelaender(gel, ri, rj, x.y0);
+        l2Gelaender(teil, ri, rj, x.y0, x.gel);
       }
     });
     const g = new T.Group(),
@@ -116,13 +166,24 @@ function l2Balkone() {
         const ge = new T.BufferGeometry();
         ge.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
         ge.computeVertexNormals();
-        const m = new T.Mesh(ge, new T.MeshLambertMaterial({ color: farbe, side: T.DoubleSide }));
-        m.castShadow = m.receiveShadow = true;
+        const glas = farbe === 'glas',
+          m = new T.Mesh(
+            ge,
+            new T.MeshLambertMaterial({
+              color: glas ? 0xd8e6ee : farbe === 'wand' ? 0xf4f4f2 : farbe,
+              transparent: glas,
+              opacity: glas ? 0.35 : 1,
+              depthWrite: !glas,
+              side: T.DoubleSide,
+            }),
+          );
+        m.castShadow = !glas;
+        m.receiveShadow = true;
         m.raycast = () => {};
         g.add(m);
       };
     mesh(pl, 0xf4f4f2);
-    mesh(gel, 0xa9aeb3);
+    teile.forEach((arr, k) => mesh(arr, k));
     G.l2.add(g);
     L2BK.set(b.id, { sig, g });
   });

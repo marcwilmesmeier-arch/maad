@@ -158,6 +158,21 @@ function oegYAbb(G, H) {
     grenze = ok.length ? Math.min(...ok) - 0.01 : G.h / 2;
   return (y) => (y >= grenze ? y + dH : y);
 }
+/** Geländerarten für Loggia und Balkon (Feld: ga Art, gh Höhe in m, gc Farbe). */
+const OEG_GEL = {
+  st: 'Alu-Stabgeländer',
+  ho: 'Alu-Relinggeländer',
+  gl: 'Glasgeländer',
+  pa: 'Alu-Paneel',
+  ma: 'Massive Brüstung',
+};
+const OEG_GEL0 = { ga: 'st', gh: 1.0, gc: '#a9aeb3' };
+/** Geländer eines Felds (mit Vorgaben). */
+const oegGel = (f) => ({
+  ga: OEG_GEL[f && f.ga] ? f.ga : OEG_GEL0.ga,
+  gh: f && +f.gh > 0.3 ? +f.gh : OEG_GEL0.gh,
+  gc: f && /^#[0-9a-f]{6}$/i.test(f.gc || '') ? f.gc : OEG_GEL0.gc,
+});
 /** Verbundene Felder der Gruppe (geprüft). */
 function oegVerbunden(G) {
   return (Array.isArray(G.vb) ? G.vb : []).filter(
@@ -219,6 +234,7 @@ function oegZellen(G) {
       z.k = f.k === 'l' || f.k === 'r' ? f.k : 'g';
       z.t = f.t || '';
       z.a = f.a === 'lo' || f.a === 'ba' ? f.a : ''; // Art: Loggia, Balkon (sonst Fläche)
+      if (z.a) Object.assign(z, oegGel(f)); // Geländer
     }
   });
   return Z;
@@ -229,7 +245,8 @@ function oegZellen(G) {
  */
 function oegFlaechenG(G) {
   const Z = oegZellen(G).map((z) => ({ ...z, t: z.t || G.t || '' })),
-    key = (z) => z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t + '|' + (z.a || ''),
+    key = (z) =>
+      z.d + '|' + (z.d ? z.k : 'g') + '|' + z.t + '|' + (z.a || '') + (z.a ? '|' + z.ga + z.gh + z.gc : ''),
     zeilen = [];
   // waagerecht zusammenfassen
   const nj = Math.max(-1, ...Z.map((z) => z.j)) + 1;
@@ -239,7 +256,19 @@ function oegFlaechenG(G) {
     Zj.forEach((z) => {
       if (cur && key(cur) === key(z) && Math.abs(cur.x1 - z.x0) < 1e-6) cur.x1 = z.x1;
       else {
-        cur = { x0: z.x0, x1: z.x1, y0: z.y0, y1: z.y1, d: z.d, k: z.d ? z.k : 'g', t: z.t, a: z.a || '' };
+        cur = {
+          x0: z.x0,
+          x1: z.x1,
+          y0: z.y0,
+          y1: z.y1,
+          d: z.d,
+          k: z.d ? z.k : 'g',
+          t: z.t,
+          a: z.a || '',
+          ga: z.ga,
+          gh: z.gh,
+          gc: z.gc,
+        };
         zeilen.push(cur);
       }
     });
@@ -290,6 +319,9 @@ function oegFlaechen(b, V) {
         t: r.t,
         a: r.a || '',
         tb: r.a === 'ba' ? Math.abs(r.d) || 1.5 : 0, // Auskragung des Balkons
+        ga: r.ga,
+        gh: r.gh,
+        gc: r.gc,
         id: I.id + ':f' + k,
         gi: I,
       }),
@@ -302,7 +334,7 @@ function oegRuecksprunge(b, V) {
   return oegFlaechen(b, V).filter((r) => r.d);
 }
 /** Rücksprung in der Ansicht zeichnen: zurückspringend dunkler, vorspringend heller, Schattenkante oben/links. */
-function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art) {
+function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art, gel) {
   const x0 = X(u0),
     x1 = X(u1),
     y0 = Y(v1),
@@ -313,7 +345,7 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art) {
     g.fillRect(x0, y0, x1 - x0, y1 - y0);
   }
   // Balkon/Loggia: Geländer (und Balkonplatte) als Ansichtssymbol
-  if (art) oegArtZeichnen(g, X, Y, u0, u1, v0, art);
+  if (art) oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel);
   if (!d || art === 'ba') {
     g.restore();
     return;
@@ -347,23 +379,45 @@ function oegRueckZeichneEins(g, X, Y, u0, u1, v0, v1, d, an, farbe, k, art) {
   g.stroke();
   g.restore();
 }
-/** Ansichtssymbol für Balkon (Platte und Geländer vor der Wand) bzw. Loggia (Geländer in der Öffnung), 1,00 m hoch. */
-function oegArtZeichnen(g, X, Y, u0, u1, v0, art) {
-  const x0 = X(u0),
+/** Ansichtssymbol für Balkon (Platte und Geländer vor der Wand) bzw. Loggia (Geländer in der Öffnung) – je Geländerart. */
+function oegArtZeichnen(g, X, Y, u0, u1, v0, art, gel) {
+  const G = oegGel(gel),
+    x0 = X(u0),
     x1 = X(u1),
     yb = Y(v0),
-    yh = Y(v0 + 1.0),
+    yh = Y(v0 + G.gh),
     n = Math.max(2, Math.round((u1 - u0) / 0.24));
   g.save();
   g.strokeStyle = '#475569';
   g.lineWidth = 1;
-  g.beginPath();
-  for (let i = 0; i <= n; i++) {
-    const x = x0 + ((x1 - x0) * i) / n;
-    g.moveTo(x, yb);
-    g.lineTo(x, yh);
+  if (G.ga === 'gl') {
+    g.fillStyle = 'rgba(160,190,205,.35)';
+    g.fillRect(x0, yh, x1 - x0, yb - yh);
+  } else if (G.ga === 'ma' || G.ga === 'pa') {
+    g.fillStyle = G.ga === 'ma' ? '#e7e5e1' : G.gc;
+    g.fillRect(x0, yh, x1 - x0, yb - yh);
+    g.strokeRect(x0, yh, x1 - x0, yb - yh);
+  } else {
+    g.beginPath();
+    if (G.ga === 'ho') {
+      // Relinggeländer: Pfosten an den Enden, waagerechte Stäbe
+      [x0, x1].forEach((x) => {
+        g.moveTo(x, yb);
+        g.lineTo(x, yh);
+      });
+      for (let i = 1; i < 5; i++) {
+        const y = yb + ((yh - yb) * i) / 5;
+        g.moveTo(x0, y);
+        g.lineTo(x1, y);
+      }
+    } else
+      for (let i = 0; i <= n; i++) {
+        const x = x0 + ((x1 - x0) * i) / n;
+        g.moveTo(x, yb);
+        g.lineTo(x, yh);
+      }
+    g.stroke();
   }
-  g.stroke();
   g.lineWidth = 2;
   g.beginPath();
   g.moveTo(x0, yh);
@@ -392,6 +446,7 @@ function oegRueckZeichnen(g, b, V, ox) {
       r.t ? fdT(r.t).c : null,
       r.dl === r.dr ? 'g' : r.dl ? 'l' : 'r',
       r.a,
+      r,
     ),
   );
 }
@@ -738,6 +793,7 @@ function oegFelderPruefen(G) {
         k: f.k === 'l' || f.k === 'r' ? f.k : 'g',
         t: String(f.t || ''),
         a: f.a === 'lo' || f.a === 'ba' ? f.a : '',
+        ...(f.a === 'lo' || f.a === 'ba' ? oegGel(f) : {}),
       }));
   (Array.isArray(G.rs) ? G.rs : []).forEach((r) => {
     if (!r || !(+r.b > 0) || !(+r.h > 0)) return;
