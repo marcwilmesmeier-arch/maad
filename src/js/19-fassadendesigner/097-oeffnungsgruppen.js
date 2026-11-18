@@ -749,9 +749,50 @@ function oegSymbol(G, w = 44, h = 22) {
   oegFlaechenG(G).forEach((r) => {
     s += `<rect x="${ox + r.x0 * k}" y="${oy - r.y1 * k}" width="${(r.x1 - r.x0) * k}" height="${(r.y1 - r.y0) * k}" fill="${r.t ? fdT(r.t).c : r.d > 0 ? '#c9c6c0' : '#f4f3f0'}" stroke="#94a3b8" stroke-width=".6"/>`;
   });
+  // Öffnungen mit Einteilung (Rahmen, Pfosten, Riegel – wie in der Ansicht, Mindeststärke 0,6 px)
   G.oe.forEach((q) => {
-    const T = oegTyp(G, q, G.h);
-    s += `<rect x="${ox + q.x * k}" y="${oy - (q.v + T.h) * k}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : '#fff'}" stroke="${T.rf}" stroke-width="1"/>`;
+    const T = oegTyp(G, q, G.h),
+      x0 = ox + q.x * k,
+      y0 = oy - (q.v + T.h) * k;
+    s += `<rect x="${x0}" y="${y0}" width="${T.b * k}" height="${T.h * k}" fill="${oeTuer(T) ? '#b9a891' : '#fff'}"/>`;
+    try {
+      oeAufteilung(T).stege.forEach(([a, c, d, e]) => {
+        s += `<rect x="${x0 + a * k}" y="${y0 + (T.h - e) * k}" width="${Math.max(0.6, (c - a) * k)}" height="${Math.max(0.6, (e - d) * k)}" fill="${T.rf}"/>`;
+      });
+    } catch (e) {
+      logErr(e, 'oegSymbol');
+      s += `<rect x="${x0}" y="${y0}" width="${T.b * k}" height="${T.h * k}" fill="none" stroke="${T.rf}" stroke-width="1"/>`;
+    }
+  });
+  // Loggia/Balkon: Geländer (je Art) und Balkonplatte
+  oegFlaechenG(G).forEach((r) => {
+    if (!r.a) return;
+    const Gl = oegGel(r),
+      x0 = ox + r.x0 * k,
+      x1 = ox + r.x1 * k,
+      yb = oy - r.y0 * k,
+      yh = oy - (r.y0 + Gl.gh) * k,
+      lw = 0.7;
+    if (r.a === 'ba' || r.a === 'bl')
+      s += `<rect x="${x0 - 1}" y="${yb}" width="${x1 - x0 + 2}" height="${Math.max(1.2, 0.2 * k)}" fill="#94a3b8"/>`;
+    if (Gl.ga === 'ke') return;
+    if (Gl.ga === 'gl')
+      s += `<rect x="${x0}" y="${yh}" width="${x1 - x0}" height="${yb - yh}" fill="rgba(150,185,205,.45)"/>`;
+    else if (Gl.ga === 'ma' || Gl.ga === 'pa')
+      s += `<rect x="${x0}" y="${yh}" width="${x1 - x0}" height="${yb - yh}" fill="${Gl.ga === 'ma' ? '#e7e5e1' : Gl.gc}" stroke="#64748b" stroke-width=".5"/>`;
+    else if (Gl.ga === 'ho')
+      for (let i = 1; i < 4; i++) {
+        const y = yb + ((yh - yb) * i) / 4;
+        s += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="${Gl.gc}" stroke-width="${lw}"/>`;
+      }
+    else {
+      const n = Math.max(2, Math.round((x1 - x0) / 2.2));
+      for (let i = 0; i <= n; i++) {
+        const x = x0 + ((x1 - x0) * i) / n;
+        s += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yh}" stroke="${Gl.gc}" stroke-width="${lw}"/>`;
+      }
+    }
+    s += `<line x1="${x0}" y1="${yh}" x2="${x1}" y2="${yh}" stroke="${Gl.gc}" stroke-width="1.1"/>`;
   });
   return s + '</svg>';
 }
