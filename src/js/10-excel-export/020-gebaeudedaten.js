@@ -206,6 +206,29 @@ function xlTerr(b) {
   });
   if (px.terr > 0.01)
     o.push({ lv: 'Flächenpatches (Dachterrasse/Rücksprung)', z: null, bx: null, by: null, area: px.terr });
+  // Loggien und Balkone (Fassadengruppen): je Geschoss und Art zusammengefasst
+  const lb = new Map();
+  lbFlaechen(b).forEach((x) => {
+    const k = x.art + '|' + x.j;
+    const r = lb.get(k) || { art: x.art, j: x.j, n: 0, area: 0 };
+    r.n++;
+    r.area += x.area;
+    lb.set(k, r);
+  });
+  lb.forEach((r) => {
+    let z = 0;
+    for (let i = u; i < r.j; i++) z += b.levels[i].h;
+    o.push({
+      lv:
+        (r.n > 1 ? { Loggia: 'Loggien', Balkon: 'Balkone' }[r.art] + ' ' + r.n + '×' : r.art) +
+        ' – ' +
+        (b.levels[r.j].name || lname(b, r.j)),
+      z,
+      bx: null,
+      by: null,
+      area: r.area,
+    });
+  });
   return o;
 }
 function xlSel() {

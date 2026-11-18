@@ -54,9 +54,46 @@ function terrOf(b) {
   b._tv = out;
   return out;
 }
+/**
+ * Loggien und Balkone aus den Fassadengruppen (Feldart 'lo'/'ba'): je Feld Breite × Tiefe (Loggia: Rücksprung,
+ * Balkon: Auskragung) mit Geschoss. Zählen zur Terrassenfläche. [{ art, j, br, ti, area }]
+ */
+function lbFlaechen(b) {
+  const out = [];
+  if (!b.fd || b.ex) return out;
+  try {
+    const B = fdStoreys(b),
+      u = ugN(b),
+      gesehen = new Set();
+    fdViews(b).forEach((V) =>
+      oegFlaechen(b, V).forEach((x) => {
+        if (!x.a || gesehen.has(x.id)) return;
+        gesehen.add(x.id);
+        const br = Math.max(0, x.u1 - x.u0),
+          ti = x.a === 'ba' ? x.tb || 0 : Math.abs(x.d || 0);
+        if (br < 0.05 || ti < 0.05) return;
+        let k = B.findIndex((v, i) => i < B.length - 1 && x.v0 >= v - 0.05 && x.v0 < B[i + 1] - 0.05);
+        if (k < 0) k = 0;
+        out.push({ art: x.a === 'ba' ? 'Balkon' : 'Loggia', j: k + u, br, ti, area: br * ti });
+      }),
+    );
+  } catch (e) {
+    logErr(e, 'lbFlaechen');
+  }
+  return out;
+}
 function bM(b) {
   const u = ugN(b),
-    m = { bgfoi: 0, bgfui: 0, brioi: 0, briui: 0, fas: 0, dach: 0, terr: terrOf(b).area },
+    // Terrassenfläche: Absätze der Geschosse und Loggien/Balkone aus den Fassadengruppen
+    m = {
+      bgfoi: 0,
+      bgfui: 0,
+      brioi: 0,
+      briui: 0,
+      fas: 0,
+      dach: 0,
+      terr: terrOf(b).area + lbFlaechen(b).reduce((s, x) => s + x.area, 0),
+    },
     ra = b._roofA;
   b.levels.forEach((l, i) => {
     const a = larea(b, l);
@@ -189,7 +226,12 @@ function flCard(x) {
       '<span style="font-weight:600">Flächen</span>',
       fr('fas', 'Fassadenfläche', 'm²', 'Außenwände über Erdreich inkl. Giebel/Drempel') +
         fr('dach', 'Dachfläche', 'm²', 'Dachfläche (geneigt: Schrägfläche, Flachdach: Grundfläche)') +
-        fr('terr', 'Terrassenfläche', 'm²', 'Horizontale Flächen auf Rücksprüngen einzelner Geschosse'),
+        fr(
+          'terr',
+          'Terrassenfläche',
+          'm²',
+          'Horizontale Flächen auf Rücksprüngen einzelner Geschosse, Loggien und Balkone',
+        ),
     ) +
     kv('Gebäudehöhe', f1(x._hTot || x._hAbove, 2) + ' m') +
     kv('Vollgeschosse', vgN(x)) +
