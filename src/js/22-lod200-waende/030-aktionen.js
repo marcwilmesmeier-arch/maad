@@ -182,10 +182,30 @@ function l2MeshOrig(e) {
   }
   return { g, mat };
 }
+/**
+ * Ruhe nach Bewegung: Wird ein Gebäude verschoben, gedreht oder umgeformt, ruht seine LOD-200-Darstellung (Wände,
+ * Öffnungen, Gruppen, Balkone, Kontur), bis es sich L2RUHE ms nicht mehr verändert hat – solange ist der einfache
+ * Körper zu sehen. Spart den Neuaufbau bei jedem Zwischenschritt.
+ */
+const L2RUHE = 1000;
+function l2Unruhig(b) {
+  const s = skSig(b) + '|' + b._y,
+    now = performance.now();
+  if (b._ruSig !== s) {
+    if (b._ruSig !== undefined) b._ruT = now;
+    b._ruSig = s;
+  }
+  return b._ruT != null && now - b._ruT < L2RUHE;
+}
 function l2Sync() {
-  const bs = S.bld.filter((b) => !b.ex && b._y != null),
+  // Gebäude in Bewegung (l2Unruhig) bleiben außen vor: ihre Bauteile werden entfernt und nach der Ruhe neu aufgebaut
+  const bs = S.bld.filter((b) => !b.ex && b._y != null && !l2Unruhig(b)),
+    ru = S.bld.filter((b) => !b.ex && b._y != null && l2Unruhig(b)),
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen (nicht Teil der Wandableitung)
-    sig = bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') + (l23() ? l2mSig() : '');
+    sig =
+      bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') +
+      ru.map((b) => '#ru:' + b.id).join('') +
+      (l23() ? l2mSig() : '');
   if (sig !== L2SIG) {
     L2SIG = sig;
     const seen = new Set(),
@@ -321,6 +341,11 @@ function l2Vis() {
     S.bld.forEach((b) => {
       if (b.ex || !b._g) return;
       b._g.visible = true;
+      // in Bewegung: einfacher Körper ganz sichtbar (LOD-200-Bauteile ruhen, l2Unruhig)
+      if (l2Unruhig(b)) {
+        b._g.children.forEach((o) => (o.visible = true));
+        return;
+      }
       try {
         exTag(b).forEach((t) => {
           t.o.visible =

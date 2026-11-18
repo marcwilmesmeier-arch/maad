@@ -358,6 +358,13 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Außenwandstärke in der Karte „Fassade“ (`fkWandstaerke`): setzt `b.l2.c.AW` (Standardstärke LOD 200 wie im
   Bauteilkonfigurator) und setzt Einzelwerte der Außenwände zurück.
 
+## LOD 200: Ruhephase bei Bewegung
+
+- `l2Unruhig(b)` (`22-lod200-waende/030-aktionen.js`): ändert sich Grundriss/Lage eines Gebäudes (`skSig(b)` + `b._y`),
+  gilt es `L2RUHE` = 1000 ms als unruhig. In dieser Zeit baut `l2Sync` keine Wände, Öffnungen und Gruppen dafür (alte
+  Teile werden entfernt), `l2Vis` zeigt den einfachen Körper, `l2Kontur`, `l2Balkone`, `l2Terrassen` und `fkSync`
+  setzen aus. Nach 1 s ohne Änderung entsteht alles neu.
+
 ## LOD 200: Terrassen
 
 `l2Els` gibt Außenwänden ohne Geschoss darüber (mindestens 3 von 5 Prüfpunkten frei) eine Attika (`r.hAt = 0,30 m`)

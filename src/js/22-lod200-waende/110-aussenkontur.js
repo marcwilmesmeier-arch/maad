@@ -166,7 +166,7 @@ function l2Kontur() {
     ex = !!(S.expl && S.expl.cur > 0.05) || l23(),
     da = new Set();
   S.bld.forEach((b) => {
-    if (b.ex || b._y == null || !an) return;
+    if (b.ex || b._y == null || !an || l2Unruhig(b)) return; // in Bewegung: ruht
     da.add(b.id);
     const sig = skSig(b) + '|' + JSON.stringify(b.roof || {}) + '|' + (b._rp ? b._rp.h : 0);
     let o = L2KO.get(b.id);

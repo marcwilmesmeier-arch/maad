@@ -109,6 +109,8 @@ function fkAbschnitte(fk, vk, j) {
 function fkSync() {
   S.bld.forEach((b) => {
     if (b.ex || !b.fk || b._y == null) return;
+    // in Bewegung (LOD 200): Gruppen erst nach der Ruhe neu setzen
+    if (l2on() && l2Unruhig(b)) return;
     const sg = JSON.stringify([
       fdSig(b),
       b.fk,

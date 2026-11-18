@@ -155,7 +155,7 @@ function l2Balkone() {
   const an = l2on() && !l23(),
     da = new Set();
   S.bld.forEach((b) => {
-    if (b.ex || b._y == null || !an) return;
+    if (b.ex || b._y == null || !an || l2Unruhig(b)) return; // in Bewegung: ruht
     const sig = oeGebSig(b) + '|' + fdSig(b);
     da.add(b.id);
     let o = L2BK.get(b.id);
@@ -318,7 +318,7 @@ function l2Terrassen() {
   const an = l2on() && !l23() && !(S.expl && S.expl.cur > 0.05),
     da = new Set();
   S.bld.forEach((b) => {
-    if (b.ex || b._y == null || !an) return;
+    if (b.ex || b._y == null || !an || l2Unruhig(b)) return; // in Bewegung: ruht
     const sig = skSig(b) + '|' + JSON.stringify((b.l2 && b.l2.c) || 0);
     da.add(b.id);
     let o = L2TG.get(b.id);
