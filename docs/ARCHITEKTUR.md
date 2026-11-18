@@ -375,11 +375,21 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Randfelder einer Reihe (`oegReihe`, Füllen und Gebäudekonfigurator): Pfosten-Riegel füllt die Fläche bis zu beiden
   Enden; den Rest nehmen je nach Ausrichtung das letzte Feld (links), das erste Feld (rechts) oder beide je zur Hälfte
   (mittig) auf – länger oder kürzer. Am Verweis: `I.l` Länge, `I.lv` Änderung am linken Rand (`oegL`/`oegAngepasst`).
-- Über Eck (`oeEckenFinden` in `oeWelt`): an Außenecken entfallen die Randprofile, ein Eckpfosten verbindet beide
+- Über Eck (`oeEckenFinden` in `oeWelt`): an Außenecken entfallen die Randprofile (`T._rd`), die Fassaden enden am
+  Eckpfosten (`T._ek`); der Eckpfosten ist ein Parallelogramm zwischen beiden Ebenen (passt zu jedem Winkel), verbindet beide
   Fassaden (3D in `l2Balkone`, Grundriss in `l2BalkonGrundriss`).
 - Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
   zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
+
+## Ansichten: Fluchtlinien und Geländeschnitt
+
+- `19-…/140-fluchten-gelaende.js` (aus `fdDrawView`): Umriss je Fassadenebene gleicher Tiefe (`fdFluchtUmrisse`,
+  vereinigt mit `boolOp`, an der Ansicht zwischengespeichert), zurückliegende Ebenen mit Rücksprungmaß.
+- Geländeschnitt (`fdGelaendeLinie`): Gelände (`gh`) entlang der vordersten Fassadenebene (`V.cut − 0,5`), Fläche
+  darunter weiß, Linie kräftig.
+- Gelände unter dem EG: in LOD 200 schneidet bei Gebäuden mit Öffnungen auch der EG-Grundriss das Gelände aus
+  (`plmFoot`), damit man durch Glas auf die Bodenplatte sieht.
 
 ## Grundriss: Balkone
 

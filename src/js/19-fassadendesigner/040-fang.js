@@ -429,6 +429,13 @@ function fdDrawView(g, b, V, ox, o) {
   } catch (e) {
     console.warn('FD-Tiefe', e);
   }
+  // ── Erweiterung aus 19-fassadendesigner/140-fluchten-gelaende.js: Fluchtlinien und Geländeschnitt
+  try {
+    fdFluchten(g, V, ox);
+    fdGelaendeSchnitt(g, b, V, ox);
+  } catch (e) {
+    logErr(e, 'fdDrawView>Fluchten');
+  }
 }
 function fdCvDraw() {
   const cv = fdE('fdCv');

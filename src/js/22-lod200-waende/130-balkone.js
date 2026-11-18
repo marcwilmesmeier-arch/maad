@@ -87,6 +87,18 @@ function l2Quader(pos, A, B, n, o, w, ya, yb) {
     [3, 0, 4, 3, 4, 7],
   ].forEach((f) => f.forEach((i) => pos.push(...V[i])));
 }
+/** Senkrechtes Prisma über dem Viereck Q (Grundriss, beliebige Form) von ya bis yb – alle Seiten, doppelseitig. */
+function l2Prisma(pos, Q, ya, yb) {
+  const V = [...Q.map((p) => [p[0], ya, p[1]]), ...Q.map((p) => [p[0], yb, p[1]])];
+  [
+    [0, 1, 2, 0, 2, 3],
+    [4, 6, 5, 4, 7, 6],
+    [0, 1, 5, 0, 5, 4],
+    [1, 2, 6, 1, 6, 5],
+    [2, 3, 7, 2, 7, 6],
+    [3, 0, 4, 3, 4, 7],
+  ].forEach((f) => f.forEach((i) => pos.push(...V[i])));
+}
 /** Stabgeländer entlang A–B (Grundriss), Fuß bei yb, 1,00 m hoch. */
 function l2Stabgelaender(pos, A, B, yb) {
   const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
@@ -218,11 +230,7 @@ function l2Balkone() {
       }
     });
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Eckpfosten der Pfosten-Riegel-Fassaden über Eck
-    oeEcken(b).forEach((e) => {
-      const A = [e.c[0] - e.n1[0] * (e.s / 2), e.c[1] - e.n1[1] * (e.s / 2)],
-        B = [A[0] - e.n2[0] * e.s, A[1] - e.n2[1] * e.s];
-      l2Quader(teil(e.rf), A, B, e.n1, 0, e.s, e.y0, e.y1);
-    });
+    oeEcken(b).forEach((e) => l2Prisma(teil(e.rf), oeEckQuadrat(e), e.y0, e.y1));
     const g = new T.Group(),
       mesh = (arr, farbe) => {
         if (!arr.length) return;

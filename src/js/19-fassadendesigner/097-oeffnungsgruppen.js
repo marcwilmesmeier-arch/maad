@@ -376,6 +376,16 @@ function oegPrAufteilung(T) {
       fu: f.pf === 'p' ? 'p' : f.pf === 'e' && f.pe ? 'l' : 'g',
       i,
     }));
+  // Ende am Eckpfosten (T._ek, aus oeEckenFinden): Profile, Glas und Paneele vor dem Eckpfosten abschneiden
+  const ek = T._ek;
+  if (ek && (ek.l || ek.r)) {
+    const xa = ek.l || 0,
+      xb = b - (ek.r || 0),
+      k = (v) => Math.max(xa, Math.min(xb, v));
+    const st = stege.map(([a, c, d, e, kk]) => [k(a), k(c), d, e, kk]).filter((q) => q[1] - q[0] > 1e-4),
+      fe = felder.map((f) => ({ ...f, x0: k(f.x0), x1: k(f.x1) })).filter((f) => f.x1 - f.x0 > 0.01);
+    return { pb, pp: pb, stege: st, felder: fe, oben: fe, ns: [] };
+  }
   return { pb, pp: pb, stege, felder, oben: felder, ns: [] };
 }
 /**

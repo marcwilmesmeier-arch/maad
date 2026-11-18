@@ -84,15 +84,31 @@ function oeEckenFinden(L) {
       const c = o1.p1,
         m2 = [(o2.p0[0] + o2.p1[0]) / 2, (o2.p0[1] + o2.p1[1]) / 2];
       if ((m2[0] - c[0]) * o1.n[0] + (m2[1] - c[1]) * o1.n[1] > -0.01) return; // Innenecke: Profile bleiben
-      o1.T = { ...o1.T, _rd: { ...o1.T._rd, r: 0 } };
-      o2.T = { ...o2.T, _rd: { ...o2.T._rd, l: 0 } };
+      // Richtungen entlang der Fassaden weg von der Ecke; Eckpfosten = Parallelogramm zwischen beiden Ebenen mit
+      // Ansichtsbreite s je Seite (k = s / sin Winkel, auch für spitze und stumpfe Ecken)
+      const ein = (p) => {
+          const d = [p[0] - c[0], p[1] - c[1]],
+            l = Math.hypot(d[0], d[1]) || 1;
+          return [d[0] / l, d[1] / l];
+        },
+        e1 = ein(o1.p0),
+        e2 = ein(o2.p1),
+        sn = Math.abs(e1[0] * e2[1] - e1[1] * e2[0]),
+        s = Math.max(0.1, 2 * o1.T.pb),
+        k = s / Math.max(0.25, sn);
+      // beide Fassaden enden am Eckpfosten: Randprofil entfällt, Profile und Glas um k gekürzt (T._ek)
+      o1.T = { ...o1.T, _rd: { ...o1.T._rd, r: 0 }, _ek: { ...(o1.T._ek || {}), r: k } };
+      o2.T = { ...o2.T, _rd: { ...o2.T._rd, l: 0 }, _ek: { ...(o2.T._ek || {}), l: k } };
       E.push({
         c,
         n1: o1.n,
         n2: o2.n,
+        e1,
+        e2,
+        k,
         y0: Math.max(o1.y0, o2.y0),
         y1: Math.min(o1.y1, o2.y1),
-        s: Math.max(0.1, 2 * o1.T.pb),
+        s,
         rf: o1.T.rf,
       });
     }),
@@ -156,10 +172,10 @@ function oeEcken(b) {
   oeWelt(b);
   return (b._oeW && b._oeW.E) || [];
 }
-/** Grundriss eines Eckpfostens: Quadrat der Seitenlänge s von der Außenecke nach innen. */
+/** Grundriss eines Eckpfostens: Parallelogramm von der Außenecke entlang beider Fassaden (je k), passt zu jedem Winkel. */
 function oeEckQuadrat(e) {
-  const P = (k1, k2) => [e.c[0] - e.n1[0] * k1 - e.n2[0] * k2, e.c[1] - e.n1[1] * k1 - e.n2[1] * k2];
-  return [P(0, 0), P(e.s, 0), P(e.s, e.s), P(0, e.s)];
+  const P = (a, b) => [e.c[0] + e.e1[0] * a + e.e2[0] * b, e.c[1] + e.e1[1] * a + e.e2[1] * b];
+  return [P(0, 0), P(e.k, 0), P(e.k, e.k), P(0, e.k)];
 }
 /**
  * Lage der Schichten einer Pfosten-Riegel-Fassade (Abstand von der Außenfläche): außen Deckleiste, dahinter das

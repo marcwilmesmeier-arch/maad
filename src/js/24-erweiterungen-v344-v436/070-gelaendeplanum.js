@@ -58,14 +58,17 @@ setInterval(() => {
   }
 }, 160);
 
-/* v433/v435 Geländeausschnitt NUR unter Gebäuden mit Untergeschoss (sonst wird der 3 m tiefe EG-Sockel durch das Loch sichtbar = 'Ebene unter dem EG'): aus den tatsächlichen Geschoss-Grundrissen (Untergeschosse + EG) statt nur aus b.fp, und sofort nach jeder Änderung am Körper (Ziehen/Schieben) neu berechnet */
+/* v433/v435 Geländeausschnitt NUR unter Gebäuden mit Untergeschoss (bzw. in LOD 200 mit Öffnungen auch unter dem EG) (sonst wird der 3 m tiefe EG-Sockel durch das Loch sichtbar = 'Ebene unter dem EG'): aus den tatsächlichen Geschoss-Grundrissen (Untergeschosse + EG) statt nur aus b.fp, und sofort nach jeder Änderung am Körper (Ziehen/Schieben) neu berechnet */
 function plmFoot() {
   const out = [],
     seen = new Set();
   for (const b of S.bld || []) {
     if (b.ex) continue;
-    const u = typeof ugN === 'function' ? ugN(b) : 0;
-    if (u < 1) continue;
+    const u = typeof ugN === 'function' ? ugN(b) : 0,
+      // LOD 200 mit Öffnungen (z. B. Glasfassade im Erdgeschoss): auch der EG-Grundriss schneidet das Gelände aus –
+      // durch das Glas sieht man die Bodenplatte, nicht das Gelände (der EG-Sockel aus LOD 100 ist dann ausgeblendet)
+      eg = l2on() && oeGebSig(b) !== '';
+    if (u < 1 && !eg) continue;
     const add = (p) => {
       if (!p || p.length < 3) return;
       const k = JSON.stringify(p);
@@ -75,7 +78,7 @@ function plmFoot() {
     };
     try {
       (b.levels || []).forEach((l, i) => {
-        if (i < u) {
+        if (i < u || (eg && i === u)) {
           let r = null;
           try {
             r = lf(b, l);
