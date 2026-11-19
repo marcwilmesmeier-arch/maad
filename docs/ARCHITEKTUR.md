@@ -87,6 +87,12 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `S.vanim`, Rand einer Seite = Kante/Ecke, Ziehen = drehen.
 - Schnittlinien (Punkte auf gerader Wand, `skSchnittPunkt` in `26-modellier-modus/150-ecken.js`) sind wie Ecken wählbar
   und ziehbar; „Schnitt entfernen“ (`skSchnittWeg`) nimmt sie aus den Grundrissen.
+- Loggien als Grundriss-Einschnitt (LOD 200, `oeWelt` → `LG`, `oeLoggiaEinschnitte`): Rücksprünge ab Geschossboden
+  (Art Loggia, Balkon + Loggia oder tiefer als 0,5 m) schneiden in `l2GeoStufe1` die Raumflächen des Geschosses aus
+  (`oeFlaechenKappen`, Umriss `lv.fp` und Decken bleiben). So entstehen echte Außenwände in normaler Stärke, wählbar
+  und mit Innenwänden verbunden; Fenster in der Loggia werden auf die Rückwand versetzt; Loggia-Wände (`r.lg`) ohne
+  Attika; Sturz über niedrigeren Loggien in `l2Balkone`; im Grundriss wird die Loggiafläche freigestellt. Der frühere
+  Rücksprungkörper (`oeLoggia`) gilt nur noch für tiefe Nischen, die nicht am Boden beginnen.
 - Loggien in LOD 200 (`22-lod200-waende/100-oeffnungen-3d.js`): Rücksprünge tiefer als die Wand (`oeLoggia`) bekommen
   Rückwand und Seitenwände in Außenwandstärke statt eines vollen Körpers; Fenster darin messen Einbautiefe und Laibung
   an der Rückwand (`oeInnenseite`). Rück- und Seitenwände werden an den Loggia-Räumen des ganzen Gebäudes beschnitten

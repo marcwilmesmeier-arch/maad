@@ -242,6 +242,19 @@ function l2Balkone() {
     });
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Eckpfosten der Pfosten-Riegel-Fassaden über Eck
     oeEcken(b).forEach((e) => l2Prisma(teil(e.rf), oeEckQuadrat(e), e.y0, e.y1));
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Sturz über einer Loggia, die nicht bis unter die
+    // Decke reicht (die Loggia ist im Grundriss ausgeschnitten, die Außenwand darüber fehlt dort)
+    {
+      const els = l2Els(b).els,
+        aw = els.find((e) => e.kind === 'AW'),
+        dW = (aw && aw.d) || 0.36,
+        dDE = ((els.find((e) => e.kind === 'DE') || {}).d || 0.22) + 0.002;
+      oeLoggiaEinschnitte(b).forEach((z) => {
+        const o = z.lg,
+          ob = o.yG - dDE;
+        if (ob - o.y1 > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, o.y1, ob);
+      });
+    }
     const g = new T.Group(),
       mesh = (arr, farbe) => {
         if (!arr.length) return;
@@ -310,8 +323,17 @@ function l2BalkonGrundriss(x, b, wl) {
     };
   x.save();
   x.globalAlpha = 1;
-  // Eckpfosten der Pfosten-Riegel-Fassaden in Schnitthöhe
+  // Loggien dieses Geschosses: Fläche freistellen (liegt außerhalb der Räume)
   const sh = y0 + (+S.gro.sh || 1.2);
+  x.globalCompositeOperation = 'destination-out';
+  oeLoggiaEinschnitte(b).forEach((z) => {
+    if (Math.abs(z.y - y0) > 0.3) return;
+    // 3 cm kleiner: die Umrisslinien der Loggia-Wände bleiben voll
+    zug(oeLgAussen(z.f, -0.03), true);
+    x.fill();
+  });
+  x.globalCompositeOperation = 'source-over';
+  // Eckpfosten der Pfosten-Riegel-Fassaden in Schnitthöhe
   oeEcken(b).forEach((e) => {
     if (e.y0 > sh || e.y1 < sh) return;
     x.fillStyle = '#222';

@@ -24,9 +24,12 @@ function l2GeoStufe1(b) {
     logErr(e, 'l2Geo');
   }
   // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Decken hinter Pfosten-Riegel-Fassaden ausgespart
-  let prZ = [];
+  let prZ = [],
+    lgZ = [];
   try {
     prZ = oeDeckenZonen(b);
+    // Loggien als Einschnitt in die Raumflächen: echte Außenwände entlang der Loggia (oeLoggiaEinschnitte)
+    if (!l23()) lgZ = oeLoggiaEinschnitte(b);
   } catch (e) {
     logErr(e, 'l2Geo>oeDeckenZonen');
   }
@@ -44,17 +47,28 @@ function l2GeoStufe1(b) {
     JSON.stringify(b.fd || 0, (k, v) => (k === 'oe' || k === 'gr' ? undefined : v)) +
     JSON.stringify(S.ft.map((t) => t.k + t.n)) +
     JSON.stringify(prZ) +
+    JSON.stringify(lgZ.map((z) => [z.y, z.r])) +
     (l23()
       ? '|d' + JSON.stringify([b._l2ref || 0, (b.l2 && b.l2.rw) || 0, (b.l2 && b.l2.cn) || 0])
       : '|c' + JSON.stringify([(b.l2 && b.l2.c) || 0, (b.l2 && b.l2.rwc) || 0]));
   if (b._l2 && b._l2.k === key) return b._l2;
-  const L = grData(b).filter((l) => !l.dg),
-    R = { k: key, els: [], lv: [], b, probe: [] };
+  let L = grData(b).filter((l) => !l.dg);
+  const R = { k: key, els: [], lv: [], b, probe: [] };
   const C = !l23(),
     DF = C ? l2DefC(b) : S.l2.defs,
     dDE = l2T(DF.DE).d;
   let y = b._y || 0;
   let prevOuter = null;
+  // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Raumflächen ohne die Loggien des Geschosses
+  // (nur für die Wandableitung; Umriss lv.fp und damit die Decken bleiben)
+  if (lgZ.length) {
+    let yy = y;
+    L = L.map((lv) => {
+      const Z = lgZ.filter((z) => Math.abs(z.y - yy) < 0.05);
+      yy += lv.h;
+      return Z.length ? { ...lv, faces: oeFlaechenKappen(lv.faces, Z), lgZ: Z } : lv;
+    });
+  }
   L.forEach((lv, li) => {
     const D = l2Data(lv),
       cuts = lv.obj.cuts || [],
@@ -413,7 +427,12 @@ function l2GeoStufe1(b) {
           console.warn('Ecke', er);
         }
       }
-      if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
+      // Loggia-Wände (im Einschnitt): keine Attika – darüber liegt die Decke bzw. das Dach
+      const imLg =
+        lv.lgZ &&
+        lv.lgZ.some((z) => inP([(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2], oeLgAussen(z.f, 0.1)));
+      if (imLg) r.lg = 1;
+      else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
       else if (li < L.length - 1) {
         // Terrasse: über dieser Außenwand steht kein Geschoss mehr → Attika wie am Dach und Geländer (r.gel)
         // Prüfpunkte 0,8 m innen vor der Wand (Innenseite aus dem eigenen Geschossgrundriss bestimmt, unabhängig

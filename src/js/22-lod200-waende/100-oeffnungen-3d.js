@@ -17,12 +17,49 @@ function oeWelt(b) {
     S.oeg,
   ]);
   if (b._oeW && b._oeW.s === sg) return b._oeW.L;
-  const L = [];
+  const L = [],
+    LG = [];
   if (b.fd && b._y != null) {
     const u = ugN(b);
     let ugH = 0;
     for (let i = 0; i < u; i++) ugH += b.levels[i].h;
-    const base = b._y + ugH;
+    const base = b._y + ugH,
+      B = fdStoreys(b);
+    // Loggien (Rücksprung ab Geschossboden: Art Loggia bzw. Balkon + Loggia oder tiefer als 0,5 m) werden Teil des
+    // Grundrisses (oeLoggiaEinschnitte → Wandableitung): echte Außenwände entlang der Loggia statt eines
+    // Rücksprungkörpers; Fenster darin sitzen auf der Rückwand
+    fdViews(b).forEach((V) =>
+      oegRuecksprunge(b, V).forEach((x) => {
+        if (!x.d || x.d < 0) return;
+        if (!(x.a === 'lo' || x.a === 'bl' || Math.max(x.dl, x.dr) > 0.5)) return;
+        if (!B.some((v) => Math.abs(v - x.v0) < 0.05)) return;
+        const pc = V.pcs.find(
+          (p) => p.pd != null && p.ring && inP([(x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2], p.ring),
+        );
+        if (!pc) return;
+        const W = (uu) => {
+          const s = (uu - pc.ua) / pc.dot;
+          return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
+        };
+        const top = B.find((v) => v > x.v0 + 0.05);
+        LG.push({
+          vk: V.key,
+          u0: x.u0,
+          u1: x.u1,
+          v0: x.v0,
+          v1: x.v1,
+          p0: W(x.u0),
+          p1: W(x.u1),
+          n: V.n,
+          rl: x.dl,
+          rr: x.dr,
+          y0: base + x.v0,
+          y1: base + x.v1,
+          yG: top != null ? base + top : base + x.v1, // Oberkante des Geschosses (Sturz über niedrigerer Loggia)
+          id: x.id,
+        });
+      }),
+    );
     fdViews(b).forEach((V) =>
       oeListe(b, V).forEach((x) => {
         const um = (x.u0 + x.u1) / 2,
@@ -33,13 +70,25 @@ function oeWelt(b) {
           const s = (uu - pc.ua) / pc.dot;
           return [pc.ax + pc.dx * s, pc.az + pc.dz * s];
         };
-        L.push({ p0: W(x.u0), p1: W(x.u1), y0: base + x.v0, y1: base + x.v1, T: x.T, n: V.n, id: x.o.id });
+        // in einer Loggia: auf die Rückwand versetzen (Tiefe an der Mitte des Fensters)
+        const lg = LG.find((o) => o.vk === V.key && um > o.u0 && um < o.u1 && vm > o.v0 && vm < o.v1),
+          t = lg ? lg.rl + (lg.rr - lg.rl) * ((um - lg.u0) / (lg.u1 - lg.u0 || 1)) : 0,
+          Z = (p) => [p[0] - V.n[0] * t, p[1] - V.n[1] * t];
+        L.push({
+          p0: Z(W(x.u0)),
+          p1: Z(W(x.u1)),
+          y0: base + x.v0,
+          y1: base + x.v1,
+          T: x.T,
+          n: V.n,
+          id: x.o.id,
+        });
       }),
     );
     // Rücksprünge (aus Öffnungsgruppen), gleiche Umrechnung
     fdViews(b).forEach((V) =>
       oegRuecksprunge(b, V).forEach((x) => {
-        if (!x.d) return;
+        if (!x.d || LG.some((o) => o.id === x.id)) return; // Loggien: im Grundriss (siehe oben)
         const pc = V.pcs.find(
           (p) => p.pd != null && p.ring && inP([(x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2], p.ring),
         );
@@ -63,8 +112,54 @@ function oeWelt(b) {
       }),
     );
   }
-  b._oeW = { s: sg, L, E: oeEckenFinden(L) };
+  b._oeW = { s: sg, L, LG, E: oeEckenFinden(L) };
   return L;
+}
+/**
+ * Einschnitte der Loggien in den Grundriss je Geschoss (für die Wandableitung in LOD 200): { y = Geschossboden,
+ * r = Grundriss der Loggia (Fassadenlinie bis Rücksprungtiefe, nach außen 5 cm verlängert), f = ohne Verlängerung,
+ * lg = Loggia }.
+ */
+function oeLoggiaEinschnitte(b) {
+  oeWelt(b);
+  return ((b._oeW && b._oeW.LG) || []).map((o) => {
+    const P = (p, s) => [p[0] + o.n[0] * s, p[1] + o.n[1] * s];
+    return {
+      y: o.y0,
+      r: [P(o.p0, 0.05), P(o.p1, 0.05), P(o.p1, -o.rr), P(o.p0, -o.rl)],
+      f: [o.p0, o.p1, P(o.p1, -o.rr), P(o.p0, -o.rl)],
+      lg: o,
+    };
+  });
+}
+/** Vieleck P um k nach außen aufgeweitet (Punkte vom Schwerpunkt weg) – für Lage-Prüfungen am Rand. */
+function oeLgAussen(P, k) {
+  const cx = P.reduce((s, p) => s + p[0], 0) / P.length,
+    cz = P.reduce((s, p) => s + p[1], 0) / P.length;
+  return P.map((p) => {
+    const dx = p[0] - cx,
+      dz = p[1] - cz,
+      l = Math.hypot(dx, dz) || 1;
+    return [p[0] + (dx / l) * k, p[1] + (dz / l) * k];
+  });
+}
+/** Raumflächen eines Geschosses ohne die Loggia-Einschnitte Z (Flächen wie aus grFill, Eigenschaften bleiben). */
+function oeFlaechenKappen(faces, Z) {
+  const V = Z.map((z) => bpP(z.r));
+  const R = [];
+  faces.forEach((f) => {
+    try {
+      boolOp([{ o: f.o, h: f.h || [] }], V, 'd')
+        .filter((p) => p.o && p.o.length >= 3)
+        .forEach((p) =>
+          R.push({ ...f, o: p.o, h: p.h || [], a: l2QA(p.o) - (p.h || []).reduce((x, h) => x + l2QA(h), 0) }),
+        );
+    } catch (e) {
+      logErr(e, 'oeFlaechenKappen');
+      R.push(f);
+    }
+  });
+  return R;
 }
 /**
  * Pfosten-Riegel über Eck: stoßen zwei Pfosten-Riegel-Öffnungen an einer Außenecke zusammen (gemeinsamer Eckpunkt,
