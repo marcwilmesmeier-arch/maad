@@ -1120,7 +1120,7 @@ function oegInspektorHtml(b, V) {
 <h4>Tauschen</h4><select style="width:100%" onchange="oegTauschen(this.value)" title="Nur diese Stelle">${opt}</select>
 ${n > 1 ? `<select style="width:100%;margin-top:6px" onchange="if(this.value)oegTauschen(this.value,true)" title="Alle ${n} gleichen Gruppen dieser Ansicht"><option value="">Alle ${n} gleichen tauschen gegen …</option>${S.oeg.map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select>` : ''}
 <div class="row"><button class="bt" onclick="okOpen(null,'gr');okGrWahl('${G.k}')">Gruppe bearbeiten …</button><button class="bt" onclick="oegLoeschen()">Entfernen <kbd>Entf</kbd></button></div>
-<div class="row"><button class="bt" onclick="oegAufloesen()" title="Öffnungen und Felder dieser Gruppe an dieser Stelle frei bearbeitbar machen (die Gruppe bleibt in der Bibliothek)">Gruppe hier auflösen</button></div>${fdAutoHtml(b, V)}
+<div class="row"><button class="bt" onclick="oegAufloesen()" title="Öffnungen und Felder dieser Gruppe an dieser Stelle frei bearbeitbar machen (die Gruppe bleibt in der Bibliothek)">Gruppe hier auflösen</button></div>
 <div class="mu" style="margin-top:8px">Ziehen zum Verschieben · Änderungen an der Gruppe gelten an allen Stellen</div>`;
 }
 /** Gespeicherte Gruppen prüfen (Projekt laden). */

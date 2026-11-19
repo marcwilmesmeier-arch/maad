@@ -202,7 +202,7 @@ function fdInspektor(b, V, cur, F) {
   // Übersicht (nichts gewählt)
   let h = `<h4>Fassadentypen</h4>${swatches(new Set())}<div class="mu" style="margin-top:6px">Feld anklicken, dann Typ wählen.</div>`;
   // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Automatik je Ansicht
-  if (cur) h += fdAutoHtml(b, cur);
+  h += fdAutoHtml(b);
   h += `<h4>Öffnungen je Ansicht</h4><div class="kv">`;
   V.forEach((v) => {
     const L = oeListe(b, v),

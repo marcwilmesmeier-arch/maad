@@ -542,27 +542,34 @@ function fkCard(b) {
 // ---- Automatik je Ansicht: Gruppen aus „Planen“ (fkAnwenden) nicht mehr neu platzieren
 /** true, wenn die Gruppen dieser Ansicht nicht mehr automatisch platziert werden (d.fest). */
 const fdAutoAus = (b, V) => !!(fdD(b, V.key) || {}).fest;
-/** Automatik der aktuellen Ansicht ein- (an = true) oder ausschalten. Beim Einschalten wird neu platziert. */
-function fdAutoSet(an) {
+/** Automatik der Seite vk (sonst der aktuellen Ansicht) ein- (an = true) oder ausschalten; beim Einschalten neu platzieren. */
+function fdAutoSet(an, vk) {
   const b = fdB(),
-    V = fdCurV();
-  if (!b || !V) return;
+    k = vk || (fdCurV() || {}).key;
+  if (!b || !k) return;
   fdEdit((b) => {
-    const V = fdCurV(),
-      d = fdD(b, V.key, true);
+    const d = fdD(b, k, true);
     if (an) delete d.fest;
     else d.fest = 1;
     if (an) fkAnwenden(b);
   });
+  const V = fdViews(b).find((x) => x.key === k),
+    n = V ? V.name.replace('Ansicht ', '') : 'diese Seite';
   fdNote(
     an
-      ? 'Automatik an: die Gruppen aus „Planen“ werden auf dieser Seite wieder platziert.'
-      : 'Automatik aus: diese Seite bleibt, wie sie ist – Änderungen in „Planen“ setzen hier keine Gruppen mehr.',
+      ? `Automatik an: die Gruppen aus „Planen“ werden auf ${n} wieder platziert.`
+      : `Automatik aus: ${n} bleibt, wie sie ist – Änderungen in „Planen“ setzen dort keine Gruppen mehr.`,
   );
 }
-/** Schalter im Inspektor (nur bei Gebäuden mit Gruppen aus „Planen“). */
-function fdAutoHtml(b, V) {
+/** Abschnitt „Automatik“ in der Übersicht des Inspektors: je Seite ein Haken (nur bei Gruppen aus „Planen“). */
+function fdAutoHtml(b) {
   if (!fkDaten(b)) return '';
-  const aus = fdAutoAus(b, V);
-  return `<h4>Automatik</h4><label style="display:flex;gap:8px;align-items:center" title="Die Gruppen aus „Planen“ (Gebäudekonfigurator) werden bei Änderungen am Gebäude automatisch neu platziert. Ausschalten, um diese Seite von Hand zu gestalten."><input type="checkbox" style="width:auto" ${aus ? '' : 'checked'} onchange="fdAutoSet(this.checked)">Gruppen automatisch platzieren</label><div class="mu" style="margin-top:4px">${aus ? 'Aus – diese Seite wird von Hand gestaltet.' : 'An – Änderungen in „Planen“ setzen die Gruppen neu.'}</div>`;
+  return `<h4>Gruppen automatisch platzieren</h4><div class="mu" style="margin:0 0 6px">Die Gruppen aus „Planen“ werden bei Änderungen am Gebäude neu gesetzt. Haken entfernen, um eine Seite von Hand zu gestalten.</div><div class="kv" style="display:grid;gap:4px">${fdViews(
+    b,
+  )
+    .map(
+      (V) =>
+        `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${fdAutoAus(b, V) ? '' : 'checked'} onchange="fdAutoSet(this.checked,'${V.key}')">${esc(V.name.replace('Ansicht ', ''))}</label>`,
+    )
+    .join('')}</div>`;
 }

@@ -495,7 +495,7 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   `fdDachTyp` färbt in LOD 200 das Dachbauteil (RD) bzw. beim Flachdach die oberste Decke (`flatTop`) samt Schraffur
   (`l2MeshOrig`, Grundfarbe in `material.userData.c0` für das Isolieren).
 - Automatik je Ansicht (`fdAutoAus`/`fdAutoSet`/`fdAutoHtml`, 120-gebaeudekonfigurator.js): `d.fest = 1` hält
-  `fkAnwenden` aus dieser Ansicht heraus (Gruppen aus „Planen“ werden nicht neu platziert). Schalter im Inspektor;
+  `fkAnwenden` aus dieser Ansicht heraus (Gruppen aus „Planen“ werden nicht neu platziert). Haken je Seite in der Übersicht des Inspektors (nicht in der Gruppe);
   „Gruppe hier auflösen“ schaltet die Automatik der Seite aus.
 - Teilen im Fassadendesigner wie in der Gruppe (`19-…/145-raster.js`): je Ansicht ein Raster `d.rs = { xs, ys, vb }`
   (senkrechte/waagerechte Linien über die ganze Seite in Ansichtskoordinaten, verbundene Felder als Rechtecke).
