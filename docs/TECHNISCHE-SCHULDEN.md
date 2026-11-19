@@ -257,3 +257,7 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
 - Hervorhebung der Auswertung (`hlApply`): Innenhöfe (`znVoidsAt`) werden jetzt bei Dach, BGF/BRI (Loch im Körper) und
   Fassade (Hofwände) berücksichtigt. Bei geneigten Dächern (`b._rp`) kommt die Dachfläche aus der Dachgeometrie und
   ist nicht gesondert geprüft.
+- LOD 200: an Stößen von Wandstücken (Fensterbrüstung/Sturz/Pfeiler, Deckenbereich `quads2`, Loggia-Sturz) sind aus
+  der Nähe feine, etwas hellere 1-px-Linien zu sehen: jede Wand besteht aus mehreren Einzelkörpern, deren Ober- bzw.
+  Stirnseiten am Stoß durchschimmern. 2 mm Überlappung half nicht (getestet und zurückgenommen). Saubere Lösung: je Wand
+  ein Körper mit Öffnungen als Löcher (Ansichtsfläche mit Löchern extrudiert, Enden auf Gehrung verzogen).

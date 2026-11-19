@@ -336,6 +336,9 @@ function l2Balkone() {
     // ── Attika als eigene Wand rund um das oberste Geschoss (Flachdach)
     eb = 'roof';
     l2AttikaRing(b).forEach((q) => l2Prisma(teil('wand'), q.Q, q.y0, q.y1));
+    // Attika, Stürze und Balkonplatten in der Farbe der Außenwände dieses Gebäudes (kein Farbsprung am Übergang)
+    const wandIt = [...L2I.values()].find((it) => it.el.bid === b.id && it.el.kind === 'AW' && it.mat),
+      wandFarbe = wandIt ? wandIt.mat.color.clone() : new T.Color(L2K.AW.c);
     const g = new T.Group(),
       mesh = (arr, farbe) => {
         if (!arr.length) return null;
@@ -346,7 +349,7 @@ function l2Balkone() {
           m = new T.Mesh(
             ge,
             new T.MeshLambertMaterial({
-              color: glas ? 0xd8e6ee : farbe === 'wand' ? 0xf4f4f2 : farbe,
+              color: glas ? 0xd8e6ee : farbe === 'wand' ? wandFarbe : farbe,
               transparent: glas,
               opacity: glas ? 0.35 : 1,
               depthWrite: !glas,
