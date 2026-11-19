@@ -1090,6 +1090,8 @@ ${n > 1 ? `<select style="width:100%;margin-top:6px" onchange="if(this.value)oeg
 function oegPruefen(L) {
   return L.filter((G) => G && G.k).map((G) => ({
     k: String(G.k),
+    // Änderungszeitpunkt (Bibliothek: beim Öffnen eines Projekts gilt die jüngere Fassung)
+    ...(+G.zt > 0 ? { zt: +G.zt } : {}),
     n: String(G.n || 'Gruppe').slice(0, 60),
     l: Math.max(0.5, Math.min(40, +G.l || 6)),
     h: Math.max(1, Math.min(10, +G.h || 3)),

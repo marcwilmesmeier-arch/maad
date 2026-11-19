@@ -3,8 +3,9 @@
 // Browser gemerkt (localStorage 'maad.bib.v1' = { oet: [...], oeg: [...] }) und stehen in neuen Projekten zur
 // Verfügung. Vorgaben (OET0/OEG0) werden nur gemerkt, wenn sie geändert wurden.
 // Neues Projekt: Bibliothek ersetzt gleichnamige Vorgaben und ergänzt den Rest.
-// Projekt öffnen: das Projekt gewinnt, Bibliothek und Vorgaben ergänzen nur fehlende Schlüssel; eigene Einträge des Projekts
-// werden danach selbst in die Bibliothek übernommen.
+// Projekt öffnen: je Schlüssel gilt die jüngere Fassung (zt = Zeitpunkt der letzten Änderung, gesetzt beim Merken) –
+// eine im Konfigurator geänderte Gruppe kommt also auch in ein älteres Projekt; fehlende Schlüssel werden ergänzt.
+// Eigene Einträge des Projekts werden danach selbst in die Bibliothek übernommen.
 // Löschen im Konfigurator entfernt den Eintrag auch aus der Bibliothek.
 
 const BIB_KEY = 'maad.bib.v1';
@@ -35,23 +36,33 @@ function bibEigen(x, V) {
   const v = V.find((y) => y.k === x.k);
   return !v || JSON.stringify(v) !== JSON.stringify(x);
 }
-/** Eigene Typen und Gruppen des Projekts in die Bibliothek übernehmen (gleicher Schlüssel wird ersetzt). */
+/** Inhalt eines Eintrags ohne Änderungszeitpunkt, geprüft wie beim Laden (zum Vergleich); pr = Prüffunktion. */
+const bibInhalt = (x, pr) => JSON.stringify({ ...pr([x])[0], zt: undefined });
+/**
+ * Eigene Typen und Gruppen des Projekts in die Bibliothek übernehmen (gleicher Schlüssel wird ersetzt). Weicht ein
+ * Eintrag von der Fassung in der Bibliothek ab und ist nicht schon jünger, bekommt er den aktuellen Zeitpunkt (zt).
+ */
 function bibMerken() {
   const B = bibLesen(),
-    rein = (L, neu) =>
+    rein = (L, neu, pr) =>
       neu.forEach((x) => {
-        const i = L.findIndex((y) => y.k === x.k),
-          c = JSON.parse(JSON.stringify(x));
+        const i = L.findIndex((y) => y.k === x.k);
+        if (i >= 0 && bibInhalt(L[i], pr) !== bibInhalt(x, pr) && !((+x.zt || 0) > (+L[i].zt || 0)))
+          x.zt = Date.now();
+        else if (i < 0 && !x.zt) x.zt = Date.now();
+        const c = JSON.parse(JSON.stringify(x));
         if (i >= 0) L[i] = c;
         else L.push(c);
       });
   rein(
     B.oet,
     S.oet.filter((t) => bibEigen(t, OET0)),
+    oeTypenPruefen,
   );
   rein(
     B.oeg,
     S.oeg.filter((G) => bibEigen(G, OEG0)),
+    oegPruefen,
   );
   bibSchreiben(B);
 }
@@ -71,7 +82,8 @@ function bibErgaenzen(neu) {
       Q.forEach((x) => {
         const i = L.findIndex((y) => y.k === x.k);
         if (i < 0) L.push(x);
-        else if (neu) L[i] = x;
+        // neues Projekt: Bibliothek ersetzt; Projekt öffnen: jüngere Fassung gewinnt
+        else if (neu || (+x.zt || 0) > (+L[i].zt || 0)) L[i] = x;
       });
   holen(S.oet, B.oet);
   holen(S.oeg, B.oeg);
