@@ -91,12 +91,50 @@ function schEinfachLinien(p) {
   if (p.art === 'dx') L.push({ a: 135, x: 0, y: 0, dx: 0, dy: av, d: [] });
   return L;
 }
+/**
+ * Maßstab der deutschen Muster in der Ansicht (e Meter je Mustereinheit, wie beim Klinker fest statt geschätzt): die
+ * Linien liegen etwa 8–15 cm auseinander, Strichstärke 6 mm – so bleiben sie auch aus der Entfernung klar statt zu
+ * einem grauen Schleier zu verschwimmen.
+ */
+const SCH_DE_MASS = {
+  Boden: { e: 0.025 },
+  Beton_bewehrt: { e: 0.5 },
+  Beton_unbewehrt: { e: 0.5 },
+  Betonfertigteil1: { e: 0.15 },
+  Betonfertigteil2: { e: 0.25 },
+  DHart: { e: 0.15 },
+  Dichtstoffe: { e: 1 },
+  DvorOrt: { e: 0.4 },
+  Dweich: { e: 0.3 },
+  Holz_laengs: { e: 0.006 },
+  Holz_quer: { e: 0.006 },
+  Holzkon2: { e: 0.15 },
+  Kies: { e: 0.6 },
+  Sand: { e: 0.08 },
+  Mauerwerk: { e: 1 },
+  Moertel: { e: 0.3 },
+  MW_Schuettgut1: { e: 0.12 },
+  MW_Schuettgut2: { e: 0.12 },
+  MW_Schuettgut3: { e: 0.12 },
+  MW_Stueckgut1: { e: 0.12 },
+  MW_Stueckgut2: { e: 0.12 },
+  Punkte1: { e: 0.1, lw: 0.012 },
+  Punkte2: { e: 0.15, lw: 0.012 },
+};
 /** Alle wählbaren Muster: mitgelieferte (de:Name), eigene und importierte (S.sch). */
 function schAlle() {
   if (!SCH.de)
     SCH.de = schParse(SCH_KLINKER)
       .map((p) => ({ ...p, k: 'de:' + p.n, q: 'de', e: 0.001, lw: 0.008 })) // Klinker: Millimeter, Fuge ~8 mm
-      .concat(schParse(SCH_DE).map((p) => ({ ...p, k: 'de:' + p.n, q: 'de' })));
+      .concat(
+        schParse(SCH_DE).map((p) => ({
+          ...p,
+          k: 'de:' + p.n,
+          q: 'de',
+          lw: 0.006,
+          ...(SCH_DE_MASS[p.n] || {}),
+        })),
+      );
   return SCH.de.concat(S.sch);
 }
 const schG = (k) => (k ? schAlle().find((p) => p.k === k) || null : null);
@@ -312,21 +350,45 @@ function schDaten(H) {
   if (!L.length || L.length > SCH_MAXF || L.some((f) => (f.d || []).length > SCH_MAXD)) return null;
   const key = JSON.stringify([L, H.e]);
   if (SCH.cache.has('dat' + key)) return SCH.cache.get('dat' + key);
-  const A = new Float32Array(L.length * 16);
+  const A = new Float32Array(L.length * 20);
   L.forEach((f, i) => {
     const a = (f.a * Math.PI) / 180,
       d = (f.d || []).map((x) => x * H.e),
-      o = i * 16;
+      o = i * 20,
+      P = d.reduce((s2, x) => s2 + Math.abs(x), 0);
     A.set([Math.cos(a), Math.sin(a), f.x * H.e, f.y * H.e], o);
-    A.set([f.dx * H.e, f.dy * H.e, d.reduce((s2, x) => s2 + Math.abs(x), 0), d.length], o + 4);
+    A.set([f.dx * H.e, f.dy * H.e, P, d.length], o + 4);
     d.forEach((x, j) => (A[o + 8 + j] = x));
+    const G = schGitter(f.dx * H.e, f.dy * H.e, P, d);
+    if (G) A.set(G, o + 16);
   });
-  const tex = new T.DataTexture(A, 4, L.length, T.RGBAFormat, T.FloatType);
+  const tex = new T.DataTexture(A, 5, L.length, T.RGBAFormat, T.FloatType);
   tex.magFilter = tex.minFilter = T.NearestFilter;
   tex.needsUpdate = true;
   const r = { tex, n: L.length };
   SCH.cache.set('dat' + key, r);
   return r;
+}
+/**
+ * Gitter einer gestrichelten Schar (Striche liegen auf dem Gitter m·(P, 0) + n·(dx, dy) in Linienrichtung s / quer q):
+ * reduzierte Basis [e1s, e1q, e2s, e2q], wenn die Linien viel dichter liegen als die Striche lang sind (z. B. Dämmung
+ * weich: 1 mm Linienabstand, Striche alle 80 m) – dann sucht der Shader die nächsten Gitterpunkte statt der nächsten
+ * Linie. Sonst null (gewöhnliche Schar).
+ */
+function schGitter(dx, dy, P, d) {
+  if (!(P > 1e-9) || !(Math.abs(dy) > 1e-9) || P / Math.abs(dy) < 6) return null;
+  let a = [P, 0],
+    b = [dx, dy];
+  const n2 = (v) => v[0] * v[0] + v[1] * v[1];
+  for (let k = 0; k < 64; k++) {
+    if (n2(a) > n2(b)) [a, b] = [b, a];
+    const mu = Math.round((a[0] * b[0] + a[1] * b[1]) / n2(a));
+    if (!mu) break;
+    b = [b[0] - mu * a[0], b[1] - mu * a[1]];
+  }
+  // längster Strich muss kürzer als die kleinere Gitterweite sein (sonst reichen die Nachbarpunkte nicht)
+  const lmax = Math.max(0, ...d.filter((x) => x >= 0));
+  return lmax < 0.95 * Math.sqrt(n2(a)) ? [a[0], a[1], b[0], b[1]] : null;
 }
 /** GLSL: Deckung der Musterlinien an der Stelle uv (Meter, in Wandebene) – genau je Linie, kantengeglättet. */
 const SCH_GLSL = `float schDeckung(vec2 uv){
@@ -336,6 +398,31 @@ const SCH_GLSL = `float schDeckung(vec2 uv){
     vec4 a=texelFetch(tSchP,ivec2(0,i),0),b=texelFetch(tSchP,ivec2(1,i),0);
     vec2 u=a.xy,pp=vec2(-u.y,u.x),d=uv-a.zw;
     float s=dot(d,u),q=dot(d,pp),k=abs(b.y)>1e-6?floor(q/b.y+.5):0.;
+    vec4 gt=texelFetch(tSchP,ivec2(4,i),0);
+    if(dot(gt.xy,gt.xy)>1e-12){
+      // gestrichelte Schar mit sehr dichten Linien: nächste Gitterpunkte (reduzierte Basis gt) und ihre Striche
+      vec2 e1=gt.xy,e2=gt.zw;float det=e1.x*e2.y-e1.y*e2.x;
+      mat2 Bi=mat2(e2.y,-e1.y,-e2.x,e1.x)/det;
+      float fp=max(max(fwidth(s),fwidth(q)),1e-6),hw2=max(uSchW,fp*.6),cg=0.,acc=0.,an=0.;
+      for(int j=0;j<8;j++){
+        if(float(j)>=b.w)break;
+        float l=texelFetch(tSchP,ivec2(2+j/4,i),0)[j-4*(j/4)],al=abs(l);
+        if(l>=0.){
+          vec2 pj=vec2(s-acc,q),c0=floor(Bi*pj);
+          for(int gx=-1;gx<=1;gx++)for(int gy=-1;gy<=1;gy++){
+            vec2 L=(c0.x+float(gx))*e1+(c0.y+float(gy))*e2,dd=pj-L;
+            float di=length(vec2(dd.x-clamp(dd.x,0.,al),dd.y));
+            cg=max(cg,1.-smoothstep(hw2-fp*.5,hw2+fp*.5,di));
+          }
+          an+=max(al,2.*uSchW)*2.*uSchW;
+        }
+        acc+=al;
+      }
+      float r1=min(length(e1),length(e2));
+      cg=mix(cg,min(1.,an/abs(det)),smoothstep(r1*.33,r1*.6,fp));
+      cov=max(cov,cg);
+      continue;
+    }
     float dist=abs(q-k*b.y),fq=max(fwidth(q),1e-6),hw=max(uSchW,fq*.6);
     float c=1.-smoothstep(hw-fq*.5,hw+fq*.5,dist);
     if(b.z>1e-6){
@@ -354,8 +441,13 @@ const SCH_GLSL = `float schDeckung(vec2 uv){
       }
       c*=on;
     }
-    // zu dichte Scharen (Abstand kaum größer als ein Bildpunkt) weich ausblenden statt flimmern
-    if(abs(b.y)>1e-6)c*=1.-smoothstep(abs(b.y)*.2,abs(b.y)*.45,fq);
+    // zu dichte Scharen (Abstand unter etwa 3 Bildpunkten): statt zu flimmern oder zu verschwinden in den mittleren
+    // Grauwert der Schar übergehen (Strichbreite / Abstand), wie eine gedruckte Schraffur aus der Entfernung
+    if(abs(b.y)>1e-6){
+      float ton=min(1.,2.*uSchW/abs(b.y));
+      if(b.z>1e-6){float an=0.;for(int j=0;j<8;j++){if(float(j)>=b.w)break;float l=(j<4?texelFetch(tSchP,ivec2(2,i),0)[j]:texelFetch(tSchP,ivec2(3,i),0)[j-4]);an+=l>=0.?max(l,2.*uSchW):0.;}ton*=min(1.,an/b.z);}
+      c=mix(c,ton,smoothstep(abs(b.y)*.33,abs(b.y)*.6,fq));
+    }
     cov=max(cov,c);
   }
   return cov;
