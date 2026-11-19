@@ -186,6 +186,33 @@ function l2MeshOrig(e) {
     m.castShadow = m.receiveShadow = true;
     m.raycast = () => {};
     g.add(m);
+    // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Giebel- und Drempelwand außen im Fassadentyp
+    // (je äußerem Dreieck der Typ an seinem Schwerpunkt; innen bleibt die Wand weiß)
+    if (e.kind === 'AW' && e.gb && e.tro && !l23()) {
+      const nachTyp = new Map();
+      for (let i = 0; i + 8 < e.tro.length; i += 9) {
+        const cx = (e.tro[i] + e.tro[i + 3] + e.tro[i + 6]) / 3,
+          cy = (e.tro[i + 1] + e.tro[i + 4] + e.tro[i + 7]) / 3 + e.y0,
+          cz = (e.tro[i + 2] + e.tro[i + 5] + e.tro[i + 8]) / 3,
+          k = ftGiebelTyp(e, cx, cy, cz);
+        if (!k) continue;
+        if (!nachTyp.has(k)) nachTyp.set(k, []);
+        nachTyp.get(k).push(...e.tro.slice(i, i + 9));
+      }
+      nachTyp.forEach((pos, k) => {
+        const ge = new T.BufferGeometry();
+        ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+        ge.computeVertexNormals();
+        const mt = matVon(k).clone();
+        mt.polygonOffset = true;
+        mt.polygonOffsetFactor = -1;
+        mt.polygonOffsetUnits = -1;
+        const mf = new T.Mesh(ge, mt);
+        mf.receiveShadow = true;
+        mf.raycast = () => {};
+        g.add(mf);
+      });
+    }
     const go = new T.BufferGeometry();
     go.setAttribute('position', new T.BufferAttribute(new Float32Array(e.tro), 3));
     const eg = new T.EdgesGeometry(go, 25);

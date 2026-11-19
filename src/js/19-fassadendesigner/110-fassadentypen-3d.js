@@ -342,6 +342,36 @@ function ftWandAbschnitte(e) {
     return { d: null, A: [] };
   }
 }
+/**
+ * Fassadentyp an einer Stelle einer Giebel- oder Drempelwand (LOD 200, Bauteil e mit e.gb): Punkt (x, y, z) in
+ * Weltkoordinaten, Außennormale aus e.gb. Gezielt gesetzter Typ der Fläche, sonst wie bei der Attika der Typ der Wand
+ * darunter im obersten Geschoss. '' = ohne Typ.
+ */
+function ftGiebelTyp(e, x, y, z) {
+  try {
+    const b = oeBauteilGebaeude(e);
+    if (!b || !b.fd || !e.gb) return '';
+    const V = fdViewAt(b, e.gb.nx, e.gb.nz, x, z, 0.7);
+    if (!V) return '';
+    const u0 = ugN(b);
+    let ugH = 0;
+    for (let i = 0; i < u0; i++) ugH += b.levels[i].h;
+    const u = x * V.n[1] - z * V.n[0],
+      v = y - (b._y + ugH),
+      F = fdFaces(b, V),
+      typ = (vv) => {
+        const f = F.find((q) => grInFace(q, u, vv));
+        return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : '';
+      };
+    // gezielt gesetzt gilt; sonst wie die Attika der Typ der Wand darunter (oberstes Vollgeschoss, Mitte der Kante u)
+    let vTop = 0;
+    for (let i = u0; i < b.levels.length; i++) vTop += b.levels[i].h;
+    return typ(v) || typ(vTop - 0.3);
+  } catch (err) {
+    logErr(err, 'ftGiebelTyp');
+    return '';
+  }
+}
 /** Kennung der Fassadentypen eines Gebäudes (Neuaufbau der eingefärbten Wände). */
 function ftWandSig(b) {
   return b && b.fd
