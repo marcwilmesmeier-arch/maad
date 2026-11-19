@@ -480,6 +480,12 @@ function fdLayout(b) {
   return L;
 }
 function fdBox(b) {
+  // ── Erweiterung aus 19-fassadendesigner/140-fluchten-gelaende.js: das Dach in ganzer Tiefe passt mit ins Bild
+  let dach = 0;
+  if (b._rp && b._roofH) {
+    for (let i = ugN(b); i < b.levels.length; i++) dach += b.levels[i].h;
+    dach += b._roofH;
+  }
   if (FDS.vk === '*') {
     const L = fdLayout(b);
     let u0 = 1e9,
@@ -490,12 +496,12 @@ function fdBox(b) {
       u0 = Math.min(u0, l.V.u0 + l.ox);
       u1 = Math.max(u1, l.V.u1 + l.ox);
       v0 = Math.min(v0, l.V.v0);
-      v1 = Math.max(v1, l.V.v1);
+      v1 = Math.max(v1, l.V.v1, dach);
     });
     return { u0, u1, v0, v1 };
   }
   const V = fdVw(b, FDS.vk);
-  return V ? { u0: V.u0, u1: V.u1, v0: V.v0, v1: V.v1 } : { u0: 0, u1: 10, v0: 0, v1: 10 };
+  return V ? { u0: V.u0, u1: V.u1, v0: V.v0, v1: Math.max(V.v1, dach) } : { u0: 0, u1: 10, v0: 0, v1: 10 };
 }
 function fdFit() {
   const b = fdB();

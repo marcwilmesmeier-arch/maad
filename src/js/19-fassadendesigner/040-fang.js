@@ -287,6 +287,8 @@ function fdDrawView(g, b, V, ox, o) {
     d = fdD(b, V.key),
     X = (u) => fdSX(u + ox),
     Y = fdSY;
+  // ── Erweiterung aus 19-fassadendesigner/140-fluchten-gelaende.js: Dach in ganzer Gebäudetiefe hinter der Fassade
+  fdDachAnsicht(g, b, V, ox);
   if (o.sel && V.ctx && V.ctx.length) {
     g.save();
     g.fillStyle = '#64748b14';

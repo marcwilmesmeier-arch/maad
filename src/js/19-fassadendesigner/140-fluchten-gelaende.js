@@ -112,3 +112,92 @@ function fdGelaendeSchnitt(g, b, V, ox) {
   g.stroke();
   g.restore();
 }
+/**
+ * Dach in der Ansicht (ganze Gebäudetiefe): die Dachflächen des geneigten Dachs (b._rp.geo, Weltkoordinaten) in die
+ * Ansichtsebene projiziert – hinter der Fassade, so dass z. B. von der Traufseite die Dachfläche eines Satteldachs zu
+ * sehen ist. Farbe und Schraffur aus dem Dachmaterial (fdDachTyp), Kanten aus der Dachform (roofKanten: First, Grat,
+ * Kehle, Traufe, Ortgang).
+ */
+function fdDachAnsicht(g, b, V, ox) {
+  const rp = b._rp;
+  if (!rp || !rp.geo || !V.n || b._y == null) return;
+  const P = rp.geo.getAttribute('position');
+  if (!P || !P.count) return;
+  const u0 = ugN(b);
+  let ugH = 0;
+  for (let i = 0; i < u0; i++) ugH += b.levels[i].h;
+  const base = b._y + ugH,
+    [nx, nz] = V.n,
+    X = (u) => fdSX(u + ox),
+    Y = fdSY,
+    pu = (x, z) => x * nz - z * nx,
+    k = fdDachTyp(b),
+    t = k ? fdT(k) : null;
+  g.save();
+  // Dachflächen: zur Ansicht geneigte heller, abgewandte etwas dunkler (wie eine Ansicht mit Licht von vorn)
+  const hell = [],
+    dunkel = [];
+  for (let i = 0; i + 2 < P.count; i += 3) {
+    const A = [P.getX(i), P.getY(i), P.getZ(i)],
+      B = [P.getX(i + 1), P.getY(i + 1), P.getZ(i + 1)],
+      C = [P.getX(i + 2), P.getY(i + 2), P.getZ(i + 2)],
+      // Normale des Dreiecks (y nach oben); zur Ansicht hin, wenn sie in Richtung −n zeigt
+      e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]],
+      e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]],
+      nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]],
+      zuMir = (nn[1] < 0 ? -1 : 1) * (nn[0] * nx + nn[2] * nz) > 0;
+    (zuMir ? hell : dunkel).push([A, B, C].map((q) => [X(pu(q[0], q[2])), Y(q[1] - base)]));
+  }
+  const fl = (L, farbe, kante = true) => {
+    if (!L.length) return;
+    g.beginPath();
+    L.forEach((T3) => {
+      g.moveTo(T3[0][0], T3[0][1]);
+      g.lineTo(T3[1][0], T3[1][1]);
+      g.lineTo(T3[2][0], T3[2][1]);
+      g.closePath();
+    });
+    g.fillStyle = farbe;
+    g.fill('nonzero');
+    if (!kante) return;
+    // kleine Fugen zwischen den Dreiecken schließen
+    g.strokeStyle = farbe;
+    g.lineWidth = 0.6;
+    g.stroke();
+  };
+  const c0 = t ? t.c : '#c9ced3';
+  fl(dunkel, c0);
+  fl(hell, c0);
+  // abgewandte Flächen leicht abdunkeln
+  if (dunkel.length) {
+    g.globalAlpha = 0.12;
+    fl(dunkel, '#1F2A33', false);
+    g.globalAlpha = 1;
+  }
+  // Schraffur des Dachmaterials über der ganzen Dachfläche
+  if (t) {
+    g.beginPath();
+    hell.concat(dunkel).forEach((T3) => {
+      g.moveTo(T3[0][0], T3[0][1]);
+      g.lineTo(T3[1][0], T3[1][1]);
+      g.lineTo(T3[2][0], T3[2][1]);
+      g.closePath();
+    });
+    schFuellen2D(g, t, X(1) - X(0), X(0), Y(0), 'nonzero');
+  }
+  // Dachkanten
+  try {
+    const K = roofKanten(rp, lf(b, b.levels[b.levels.length - 1])).p;
+    g.beginPath();
+    for (let i = 0; i + 5 < K.length; i += 6) {
+      g.moveTo(X(pu(K[i], K[i + 2])), Y(K[i + 1] - base));
+      g.lineTo(X(pu(K[i + 3], K[i + 5])), Y(K[i + 4] - base));
+    }
+    g.strokeStyle = '#475569';
+    g.lineWidth = 1.1;
+    g.stroke();
+  } catch (e) {
+    logErr(e, 'fdDachAnsicht');
+  }
+  g.restore();
+}

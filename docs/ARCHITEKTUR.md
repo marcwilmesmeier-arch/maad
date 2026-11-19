@@ -489,6 +489,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Firstrichtung: `autoDir` exakt (ungerundet), Eingabe als Drehung gegenüber der Ausgangslage `b.roof.dv` (0 = parallel
   zur längsten Seite, Walmgrate auf den Ecken); `roofVersatz` rechnet die frühere absolute Richtung `b.roof.dir` um,
   `roofFest` ersetzt die alte Prüfung auf `dir`.
+- Ansichten zeigen das geneigte Dach in ganzer Gebäudetiefe (`fdDachAnsicht`, 140-fluchten-gelaende.js): Dreiecke aus
+  `b._rp.geo` in die Ansichtsebene projiziert, hinter der Fassade, Farbe/Schraffur aus dem Dachmaterial, Kanten aus
+  `roofKanten`; `fdBox` nimmt die Firsthöhe beim Einpassen mit.
 - Terrassen-Attika (LOD 200): wie am Dach eine eigene Wand (`l2AttikaTerrassen` in 130-balkone.js, über
   `l2AttikaRing`): Terrassenfläche = Geschoss minus Geschoss darüber, Wandstücke an deren Außenkanten, Gehrung zwischen
   Außenkanten, stumpf an der Wand darüber; Typ wie die Wand darunter (`l2AttikaTyp(…, j)`). Die Terrassenwand selbst
