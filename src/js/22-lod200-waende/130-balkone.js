@@ -154,10 +154,50 @@ function l2AttikaRing(b) {
       I = K.map((_, i) => innen(i));
     K.forEach((k, i) => {
       if (k.l < 0.01) return;
-      R.push({ Q: [k.p, k.q, I[(i + 1) % n], I[i]], y0, y1: y0 + L2_ATTIKA });
+      // Fassadentyp entlang der Kante (alle 0,5 m); bei einem Wechsel wird die Attika dort geteilt
+      const N = Math.max(1, Math.ceil(k.l / 0.5)),
+        typ = (t) => l2AttikaTyp(b, k.p[0] + (k.q[0] - k.p[0]) * t, k.p[1] + (k.q[1] - k.p[1]) * t, k.nn),
+        st = [{ t0: 0, ft: typ(0.5 / N) }];
+      for (let s = 1; s < N; s++) {
+        const ft = typ((s + 0.5) / N);
+        if (ft !== st[st.length - 1].ft) st.push({ t0: s / N, ft });
+      }
+      const A = (t) => [k.p[0] + (k.q[0] - k.p[0]) * t, k.p[1] + (k.q[1] - k.p[1]) * t],
+        // innen: an den Kantenenden die Gehrungspunkte, dazwischen senkrecht versetzt
+        Ii = (t) =>
+          t <= 0 ? I[i] : t >= 1 ? I[(i + 1) % n] : [A(t)[0] + k.nn[0] * d, A(t)[1] + k.nn[1] * d];
+      st.forEach((x, j) => {
+        const t0 = x.t0,
+          t1 = j + 1 < st.length ? st[j + 1].t0 : 1;
+        R.push({ Q: [A(t0), A(t1), Ii(t1), Ii(t0)], y0, y1: y0 + L2_ATTIKA, ft: x.ft });
+      });
     });
   });
   return R;
+}
+/**
+ * Fassadentyp der Attika an einer Stelle (x, z) ihrer Außenkante (nn = Normale zur Gebäudeseite): gezielt in der
+ * Ansicht gesetzt (Fassadendesigner, d.at; 'ohne' = ohne Typ), sonst der Typ der Fassadenfläche darunter im obersten
+ * Geschoss. '' = ohne Typ (Wandfarbe).
+ */
+function l2AttikaTyp(b, x, z, nn) {
+  try {
+    if (!b.fd) return '';
+    const V = fdViewAt(b, -nn[0], -nn[1], x, z, 0.7);
+    if (!V) return '';
+    const d = fdD(b, V.key),
+      gilt = (k) => (k && k !== 'ohne' && S.ft.some((t) => t.k === k) ? k : '');
+    if (d && d.at) return gilt(d.at);
+    const u0 = ugN(b);
+    let vTop = 0;
+    for (let i = u0; i < b.levels.length; i++) vTop += b.levels[i].h;
+    const u = x * V.n[1] - z * V.n[0],
+      F = fdFaces(b, V).find((f) => grInFace(f, u, vTop - 0.3));
+    return gilt(F && F.t);
+  } catch (e) {
+    logErr(e, 'l2AttikaTyp');
+    return '';
+  }
 }
 /** Senkrechtes Prisma über dem Viereck Q (Grundriss, beliebige Form) von ya bis yb – alle Seiten, doppelseitig. */
 function l2Prisma(pos, Q, ya, yb) {
@@ -232,7 +272,12 @@ function l2Balkone() {
     da = new Set();
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !an || l2Einfach(b)) return; // in Bewegung oder Bearbeitung: einfacher Körper
-    const sig = oeGebSig(b) + '|' + fdSig(b);
+    // auch Fassadentypen und Schraffuren (Attika im Typ der Wand darunter)
+    const sig =
+      oeGebSig(b) +
+      '|' +
+      fdSig(b) +
+      JSON.stringify([b.fd ? Object.values(b.fd).map((d) => [d.units, d.at]) : 0, S.ft, schSig()]);
     da.add(b.id);
     let o = L2BK.get(b.id);
     if (o && o.sig === sig) return;
@@ -335,7 +380,8 @@ function l2Balkone() {
     }
     // ── Attika als eigene Wand rund um das oberste Geschoss (Flachdach)
     eb = 'roof';
-    l2AttikaRing(b).forEach((q) => l2Prisma(teil('wand'), q.Q, q.y0, q.y1));
+    // je Abschnitt im Fassadentyp der Wand darunter (Farbe und Schraffur, l2AttikaTyp)
+    l2AttikaRing(b).forEach((q) => l2Prisma(teil(q.ft ? 'ft:' + q.ft : 'wand'), q.Q, q.y0, q.y1));
     // Attika, Stürze und Balkonplatten in der Farbe der Außenwände dieses Gebäudes (kein Farbsprung am Übergang)
     const wandIt = [...L2I.values()].find((it) => it.el.bid === b.id && it.el.kind === 'AW' && it.mat),
       wandFarbe = wandIt ? wandIt.mat.color.clone() : new T.Color(L2K.AW.c);
@@ -346,10 +392,12 @@ function l2Balkone() {
         ge.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
         ge.computeVertexNormals();
         const glas = farbe === 'glas',
+          // 'ft:<Typ>': Farbe und Schraffur des Fassadentyps (Attika)
+          ftT = typeof farbe === 'string' && farbe.startsWith('ft:') ? fdT(farbe.slice(3)) : null,
           m = new T.Mesh(
             ge,
             new T.MeshLambertMaterial({
-              color: glas ? 0xd8e6ee : farbe === 'wand' ? wandFarbe : farbe,
+              color: glas ? 0xd8e6ee : ftT ? ftT.c : farbe === 'wand' ? wandFarbe : farbe,
               transparent: glas,
               opacity: glas ? 0.35 : 1,
               depthWrite: !glas,
@@ -359,6 +407,7 @@ function l2Balkone() {
               shadowSide: T.BackSide,
             }),
           );
+        if (ftT) schMaterial(m.material, ftT);
         m.castShadow = !glas;
         m.receiveShadow = true;
         m.raycast = () => {};

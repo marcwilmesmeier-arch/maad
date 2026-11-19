@@ -117,21 +117,55 @@ function l2MeshOrig(e) {
       side: T.DoubleSide,
       emissive: new T.Color(0x000000),
     }),
-    add = (f, hh) => {
-      const P = grPrism(f, 0, hh || e.h),
-        m = new T.Mesh(P.g, mat);
-      m.castShadow = m.receiveShadow = true;
-      m.raycast = () => {};
-      g.add(m);
-      const lg = new T.BufferGeometry();
-      lg.setAttribute('position', new T.BufferAttribute(new Float32Array(P.ln), 3));
-      const ln = new T.LineSegments(
-        lg,
-        new T.LineBasicMaterial({ color: new T.Color(K.c2), transparent: true, opacity: 0.55 }),
-      );
-      ln.raycast = () => {};
-      g.add(ln);
-    };
+    // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Außenwand in der Farbe ihres Fassadentyps,
+    // nur in der Darstellung an Typwechseln geschnitten (die Wand bleibt ein Bauteil); Schraffur als Schicht davor
+    FA = e.kind === 'AW' && e.quads ? ftWandAbschnitte(e) : { A: [] },
+    mats = new Map(),
+    matVon = (k) => {
+      if (!k) return mat;
+      if (!mats.has(k))
+        mats.set(
+          k,
+          new T.MeshLambertMaterial({
+            color: new T.Color(fdT(k).c),
+            side: T.DoubleSide,
+            emissive: new T.Color(0),
+          }),
+        );
+      return mats.get(k);
+    },
+    typBei = (f) => {
+      if (!FA.A.length) return '';
+      const t = f.o.reduce((s, p) => s + p[0] * FA.d[0] + p[1] * FA.d[1], 0) / f.o.length,
+        a = FA.A.find((x) => t >= x.t0 && t <= x.t1);
+      return a ? a.k : '';
+    },
+    // Fläche f an den Typwechseln schneiden: [[Teilfläche, Typ]]
+    nachTyp = (f) => {
+      if (!FA.A.length || (f.h && f.h.length)) return [[f, typBei(f)]];
+      const R = [];
+      FA.A.forEach((a) => {
+        const P = oeSchneide(f.o, FA.d, a.t0, a.t1);
+        if (P.length >= 3) R.push([{ o: P, h: [] }, a.k]);
+      });
+      return R;
+    },
+    add = (f0, hh) =>
+      nachTyp(f0).forEach(([f, k]) => {
+        const P = grPrism(f, 0, hh || e.h),
+          m = new T.Mesh(P.g, matVon(k));
+        m.castShadow = m.receiveShadow = true;
+        m.raycast = () => {};
+        g.add(m);
+        const lg = new T.BufferGeometry();
+        lg.setAttribute('position', new T.BufferAttribute(new Float32Array(P.ln), 3));
+        const ln = new T.LineSegments(
+          lg,
+          new T.LineBasicMaterial({ color: new T.Color(K.c2), transparent: true, opacity: 0.55 }),
+        );
+        ln.raycast = () => {};
+        g.add(ln);
+      });
   if (e.tri) {
     const gg = new T.BufferGeometry();
     gg.setAttribute('position', new T.BufferAttribute(new Float32Array(e.tri), 3));
@@ -211,7 +245,7 @@ function l2Sync() {
     ru = S.bld.filter((b) => !b.ex && b._y != null && l2Einfach(b)),
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen (nicht Teil der Wandableitung)
     sig =
-      bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') +
+      bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b) + ftWandSig(b)).join('#') +
       ru.map((b) => '#ru:' + b.id).join('') +
       (l23() ? l2mSig() : '');
   if (sig !== L2SIG) {
@@ -235,6 +269,8 @@ function l2Sync() {
             l23() ? l2mSig() : 0,
             // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js
             l23() ? 0 : oeWandSig(e),
+            // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Wandfarbe nach Fassadentyp
+            e.kind === 'AW' && !l23() ? ftWandSig(oeBauteilGebaeude(e)) : 0,
           ]).replace(/(\d+\.\d{3})\d+/g, '$1'),
           old = L2I.get(e.id);
         seen.add(e.id);

@@ -88,7 +88,7 @@ function ftBauen(b) {
   let ugH = 0;
   for (let i = 0; i < u; i++) ugH += b.levels[i].h;
   const base = b._y + ugH,
-    VOR = 0.04, // Abstand der Farbfläche vor der Wand
+    VOR = 0.01, // Abstand der Farbfläche vor der Wand (knapp davor: wirkt wie eingefärbt, bündig mit der Attika)
     e = 0.003, // Seitenflächen leicht zur offenen Seite gerückt
     ov = (d) => (d > 0 ? d - 0.01 : d - VOR), // Lage der Farbfläche zu einer Wandfläche in Tiefe d
     farbePos = (c) => {
@@ -148,12 +148,13 @@ function ftBauen(b) {
         pos.push(...A0, ...C0, ...C1, ...A0, ...C1, ...A1);
       };
     fdFaces(b, V).forEach((f) => {
-      const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? f.t : null, // Typ (Schlüssel)
+      const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? 'l:' + f.t : null, // nur Schraffur (Wand trägt die Farbe)
         imFeld = (x) => grInFace(f, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2),
         Mf = M.filter(imFeld),
         Of = O.filter(imFeld),
         inR = (x) => Mf.find((m) => innerhalb(m, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2)),
-        farbeVon = (m) => (m && m.t ? m.t : fc);
+        // Gruppenfelder mit eigenem Material: Farbe und Schraffur (die Wand dahinter hat die Farbe der Fläche)
+        farbeVon = (m) => (m && m.t ? 'g:' + m.t : fc);
       if (!fc && !Mf.some((m) => m.t)) return;
       // Hauptfläche ohne Gruppenfelder und ohne Fenster außerhalb davon (Aussparungen vereinigt)
       if (fc)
@@ -263,21 +264,27 @@ function ftBauen(b) {
   });
   farben.forEach((pos, c) => {
     if (!pos.length) return;
+    // 'l:<Typ>': nur die Schraffurlinien (ohne Schraffur entfällt die Schicht); 'g:<Typ>': Farbe und Schraffur
+    const nur = c.startsWith('l:'),
+      t = fdT(c.slice(2));
+    if (nur && !schVonTyp(t)) return;
     const ge = new T.BufferGeometry();
     ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
     ge.computeVertexNormals();
     const m = new T.Mesh(
       ge,
-      // Farbe und Schraffur des Fassadentyps c
       schMaterial(
         new T.MeshLambertMaterial({
-          color: new T.Color(fdT(c).c),
+          color: new T.Color(t.c),
           side: T.DoubleSide,
+          transparent: nur,
+          depthWrite: !nur,
           polygonOffset: true,
           polygonOffsetFactor: -2,
           polygonOffsetUnits: -2,
         }),
-        fdT(c),
+        t,
+        nur,
       ),
     );
     m.receiveShadow = true;
@@ -285,6 +292,60 @@ function ftBauen(b) {
     g.add(m);
   });
   return g;
+}
+/**
+ * Fassadentypen entlang einer Außenwand (LOD 200, Bauteil e): Abschnitte [{ t0, t1, k }] entlang der Wandachse d
+ * (t = Punkt · d), Typ k der Fassadenfläche in Geschossmitte ('' = ohne Typ). Damit wird die Wand selbst eingefärbt
+ * (nur in der Darstellung in Stücke geschnitten, l2MeshOrig); leer, wenn die Wand keinen Typ trägt.
+ */
+function ftWandAbschnitte(e) {
+  try {
+    const b = oeBauteilGebaeude(e);
+    if (!b || !b.fd || e.kind !== 'AW' || !e.sa || !e.sb) return { d: null, A: [] };
+    const u0 = ugN(b);
+    if (e.li < u0) return { d: null, A: [] };
+    const L = Math.hypot(e.sb[0] - e.sa[0], e.sb[1] - e.sa[1]) || 1,
+      d = [(e.sb[0] - e.sa[0]) / L, (e.sb[1] - e.sa[1]) / L],
+      fp = lf(b, b.levels[e.li]),
+      m = [(e.sa[0] + e.sb[0]) / 2, (e.sa[1] + e.sb[1]) / 2];
+    let n = [-d[1], d[0]];
+    if (fp && inP([m[0] + n[0] * 0.2, m[1] + n[1] * 0.2], fp)) n = [d[1], -d[0]]; // Normale nach außen
+    let vm = 0;
+    for (let i = u0; i < e.li; i++) vm += b.levels[i].h;
+    vm += b.levels[e.li].h / 2;
+    const V = fdViewAt(b, n[0], n[1], m[0], m[1], 0.7);
+    if (!V) return { d, A: [] };
+    const F = fdFaces(b, V),
+      typ = (s) => {
+        const x = e.sa[0] + d[0] * s,
+          z = e.sa[1] + d[1] * s,
+          f = F.find((q) => grInFace(q, x * V.n[1] - z * V.n[0], vm));
+        return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : '';
+      },
+      ta = e.sa[0] * d[0] + e.sa[1] * d[1],
+      N = Math.max(1, Math.ceil(L / 0.25)),
+      A = [];
+    for (let i = 0; i < N; i++) {
+      const k = typ(((i + 0.5) / N) * L),
+        t0 = ta + (i / N) * L,
+        t1 = ta + ((i + 1) / N) * L;
+      if (A.length && A[A.length - 1].k === k) A[A.length - 1].t1 = t1;
+      else A.push({ t0, t1, k });
+    }
+    // Wandenden (Gehrung) gehören zum ersten bzw. letzten Abschnitt
+    A[0].t0 = -1e5;
+    A[A.length - 1].t1 = 1e5;
+    return { d, A: A.some((a) => a.k) ? A : [] };
+  } catch (err) {
+    logErr(err, 'ftWandAbschnitte');
+    return { d: null, A: [] };
+  }
+}
+/** Kennung der Fassadentypen eines Gebäudes (Neuaufbau der eingefärbten Wände). */
+function ftWandSig(b) {
+  return b && b.fd
+    ? JSON.stringify([Object.values(b.fd).map((d) => d && d.units), S.ft.map((t) => [t.k, t.c]), fdSig(b)])
+    : '';
 }
 /** Flächen aller Gebäude abgleichen (nur geänderte neu bauen). */
 function ftSync() {

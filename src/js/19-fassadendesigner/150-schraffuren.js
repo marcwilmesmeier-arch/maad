@@ -278,7 +278,7 @@ function schTextur(H) {
  * Material mit der Schraffur eines Fassadentyps versehen (3D): Kachel in Wandebene (waagerecht auf Decken), Drehung w,
  * Linien über die Grundfarbe gemischt.
  */
-function schMaterial(m, t) {
+function schMaterial(m, t, nurLinien) {
   const H = schVonTyp(t);
   if (!H) return m;
   const K = schTextur(H),
@@ -303,10 +303,14 @@ function schMaterial(m, t) {
 {vec3 wn=normalize(cross(dFdx(vSchP),dFdy(vSchP)));vec2 uv;
 if(abs(wn.y)>.7){uv=vSchP.xz;}else{vec2 tt=normalize(vec2(-wn.z,wn.x));uv=vec2(dot(vSchP.xz,tt),vSchP.y);}
 float cr=cos(uSchR),sr=sin(uSchR);uv=vec2(cr*uv.x+sr*uv.y,-sr*uv.x+cr*uv.y);
-vec4 hs=texture2D(tSch,uv/uSchM);diffuseColor.rgb=mix(diffuseColor.rgb,hs.rgb,hs.a);}`,
+vec4 hs=texture2D(tSch,uv/uSchM);${
+          nurLinien
+            ? 'if(hs.a<.02)discard;diffuseColor=vec4(hs.rgb,hs.a);'
+            : 'diffuseColor.rgb=mix(diffuseColor.rgb,hs.rgb,hs.a);'
+        }}`,
       );
   };
-  m.customProgramCacheKey = () => 'sch';
+  m.customProgramCacheKey = () => (nurLinien ? 'schL' : 'sch');
   return m;
 }
 /** Kennung der Schraffuren (für den Neuaufbau, wenn sich Muster ändern). */

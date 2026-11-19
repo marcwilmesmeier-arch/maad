@@ -192,9 +192,25 @@ function fdInspektor(b, V, cur, F) {
         `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${t.c};margin-right:6px"></i>${esc(t.n)}</span><b>${fdFmt(R.t[t.k].a)} m²</b>`,
     )
     .join('')}<span>Gesamt</span><b>${fdFmt(R.tot)} m²</b></div>`;
+  // Attika dieser Ansicht: wie die Fassade darunter oder gezielt ein Typ (LOD 200, 22-…/130-balkone.js l2AttikaTyp)
+  if (cur) {
+    const at = (fdD(b, cur.key) || {}).at || '';
+    h += `<h4>Attika</h4><select style="width:100%" onchange="fdAttikaSet('${cur.key}',this.value)" title="Material der Attika auf dieser Seite (Flachdach, LOD 200)"><option value="" ${!at ? 'selected' : ''}>wie Fassade darunter</option><option value="ohne" ${at === 'ohne' ? 'selected' : ''}>ohne Typ (Wandfarbe)</option>${S.ft
+      .filter((t) => !t.df)
+      .map((t) => `<option value="${t.k}" ${at === t.k ? 'selected' : ''}>${esc(t.n)}</option>`)
+      .join('')}</select>`;
+  }
   if (cur)
     h += `<div class="row" style="margin-top:12px"><button class="bt" onclick="fdClearView()" title="Alle Schnittlinien und Typen dieser Ansicht entfernen (Öffnungen bleiben)">Ansicht zurücksetzen</button></div>`;
   return h;
+}
+/** Attika einer Ansicht: '' wie die Fassade darunter, 'ohne' ohne Typ, sonst Fassadentyp. */
+function fdAttikaSet(vk, v) {
+  fdEdit((b) => {
+    const d = fdD(b, vk, true);
+    if (v) d.at = v;
+    else delete d.at;
+  });
 }
 function fdSelFace(i, e) {
   FDS.sel =
