@@ -197,10 +197,27 @@ function l2Unruhig(b) {
   }
   return b._ruT != null && now - b._ruT < L2RUHE;
 }
+/**
+ * Gebäude in LOD 200 einfach darstellen (wie LOD 100: Körper statt Wände, Öffnungen, Gruppen): während es sich
+ * bewegt (l2Unruhig) und solange es gewählt ist und bearbeitet wird – außer Grundriss oder Fassadendesigner zeigen
+ * gerade dieses Gebäude (dort braucht man die Bauteile).
+ */
+function l2Einfach(b) {
+  const un = l2Unruhig(b); // immer aufrufen: merkt sich die Form für die Ruhephase
+  return un || l2Bearbeitet(b);
+}
+/** Gewähltes Gebäude wird bearbeitet (nicht im Grundriss oder Fassadendesigner geöffnet). */
+function l2Bearbeitet(b) {
+  if (S.sel !== b || b.ex) return false;
+  if (GRS.w && GRS.bid === b.id) return false;
+  if (FDS.open && fdB() === b) return false;
+  return true;
+}
 function l2Sync() {
-  // Gebäude in Bewegung (l2Unruhig) bleiben außen vor: ihre Bauteile werden entfernt und nach der Ruhe neu aufgebaut
-  const bs = S.bld.filter((b) => !b.ex && b._y != null && !l2Unruhig(b)),
-    ru = S.bld.filter((b) => !b.ex && b._y != null && l2Unruhig(b)),
+  // Gebäude in Bewegung oder in Bearbeitung (l2Einfach) bleiben außen vor: ihre Bauteile werden entfernt und danach neu
+  // aufgebaut
+  const bs = S.bld.filter((b) => !b.ex && b._y != null && !l2Einfach(b)),
+    ru = S.bld.filter((b) => !b.ex && b._y != null && l2Einfach(b)),
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Öffnungen (nicht Teil der Wandableitung)
     sig =
       bs.map((b) => b.id + '|' + l2Els(b).k + oeGebSig(b)).join('#') +
@@ -342,7 +359,7 @@ function l2Vis() {
       if (b.ex || !b._g) return;
       b._g.visible = true;
       // in Bewegung: einfacher Körper ganz sichtbar (LOD-200-Bauteile ruhen, l2Unruhig)
-      if (l2Unruhig(b)) {
+      if (l2Einfach(b)) {
         b._g.children.forEach((o) => (o.visible = true));
         return;
       }

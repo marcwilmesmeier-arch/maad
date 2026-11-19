@@ -396,6 +396,14 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - `l2BalkonGrundriss` (`22-…/130-balkone.js`, aus `l2Draw`): Balkonplatte mit Geländer im Geschoss auf Plattenhöhe,
   Balkon des Geschosses darüber gestrichelt, Loggia-Geländer in der Fassadenebene.
 
+## LOD 200: Bearbeiten in der einfachen Darstellung
+
+- `l2Einfach(b)` (`22-…/030-aktionen.js`) = in Bewegung (`l2Unruhig`) oder gewählt und in Bearbeitung (`l2Bearbeitet`:
+  `S.sel`, nicht im Grundriss oder Fassadendesigner geöffnet). Solche Gebäude zeigen den Körper wie in LOD 100;
+  `l2Sync`, `l2Vis`, `l2Kontur`, `l2Balkone`, `l2Terrassen` lassen sie aus. `fkSync` wartet nur auf die Ruhe.
+- Bibliothek: Einträge tragen `zt` (Zeitpunkt der letzten Änderung, `bibMerken`); beim Öffnen eines Projekts gilt
+  je Schlüssel die jüngere Fassung (`bibErgaenzen`).
+
 ## LOD 200: Ruhephase bei Bewegung
 
 - `l2Unruhig(b)` (`22-lod200-waende/030-aktionen.js`): ändert sich Grundriss/Lage eines Gebäudes (`skSig(b)` + `b._y`),
