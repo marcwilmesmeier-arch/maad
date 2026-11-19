@@ -198,20 +198,11 @@ function l2Unruhig(b) {
   return b._ruT != null && now - b._ruT < L2RUHE;
 }
 /**
- * Gebäude in LOD 200 einfach darstellen (wie LOD 100: Körper statt Wände, Öffnungen, Gruppen): während es sich
- * bewegt (l2Unruhig) und solange es gewählt ist und bearbeitet wird – außer Grundriss oder Fassadendesigner zeigen
- * gerade dieses Gebäude (dort braucht man die Bauteile).
+ * Gebäude in LOD 200 einfach darstellen (wie LOD 100: Körper statt Wände, Öffnungen, Gruppen), solange es sich bewegt
+ * (l2Unruhig – Ruhephase nach dem Verschieben).
  */
 function l2Einfach(b) {
-  const un = l2Unruhig(b); // immer aufrufen: merkt sich die Form für die Ruhephase
-  return un || l2Bearbeitet(b);
-}
-/** Gewähltes Gebäude wird bearbeitet (nicht im Grundriss oder Fassadendesigner geöffnet). */
-function l2Bearbeitet(b) {
-  if (S.sel !== b || b.ex) return false;
-  if (GRS.w && GRS.bid === b.id) return false;
-  if (FDS.open && fdB() === b) return false;
-  return true;
+  return l2Unruhig(b);
 }
 function l2Sync() {
   // Gebäude in Bewegung oder in Bearbeitung (l2Einfach) bleiben außen vor: ihre Bauteile werden entfernt und danach neu
