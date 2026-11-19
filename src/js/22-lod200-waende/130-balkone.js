@@ -78,6 +78,20 @@ function l2Quader(pos, A, B, n, o, w, ya, yb) {
       [b1, yb],
       [a1, yb],
     ].map(([p, y]) => [p[0], y, p[1]]);
+  l2QuaderFlaechen(pos, V);
+}
+/**
+ * Flächen eines Quaders aus 8 Ecken (0–3 unten, 4–7 oben, gleiche Reihenfolge) – alle Dreiecke nach außen gewickelt:
+ * ist der Grundriss andersherum umlaufen, werden die Dreiecke umgedreht (sonst zeigen Normalen nach innen, Licht und
+ * Schatten der Seitenflächen sind falsch).
+ */
+function l2QuaderFlaechen(pos, V) {
+  const a = V[4],
+    b = V[5],
+    c = V[6],
+    // y-Anteil der Normale der Oberseite (4, 5, 6), mit umgekehrtem Vorzeichen
+    ny = (c[2] - a[2]) * (b[0] - a[0]) - (c[0] - a[0]) * (b[2] - a[2]),
+    um = ny > 0;
   [
     [0, 2, 1, 0, 3, 2],
     [4, 5, 6, 4, 6, 7],
@@ -85,19 +99,16 @@ function l2Quader(pos, A, B, n, o, w, ya, yb) {
     [1, 2, 6, 1, 6, 5],
     [2, 3, 7, 2, 7, 6],
     [3, 0, 4, 3, 4, 7],
-  ].forEach((f) => f.forEach((i) => pos.push(...V[i])));
+  ].forEach((f) => {
+    for (let i = 0; i < 6; i += 3) {
+      const t = um ? [f[i], f[i + 2], f[i + 1]] : [f[i], f[i + 1], f[i + 2]];
+      t.forEach((k) => pos.push(...V[k]));
+    }
+  });
 }
 /** Senkrechtes Prisma über dem Viereck Q (Grundriss, beliebige Form) von ya bis yb – alle Seiten, doppelseitig. */
 function l2Prisma(pos, Q, ya, yb) {
-  const V = [...Q.map((p) => [p[0], ya, p[1]]), ...Q.map((p) => [p[0], yb, p[1]])];
-  [
-    [0, 1, 2, 0, 2, 3],
-    [4, 6, 5, 4, 7, 6],
-    [0, 1, 5, 0, 5, 4],
-    [1, 2, 6, 1, 6, 5],
-    [2, 3, 7, 2, 7, 6],
-    [3, 0, 4, 3, 4, 7],
-  ].forEach((f) => f.forEach((i) => pos.push(...V[i])));
+  l2QuaderFlaechen(pos, [...Q.map((p) => [p[0], ya, p[1]]), ...Q.map((p) => [p[0], yb, p[1]])]);
 }
 /** Stabgeländer entlang A–B (Grundriss), Fuß bei yb, 1,00 m hoch. */
 function l2Stabgelaender(pos, A, B, yb) {
@@ -246,6 +257,9 @@ function l2Balkone() {
               opacity: glas ? 0.35 : 1,
               depthWrite: !glas,
               side: T.DoubleSide,
+              // geschlossene, nach außen gewickelte Quader: nur die Rückseiten in die Schattenkarte (keine
+              // Schattenstreifen auf den Seiten der Platte)
+              shadowSide: T.BackSide,
             }),
           );
         m.castShadow = !glas;

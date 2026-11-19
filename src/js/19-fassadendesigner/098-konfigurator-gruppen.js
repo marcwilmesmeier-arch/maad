@@ -622,7 +622,7 @@ function okGrZeichnen() {
       false,
       r.t ? fdT(r.t).c : null,
       r.k,
-      r.a,
+      null, // Geländer und Balkonplatte erst nach den Fenstern (davor)
       r,
     );
     if (r.d && (r.x1 - r.x0) * P.s > 40) {
@@ -724,6 +724,8 @@ function okGrZeichnen() {
     const T = oegTyp(G, q, G.h);
     oeZeichneEine(g, P.X, P.Y, q.x, q.x + T.b, q.v, T, { sel: q.id === OK.go });
   });
+  // Loggia/Balkon: Geländer und Platte vor den Fenstern (die Fenster sitzen auf dem Rücksprung dahinter)
+  oegFlaechenG(G).forEach((r) => r.a && oegArtZeichnen(g, P.X, P.Y, r.x0, r.x1, r.y0, r.a, r));
   // Maßkette unten: Lücken und Öffnungen
   const L = G.oe.map((q) => [q.x, q.x + oegTyp(G, q, G.h).b]).sort((a, c) => a[0] - c[0]),
     pk = [0];
@@ -876,13 +878,21 @@ function okGrDown(e) {
     }
     return;
   }
-  const q = G.oe
-    .slice()
-    .reverse()
-    .find((q) => {
-      const T = oegTyp(G, q, G.h);
-      return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
-    });
+  // Klick auf Geländer bzw. Balkonplatte einer Loggia/eines Balkons wählt das Feld (liegt vor den Fenstern)
+  const vorGel = oegFlaechenG(G).some((r) => {
+      if (!r.a || x < r.x0 || x > r.x1) return false;
+      const Gl = oegGel(r);
+      return y >= r.y0 - (r.a === 'lo' ? 0 : 0.2) && y <= r.y0 + (Gl.ga === 'ke' ? 0 : Gl.gh);
+    }),
+    q = vorGel
+      ? null
+      : G.oe
+          .slice()
+          .reverse()
+          .find((q) => {
+            const T = oegTyp(G, q, G.h);
+            return x >= q.x && x <= q.x + T.b && y >= q.v && y <= q.v + T.h;
+          });
   OK.go = q ? q.id : null;
   OK.glin = null;
   if (q) {
