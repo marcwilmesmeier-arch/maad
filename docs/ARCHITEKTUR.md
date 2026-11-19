@@ -482,6 +482,14 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   `FD_FE`, als `f.fe` in `fdFaces`), Inspektor `fdFeldHtml`, Setzen `fdFeldSet`. `fdFeldFlaechen` liefert sie wie
   Gruppenflächen (`gi: null`) an `oegFlaechen`, damit 3D, Grundriss und Auswertung sie ohne Sonderweg kennen. Beim
   Teilen bekommt das größte Teilstück die Eigenschaften (`fdSetCuts`).
+- Teilen im Fassadendesigner wie in der Gruppe (`19-…/145-raster.js`): je Ansicht ein Raster `d.rs = { xs, ys, vb }`
+  (senkrechte/waagerechte Linien über die ganze Seite in Ansichtskoordinaten, verbundene Felder als Rechtecke).
+  `fdRasterAnwenden` schreibt daraus die Schnittlinien mit Kennung `FD_RS = −1` in `d.cuts`; Felder, Typen, Tiefe und
+  Loggien laufen unverändert über `fdFaces`/`fdSetCuts`. Werkzeuge `rx`/`ry` (Teilen, T), im Auswählen wird eine Linie
+  stückweise gewählt (`fdRsTreffer`, `FDS.rl`), gezogen (`FDS.rzug`, `fdRsSchieben` – Feldpunkte wandern mit), hier
+  (`fdRsVerbinden`) oder ganz entfernt. „Automatisch teilen“ (`fdRsAnFenstern`) setzt Linien an Öffnungen, gesetzten
+  Gruppen und deren Feldern. Das frühere freie Linien- und Rechteckwerkzeug ist nicht mehr erreichbar; vorhandene
+  freie Linien bleiben sichtbar und löschbar.
 - „Gruppe hier auflösen“ (`oegAufloesen`): Öffnungen werden freie Öffnungen (in der Höhe angepasste Fenster bekommen
   einen eigenen Typ), Felder mit Tiefe/Art/Material werden Rechteckteilungen mit Feldeigenschaften; die Gruppe bleibt in
   der Bibliothek. Pfosten-Riegel-Gruppen lassen sich nicht auflösen.

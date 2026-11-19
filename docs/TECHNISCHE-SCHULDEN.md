@@ -261,3 +261,9 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   der Nähe feine, etwas hellere 1-px-Linien zu sehen: jede Wand besteht aus mehreren Einzelkörpern, deren Ober- bzw.
   Stirnseiten am Stoß durchschimmern. 2 mm Überlappung half nicht (getestet und zurückgenommen). Saubere Lösung: je Wand
   ein Körper mit Öffnungen als Löcher (Ansichtsfläche mit Löchern extrudiert, Enden auf Gehrung verzogen).
+
+- Fassadendesigner: Code des alten freien Linien-/Rechteckwerkzeugs (`fdFinishLine`, `fdFinishRect`, `fdAddLine`,
+  `fdAddArea`, Zeichnung `FDS.tool === 'line'|'rect'` in 040-fang.js) ist seit dem Raster (145-raster.js) nicht mehr
+  erreichbar – bei Gelegenheit entfernen. Ebenso das Werkzeug „Geschoss“ (`st`, 070-werkzeug.js).
+- Behoben: `fdSetCuts`/`fdAttr` löschten eine Ansicht samt Öffnungen und Gruppen, sobald keine Linien und Felder
+  mehr da waren (jetzt `fdAnsichtLeer`).

@@ -386,10 +386,11 @@ function fdDrawView(g, b, V, ox, o) {
   g.stroke();
   if (d) {
     d.cuts.forEach((c) => {
-      const on = o.selCut != null && c[4] === o.selCut;
-      g.lineWidth = on ? 3.2 : 1.6;
+      const on = o.selCut != null && c[4] === o.selCut,
+        rs = c[4] === FD_RS; // Teilung wie in der Gruppe: durchgezogen
+      g.lineWidth = on ? 3.2 : rs ? 1.3 : 1.6;
       g.strokeStyle = on ? '#c2410c' : '#334155';
-      g.setLineDash(on ? [] : [7, 3]);
+      g.setLineDash(on || rs ? [] : [7, 3]);
       g.beginPath();
       g.moveTo(X(c[0]), Y(c[1]));
       g.lineTo(X(c[2]), Y(c[3]));
@@ -399,6 +400,8 @@ function fdDrawView(g, b, V, ox, o) {
   }
   // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js (nur LOD 200: Öffnungen, Gruppen, Balkone, Loggien)
   if (lod2) oeZeichnen(g, b, V, ox, o);
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js: gewählte bzw. gezogene Teilung, Vorschau beim Teilen
+  if (o.sel) fdRsZeichnen(g, V, ox);
   if (o.lab) {
     const s = fdVP().s;
     F.forEach((f, i) => {
@@ -731,17 +734,19 @@ function fdCvDraw() {
       ? FDS.note.t
       : FDS.ed
         ? 'Ziehen – Fang wie beim Zeichnen · Shift = Spur festhalten · Esc = abbrechen'
-        : FDS.tool === 'line'
-          ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen · Enter / Rechtsklick = beenden · Umschalt = Winkel fest · Esc = abbrechen bzw. zurück zu „Auswählen“'
-          : FDS.tool === 'st'
-            ? 'Klick auf eine Fläche = diese Fläche im Geschoss wählen (nur die Flucht, in der sie liegt) · danach Fassadentyp rechts wählen · Umschalt = weitere Geschosse'
-            : FDS.tool === 'rect'
-              ? 'Aufziehen oder zwei Ecken anklicken – ersetzt alle Linien und Felder darin durch eine Fläche · Esc = abbrechen'
-              : FDS.tool === 'oe'
-                ? 'Klick = Öffnung setzen (rastet an Brüstung und Achsen ein, Umschalt = frei) · Öffnung ziehen = verschieben · Esc = zurück zu „Auswählen“'
-                : FDS.tool === 'gr'
-                  ? 'Klick = Gruppe setzen (rastet am Geschoss und an Nachbargruppen ein) · Gruppe ziehen = verschieben · Esc = zurück zu „Auswählen“'
-                  : 'Klick = Feld, Linie, Öffnung oder Gruppe wählen · Umschalt = mehrere Felder · ziehen = verschieben · Entf = löschen · V T O G = Werkzeuge · Esc = Auswahl aufheben';
+        : FDS.tool === 'rx' || FDS.tool === 'ry'
+          ? 'Klick = Teilung über die ganze Seite setzen (rastet an Fenstern, Gruppen, Geschossen und Ecken ein, Umschalt = frei) · Esc = zurück zu „Auswählen“'
+          : FDS.tool === 'line'
+            ? 'Klick = Punkt · zurück auf den Startpunkt = Fläche schließen · Enter / Rechtsklick = beenden · Umschalt = Winkel fest · Esc = abbrechen bzw. zurück zu „Auswählen“'
+            : FDS.tool === 'st'
+              ? 'Klick auf eine Fläche = diese Fläche im Geschoss wählen (nur die Flucht, in der sie liegt) · danach Fassadentyp rechts wählen · Umschalt = weitere Geschosse'
+              : FDS.tool === 'rect'
+                ? 'Aufziehen oder zwei Ecken anklicken – ersetzt alle Linien und Felder darin durch eine Fläche · Esc = abbrechen'
+                : FDS.tool === 'oe'
+                  ? 'Klick = Öffnung setzen (rastet an Brüstung und Achsen ein, Umschalt = frei) · Öffnung ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                  : FDS.tool === 'gr'
+                    ? 'Klick = Gruppe setzen (rastet am Geschoss und an Nachbargruppen ein) · Gruppe ziehen = verschieben · Esc = zurück zu „Auswählen“'
+                    : 'Klick = Feld, Linie, Öffnung oder Gruppe wählen · Umschalt = mehrere Felder · ziehen = verschieben · Entf = löschen · V T O G = Werkzeuge · Esc = Auswahl aufheben';
   fdHintSet(ht);
 }
 function fdHintSet(t) {

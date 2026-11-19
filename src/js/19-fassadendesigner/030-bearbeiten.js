@@ -43,12 +43,15 @@ function fdSetCuts(b, V, cuts) {
     if (o.t !== 'ohne' || n || fe) units.push({ p: [gr2(f.c[0]), gr2(f.c[1])], t: o.t, n, ...(fe || {}) });
   });
   d.units = units;
-  if (!d.cuts.length && !d.units.length) {
+  if (fdAnsichtLeer(d)) {
     delete b.fd[V.key];
     if (!Object.keys(b.fd).length) delete b.fd;
   }
   V._f = null;
 }
+/** Ansicht ohne eigene Angaben (keine Linien, Felder, Öffnungen, Gruppen, Raster, Attika-Typ) – darf entfallen. */
+const fdAnsichtLeer = (d) =>
+  !d.cuts.length && !d.units.length && !(d.oe && d.oe.length) && !(d.gr && d.gr.length) && !d.rs && !d.at;
 function fdAttr(b, V, face, patch) {
   const d = fdD(b, V.key, true);
   let u = d.units.find((q) => grInFace(face, q.p[0], q.p[1]));
@@ -59,7 +62,7 @@ function fdAttr(b, V, face, patch) {
   Object.assign(u, patch);
   d.units = d.units.filter((q) => q === u || !grInFace(face, q.p[0], q.p[1]));
   if (u.t === 'ohne' && !u.n && !u.d && !u.a) d.units = d.units.filter((q) => q !== u);
-  if (!d.cuts.length && !d.units.length) {
+  if (fdAnsichtLeer(d)) {
     delete b.fd[V.key];
     if (!Object.keys(b.fd).length) delete b.fd;
   }
@@ -121,6 +124,12 @@ function fdMerge() {
     idx = FDS.sel.filter((i) => F[i]);
   if (idx.length < 2) {
     fdNote('Zum Zusammenlegen mindestens zwei benachbarte Felder wählen.');
+    return;
+  }
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js: Rasterfelder wie in der Gruppe verbinden
+  const W = fdRsWahlZellen(b, V);
+  if (W) {
+    fdRsVerbinden(W);
     return;
   }
   const d = fdD(b, V.key),
@@ -262,7 +271,7 @@ function fdBody() {
   return `<div class="fgr" id="fdGr" title="Höhe ziehen"></div><div class="fh" id="fdHd"><b>Fassade</b><select id="fdBld" onchange="fdPick(this.value)" title="Gebäude"></select>
 <div class="seg" id="fdVs"></div><span class="gr"></span>
 <button class="ib" onclick="fdUndo()" title="Rückgängig (Strg+Z)">${fdIcon('undo')}</button><button class="ib" onclick="fdFit()" title="Ansicht einpassen (F)">${fdIcon('fit')}</button><button class="ib" id="fdZu" onclick="fdEinklappen()" title="Einklappen">${fdIcon('zu')}</button><button class="ib" onclick="fdClose()" title="Schließen">${fdIcon('x')}</button></div>
-<div class="fm"><div class="fw">${wz('fdTs', 'sel', 'sel', 'Auswählen (V) – Felder, Linien, Öffnungen, Gruppen; ziehen zum Verschieben')}${wz('fdTt', 'teil', 'teil', 'Teilen (T) – Linie, Rechteck oder Geschoss')}<hr>${wz('fdTo', 'oe', 'oe', 'Öffnung (O) – Fenster oder Tür setzen')}${wz('fdTu', 'gr', 'gr', 'Gruppe (G) – Öffnungsgruppe setzen oder Felder füllen')}</div>
+<div class="fm"><div class="fw">${wz('fdTs', 'sel', 'sel', 'Auswählen (V) – Felder, Linien, Öffnungen, Gruppen; ziehen zum Verschieben')}${wz('fdTt', 'teil', 'teil', 'Teilen (T) – senkrecht oder waagerecht wie in der Gruppe')}<hr>${wz('fdTo', 'oe', 'oe', 'Öffnung (O) – Fenster oder Tür setzen')}${wz('fdTu', 'gr', 'gr', 'Gruppe (G) – Öffnungsgruppe setzen oder Felder füllen')}</div>
 <div class="fc" id="fdCw"><canvas id="fdCv"></canvas><div class="fo" id="fdOpt"></div></div><div class="fs" id="fdPn"></div></div>
 <div class="ff"><span id="fdHint"></span><span id="fdInfo"></span></div>`;
 }
@@ -401,10 +410,12 @@ function fdLodSet(k) {
 }
 function fdTool(t) {
   // „Teilen“ ist ein Werkzeug mit drei Arten (Linie, Rechteck, Geschoss); die zuletzt genutzte bleibt gewählt
-  if (t === 'teil') t = FDS.teil || 'line';
+  if (t === 'teil') t = FDS.teil || 'rx';
   // Öffnungen und Gruppen setzen braucht die LOD-200-Ansicht
   if (t === 'oe' || t === 'gr') FDS.lod = 200;
-  if (t === 'line' || t === 'rect' || t === 'st') FDS.teil = t;
+  if (t === 'rx' || t === 'ry') FDS.teil = t;
+  FDS.rl = null;
+  FDS.rvor = null;
   FDS.tool = t;
   FDS.oeVor = null;
   FDS.grVor = null;
@@ -416,6 +427,7 @@ function fdTool(t) {
 }
 function fdView(k) {
   FDS.vk = k;
+  FDS.rl = null;
   FDS.sel = [];
   FDS.selCut = null;
   FDS.pts = [];
@@ -427,7 +439,11 @@ function fdView(k) {
 }
 function fdDelSel() {
   // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
-  if (FDS.gi) oegLoeschen();
+  if (FDS.rl) {
+    // ── Erweiterung aus 19-fassadendesigner/145-raster.js: Teilung an dieser Stelle (sonst ganz) entfernen
+    if (FDS.rl.A && FDS.rl.B) fdRsHierEntfernen();
+    else fdRsLinieEntfernen();
+  } else if (FDS.gi) oegLoeschen();
   else if (FDS.oe) oeLoeschen();
   else if (FDS.selCut != null) fdDelCut(FDS.selCut);
   else fdNote('Zuerst eine Schnittlinie wählen (Werkzeug „Wählen“, auf die Linie klicken).');

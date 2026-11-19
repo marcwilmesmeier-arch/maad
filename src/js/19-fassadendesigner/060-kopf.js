@@ -58,7 +58,7 @@ function fdChrome(b, V, cur, F) {
           `<option value="${esc(x.id)}" ${x.id === FDS.bid ? 'selected' : ''}>${esc(x.name || x.id)}</option>`,
       )
       .join('');
-  const teil = FDS.tool === 'line' || FDS.tool === 'rect' || FDS.tool === 'st';
+  const teil = FDS.tool === 'rx' || FDS.tool === 'ry';
   [
     ['fdTs', FDS.tool === 'sel'],
     ['fdTt', teil],
@@ -107,9 +107,8 @@ function fdChrome(b, V, cur, F) {
     let h = '';
     if (teil)
       h = `<span class="mu">Teilen</span><div class="seg">${[
-        ['line', 'Linie', 'L'],
-        ['rect', 'Rechteck', 'R'],
-        ['st', 'Geschoss', ''],
+        ['rx', 'Senkrecht', ''],
+        ['ry', 'Waagerecht', ''],
       ]
         .map(
           ([k, n, kb]) =>
@@ -169,6 +168,8 @@ function fdInspektor(b, V, cur, F) {
     );
   if (cur && FDS.gi) return oegInspektorHtml(b, cur);
   if (cur && FDS.oe) return oeInspektorHtml(b, cur);
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js: gewählte Teilungslinie
+  if (cur && FDS.rl) return fdRsInspektor(b, cur);
   if (cur && FDS.selCut != null)
     return `<h4>Trennlinie</h4><div class="mu">An den blauen Griffen ziehen, um sie zu verschieben.</div><div class="row"><button class="bt" onclick="fdDelSel()">Löschen <kbd>Entf</kbd></button></div>`;
   const swatches = (tf) =>
@@ -192,17 +193,12 @@ function fdInspektor(b, V, cur, F) {
     h += `<h4>Fassadentyp</h4>${swatches(new Set(S_.map((f) => f.t)))}`;
     // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Tiefe, Art und Geländer am Feld (ohne Gruppe)
     h += fdFeldHtml(S_);
-    h += `<h4>Aktionen</h4><div class="row">${S_.length > 1 ? '<button class="bt" onclick="fdMerge()">Zusammenlegen</button>' : ''}<button class="bt" onclick="fdTool('gr')" title="Gruppe wählen und die Felder je Geschoss damit füllen">Mit Gruppe füllen …</button></div><div class="mu" style="margin-top:8px">Umschalt + Klick: weitere Felder · <kbd>Esc</kbd> Auswahl aufheben</div>`;
+    // Rasterfelder: verbinden bzw. Verbindung lösen wie in der Gruppe (145-raster.js)
+    const W = fdRsWahlZellen(b, cur);
+    h += `<h4>Aktionen</h4><div class="row">${S_.length > 1 ? '<button class="bt" onclick="fdMerge()" title="Gewählte Felder zu einem Feld verbinden">Felder verbinden</button>' : ''}${W && W.some((z) => z.vb) ? '<button class="bt" onclick="fdRsVerbindungLoesen()" title="Verbundenes Feld wieder in einzelne Felder teilen">Verbindung lösen</button>' : ''}<button class="bt" onclick="fdTool('gr')" title="Gruppe wählen und die Felder je Geschoss damit füllen">Mit Gruppe füllen …</button></div><div class="mu" style="margin-top:8px">Umschalt + Klick: weitere Felder · <kbd>Esc</kbd> Auswahl aufheben</div>`;
     return h;
   }
-  if (FDS.tool === 'line' || FDS.tool === 'rect' || FDS.tool === 'st')
-    return `<h4>Teilen</h4><div class="leer">${
-      FDS.tool === 'line'
-        ? 'Punkte setzen, mit <kbd>Enter</kbd> oder Rechtsklick beenden. Zurück auf den Startpunkt schließt eine Fläche.'
-        : FDS.tool === 'rect'
-          ? 'Rechteck aufziehen – ergibt ein eigenes Feld, z. B. für Sockel oder Fensterband.'
-          : 'Auf eine Fläche klicken: das Geschoss dieser Flucht wird ein eigenes Feld.'
-    }<br><br><kbd>Esc</kbd> zurück zu „Auswählen“</div>`;
+  if ((FDS.tool === 'rx' || FDS.tool === 'ry') && cur) return fdRsInspektor(b, cur);
   // Übersicht (nichts gewählt)
   let h = `<h4>Fassadentypen</h4>${swatches(new Set())}<div class="mu" style="margin-top:6px">Feld anklicken, dann Typ wählen.</div>`;
   h += `<h4>Öffnungen je Ansicht</h4><div class="kv">`;

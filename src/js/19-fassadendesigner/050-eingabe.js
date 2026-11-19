@@ -78,6 +78,7 @@ function fdHitCut(V, x, y) {
   let bd = 7,
     bg = null;
   d.cuts.forEach((c) => {
+    if (c[4] === FD_RS) return; // Rasterlinien wählt fdRsTreffer (145-raster.js)
     const ax = fdSX(c[0]),
       ay = fdSY(c[1]),
       bx = fdSX(c[2]),
@@ -344,7 +345,23 @@ function fdDown(e) {
   if ((FDS.tool === 'sel' && !(FDS.selCut != null && fdEdHit(V, FDS.selCut, p))) || FDS.tool === 'oe') {
     if (oeDown(b, V, p, e)) return;
   }
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js: Teilen wie in der Gruppe
+  if (FDS.tool === 'rx' || FDS.tool === 'ry') {
+    const a = FDS.tool === 'rx' ? 'x' : 'y';
+    fdRsSetzen(b, V, a, fdRsFang(b, V, a, a === 'x' ? p.x : p.z, e.shiftKey));
+    return;
+  }
   if (FDS.tool === 'sel') {
+    const rl = fdRsTreffer(b, V, p);
+    FDS.rl = rl;
+    if (rl) {
+      FDS.selCut = null;
+      FDS.sel = [];
+      FDS.ps = '';
+      FDS.dirty = 1;
+      fdRsGreifen(b, V, rl, e);
+      return;
+    }
     if (FDS.selCut != null) {
       const hd = fdEdHit(V, FDS.selCut, p);
       if (hd) {
@@ -414,6 +431,25 @@ function fdCvMove(e) {
   const p = { x: fdWU(x), z: fdWV(y) };
   // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
   if (!FDS.ed && oeMove(b, V, p, e)) return;
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js: Rasterlinie ziehen, Vorschau beim Teilen
+  if (FDS.rzug) {
+    const z = FDS.rzug;
+    if (!z.mv && Math.hypot(e.clientX - z.px, e.clientY - z.py) < 4) return;
+    z.mv = 1;
+    z.v = Math.max(
+      z.lo + 0.05,
+      Math.min(z.hi - 0.05, fdRsFang(b, V, z.a, z.a === 'x' ? p.x : p.z, e.shiftKey)),
+    );
+    FDS.dirty = 1;
+    return;
+  }
+  if (FDS.tool === 'rx' || FDS.tool === 'ry') {
+    const a = FDS.tool === 'rx' ? 'x' : 'y';
+    FDS.rvor = { a, v: fdRsFang(b, V, a, a === 'x' ? p.x : p.z, e.shiftKey) };
+    e.currentTarget.style.cursor = a === 'x' ? 'col-resize' : 'row-resize';
+    FDS.dirty = 1;
+    return;
+  }
   if (FDS.ed) {
     const ed = FDS.ed;
     if (!ed.moved && Math.hypot(e.clientX - ed.px, e.clientY - ed.py) < 4) return;
@@ -426,8 +462,17 @@ function fdCvMove(e) {
   }
   if (FDS.tool === 'sel') {
     FDS.cur = null;
-    const hd = FDS.selCut != null ? fdEdHit(V, FDS.selCut, p) : null;
-    e.currentTarget.style.cursor = hd ? (hd.m === 'v' ? 'crosshair' : 'move') : '';
+    const hd = FDS.selCut != null ? fdEdHit(V, FDS.selCut, p) : null,
+      rl = !hd && fdRsTreffer(b, V, p);
+    e.currentTarget.style.cursor = hd
+      ? hd.m === 'v'
+        ? 'crosshair'
+        : 'move'
+      : rl
+        ? rl.a === 'x'
+          ? 'col-resize'
+          : 'row-resize'
+        : '';
     return;
   }
   if (FDS.tool === 'st') {
@@ -447,6 +492,18 @@ function fdUp(e) {
   // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
   if (oeUp()) return;
   const b = fdB();
+  // ── Erweiterung aus 19-fassadendesigner/145-raster.js
+  if (FDS.rzug) {
+    const z = FDS.rzug,
+      V = b && fdCurV();
+    FDS.rzug = null;
+    FDS.dirty = 1;
+    if (z.mv && V && Math.abs(z.v - z.v0) > 1e-4) {
+      fdRsSchieben(b, V, z.a, z.v0, Math.round(z.v * 1000) / 1000);
+      FDS.rl = null;
+    }
+    return;
+  }
   if (FDS.ed) {
     const ed = FDS.ed;
     FDS.ed = null;
@@ -499,7 +556,8 @@ function fdKey(e) {
       FDS.oeZug = null;
       FDS.grZug = null;
     } else if (FDS.tool !== 'sel') fdTool('sel');
-    else if (FDS.oe || FDS.gi || FDS.sel.length || FDS.selCut != null) {
+    else if (FDS.oe || FDS.gi || FDS.sel.length || FDS.selCut != null || FDS.rl) {
+      FDS.rl = null;
       FDS.oe = null;
       FDS.gi = null;
       FDS.sel = [];
@@ -518,8 +576,6 @@ function fdKey(e) {
     }
   } else if (k === 'v' || k === 'V') fdTool('sel');
   else if (k === 't' || k === 'T') fdTool('teil');
-  else if (k === 'l' || k === 'L') fdTool('line');
-  else if (k === 'r' || k === 'R') fdTool('rect');
   else if (k === 'o' || k === 'O') fdTool('oe');
   else if (k === 'g' || k === 'G') fdTool('gr');
   else if (k === 'f' || k === 'F') fdFit();
