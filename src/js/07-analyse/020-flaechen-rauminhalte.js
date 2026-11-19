@@ -364,8 +364,13 @@ function hlApply() {
         z = z1;
         const f = lf(b, l),
           ug = i < u;
+        // ── Erweiterung aus 25-polygon-operationen/020-innenhoefe-und-dachflaechen-als-echte.js: Innenhöfe dieses
+        // Geschosses (wie in der Zahl, larea) – als Loch im Körper und als Hofwände bei der Fassade
+        const hoefe = znVoidsAt(b, i).map((v) => v.poly);
         if ((oi && !ug) || (ui && ug)) {
-          const ge = new T.ExtrudeGeometry(new T.Shape(f.map((q) => new T.Vector2(q[0], -q[1]))), {
+          const sh = new T.Shape(f.map((q) => new T.Vector2(q[0], -q[1])));
+          hoefe.forEach((p) => sh.holes.push(znPath(p)));
+          const ge = new T.ExtrudeGeometry(sh, {
             depth: l.h,
             bevelEnabled: false,
           });
@@ -375,36 +380,37 @@ function hlApply() {
           m.renderOrder = ug ? 12 : 9;
           g.add(m);
         }
-        if (k === 'fas' && !ug) {
-          const pos = [];
-          f.forEach((a, q) => {
-            const c = f[(q + 1) % f.length];
-            pos.push(
-              a[0],
-              z0,
-              a[1],
-              c[0],
-              z0,
-              c[1],
-              c[0],
-              z1,
-              c[1],
-              a[0],
-              z0,
-              a[1],
-              c[0],
-              z1,
-              c[1],
-              a[0],
-              z1,
-              a[1],
-            );
+        if (k === 'fas' && !ug)
+          [f].concat(hoefe).forEach((f) => {
+            const pos = [];
+            f.forEach((a, q) => {
+              const c = f[(q + 1) % f.length];
+              pos.push(
+                a[0],
+                z0,
+                a[1],
+                c[0],
+                z0,
+                c[1],
+                c[0],
+                z1,
+                c[1],
+                a[0],
+                z0,
+                a[1],
+                c[0],
+                z1,
+                c[1],
+                a[0],
+                z1,
+                a[1],
+              );
+            });
+            const fm = new T.Mesh(gm(pos), mt);
+            fm.userData.k = i;
+            fm.userData.ol = zoFasOl(f, z0, z1);
+            g.add(fm);
           });
-          const fm = new T.Mesh(gm(pos), mt);
-          fm.userData.k = i;
-          fm.userData.ol = zoFasOl(f, z0, z1);
-          g.add(fm);
-        }
       });
       if (k === 'terr')
         terrOf(b).lv.forEach((L) => {
@@ -454,10 +460,14 @@ function hlApply() {
         if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
       } else if (k === 'dach' && b.levels.length) {
         const L = b.levels.at(-1),
-          ge = new T.ExtrudeGeometry(new T.Shape(lf(b, L).map((q) => new T.Vector2(q[0], -q[1]))), {
-            depth: 0.08,
-            bevelEnabled: false,
-          });
+          sh = new T.Shape(lf(b, L).map((q) => new T.Vector2(q[0], -q[1])));
+        // ── Erweiterung aus 25-polygon-operationen/020-innenhoefe-und-dachflaechen-als-echte.js: Innenhöfe, die bis
+        // zum Dach reichen, ausschneiden (wie in der Zahl, larea)
+        znVoidsAt(b, b.levels.length - 1).forEach((v) => sh.holes.push(znPath(v.poly)));
+        const ge = new T.ExtrudeGeometry(sh, {
+          depth: 0.08,
+          bevelEnabled: false,
+        });
         ge.rotateX(-Math.PI / 2);
         const m = new T.Mesh(ge, mt);
         m.position.y = b._y + b._h;

@@ -123,11 +123,42 @@ function l2NetShow(iso) {
     logErr(e, 'l2NetShow');
   }
 }
+/**
+ * Balkone/Loggia-Geländer (L2BK), Terrassengeländer (L2TG) und Außenkontur (L2KO) je Gebäude mit der Isolierung
+ * ein- und ausblenden: beim Isolieren aus der Gebäudemetrik (iso) ausgeblendet, bei einer Auswertung (sp) nur bei
+ * Gebäuden sichtbar, von denen etwas angezeigt wird. Jeden Takt, da diese Gruppen neu entstehen können.
+ */
+function l2IsoAnbauten(iso, sp) {
+  const sicht = (id) => {
+    if (iso) return false;
+    if (!sp) return true;
+    const b = S.bld.find((z) => z.id === id);
+    if (!b) return true;
+    try {
+      return (
+        b.levels.some((l, i) => zoIsoHit(sp, b, { hull: 1, k: i })) || zoIsoHit(sp, b, { hull: 1, k: 'roof' })
+      );
+    } catch (e) {
+      logErr(e, 'l2IsoAnbauten');
+      return true;
+    }
+  };
+  [L2BK, L2TG].forEach((M) =>
+    M.forEach((o, id) => {
+      if (o && o.g) o.g.visible = sicht(id);
+    }),
+  );
+  L2KO.forEach((o, id) => {
+    if (o && o.ln) o.ln.visible = sicht(id);
+  });
+}
 function l2IsoApply(force) {
   const iso = S.l2.iso,
     sp = typeof ZI !== 'undefined' && ZI.sp,
-    on = l2on(),
-    key = on ? JSON.stringify([iso && iso.key, sp && ZI.key, L2I.size, L2GEN]) : 'off';
+    on = l2on();
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js und 110-aussenkontur.js: Anbauten und Kontur mit isolieren
+  if (on) l2IsoAnbauten(iso, sp);
+  const key = on ? JSON.stringify([iso && iso.key, sp && ZI.key, L2I.size, L2GEN]) : 'off';
   if (!force && key === L2IK) return;
   L2IK = key;
   if (!on) {

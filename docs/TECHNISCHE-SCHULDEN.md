@@ -254,3 +254,6 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   zweiten Lauf. Ursache noch nicht gefunden (vermutlich Zeitverhalten beim Seitenwechsel).
 - Pfosten-Riegel an spitzen/stumpfen Ecken: Eckpfosten und Kürzung der Fassaden sind winkelgerecht; der Anschluss der
   Attika darüber ist nur an einfachen Ecken geprüft.
+- Hervorhebung der Auswertung (`hlApply`): Innenhöfe (`znVoidsAt`) werden jetzt bei Dach, BGF/BRI (Loch im Körper) und
+  Fassade (Hofwände) berücksichtigt. Bei geneigten Dächern (`b._rp`) kommt die Dachfläche aus der Dachgeometrie und
+  ist nicht gesondert geprüft.
