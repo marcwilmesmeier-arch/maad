@@ -489,6 +489,8 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Firstrichtung: `autoDir` exakt (ungerundet), Eingabe als Drehung gegenüber der Ausgangslage `b.roof.dv` (0 = parallel
   zur längsten Seite, Walmgrate auf den Ecken); `roofVersatz` rechnet die frühere absolute Richtung `b.roof.dir` um,
   `roofFest` ersetzt die alte Prüfung auf `dir`.
+- Weißmodell (`S.dar === 'wm'`): keine Materialien an Gebäuden – `ftFarbig()` (110-fassadentypen-3d.js) sperrt
+  Wandfarbe, Giebel, Attika, Loggia, Dach und die Schraffurschicht; der Wechsel baut über `ftWandSig` neu.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;
   `fdDachTyp` färbt in LOD 200 das Dachbauteil (RD) bzw. beim Flachdach die oberste Decke (`flatTop`) samt Schraffur
   (`l2MeshOrig`, Grundfarbe in `material.userData.c0` für das Isolieren).

@@ -182,7 +182,7 @@ function l2AttikaRing(b) {
  */
 function l2AttikaTyp(b, x, z, nn) {
   try {
-    if (!b.fd && !fkHatMt(b)) return '';
+    if ((!b.fd && !fkHatMt(b)) || !ftFarbig()) return '';
     const V = fdViewAt(b, -nn[0], -nn[1], x, z, 0.7);
     if (!V) return '';
     const d = fdD(b, V.key),
@@ -278,7 +278,8 @@ function l2Balkone() {
       oeGebSig(b) +
       '|' +
       fdSig(b) +
-      JSON.stringify([b.fd ? Object.values(b.fd).map((d) => [d.units, d.at]) : 0, S.ft, schSig()]);
+      JSON.stringify([b.fd ? Object.values(b.fd).map((d) => [d.units, d.at]) : 0, S.ft, schSig()]) +
+      ftWandSig(b); // auch Material aus „Planen“ und Weißmodell
     da.add(b.id);
     let o = L2BK.get(b.id);
     if (o && o.sig === sig) return;

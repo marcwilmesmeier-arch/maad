@@ -113,7 +113,7 @@ function l2MeshOrig(e) {
   g.position.y = e.y0;
   // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Dachfläche (geneigtes Dach bzw. oberste Decke
   // beim Flachdach) im Material aus „Planen“ → Dach, mit Schraffur
-  const dachK = (e.kind === 'RD' || e.flatTop) && !l23() ? fdDachTyp(oeBauteilGebaeude(e)) : '';
+  const dachK = (e.kind === 'RD' || e.flatTop) && !l23() && ftFarbig() ? fdDachTyp(oeBauteilGebaeude(e)) : '';
   const K = L2K[e.kind],
     mat0 = new T.MeshLambertMaterial({
       color: new T.Color(dachK ? fdT(dachK).c : K.c),

@@ -308,7 +308,10 @@ function ftBauen(b) {
  * (t = Punkt · d), Typ k der Fassadenfläche in Geschossmitte ('' = ohne Typ). Damit wird die Wand selbst eingefärbt
  * (nur in der Darstellung in Stücke geschnitten, l2MeshOrig); leer, wenn die Wand keinen Typ trägt.
  */
+/** Materialien (Farbe, Schraffur) der Gebäude zeigen – im Weißmodell nicht: dort bleiben die Bauteile weiß. */
+const ftFarbig = () => S.dar !== 'wm';
 function ftWandAbschnitte(e) {
+  if (!ftFarbig()) return { d: null, A: [] };
   try {
     const b = oeBauteilGebaeude(e);
     if (!b || !(b.fd || fkHatMt(b)) || e.kind !== 'AW' || !e.sa || !e.sb) return { d: null, A: [] };
@@ -372,6 +375,7 @@ function ftWandAbschnitte(e) {
  * darunter im obersten Geschoss. '' = ohne Typ.
  */
 function ftGiebelTyp(e, x, y, z) {
+  if (!ftFarbig()) return '';
   try {
     const b = oeBauteilGebaeude(e);
     if (!b || !(b.fd || fkHatMt(b)) || !e.gb) return '';
@@ -399,12 +403,13 @@ function ftGiebelTyp(e, x, y, z) {
 /** Fassadentyp der Fassadenfläche an der Stelle (u, v) der Ansicht vk ('' = ohne Typ). */
 function ftFassadeBei(b, vk, u, v) {
   const V = fdViews(b).find((x) => x.key === vk);
-  if (!V) return '';
+  if (!V || !ftFarbig()) return '';
   const f = fdFaces(b, V).find((q) => grInFace(q, u, v));
   return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : fkMaterialBeiV(b, v);
 }
 /** Typ einer Loggia (Rück- und Seitenwände): Material des Gruppenfelds, sonst der Fassadentyp an der Loggia. */
 function ftLoggiaTyp(b, o) {
+  if (!ftFarbig()) return '';
   if (o.t && S.ft.some((t) => t.k === o.t)) return o.t;
   return ftFassadeBei(b, o.vk, (o.u0 + o.u1) / 2, (o.v0 + o.v1) / 2);
 }
@@ -421,6 +426,7 @@ function ftWandSig(b) {
         fdSig(b),
         b.fk && b.fk.mt,
         fdDachTyp(b),
+        ftFarbig(),
       ])
     : '';
 }
@@ -430,7 +436,7 @@ function ftSync() {
     explodiert = !!(S.expl && S.expl.cur > 0.05),
     einheiten = !!(S.zo && S.zo.m === 'u');
   // erst ab LOD 200 im Modell; in LOD 100 dienen die Fassadentypen nur der Auswertung
-  const an = FT3.aktiv && l2on();
+  const an = FT3.aktiv && l2on() && ftFarbig();
   S.bld.forEach((b) => {
     if (!an || b.ex || !(b.fd || fkHatMt(b)) || b._y == null) return;
     const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg, schSig(), b.fk && b.fk.mt]),
