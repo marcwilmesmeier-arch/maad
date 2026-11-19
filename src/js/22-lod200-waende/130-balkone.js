@@ -184,14 +184,18 @@ function l2Balkone() {
     let o = L2BK.get(b.id);
     if (o && o.sig === sig) return;
     if (o) l2BalkoneWeg(o);
+    // Teile je Geschoss (eb = Geschoss, auf dessen Boden sie stehen) und Farbe – je Geschoss eine Gruppe, damit sie
+    // in der Explosionsansicht mit dem Geschoss wandern (exApply)
+    let eb = 0;
     const L = l2BalkonListe(b),
-      pl = [],
       teile = new Map(),
       teil = (k) => {
-        if (!teile.has(k)) teile.set(k, []);
-        return teile.get(k);
+        const kk = eb + '\u0001' + k;
+        if (!teile.has(kk)) teile.set(kk, []);
+        return teile.get(kk);
       };
     L.forEach((x) => {
+      eb = lvOfY(b, x.y0 + 0.1);
       const n = x.n,
         A = x.p0,
         B = x.p1;
@@ -206,7 +210,7 @@ function l2Balkone() {
             return [p[0] + ((q[0] - p[0]) / L2) * 0.05, p[1] + ((q[1] - p[1]) / L2) * 0.05];
           };
         // Platte von der Fassade bis zur Vorderkante
-        l2Quader(pl, A, B, n, t / 2, t, x.y0 - 0.2, x.y0);
+        l2Quader(teil('wand'), A, B, n, t / 2, t, x.y0 - 0.2, x.y0);
         if (x.gel.gm === 'se') {
           // seitlich: außen vor der Plattenstirn, ab Plattenunterkante (Höhe über der Platte bleibt gleich)
           const aus = (p, q) => {
@@ -241,7 +245,10 @@ function l2Balkone() {
       }
     });
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Eckpfosten der Pfosten-Riegel-Fassaden über Eck
-    oeEcken(b).forEach((e) => l2Prisma(teil(e.rf), oeEckQuadrat(e), e.y0, e.y1));
+    oeEcken(b).forEach((e) => {
+      eb = lvOfY(b, e.y0 + 0.1);
+      l2Prisma(teil(e.rf), oeEckQuadrat(e), e.y0, e.y1);
+    });
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Sturz über einer Loggia, die nicht bis unter die
     // Decke reicht (die Loggia ist im Grundriss ausgeschnitten, die Außenwand darüber fehlt dort)
     {
@@ -252,12 +259,13 @@ function l2Balkone() {
       oeLoggiaEinschnitte(b).forEach((z) => {
         const o = z.lg,
           ob = o.yG - dDE;
+        eb = lvOfY(b, o.y0 + 0.1);
         if (ob - o.y1 > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, o.y1, ob);
       });
     }
     const g = new T.Group(),
       mesh = (arr, farbe) => {
-        if (!arr.length) return;
+        if (!arr.length) return null;
         const ge = new T.BufferGeometry();
         ge.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
         ge.computeVertexNormals();
@@ -278,10 +286,22 @@ function l2Balkone() {
         m.castShadow = !glas;
         m.receiveShadow = true;
         m.raycast = () => {};
-        g.add(m);
-      };
-    mesh(pl, 0xf4f4f2);
-    teile.forEach((arr, k) => mesh(arr, k));
+        return m;
+      },
+      gs = new Map();
+    teile.forEach((arr, kk) => {
+      const [e, k] = kk.split('\u0001'),
+        m = mesh(arr, k);
+      if (!m) return;
+      if (!gs.has(e)) {
+        const sg = new T.Group();
+        sg.userData.k = e === 'roof' ? 'roof' : +e; // Geschoss für die Explosionsansicht
+        sg.position.y = S.expl ? exOff(b, sg.userData.k) : 0;
+        gs.set(e, sg);
+        g.add(sg);
+      }
+      gs.get(e).add(m);
+    });
     G.l2.add(g);
     L2BK.set(b.id, { sig, g });
   });
@@ -456,18 +476,28 @@ function l2Terrassen() {
     let o = L2TG.get(b.id);
     if (o && o.sig === sig) return;
     if (o) l2BalkoneWeg(o);
-    const pos = [];
-    l2TerrassenLinien(b).forEach((x) => l2Stabgelaender(pos, x.A, x.B, x.y));
+    // je Geschoss (Terrassenboden = Boden des Geschosses darüber) eine Gruppe für die Explosionsansicht
+    const P = new Map();
+    l2TerrassenLinien(b).forEach((x) => {
+      const e = lvOfY(b, x.y + 0.1);
+      if (!P.has(e)) P.set(e, []);
+      l2Stabgelaender(P.get(e), x.A, x.B, x.y);
+    });
     const g = new T.Group();
-    if (pos.length) {
+    P.forEach((pos, e) => {
+      if (!pos.length) return;
       const ge = new T.BufferGeometry();
       ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
       ge.computeVertexNormals();
       const m = new T.Mesh(ge, new T.MeshLambertMaterial({ color: 0xa9aeb3, side: T.DoubleSide }));
       m.castShadow = m.receiveShadow = true;
       m.raycast = () => {};
-      g.add(m);
-    }
+      const sg = new T.Group();
+      sg.userData.k = e;
+      sg.position.y = S.expl ? exOff(b, e) : 0;
+      sg.add(m);
+      g.add(sg);
+    });
     G.l2.add(g);
     L2TG.set(b.id, { sig, g });
   });

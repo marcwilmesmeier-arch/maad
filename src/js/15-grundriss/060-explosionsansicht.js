@@ -118,6 +118,20 @@ function exApply() {
     console.warn('Einheiten auseinander', e);
   }
 
+  // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Balkone, Geländer, Stürze und Eckpfosten je Geschoss mitnehmen
+  try {
+    [L2BK, L2TG].forEach((M) =>
+      M.forEach((o, id) => {
+        const b = S.bld.find((z) => z.id === id);
+        if (b && o.g)
+          o.g.children.forEach((sg) => {
+            if (sg.userData.k != null) sg.position.y = exOff(b, sg.userData.k);
+          });
+      }),
+    );
+  } catch (e) {
+    logErr(e, 'exApply>Balkone');
+  }
   // ── Erweiterung aus 22-lod200-waende/060-stutzen-dehnen.js (danach)
   try {
     for (const it of L2I.values()) {

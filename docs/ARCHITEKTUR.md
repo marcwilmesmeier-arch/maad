@@ -397,6 +397,12 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Gelände unter dem EG: in LOD 200 schneidet bei Gebäuden mit Öffnungen auch der EG-Grundriss das Gelände aus
   (`plmFoot`), damit man durch Glas auf die Bodenplatte sieht.
 
+## LOD 200: Anbauten in Explosion und Isolieren
+
+- `l2Balkone`/`l2Terrassen` (`22-…/130-balkone.js`) legen je Geschoss eine Untergruppe an (`userData.k`, Geschoss des
+  Bodens); `exApply` verschiebt sie mit `exOff` wie die Wände. `l2IsoAnbauten` (`080-isolieren…`) blendet Balkone,
+  Geländer und Außenkontur beim Isolieren mit aus.
+
 ## Grundriss: Balkone
 
 - `l2BalkonGrundriss` (`22-…/130-balkone.js`, aus `l2Draw`): Balkonplatte mit Geländer im Geschoss auf Plattenhöhe,
