@@ -263,6 +263,11 @@ function fkMaterial(b, j) {
   const k = mt[Math.max(0, Math.min(j, mt.length - 1))];
   return S.ft.some((t) => t.k === k && !t.df) ? k : '';
 }
+/** Material der Dachfläche (b.roof.mt, Fassadentyp-Schlüssel) oder ''. */
+const fdDachTyp = (b) => {
+  const k = b && b.roof && b.roof.mt;
+  return k && S.ft.some((t) => t.k === k && !t.df) ? k : '';
+};
 /** Hat das Gebäude ein Fassadenmaterial aus „Planen“ (ganzes Haus bzw. je Geschoss)? */
 const fkHatMt = (b) => !!(b && b.fk && b.fk.mt && b.fk.mt.some(Boolean));
 /** Material aus „Planen“ an der Höhe v einer Ansicht (Ansichtskoordinate, oberirdisch), '' = keins. */

@@ -111,12 +111,16 @@ function l2Mesh(e) {
 function l2MeshOrig(e) {
   const g = new T.Group();
   g.position.y = e.y0;
+  // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Dachfläche (geneigtes Dach bzw. oberste Decke
+  // beim Flachdach) im Material aus „Planen“ → Dach, mit Schraffur
+  const dachK = (e.kind === 'RD' || e.flatTop) && !l23() ? fdDachTyp(oeBauteilGebaeude(e)) : '';
   const K = L2K[e.kind],
-    mat = new T.MeshLambertMaterial({
-      color: new T.Color(K.c),
+    mat0 = new T.MeshLambertMaterial({
+      color: new T.Color(dachK ? fdT(dachK).c : K.c),
       side: T.DoubleSide,
       emissive: new T.Color(0x000000),
     }),
+    mat = dachK ? schMaterial(mat0, fdT(dachK), false) : mat0,
     // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Außenwand in der Farbe ihres Fassadentyps,
     // nur in der Darstellung an Typwechseln geschnitten (die Wand bleibt ein Bauteil); Schraffur als Schicht davor
     FA = e.kind === 'AW' && e.quads ? ftWandAbschnitte(e) : { A: [] },
@@ -176,6 +180,7 @@ function l2MeshOrig(e) {
         ln.raycast = () => {};
         g.add(ln);
       });
+  if (dachK) mat0.userData.c0 = fdT(dachK).c; // Grundfarbe für das Isolieren (080)
   if (e.tri) {
     const gg = new T.BufferGeometry();
     gg.setAttribute('position', new T.BufferAttribute(new Float32Array(e.tri), 3));
@@ -307,7 +312,7 @@ function l2Sync() {
             // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js
             l23() ? 0 : oeWandSig(e),
             // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Wandfarbe nach Fassadentyp
-            e.kind === 'AW' && !l23() ? ftWandSig(oeBauteilGebaeude(e)) : 0,
+            (e.kind === 'AW' || e.kind === 'RD' || e.flatTop) && !l23() ? ftWandSig(oeBauteilGebaeude(e)) : 0,
           ]).replace(/(\d+\.\d{3})\d+/g, '$1'),
           old = L2I.get(e.id);
         seen.add(e.id);

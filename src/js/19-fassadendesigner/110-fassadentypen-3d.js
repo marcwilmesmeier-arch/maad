@@ -414,12 +414,13 @@ function ftSturzTyp(b, o) {
 }
 /** Kennung der Fassadentypen eines Gebäudes (Neuaufbau der eingefärbten Wände). */
 function ftWandSig(b) {
-  return b && (b.fd || fkHatMt(b))
+  return b && (b.fd || fkHatMt(b) || fdDachTyp(b))
     ? JSON.stringify([
         Object.values(b.fd || {}).map((d) => d && d.units),
         S.ft.map((t) => [t.k, t.c]),
         fdSig(b),
         b.fk && b.fk.mt,
+        fdDachTyp(b),
       ])
     : '';
 }

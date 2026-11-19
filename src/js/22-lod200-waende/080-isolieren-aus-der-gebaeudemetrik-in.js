@@ -201,7 +201,7 @@ function l2IsoApply(force) {
         o.userData.off = off ? 1 : 0;
         o.visible = !off;
       });
-    } else it.mat.color.set(col || L2K[e.kind].c);
+    } else it.mat.color.set(col || (it.mat.userData && it.mat.userData.c0) || L2K[e.kind].c); // c0: Dachmaterial
   }
 }
 const l2IsTr = (L) => !!L && ['331', '341', '351', '322', '361'].indexOf(L.kg) >= 0;

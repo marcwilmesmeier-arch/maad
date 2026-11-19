@@ -425,7 +425,11 @@ function roofSet(k, v) {
       r.dir = null;
     }
   } else if (k === 'dir') r.dir = v === '' || v == null ? null : +v;
-  else r[k] = +v;
+  // Dachmaterial: Fassadentyp-Schlüssel (Farbe und Schraffur in LOD 200), '' = wie bisher
+  else if (k === 'mt') {
+    if (S.ft.some((t) => t.k === v && !t.df && t.k !== 'pr')) r.mt = v;
+    else delete r.mt;
+  } else r[k] = +v;
   mesh(b);
   H();
   hpos();
@@ -479,7 +483,12 @@ function roofCtl(b) {
   let h =
     'Dachform<select style="width:100%" onchange="roofSet(\'type\',this.value)">' +
     RT.map(([k, n]) => `<option value="${k}" ${k === r.type ? 'selected' : ''}>${n}</option>`).join('') +
-    '</select>';
+    '</select>' +
+    // Material der Dachfläche aus den Fassadentypen (Farbe und Schraffur, sichtbar ab LOD 200)
+    `<span title="Farbe und Schraffur der Dachfläche aus den Materialien (Fassadentypen) – sichtbar ab LOD 200">Material</span><select style="width:100%" onchange="roofSet('mt',this.value)"><option value="" ${!r.mt ? 'selected' : ''}>— keins —</option>${S.ft
+      .filter((t) => !t.df && t.k !== 'pr')
+      .map((t) => `<option value="${t.k}" ${t.k === r.mt ? 'selected' : ''}>${esc(t.n)}</option>`)
+      .join('')}</select>`;
   if (r.type !== 'flat')
     h += `Neigung (°)<input type="number" min="1" max="75" step="1" value="${r.angle}" onchange="roofSet('angle',this.value)">Drempelhöhe (m)<input type="number" min="0" max="3" step="0.05" value="${r.dremp || 0}" onchange="roofSet('dremp',this.value)">${b._rp && b._rp.mehr > 1 ? `Firstrichtung<div class="mu" style="font-size:11px;margin:2px 0 6px">Je Flügel automatisch (${b._rp.mehr} Flügel): jeder First folgt der längeren Seite seines Flügels, angeschlossene Flügel laufen quer ins Hauptdach.</div>` : `${r.type === 'pult' ? 'Richtung der Dachneigung' : 'Firstrichtung'} (°)<div style="display:flex;gap:4px"><input type="number" step="5" value="${roofDir(b)}" onchange="roofSet('dir',this.value)"><button class="sm" onclick="roofSet('dir',null)">Auto</button></div>`}${kv('Höhe Dachgeschoss', f1(b._roofH || 0, 2) + ' m')}`;
   h += `<button class="sm" style="margin-top:8px;width:100%" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner öffnen</button>`;

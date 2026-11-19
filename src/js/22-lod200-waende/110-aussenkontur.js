@@ -12,9 +12,13 @@ const L2KO = new Map(); // Gebäude-ID → { sig, ln }
 function l2TraufeBei(b, v) {
   const P = b._rp && b._rp.pr;
   if (!P || !P.length) return null;
+  // nächster Dachpunkt (bei zusammengesetzten Dächern liegt er nicht immer genau über der Ecke), dort der tiefste
+  let dmin = 1e9;
+  for (let i = 0; i + 2 < P.length; i += 3) dmin = Math.min(dmin, Math.hypot(P[i] - v[0], P[i + 2] - v[1]));
+  if (dmin > 1.2) return null;
   let y = null;
   for (let i = 0; i + 2 < P.length; i += 3)
-    if (Math.hypot(P[i] - v[0], P[i + 2] - v[1]) < 0.15 && (y == null || P[i + 1] < y)) y = P[i + 1];
+    if (Math.hypot(P[i] - v[0], P[i + 2] - v[1]) < dmin + 0.15 && (y == null || P[i + 1] < y)) y = P[i + 1];
   return y;
 }
 /** Außenkontur von Gebäude b: p = Kantenpunkte [x, y, z, x, y, z, …], n = je Kante die Normalen der beiden
