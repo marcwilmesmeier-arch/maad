@@ -190,6 +190,8 @@ function fdInspektor(b, V, cur, F) {
     if (one)
       h += `<div class="fe"><input type="text" style="flex:1" value="${esc(one.n)}" placeholder="Name (F${one.idx})" onchange="fdRename(this.value)"></div>`;
     h += `<h4>Fassadentyp</h4>${swatches(new Set(S_.map((f) => f.t)))}`;
+    // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Tiefe, Art und Geländer am Feld (ohne Gruppe)
+    h += fdFeldHtml(S_);
     h += `<h4>Aktionen</h4><div class="row">${S_.length > 1 ? '<button class="bt" onclick="fdMerge()">Zusammenlegen</button>' : ''}<button class="bt" onclick="fdTool('gr')" title="Gruppe wählen und die Felder je Geschoss damit füllen">Mit Gruppe füllen …</button></div><div class="mu" style="margin-top:8px">Umschalt + Klick: weitere Felder · <kbd>Esc</kbd> Auswahl aufheben</div>`;
     return h;
   }

@@ -18,7 +18,7 @@ function fdEdit(fn) {
   }
 }
 function fdSetCuts(b, V, cuts) {
-  const old = fdFaces(b, V).map((f) => ({ o: f.o, h: f.h, t: f.t, n: f.n })),
+  const old = fdFaces(b, V).map((f) => ({ o: f.o, h: f.h, t: f.t, n: f.n, fe: f.fe })),
     d = fdD(b, V.key, true);
   d.cuts = cuts;
   const nf = grFaces(
@@ -36,8 +36,11 @@ function fdSetCuts(b, V, cuts) {
   nf.forEach((f, i) => {
     const o = par[i] >= 0 ? old[par[i]] : null;
     if (!o) return;
-    const n = big.get(par[i]) === i ? o.n : '';
-    if (o.t !== 'ohne' || n) units.push({ p: [gr2(f.c[0]), gr2(f.c[1])], t: o.t, n });
+    const gr_ = big.get(par[i]) === i,
+      n = gr_ ? o.n : '',
+      // Tiefe/Art (Loggia usw.) bleibt beim größten Teil, wie der Name
+      fe = gr_ && o.fe ? o.fe : null;
+    if (o.t !== 'ohne' || n || fe) units.push({ p: [gr2(f.c[0]), gr2(f.c[1])], t: o.t, n, ...(fe || {}) });
   });
   d.units = units;
   if (!d.cuts.length && !d.units.length) {
@@ -55,7 +58,7 @@ function fdAttr(b, V, face, patch) {
   }
   Object.assign(u, patch);
   d.units = d.units.filter((q) => q === u || !grInFace(face, q.p[0], q.p[1]));
-  if (u.t === 'ohne' && !u.n) d.units = d.units.filter((q) => q !== u);
+  if (u.t === 'ohne' && !u.n && !u.d && !u.a) d.units = d.units.filter((q) => q !== u);
   if (!d.cuts.length && !d.units.length) {
     delete b.fd[V.key];
     if (!Object.keys(b.fd).length) delete b.fd;

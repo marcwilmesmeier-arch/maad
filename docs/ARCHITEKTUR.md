@@ -477,6 +477,14 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Loggia, `'ba'` Balkon. Gezeichnet wird wie bei Rücksprüngen: teilen, Feld wählen, Art und Tiefe setzen.
 - Eine Loggia ist ein Rücksprung um `d` (Wandaussparung wie bisher) mit Geländer in der Fassadenebene.
 - Bei einem Balkon ist `d` die Auskragung (`tb` in `oegFlaechen`); die Wand bleibt bündig.
+- Fassadenfelder ohne Gruppe: gewählte Felder im Fassadendesigner bekommen dieselben Einstellungen wie Gruppenfelder
+  (Tiefe, Verlauf, Art Loggia/Balkon/Balkon + Loggia, Auskragung, Geländer) – gespeichert am Feld (`units[]`, Schlüssel
+  `FD_FE`, als `f.fe` in `fdFaces`), Inspektor `fdFeldHtml`, Setzen `fdFeldSet`. `fdFeldFlaechen` liefert sie wie
+  Gruppenflächen (`gi: null`) an `oegFlaechen`, damit 3D, Grundriss und Auswertung sie ohne Sonderweg kennen. Beim
+  Teilen bekommt das größte Teilstück die Eigenschaften (`fdSetCuts`).
+- „Gruppe hier auflösen“ (`oegAufloesen`): Öffnungen werden freie Öffnungen (in der Höhe angepasste Fenster bekommen
+  einen eigenen Typ), Felder mit Tiefe/Art/Material werden Rechteckteilungen mit Feldeigenschaften; die Gruppe bleibt in
+  der Bibliothek. Pfosten-Riegel-Gruppen lassen sich nicht auflösen.
 - In den Ansichten zeichnet `oegArtZeichnen` das Symbol: Geländer 1,00 m, beim Balkon die Platte.
 - In LOD 200 baut `22-lod200-waende/130-balkone.js` (`l2Balkone`, Takt aus 030-aktionen) je Gebäude die Platten
   (0,20 m) und die Stabgeländer (`l2Stabgelaender`).

@@ -397,6 +397,10 @@ function fdFaces(b, V) {
     const un = d && d.units.find((q) => q && q.p && grInFace(f, q.p[0], q.p[1]));
     f.t = un && un.t && S.ft.some((t) => t.k === un.t) ? un.t : 'ohne';
     f.n = (un && un.n) || '';
+    // ── Erweiterung aus 19-fassadendesigner/097-oeffnungsgruppen.js: Tiefe und Art direkt am Feld (Rücksprung,
+    // Loggia, Balkon – wie Gruppenfelder, fdFeldFlaechen)
+    f.fe =
+      un && (un.d || un.a) ? FD_FE.reduce((o, k) => (un[k] != null ? { ...o, [k]: un[k] } : o), {}) : null;
     f.idx = i + 1;
   });
   V._f = { s: sg, F };

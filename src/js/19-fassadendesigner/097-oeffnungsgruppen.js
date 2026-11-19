@@ -587,6 +587,42 @@ function oegFlaechen(b, V) {
       }),
     );
   });
+  // ── Erweiterung: Fassadenfelder mit Tiefe/Art ohne Gruppe (fdFeldFlaechen)
+  fdFeldFlaechen(b, V).forEach((x) => R.push(x));
+  return R;
+}
+/** Eigenschaften eines Fassadenfelds für Tiefe und Art (ohne Gruppe). */
+const FD_FE = ['d', 'k', 'a', 'ga', 'gh', 'gc', 'gm', 'eg', 'tb'];
+/**
+ * Fassadenfelder mit Tiefe oder Art (Rücksprung, Vorsprung, Loggia, Balkon, Balkon + Loggia direkt an der Fassade,
+ * ohne Gruppe) als Flächen wie oegFlaechen (umschließendes Rechteck des Felds).
+ */
+function fdFeldFlaechen(b, V) {
+  const R = [];
+  fdFaces(b, V).forEach((f) => {
+    const e = f.fe;
+    if (!e || (!e.d && !e.a)) return;
+    const us = f.o.map((p) => p[0]),
+      vs = f.o.map((p) => p[1]),
+      a = ['lo', 'ba', 'bl'].includes(e.a) ? e.a : '',
+      d = +e.d || 0,
+      k = e.k === 'l' || e.k === 'r' ? e.k : 'g';
+    R.push({
+      u0: Math.min(...us),
+      u1: Math.max(...us),
+      v0: Math.min(...vs),
+      v1: Math.max(...vs),
+      d: a === 'ba' ? 0 : d,
+      dl: a === 'ba' ? 0 : k === 'r' ? 0 : d,
+      dr: a === 'ba' ? 0 : k === 'l' ? 0 : d,
+      t: '',
+      a,
+      tb: a === 'ba' ? Math.abs(d) || 1.5 : a === 'bl' ? +e.tb || 1.2 : 0,
+      ...(a ? oegGel(e) : {}),
+      id: 'ff:' + V.key + ':' + f.idx,
+      gi: null,
+    });
+  });
   return R;
 }
 /** Rücksprünge und Vorsprünge (Flächen mit Tiefe) aller Gruppenverweise einer Ansicht. */
@@ -1084,6 +1120,7 @@ function oegInspektorHtml(b, V) {
 <h4>Tauschen</h4><select style="width:100%" onchange="oegTauschen(this.value)" title="Nur diese Stelle">${opt}</select>
 ${n > 1 ? `<select style="width:100%;margin-top:6px" onchange="if(this.value)oegTauschen(this.value,true)" title="Alle ${n} gleichen Gruppen dieser Ansicht"><option value="">Alle ${n} gleichen tauschen gegen …</option>${S.oeg.map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select>` : ''}
 <div class="row"><button class="bt" onclick="okOpen(null,'gr');okGrWahl('${G.k}')">Gruppe bearbeiten …</button><button class="bt" onclick="oegLoeschen()">Entfernen <kbd>Entf</kbd></button></div>
+<div class="row"><button class="bt" onclick="oegAufloesen()" title="Öffnungen und Felder dieser Gruppe an dieser Stelle frei bearbeitbar machen (die Gruppe bleibt in der Bibliothek)">Gruppe hier auflösen</button></div>
 <div class="mu" style="margin-top:8px">Ziehen zum Verschieben · Änderungen an der Gruppe gelten an allen Stellen</div>`;
 }
 /** Gespeicherte Gruppen prüfen (Projekt laden). */
@@ -1140,4 +1177,182 @@ function oegFelderPruefen(G) {
     .map((r) => ({ x0: +r.x0, x1: +r.x1, y0: +r.y0, y1: +r.y1 }))
     .filter((r) => [r.x0, r.x1, r.y0, r.y1].every((v) => isFinite(v)) && r.x1 > r.x0 && r.y1 > r.y0);
   return { xs, ys, fe, vb };
+}
+
+// ---- Fassadenfelder ohne Gruppe: Tiefe, Art und Geländer wie bei Gruppenfeldern (Inspektor im Fassadendesigner)
+/** Einstellungen der gewählten Felder (S_: Flächen aus fdFaces). */
+function fdFeldHtml(S_) {
+  const E = S_.map((f) => f.fe || {}),
+    alle = (fn) => E.every(fn),
+    a0 = E[0].a || '',
+    gleichA = alle((e) => (e.a || '') === a0),
+    d0 = +E[0].d || 0,
+    gleichD = alle((e) => (+e.d || 0) === d0),
+    G0 = oegGel(E[0]),
+    gl = (k) => alle((e) => oegGel(e)[k] === G0[k]);
+  let h = `<h4>Tiefe und Art</h4><div class="kv sche" style="display:grid;gap:6px;margin:0;padding:0;background:none">
+<label>Art<select onchange="fdFeldSet('a',this.value)">${[
+    ['', 'Fläche'],
+    ['lo', 'Loggia'],
+    ['ba', 'Balkon'],
+    ['bl', 'Balkon + Loggia'],
+  ]
+    .map(([k, n]) => `<option value="${k}" ${gleichA && a0 === k ? 'selected' : ''}>${n}</option>`)
+    .join('')}${gleichA ? '' : '<option selected>gemischt</option>'}</select></label>
+<label>${gleichA && a0 === 'ba' ? 'Auskragung' : gleichA && a0 === 'bl' ? 'Rücksprung Loggia' : 'Tiefe'} (cm)<input type="number" step="1" value="${gleichD ? Math.round(d0 * 1000) / 10 : ''}" placeholder="gemischt" onchange="fdFeldSet('d',this.value)" title="Positiv = Rücksprung, negativ = Vorsprung, 0 = bündig"></label>`;
+  if (gleichA && a0 === 'bl')
+    h += `<label>Auskragung Balkon (cm)<input type="number" step="1" value="${Math.round((+E[0].tb || 1.2) * 100)}" onchange="fdFeldSet('tb',this.value)"></label>`;
+  if (gleichA && a0)
+    h += `<label>Geländer<select onchange="fdFeldSet('ga',this.value)">${Object.entries(OEG_GEL)
+      .map(([k, n]) => `<option value="${k}" ${gl('ga') && G0.ga === k ? 'selected' : ''}>${n}</option>`)
+      .join(
+        '',
+      )}</select></label><label>Geländerhöhe (cm)<input type="number" step="5" min="50" max="200" value="${gl('gh') ? Math.round(G0.gh * 100) : ''}" onchange="fdFeldSet('gh',this.value)"></label><label>Geländerfarbe<input type="color" value="${G0.gc}" onchange="fdFeldSet('gc',this.value)"></label>${
+      a0 === 'ba' || a0 === 'bl'
+        ? `<label>Montage<select onchange="fdFeldSet('gm',this.value)"><option value="auf" ${G0.gm !== 'se' ? 'selected' : ''}>aufgesetzt</option><option value="se" ${G0.gm === 'se' ? 'selected' : ''}>seitlich</option></select></label>`
+        : ''
+    }<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:auto" ${G0.eg ? 'checked' : ''} onchange="fdFeldSet('eg',this.checked)">im Erdgeschoss ohne Geländer</label>`;
+  if (!gleichA || !a0)
+    h += `<label>Verlauf<select onchange="fdFeldSet('k',this.value)">${[
+      ['g', 'gleichmäßig'],
+      ['l', 'schräg – links tief'],
+      ['r', 'schräg – rechts tief'],
+    ]
+      .map(
+        ([k, n]) => `<option value="${k}" ${alle((e) => (e.k || 'g') === k) ? 'selected' : ''}>${n}</option>`,
+      )
+      .join('')}</select></label>`;
+  return (
+    h +
+    `</div><div class="row"><button class="bt" onclick="fdFeldSet('dd',-5)">5 cm vor</button><button class="bt" onclick="fdFeldSet('d',0)">bündig</button><button class="bt" onclick="fdFeldSet('dd',5)">5 cm zurück</button></div>`
+  );
+}
+/** Gewählte Felder ändern (wie okGrFeldSet bei Gruppen): a Art, d Tiefe (cm), tb Auskragung (cm), Geländer, k Verlauf. */
+function fdFeldSet(f, v) {
+  const b = fdB(),
+    V = fdCurV();
+  if (!b || !V) return;
+  const pts = fdSelFaces().map((x) => [x.c[0], x.c[1]]);
+  if (!pts.length) return;
+  const zahl = (x) => +String(x).replace(',', '.');
+  fdEdit((b) => {
+    const V = fdCurV();
+    pts.forEach((p) => {
+      const fc = fdFaces(b, V).find((q) => grInFace(q, p[0], p[1]));
+      if (!fc) return;
+      const e = { ...(fc.fe || {}) };
+      if (f === 'a') {
+        e.a = ['lo', 'ba', 'bl'].includes(v) ? v : '';
+        // Vorgaben wie bei Gruppen: Loggia/Balkon 1,50 m, Balkon + Loggia 0,60 m Rücksprung und 1,20 m Auskragung
+        if (e.a === 'bl') {
+          e.d = Math.abs(e.d) > 0.05 && Math.abs(e.d) < 1.5 ? Math.abs(e.d) : 0.6;
+          if (!(e.tb > 0.05)) e.tb = 1.2;
+        } else if (e.a && !(Math.abs(e.d) > 0.05)) e.d = 1.5;
+        if (e.a) e.d = Math.abs(e.d);
+        if (!e.a && f === 'a') delete e.a;
+      }
+      if (f === 'd' && isFinite(zahl(v))) {
+        e.d = Math.max(-300, Math.min(300, zahl(v))) / 100;
+        if (e.a) e.d = Math.abs(e.d);
+      }
+      if (f === 'dd') e.d = Math.round(((+e.d || 0) + v / 100) * 1000) / 1000; // schrittweise vor/zurück
+      if (f === 'tb' && isFinite(zahl(v))) e.tb = Math.max(20, Math.min(300, Math.abs(zahl(v)))) / 100;
+      if (f === 'ga' && OEG_GEL[v]) e.ga = v;
+      if (f === 'gh' && isFinite(zahl(v))) e.gh = Math.max(50, Math.min(200, zahl(v))) / 100;
+      if (f === 'gc' && /^#[0-9a-f]{6}$/i.test(v)) e.gc = v;
+      if (f === 'gm') e.gm = v === 'se' ? 'se' : 'auf';
+      if (f === 'eg') e.eg = !!v;
+      if (f === 'k') e.k = v === 'l' || v === 'r' ? v : 'g';
+      const patch = {};
+      FD_FE.forEach((k) => (patch[k] = e[k] != null && e[k] !== '' ? e[k] : undefined));
+      if (!patch.d && !patch.a) FD_FE.forEach((k) => (patch[k] = undefined)); // bündige Fläche: nichts merken
+      fdAttr(b, V, fc, patch);
+      // undefinierte Einträge entfernen (sauber gespeichert)
+      const d = fdD(b, V.key);
+      if (d) d.units.forEach((u) => Object.keys(u).forEach((k) => u[k] === undefined && delete u[k]));
+    });
+  });
+}
+/**
+ * Gruppe an dieser Stelle auflösen: ihre Öffnungen werden freie Öffnungen, ihre Felder mit Tiefe, Art oder Material
+ * werden Fassadenfelder (Rechteck geteilt, Eigenschaften am Feld). Die Gruppe selbst bleibt in der Bibliothek.
+ */
+function oegAufloesen() {
+  const b = fdB(),
+    V = fdCurV(),
+    I = oegGewaehlt(),
+    G0 = I && oegG(I.g);
+  if (!b || !V || !G0) return;
+  if (oegPr(G0)) {
+    fdNote('Eine Pfosten-Riegel-Gruppe lässt sich nicht auflösen.');
+    return;
+  }
+  const B = fdStoreys(b),
+    H = oegHoehe(B, I, G0),
+    G = oegAngepasst(G0, I),
+    Y = oegYAbb(G, H),
+    oe = oegElemente(G, H, null).map((q) => ({ q, T: q.T })),
+    fl = oegFlaechenG(G).map((r) => ({
+      u0: I.u + r.x0,
+      u1: I.u + r.x1,
+      v0: I.v + Y(r.y0),
+      v1: I.v + Y(r.y1),
+      r,
+    }));
+  fdEdit((b) => {
+    const d = fdD(b, V.key, true);
+    // Öffnungen: frei gesetzt; in der Höhe angepasste Fenster (fester Sturz) bekommen einen eigenen Typ
+    oe.forEach(({ q, T }) => {
+      let k = q.t;
+      if (Math.abs(T.h - oeT(q.t).h) > 1e-3) {
+        k = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+        S.oet.push({
+          ...JSON.parse(JSON.stringify(oeT(q.t))),
+          k,
+          n: oeT(q.t).n + ' (' + fdFmt(T.h) + ' m)',
+          h: T.h,
+        });
+      }
+      oeDaten(b, V.key, true).push({
+        id: 'oe' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        t: k,
+        u: I.u + q.x + T.b / 2,
+        v: I.v + q.v,
+        q: 'frei',
+      });
+    });
+    // Felder: Rechteck als Teilung, Eigenschaften am neuen Feld
+    let g = Math.max(0, ...d.cuts.map((c) => +c[4] || 0)) + 1;
+    fl.forEach((x) => {
+      const id = g++;
+      d.cuts.push(
+        [gr2(x.u0), gr2(x.v0), gr2(x.u1), gr2(x.v0), id],
+        [gr2(x.u1), gr2(x.v0), gr2(x.u1), gr2(x.v1), id],
+        [gr2(x.u1), gr2(x.v1), gr2(x.u0), gr2(x.v1), id],
+        [gr2(x.u0), gr2(x.v1), gr2(x.u0), gr2(x.v0), id],
+      );
+    });
+    V._f = null;
+    fl.forEach((x) => {
+      const fc = fdFaces(b, V).find((q) => grInFace(q, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2));
+      if (!fc) return;
+      const r = x.r,
+        patch = { t: r.t || fc.t };
+      if (r.d) patch.d = r.d;
+      if (r.d && r.k !== 'g') patch.k = r.k;
+      if (r.a) {
+        patch.a = r.a;
+        if (r.a === 'ba') patch.d = Math.abs(r.d) || 1.5;
+        if (r.a === 'bl') patch.tb = r.tb || 1.2;
+        Object.assign(patch, oegGel(r));
+      }
+      fdAttr(b, V, fc, patch);
+    });
+    // Verweis entfernen
+    d.gr = (d.gr || []).filter((J) => J.id !== I.id);
+  });
+  FDS.gi = null;
+  fdNote(
+    `„${G0.n}“ aufgelöst: ${oe.length} Öffnung${oe.length === 1 ? '' : 'en'}, ${fl.length} Feld${fl.length === 1 ? '' : 'er'}.`,
+  );
 }
