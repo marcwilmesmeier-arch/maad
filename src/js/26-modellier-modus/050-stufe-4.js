@@ -72,7 +72,10 @@ function skSplitTargets(lh) {
   const b = lh.en.b,
     out = [];
   // nur die angeklickte Fläche – oder die gewählten Flächen, wenn sie dazugehört; Alt = alle Geschosse der Flucht
-  const gew = (SK.sel || []).filter((x) => x.b === b && !x.top && x.i != null && x.j != null),
+  // (ganzes Gebäude gewählt zählt nicht als Flächenauswahl; gewählte Flucht = ganze Flucht)
+  const gew = skWhole(b)
+      ? []
+      : (SK.sel || []).filter((x) => x.b === b && !x.top && x.i != null && x.j != null),
     drin = gew.some((x) => x.j === lh.en.j && x.i === lh.en.i),
     ents = lh.alt
       ? skGroup(lh.en)
