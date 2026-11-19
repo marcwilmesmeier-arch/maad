@@ -1,6 +1,6 @@
 // ================= Stufe 4: Teilen (T) =================
 // Wandfläche mit einer senkrechten Linie teilen (Klick auf die Fläche; Fang auf Mitte und auf Fluchten anderer Geschosse; Zahl + Enter = Abstand von der nächsten Ecke).
-// Gilt für alle Geschosse der Fläche, Alt = nur dieses Geschoss. Danach lassen sich die Teile einzeln mit Ziehen & Schieben ziehen (Erker, Loggia, Rücksprung).
+// Gilt nur für die angeklickte Fläche bzw. die gewählten Flächen, Alt = alle Geschosse der Flucht. Danach lassen sich die Teile einzeln mit Ziehen & Schieben ziehen (Erker, Loggia, Rücksprung).
 // var bewusst: 020-darstellung und 030-leiste fragen SKLN vorher mit typeof ab
 // eslint-disable-next-line no-var
 var SKLN = new T.LineSegments(
@@ -38,16 +38,15 @@ function skSplitPos(e, alt) {
     bd = thr,
     lab = '';
   const cand = [[len / 2, 'Mitte']];
-  if (!alt)
-    skGroup(en).forEach((g) => {
-      const f2 = lf(b, b.levels[g.j]),
-        p = f2[g.i],
-        q = f2[(g.i + 1) % f2.length];
-      [p, q].forEach((v) => {
-        const tt = (v[0] - a[0]) * ux + (v[1] - a[1]) * uz;
-        cand.push([tt, 'Flucht Geschoss ' + (g.j + 1)]);
-      });
+  skGroup(en).forEach((g) => {
+    const f2 = lf(b, b.levels[g.j]),
+      p = f2[g.i],
+      q = f2[(g.i + 1) % f2.length];
+    [p, q].forEach((v) => {
+      const tt = (v[0] - a[0]) * ux + (v[1] - a[1]) * uz;
+      cand.push([tt, 'Flucht Geschoss ' + (g.j + 1)]);
     });
+  });
   b.levels.forEach((l, j) =>
     lf(b, l).forEach((v) => {
       const tt = (v[0] - a[0]) * ux + (v[1] - a[1]) * uz,
@@ -72,7 +71,14 @@ function skSplitPos(e, alt) {
 function skSplitTargets(lh) {
   const b = lh.en.b,
     out = [];
-  const ents = lh.alt ? [{ b, j: lh.en.j, i: lh.en.i }] : skGroup(lh.en);
+  // nur die angeklickte Fläche – oder die gewählten Flächen, wenn sie dazugehört; Alt = alle Geschosse der Flucht
+  const gew = (SK.sel || []).filter((x) => x.b === b && !x.top && x.i != null && x.j != null),
+    drin = gew.some((x) => x.j === lh.en.j && x.i === lh.en.i),
+    ents = lh.alt
+      ? skGroup(lh.en)
+      : drin
+        ? gew.map((x) => ({ b, j: x.j, i: x.i }))
+        : [{ b, j: lh.en.j, i: lh.en.i }];
   ents.forEach((g) => {
     const f = lf(b, b.levels[g.j]),
       m = f.length,
@@ -130,7 +136,7 @@ function skLnDraw() {
       tg.length +
       ' Geschoss' +
       (tg.length === 1 ? '' : 'e') +
-      ' · Klick = teilen · Zahl + Enter = Abstand · Alt = nur dieses Geschoss';
+      ' · Klick = teilen · Zahl + Enter = Abstand · Alt = alle Geschosse';
   } catch (e) {
     logErr(e, 'skLnDraw');
   }
