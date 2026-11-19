@@ -432,8 +432,12 @@ function l2GeoStufe1(b) {
       const imLg =
         lv.lgZ &&
         lv.lgZ.some((z) => inP([(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2], oeLgAussen(z.f, 0.1)));
-      if (imLg) r.lg = 1;
-      else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
+      if (imLg) {
+        r.lg = 1;
+        // unter der durchgehenden Decke: kein oberes Wandstück im Deckenbereich (läge sonst in der Deckenoberfläche)
+        r.quads2 = null;
+        r.hTop = 0;
+      } else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
       else if (li < L.length - 1) {
         // Terrasse: über dieser Außenwand steht kein Geschoss mehr → Attika wie am Dach und Geländer (r.gel)
         // Prüfpunkte 0,8 m innen vor der Wand (Innenseite aus dem eigenen Geschossgrundriss bestimmt, unabhängig

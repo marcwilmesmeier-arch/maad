@@ -250,18 +250,23 @@ function l2Balkone() {
       eb = lvOfY(b, e.y0 + 0.1);
       l2Prisma(teil(e.rf), oeEckQuadrat(e), e.y0, e.y1);
     });
-    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Sturz über einer Loggia, die nicht bis unter die
-    // Decke reicht (die Loggia ist im Grundriss ausgeschnitten, die Außenwand darüber fehlt dort)
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Sturz über einer Loggia (die Loggia ist im Grundriss
+    // ausgeschnitten, die Außenwand darüber fehlt dort): von der Oberkante der Loggia, spätestens ab Deckenunterkante,
+    // bis Oberkante Decke – im obersten Geschoss mit Flachdach weiter bis Oberkante Attika wie die übrigen Außenwände
     {
       const els = l2Els(b).els,
         aw = els.find((e) => e.kind === 'AW'),
         dW = (aw && aw.d) || 0.36,
-        dDE = ((els.find((e) => e.kind === 'DE') || {}).d || 0.22) + 0.002;
+        dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22,
+        flach = !b.roof || !b.roof.type || b.roof.type === 'flat',
+        hAt = (els.find((e) => e.kind === 'AW' && e.hAt) || {}).hAt || 0.3;
       oeLoggiaEinschnitte(b).forEach((z) => {
-        const o = z.lg,
-          ob = o.yG - dDE;
+        const o = z.lg;
         eb = lvOfY(b, o.y0 + 0.1);
-        if (ob - o.y1 > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, o.y1, ob);
+        const oben = eb === b.levels.length - 1 && flach,
+          ya = Math.min(o.y1, o.yG - dDE),
+          yb = o.yG + (oben ? hAt : 0);
+        if (yb - ya > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, ya, yb);
       });
     }
     const g = new T.Group(),
