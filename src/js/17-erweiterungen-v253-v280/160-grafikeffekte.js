@@ -1,7 +1,12 @@
 /* ===== v280 Grafikeffekte: Bäume (Laubschalen, Taste 8 im Grafiktest), Gras (Voxel, Taste 1), Wasser-Shader mit Spiegelung =====
    Schaltbar je Darstellung (Schattiert / Realistisch) im Panel „Darstellung“. Weißmodell: immer Original.
    Texturfarben der Grünflächen/Gewässer (ctxPaint) bleiben unverändert. */
-S.fx = { sch: { trees: 0, tv: 8, grass: 0, gv: 1 }, real: { trees: 1, tv: 8, grass: 1, gv: 1, water: 1 } };
+S.fx = {
+  sch: { trees: 0, tv: 8, grass: 0, gv: 1 },
+  real: { trees: 1, tv: 8, grass: 1, gv: 1, water: 1 },
+  // Weißmodell: nur die Baumschalen (Laub- und Nadelschalen) wählbar
+  wm: { trees: 0, tv: 8 },
+};
 const FX = {};
 const FXT = {
   ansatz: 30,
@@ -20,7 +25,9 @@ const FXT = {
 };
 const fxOn = (k) => {
   const m = drKey();
-  if (k === 'grass' || m === 'wm' || !S.fx) return false;
+  if (k === 'grass' || !S.fx) return false;
+  // Weißmodell: nur Baumschalen (kein Wasser-Shader)
+  if (m === 'wm' && k !== 'trees' && k !== 'nadel') return false;
   const o = S.fx[m];
   // Wasser-Shader mit Spiegelung nur in Realistisch (in Realistisch+ flackert die Spiegelung in der Nachbearbeitung)
   return !!(o && o[k] && (k !== 'water' || S.dar === 'real'));

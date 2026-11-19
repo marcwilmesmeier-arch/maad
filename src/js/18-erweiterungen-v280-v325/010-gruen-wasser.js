@@ -701,7 +701,7 @@ function fxSet(k, v) {
 }
 function fxLoad(o) {
   if (!o) return;
-  for (const m of ['sch', 'real']) if (o[m]) Object.assign(S.fx[m], o[m]);
+  for (const m of ['sch', 'real', 'wm']) if (o[m]) Object.assign(S.fx[m], o[m]);
 }
 setInterval(() => {
   try {

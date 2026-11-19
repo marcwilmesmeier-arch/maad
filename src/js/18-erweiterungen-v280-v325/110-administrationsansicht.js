@@ -190,7 +190,7 @@ function admModeCap(m) {
     d.lt = JSON.parse(JSON.stringify(S.lt[m]));
     d.kon = JSON.parse(JSON.stringify(S.kon[m]));
   }
-  if (m === 'sch' || drReal(m)) d.fx = JSON.parse(JSON.stringify(S.fx[drKey(m)]));
+  if (m === 'sch' || m === 'wm' || drReal(m)) d.fx = JSON.parse(JSON.stringify(S.fx[drKey(m)]));
   if (drReal(m)) {
     d.sky = JSON.parse(JSON.stringify(S.sky));
     d.aa = S.aa;

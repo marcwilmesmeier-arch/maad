@@ -234,7 +234,7 @@ function lyDGroup() {
     g.className = 'lyg' + (LYD.col[title] ? ' col' : '');
     g.innerHTML = `<h4 data-g="${title}">${title}<span>▾</span></h4>`;
     if (list === 'fx') {
-      if (S.dar === 'wm') continue;
+      // Weißmodell: nur die Baumschalen (wie in den anderen Darstellungen)
       const fr = (k, l, ik) =>
         `<div class="ly lyr">${lyDBtn(ik, !!o[k], 'fx:' + k)}<label>${l}</label></div>`;
       g.insertAdjacentHTML(

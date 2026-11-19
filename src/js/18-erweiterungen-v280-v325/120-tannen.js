@@ -4,6 +4,7 @@ LY.push(['Tannen in Nadelwald', 'wld', 0, 1]);
 S.lc.nad = '#2f5d3f';
 S.fx.real.nadel = 1;
 S.fx.sch.nadel = 0;
+S.fx.wm.nadel = 0;
 G.wld = new T.Group();
 sc.add(G.wld);
 G.wld.visible = false;
