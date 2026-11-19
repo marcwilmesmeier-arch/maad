@@ -69,7 +69,7 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   Gruppe G), Optionsleiste über der Zeichnung, Inspektor `fdInspektor` (zeigt nur das Gewählte bzw. die Bibliothek des
   Werkzeugs), Fußleiste mit Hinweis und Kennwerten. Esc führt stufenweise zurück zu „Auswählen“. Zahlenfelder
   `fdZahl` (Einheit im Feld, Komma, Pfeiltasten).
-- Fassadentypen in 3D (`110-fassadentypen-3d.js`, derzeit abgeschaltet: `FT3.aktiv = false`): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
+- Fassadentypen in 3D (`110-fassadentypen-3d.js`, eingeschaltet: `FT3.aktiv = true`, mit Schraffur): nur ab LOD 200 (LOD 100: nur Auswertung). Ebene „Fassadentypen“
   (`G.fdt`), farbige Flächen 4 cm vor der Außenwand mit ausgesparten Öffnungen, Laibungen in derselben Farbe
   (senkrecht zur tatsächlichen Wand); `ftSync` im Takt von `l2Vis`, je Gebäude nur bei Änderung neu.
 - LOD-200-Zeichnung (`22-lod200-waende/140-zeichnung.js`, Schalter `S.l2zs` in der LOD-Leiste, mit dem Projekt
@@ -387,6 +387,17 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
   zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
+
+## Schraffuren der Fassadentypen
+
+- `19-…/150-schraffuren.js`: Muster als PAT-Linienscharen (`schParse`, UTF-8 oder Latin-1). Mitgeliefert: deutsche
+  Muster als PAT-Text (`SCH_DE`, aus den Vorlagen des Nutzers); eigene einfache Muster (`ein`: waagerecht, senkrecht,
+  Kreuz, diagonal, Diagonalkreuz mit Abständen) und importierte .pat in `S.sch` (Projekt `x.sch`, Browser `maad.sch.v1`).
+- Fassadentyp `t.sch = { k, e, w, c }` (Muster, Meter je Einheit, Winkel, Linienfarbe), bearbeitet unter „Typen
+  bearbeiten“ (`schTypHtml`, `schMusterHtml`). `schKachel` sucht die kleinste Wiederholung, `schCanvas` zeichnet sie
+  (2D in Bildschirmauflösung, zu dichte Muster entfallen; 3D als Textur).
+- 2D: `schFuellen2D` nach dem Füllen in `fdDrawView`. 3D: die Fassadentyp-Schicht (`110-fassadentypen-3d.js`, wieder
+  eingeschaltet, 4 cm vor der Wand, Öffnungen ausgespart) bekommt `schMaterial` (Shader: Kachel in Wandebene).
 
 ## Ansichten: Fluchtlinien und Geländeschnitt
 

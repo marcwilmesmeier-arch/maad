@@ -135,10 +135,13 @@ function fdInspektor(b, V, cur, F) {
       S.ft
         .map(
           (t, i) =>
-            `<div class="fe"><input type="color" value="${t.c}" onchange="fdTypeSet(${i},'c',this.value)"><input type="text" style="flex:1" value="${esc(t.n)}" onchange="fdTypeSet(${i},'n',this.value)">${t.df ? '' : `<button class="ib" onclick="fdTypeDel(${i})" title="Typ löschen (Felder werden zu „ohne Typ“)">${fdIcon('x')}</button>`}</div>`,
+            `<div class="fe"><input type="color" value="${t.c}" onchange="fdTypeSet(${i},'c',this.value)"><input type="text" style="flex:1" value="${esc(t.n)}" onchange="fdTypeSet(${i},'n',this.value)">${t.df ? '' : `<button class="ib" onclick="fdTypeDel(${i})" title="Typ löschen (Felder werden zu „ohne Typ“)">${fdIcon('x')}</button>`}</div>` +
+            // ── Erweiterung aus 19-fassadendesigner/150-schraffuren.js: Schraffur je Typ
+            schTypHtml(i),
         )
         .join('') +
-      `<div class="row"><button class="bt" onclick="fdTypeAdd()">+ Neuer Typ</button><button class="bt pri" onclick="FDS.mng=false;FDS.ps='';fdTick(true)">Fertig</button></div>`
+      `<div class="row"><button class="bt" onclick="fdTypeAdd()">+ Neuer Typ</button><button class="bt pri" onclick="FDS.mng=false;FDS.ps='';fdTick(true)">Fertig</button></div>` +
+      schMusterHtml()
     );
   if (cur && FDS.gi) return oegInspektorHtml(b, cur);
   if (cur && FDS.oe) return oeInspektorHtml(b, cur);

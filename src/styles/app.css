@@ -3101,3 +3101,78 @@ summary:focus-visible {
   outline: 2px solid #5e7f92;
   outline-offset: 2px;
 }
+
+/* Schraffuren der Fassadentypen (19-fassadendesigner/150-schraffuren.js) */
+#fdDock .schz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 6px 34px;
+  width: calc(100% - 34px);
+  padding: 3px 6px 3px 3px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+#fdDock .schz:hover {
+  background: #5e7f9214;
+}
+#fdDock .schz:focus-visible {
+  outline: 2px solid #5e7f92;
+  outline-offset: 1px;
+}
+#fdDock .schz.on {
+  border-color: #f07a12;
+}
+#fdDock .schz span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mu, #64748b);
+}
+#fdDock .schv {
+  display: block;
+  flex: none;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #0002;
+}
+#fdDock .schv0 {
+  background: repeating-linear-gradient(135deg, #0000 0 5px, #0001 5px 6px);
+}
+#fdDock .sche {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px 34px;
+  padding: 8px;
+  border-radius: 9px;
+  background: #5e7f920d;
+  font-size: 11.5px;
+}
+#fdDock .sche label {
+  display: grid;
+  gap: 3px;
+  color: var(--mu, #64748b);
+}
+#fdDock .sche input,
+#fdDock .sche select {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+#fdDock .sche input[type='color'] {
+  height: 26px;
+  padding: 0;
+}
+#fdDock .schneu img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #0002;
+}

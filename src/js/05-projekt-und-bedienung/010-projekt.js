@@ -43,6 +43,9 @@ function newProjectReset() {
     S.oeg = JSON.parse(JSON.stringify(OEG0));
     // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: eigene Typen und Gruppen aus früheren Projekten
     bibErgaenzen(true);
+    // ── Erweiterung aus 19-fassadendesigner/150-schraffuren.js
+    S.sch = [];
+    schBibErgaenzen();
     if (FDS.open) fdClose();
   } catch (e) {
     logErr(e, 'newProjectReset');

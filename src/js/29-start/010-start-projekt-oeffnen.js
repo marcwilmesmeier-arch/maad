@@ -118,6 +118,7 @@ function start() {
   // eigene Fenster/Türen und Gruppen aus früheren Projekten (19-fassadendesigner/130-bibliothek)
   try {
     bibErgaenzen(true);
+    schBibErgaenzen(); // eigene und importierte Schraffuren (19-fassadendesigner/150)
   } catch (e) {
     logErr(e, 'start');
   }

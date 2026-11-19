@@ -87,6 +87,8 @@ function projExtra(cam) {
     // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
     x.oet = JSON.parse(JSON.stringify(S.oet));
     x.oeg = JSON.parse(JSON.stringify(S.oeg));
+    // ── Erweiterung aus 19-fassadendesigner/150-schraffuren.js
+    x.sch = JSON.parse(JSON.stringify(S.sch));
   } catch (e) {
     logErr(e, 'projExtra');
   }
@@ -290,6 +292,9 @@ function projApplySet(x) {
     // ── Erweiterung aus 19-fassadendesigner/130-bibliothek.js: Bibliothek ergänzt, eigene Einträge des Projekts merken
     bibErgaenzen(false);
     bibMerken();
+    // ── Erweiterung aus 19-fassadendesigner/150-schraffuren.js: Muster des Projekts, Bibliothek ergänzt
+    S.sch = schPruefen(x && x.sch);
+    schBibErgaenzen();
   } catch (e) {
     logErr(e, 'projApplySet');
   }

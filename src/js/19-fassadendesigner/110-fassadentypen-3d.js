@@ -5,9 +5,9 @@
 // Seitenflächen nur an Kanten mit Tiefenunterschied (gestuft, L-förmig, schräg). Eigene Ebene „Fassadentypen“ (ein-/ausblendbar, Deckkraft). Abgleich in ftSync() (aus dem Takt der
 // LOD-200-Ansicht, 22-lod200-waende/030-aktionen.js): neu gebaut wird nur ein Gebäude, dessen Fassade sich geändert hat.
 
-// Vorerst abgeschaltet (Wunsch: Einfärbung im 3D-Modell anders umsetzen; 2D-Ansicht unverändert). Mit aktiv = true
-// wieder einschalten – dann auch die Ebene „Fassadentypen“.
-const FT3 = { aktiv: false, g: new T.Group(), bau: new Map() };
+// Eingeschaltet: Farbe und Schraffur der Fassadentypen liegen als dünne Schicht über den LOD-200-Wänden (die Wände selbst
+// bleiben ungeteilt); Schraffur aus 150-schraffuren.js (schMaterial).
+const FT3 = { aktiv: true, g: new T.Group(), bau: new Map() };
 FT3.g.name = 'Fassadentypen';
 sc.add(FT3.g);
 G.fdt = FT3.g;
@@ -148,12 +148,12 @@ function ftBauen(b) {
         pos.push(...A0, ...C0, ...C1, ...A0, ...C1, ...A1);
       };
     fdFaces(b, V).forEach((f) => {
-      const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? fdT(f.t).c : null,
+      const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? f.t : null, // Typ (Schlüssel)
         imFeld = (x) => grInFace(f, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2),
         Mf = M.filter(imFeld),
         Of = O.filter(imFeld),
         inR = (x) => Mf.find((m) => innerhalb(m, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2)),
-        farbeVon = (m) => (m && m.t ? fdT(m.t).c : fc);
+        farbeVon = (m) => (m && m.t ? m.t : fc);
       if (!fc && !Mf.some((m) => m.t)) return;
       // Hauptfläche ohne Gruppenfelder und ohne Fenster außerhalb davon (Aussparungen vereinigt)
       if (fc)
@@ -268,13 +268,17 @@ function ftBauen(b) {
     ge.computeVertexNormals();
     const m = new T.Mesh(
       ge,
-      new T.MeshLambertMaterial({
-        color: new T.Color(c),
-        side: T.DoubleSide,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      }),
+      // Farbe und Schraffur des Fassadentyps c
+      schMaterial(
+        new T.MeshLambertMaterial({
+          color: new T.Color(fdT(c).c),
+          side: T.DoubleSide,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2,
+        }),
+        fdT(c),
+      ),
     );
     m.receiveShadow = true;
     m.raycast = () => {};
@@ -291,7 +295,7 @@ function ftSync() {
   const an = FT3.aktiv && l2on();
   S.bld.forEach((b) => {
     if (!an || b.ex || !b.fd || b._y == null) return;
-    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg]),
+    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg, schSig()]),
       alt = FT3.bau.get(b.id);
     da.add(b.id);
     if (alt && alt.sg === sg) return;

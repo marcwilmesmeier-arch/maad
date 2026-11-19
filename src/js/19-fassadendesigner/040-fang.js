@@ -311,6 +311,8 @@ function fdDrawView(g, b, V, ox, o) {
     });
     g.fillStyle = t.c;
     g.fill('evenodd');
+    // ── Erweiterung aus 19-fassadendesigner/150-schraffuren.js: Schraffur des Fassadentyps
+    schFuellen2D(g, t, X(1) - X(0), X(0), Y(0), 'evenodd');
     // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: Fassadenmaterial je Geschoss als
     // Voreinstellung für Flächen ohne eigenen Fassadentyp
     const vor = fkMaterialAnteile(b, f);
@@ -324,6 +326,9 @@ function fdDrawView(g, b, V, ox, o) {
         const ya = Y(Math.min(m.v1, 1e3)),
           yb = Y(m.v0);
         g.fillRect(Math.min(...xs), Math.min(ya, yb), Math.max(...xs) - Math.min(...xs), Math.abs(yb - ya));
+        g.beginPath();
+        g.rect(Math.min(...xs), Math.min(ya, yb), Math.max(...xs) - Math.min(...xs), Math.abs(yb - ya));
+        schFuellen2D(g, fdT(m.t), X(1) - X(0), X(0), Y(0));
       });
       g.restore();
     }
