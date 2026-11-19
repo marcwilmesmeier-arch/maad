@@ -489,6 +489,10 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Firstrichtung: `autoDir` exakt (ungerundet), Eingabe als Drehung gegenüber der Ausgangslage `b.roof.dv` (0 = parallel
   zur längsten Seite, Walmgrate auf den Ecken); `roofVersatz` rechnet die frühere absolute Richtung `b.roof.dir` um,
   `roofFest` ersetzt die alte Prüfung auf `dir`.
+- Terrassen-Attika (LOD 200): wie am Dach eine eigene Wand (`l2AttikaTerrassen` in 130-balkone.js, über
+  `l2AttikaRing`): Terrassenfläche = Geschoss minus Geschoss darüber, Wandstücke an deren Außenkanten, Gehrung zwischen
+  Außenkanten, stumpf an der Wand darüber; Typ wie die Wand darunter (`l2AttikaTyp(…, j)`). Die Terrassenwand selbst
+  bekommt kein `hAt` mehr (nur LOD 300).
 - Weißmodell (`S.dar === 'wm'`): keine Materialien an Gebäuden – `ftFarbig()` (110-fassadentypen-3d.js) sperrt
   Wandfarbe, Giebel, Attika, Loggia, Dach und die Schraffurschicht; der Wechsel baut über `ftWandSig` neu.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;

@@ -116,9 +116,11 @@ const L2_ATTIKA = 0.3;
  * darunter. Ergebnis: Vierecke je Kante [{ Q, y0, y1 }].
  */
 function l2AttikaRing(b) {
-  if (b.roof && b.roof.type && b.roof.type !== 'flat') return [];
+  // ── Terrassen: Attika als eigene Wand an den freien Außenkanten (l2AttikaTerrassen)
+  const T_ = l2AttikaTerrassen(b);
+  if (b.roof && b.roof.type && b.roof.type !== 'flat') return T_;
   const j = b.levels.length - 1;
-  if (j < 0) return [];
+  if (j < 0) return T_;
   const f = lf(b, b.levels[j]);
   if (!f || f.length < 3) return [];
   const els = l2Els(b).els,
@@ -173,6 +175,86 @@ function l2AttikaRing(b) {
       });
     });
   });
+  return R.concat(T_);
+}
+/**
+ * Attika an Terrassen (LOD 200) wie am Dach als eigene Wand: Terrassenfläche = Grundriss des Geschosses minus Grundriss
+ * darüber; an jeder ihrer Kanten auf der Gebäudeaußenkante ein Wandstück der Stärke der Außenwand, nach innen versetzt,
+ * Gehrung zwischen benachbarten Außenkanten, stumpf an der Wand des Geschosses darüber. Material wie die Wand darunter.
+ */
+function l2AttikaTerrassen(b) {
+  const R = [],
+    els = l2Els(b).els,
+    aw = els.find((e) => e.kind === 'AW'),
+    d = (aw && aw.d) || 0.36;
+  let y = b._y || 0;
+  b.levels.forEach((l, j) => {
+    y += l.h;
+    const ob = b.levels[j + 1];
+    if (l.ug || !ob) return;
+    const f = lf(b, l),
+      g = lf(b, ob);
+    let T2 = [];
+    try {
+      T2 = boolOp([bpP(f)], [bpP(g)], 'd');
+    } catch (e) {
+      logErr(e, 'l2AttikaTerrassen');
+      return;
+    }
+    T2.forEach((P) => {
+      if (!P.o || P.o.length < 3 || Math.abs(l2QA(P.o)) < 1) return;
+      const r = P.o,
+        n = r.length,
+        K = r.map((p, i) => {
+          const q = r[(i + 1) % n],
+            L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
+            u = [(q[0] - p[0]) / L, (q[1] - p[1]) / L],
+            m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+          let nn = [-u[1], u[0]];
+          if (!inP([m[0] + nn[0] * 0.05, m[1] + nn[1] * 0.05], r)) nn = [u[1], -u[0]];
+          // nur Kanten auf der Gebäudeaußenkante (nicht entlang der Wand des Geschosses darüber)
+          const aussen = L > 0.05 && f.some((a, k) => proj(m, a, f[(k + 1) % f.length]).d < 0.05);
+          return { p, q, u, nn, L, aussen };
+        }),
+        // Ecke i (Anfang der Kante i): Gehrung, wenn die Kante davor auch außen liegt, sonst senkrecht versetzt
+        ecke = (i) => {
+          const a = K[(i + n - 1) % n],
+            c = K[i],
+            C = [c.p[0] + c.nn[0] * d, c.p[1] + c.nn[1] * d];
+          if (!a.aussen) return C;
+          const A = [a.p[0] + a.nn[0] * d, a.p[1] + a.nn[1] * d],
+            det = a.u[0] * c.u[1] - a.u[1] * c.u[0];
+          if (Math.abs(det) < 1e-6) return C;
+          const t = ((C[0] - A[0]) * c.u[1] - (C[1] - A[1]) * c.u[0]) / det;
+          return [A[0] + a.u[0] * t, A[1] + a.u[1] * t];
+        },
+        ende = (i) => {
+          const c = K[i],
+            e = K[(i + 1) % n];
+          return e.aussen ? ecke((i + 1) % n) : [c.q[0] + c.nn[0] * d, c.q[1] + c.nn[1] * d];
+        };
+      K.forEach((k, i) => {
+        if (!k.aussen) return;
+        const N = Math.max(1, Math.ceil(k.L / 0.5)),
+          typ = (t) =>
+            l2AttikaTyp(b, k.p[0] + (k.q[0] - k.p[0]) * t, k.p[1] + (k.q[1] - k.p[1]) * t, k.nn, j),
+          st = [{ t0: 0, ft: typ(0.5 / N) }];
+        for (let s = 1; s < N; s++) {
+          const ft = typ((s + 0.5) / N);
+          if (ft !== st[st.length - 1].ft) st.push({ t0: s / N, ft });
+        }
+        const A = (t) => [k.p[0] + (k.q[0] - k.p[0]) * t, k.p[1] + (k.q[1] - k.p[1]) * t],
+          I0 = ecke(i),
+          I1 = ende(i),
+          Ii = (t) => (t <= 0 ? I0 : t >= 1 ? I1 : [A(t)[0] + k.nn[0] * d, A(t)[1] + k.nn[1] * d]);
+        st.forEach((x, s) => {
+          const t0 = x.t0,
+            t1 = s + 1 < st.length ? st[s + 1].t0 : 1;
+          R.push({ Q: [A(t0), A(t1), Ii(t1), Ii(t0)], y0: y, y1: y + L2_ATTIKA, ft: x.ft, j });
+        });
+      });
+    });
+  });
   return R;
 }
 /**
@@ -180,7 +262,7 @@ function l2AttikaRing(b) {
  * Ansicht gesetzt (Fassadendesigner, d.at; 'ohne' = ohne Typ), sonst der Typ der Fassadenfläche darunter im obersten
  * Geschoss. '' = ohne Typ (Wandfarbe).
  */
-function l2AttikaTyp(b, x, z, nn) {
+function l2AttikaTyp(b, x, z, nn, jo) {
   try {
     if ((!b.fd && !fkHatMt(b)) || !ftFarbig()) return '';
     const V = fdViewAt(b, -nn[0], -nn[1], x, z, 0.7);
@@ -189,8 +271,10 @@ function l2AttikaTyp(b, x, z, nn) {
       gilt = (k) => (k && k !== 'ohne' && S.ft.some((t) => t.k === k) ? k : '');
     if (d && d.at) return gilt(d.at);
     const u0 = ugN(b);
+    // jo: Geschoss unter der Attika (Terrasse), sonst das oberste
+    const bis = jo == null ? b.levels.length - 1 : jo;
     let vTop = 0;
-    for (let i = u0; i < b.levels.length; i++) vTop += b.levels[i].h;
+    for (let i = u0; i <= bis; i++) vTop += b.levels[i].h;
     const u = x * V.n[1] - z * V.n[0],
       F = fdFaces(b, V).find((f) => grInFace(f, u, vTop - 0.3));
     // ohne eigenen Typ: Material aus „Planen“ (oberstes Geschoss)
@@ -386,7 +470,11 @@ function l2Balkone() {
     // ── Attika als eigene Wand rund um das oberste Geschoss (Flachdach)
     eb = 'roof';
     // je Abschnitt im Fassadentyp der Wand darunter (Farbe und Schraffur, l2AttikaTyp)
-    l2AttikaRing(b).forEach((q) => l2Prisma(teil(q.ft ? 'ft:' + q.ft : 'wand'), q.Q, q.y0, q.y1));
+    l2AttikaRing(b).forEach((q) => {
+      // Terrassen-Attika gehört in der Explosionsansicht zum Geschoss darunter
+      eb = q.j != null ? lvOfY(b, q.y0 - 0.1) : 'roof';
+      l2Prisma(teil(q.ft ? 'ft:' + q.ft : 'wand'), q.Q, q.y0, q.y1);
+    });
     // Attika, Stürze und Balkonplatten in der Farbe der Außenwände dieses Gebäudes (kein Farbsprung am Übergang)
     const wandIt = [...L2I.values()].find((it) => it.el.bid === b.id && it.el.kind === 'AW' && it.mat),
       wandFarbe = wandIt ? wandIt.mat.color.clone() : new T.Color(L2K.AW.c);

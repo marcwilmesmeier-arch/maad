@@ -489,7 +489,11 @@ function l2GeoStufe1(b) {
               t0 = null;
             }
           });
-          if (atT.length) {
+          if (atT.length && C) {
+            // LOD 200: Attika als eigene Wand an der Terrasse (l2AttikaTerrassen, 130-balkone.js)
+            r.atR = 1;
+            r.gel = 1;
+          } else if (atT.length) {
             r.hAt = 0.3;
             r.gel = 1;
             if (!(atT.length === 1 && atT[0][0] < 0.02 && atT[0][1] > 0.98)) r.atT = atT;
