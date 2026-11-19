@@ -403,6 +403,15 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   und Loggien. `lbFlaechen`/`lbBoeden` liefern nur bei `l2on()`, die Loggia-Einschnitte der Wandableitung (NGF, KF)
   ebenso. Beim Wechsel (`lotlod`) werden Kennzahlen (`rr`) und Hervorhebung (`hlApply`) neu aufgebaut.
 
+## LOD 200: Attika als eigene Wand
+
+- Flachdach, oberstes Geschoss: `l2AttikaRing` (`22-…/130-balkone.js`) baut die Attika als durchgehenden Ring entlang
+  des Umrisses des obersten Geschosses (und um Innenhöfe bis zum Dach), in Außenwandstärke nach innen, auf Gehrung an
+  jeder Ecke, Höhe `L2_ATTIKA`; in der Balkongruppe (Geschoss 'roof'). Die Außenwände dieses Geschosses tragen in LOD 200
+  keine eigene Attika mehr (`r.atR`); LOD 300 behält `r.hAt`. Terrassen-Attiken tieferer Geschosse bleiben an der Wand.
+- Loggien: Sturz an der Fassadenlinie bis Oberkante Decke; Loggia-Wände enden unter der Decke (`r.lg`, ohne `quads2`);
+  die Gehrungsdreiecke der Nachbarwände im Deckenbereich werden ergänzt.
+
 ## LOD 200: Anbauten in Explosion und Isolieren
 
 - `l2Balkone`/`l2Terrassen` (`22-…/130-balkone.js`) legen je Geschoss eine Untergruppe an (`userData.k`, Geschoss des

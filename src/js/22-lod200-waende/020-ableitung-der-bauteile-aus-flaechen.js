@@ -437,8 +437,11 @@ function l2GeoStufe1(b) {
         // unter der durchgehenden Decke: kein oberes Wandstück im Deckenbereich (läge sonst in der Deckenoberfläche)
         r.quads2 = null;
         r.hTop = 0;
-      } else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) r.hAt = 0.3;
-      else if (li < L.length - 1) {
+        // oberstes Geschoss mit Flachdach: in LOD 200 ist die Attika eine eigene, durchgehende Wand (l2AttikaRing)
+      } else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) {
+        if (C) r.atR = 1;
+        else r.hAt = 0.3; // LOD 300: Attika weiter an der Wand (Schichtaufbau)
+      } else if (li < L.length - 1) {
         // Terrasse: über dieser Außenwand steht kein Geschoss mehr → Attika wie am Dach und Geländer (r.gel)
         // Prüfpunkte 0,8 m innen vor der Wand (Innenseite aus dem eigenen Geschossgrundriss bestimmt, unabhängig
         // von der Richtung der gespeicherten Normalen); frei, wenn das Geschoss darüber dort nicht steht

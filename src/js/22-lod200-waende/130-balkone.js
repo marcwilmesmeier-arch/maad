@@ -107,6 +107,58 @@ function l2QuaderFlaechen(pos, V) {
     }
   });
 }
+/** Attikahöhe über der Dachdecke (m). */
+const L2_ATTIKA = 0.3;
+/**
+ * Attika als eigene, durchgehende Wand (LOD 200, Flachdach): entlang des Umrisses des obersten Geschosses (und um
+ * Innenhöfe, die bis zum Dach reichen), in Außenwandstärke nach innen, auf der Dachdecke stehend; an jeder Ecke auf
+ * Gehrung (Schnittpunkt der versetzten Kanten) – keine Lücken, keine Überschneidungen, kein Überstand aus dem Geschoss
+ * darunter. Ergebnis: Vierecke je Kante [{ Q, y0, y1 }].
+ */
+function l2AttikaRing(b) {
+  if (b.roof && b.roof.type && b.roof.type !== 'flat') return [];
+  const j = b.levels.length - 1;
+  if (j < 0) return [];
+  const f = lf(b, b.levels[j]);
+  if (!f || f.length < 3) return [];
+  const els = l2Els(b).els,
+    aw = els.find((e) => e.kind === 'AW' && e.li === j) || els.find((e) => e.kind === 'AW'),
+    d = (aw && aw.d) || 0.36,
+    y0 = (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0),
+    hoefe = znVoidsAt(b, j).map((v) => v.poly),
+    drin = (p) => inP(p, f) && !hoefe.some((h) => inP(p, h)),
+    R = [];
+  [f].concat(hoefe).forEach((ring) => {
+    const n = ring.length,
+      // je Kante: Richtung und Normale zur Gebäudeseite (Prüfpunkt 5 cm daneben)
+      K = ring.map((p, i) => {
+        const q = ring[(i + 1) % n],
+          l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
+          u = [(q[0] - p[0]) / l, (q[1] - p[1]) / l],
+          m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+        let nn = [-u[1], u[0]];
+        if (!drin([m[0] + nn[0] * 0.05, m[1] + nn[1] * 0.05])) nn = [u[1], -u[0]];
+        return { p, q, u, nn, l };
+      }),
+      // innere Ecke i: Schnitt der um d versetzten Kanten i−1 und i (Gehrung)
+      innen = (i) => {
+        const a = K[(i + n - 1) % n],
+          c = K[i],
+          A = [a.p[0] + a.nn[0] * d, a.p[1] + a.nn[1] * d],
+          C = [c.p[0] + c.nn[0] * d, c.p[1] + c.nn[1] * d],
+          det = a.u[0] * c.u[1] - a.u[1] * c.u[0];
+        if (Math.abs(det) < 1e-6) return C;
+        const t = ((C[0] - A[0]) * c.u[1] - (C[1] - A[1]) * c.u[0]) / det;
+        return [A[0] + a.u[0] * t, A[1] + a.u[1] * t];
+      },
+      I = K.map((_, i) => innen(i));
+    K.forEach((k, i) => {
+      if (k.l < 0.01) return;
+      R.push({ Q: [k.p, k.q, I[(i + 1) % n], I[i]], y0, y1: y0 + L2_ATTIKA });
+    });
+  });
+  return R;
+}
 /** Senkrechtes Prisma über dem Viereck Q (Grundriss, beliebige Form) von ya bis yb – alle Seiten, doppelseitig. */
 function l2Prisma(pos, Q, ya, yb) {
   l2QuaderFlaechen(pos, [...Q.map((p) => [p[0], ya, p[1]]), ...Q.map((p) => [p[0], yb, p[1]])]);
@@ -257,18 +309,33 @@ function l2Balkone() {
       const els = l2Els(b).els,
         aw = els.find((e) => e.kind === 'AW'),
         dW = (aw && aw.d) || 0.36,
-        dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22,
-        flach = !b.roof || !b.roof.type || b.roof.type === 'flat',
-        hAt = (els.find((e) => e.kind === 'AW' && e.hAt) || {}).hAt || 0.3;
+        dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22;
       oeLoggiaEinschnitte(b).forEach((z) => {
         const o = z.lg;
         eb = lvOfY(b, o.y0 + 0.1);
-        const oben = eb === b.levels.length - 1 && flach,
-          ya = Math.min(o.y1, o.yG - dDE),
-          yb = o.yG + (oben ? hAt : 0);
+        // bis Oberkante Decke; im obersten Geschoss läuft darüber die Attika als eigene Wand (l2AttikaRing)
+        const ya = Math.min(o.y1, o.yG - dDE),
+          yb = o.yG;
         if (yb - ya > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, ya, yb);
+        // Gehrung zu den Seitenwänden der Loggia: die Außenwände daneben enden schräg (Dreieck gehört der
+        // Seitenwand); da diese unter der Decke endet, das Dreieck im Decken- und Attikabereich ergänzen
+        const L = Math.hypot(o.p1[0] - o.p0[0], o.p1[1] - o.p0[1]) || 1,
+          u = [(o.p1[0] - o.p0[0]) / L, (o.p1[1] - o.p0[1]) / L],
+          Q = (p, a, s2) => [p[0] + u[0] * a - o.n[0] * s2, p[1] + u[1] * a - o.n[1] * s2],
+          y0 = o.yG - dDE;
+        if (yb - y0 > 0.03) {
+          const a = Q(o.p0, -dW, dW),
+            c = Q(o.p0, 0, dW),
+            d = Q(o.p1, dW, dW),
+            e = Q(o.p1, 0, dW);
+          l2Prisma(teil('wand'), [o.p0, a, c, c], y0, yb);
+          l2Prisma(teil('wand'), [o.p1, e, d, d], y0, yb);
+        }
       });
     }
+    // ── Attika als eigene Wand rund um das oberste Geschoss (Flachdach)
+    eb = 'roof';
+    l2AttikaRing(b).forEach((q) => l2Prisma(teil('wand'), q.Q, q.y0, q.y1));
     const g = new T.Group(),
       mesh = (arr, farbe) => {
         if (!arr.length) return null;
