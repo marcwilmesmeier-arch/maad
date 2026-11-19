@@ -335,7 +335,8 @@ function ftWandAbschnitte(e) {
     // Wandenden (Gehrung) gehören zum ersten bzw. letzten Abschnitt
     A[0].t0 = -1e5;
     A[A.length - 1].t1 = 1e5;
-    return { d, A: A.some((a) => a.k) ? A : [] };
+    // n, sA: Normale nach außen und Lage der Außenfläche (für die Einfärbung nur bis zur Fensterebene)
+    return { d, n, sA: e.sa[0] * n[0] + e.sa[1] * n[1], A: A.some((a) => a.k) ? A : [] };
   } catch (err) {
     logErr(err, 'ftWandAbschnitte');
     return { d: null, A: [] };

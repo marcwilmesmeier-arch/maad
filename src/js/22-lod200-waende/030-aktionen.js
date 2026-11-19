@@ -140,13 +140,23 @@ function l2MeshOrig(e) {
         a = FA.A.find((x) => t >= x.t0 && t <= x.t1);
       return a ? a.k : '';
     },
-    // Fläche f an den Typwechseln schneiden: [[Teilfläche, Typ]]
+    // eingefärbt wird nur der äußere Teil bis zur Fensterebene (Einbautiefe der Fenster), dahinter bleibt die Wand weiß
+    sF = (() => {
+      const O = e.kind === 'AW' && FA.A.length ? oeWandOeffnungen(e).filter((o) => o.T) : [];
+      return O.length ? Math.min(...O.map((o) => o.T.et || 0.12)) : 0.12;
+    })(),
+    // Fläche f an den Typwechseln schneiden, eingefärbte Teile in der Tiefe teilen: [[Teilfläche, Typ]]
     nachTyp = (f) => {
-      if (!FA.A.length || (f.h && f.h.length)) return [[f, typBei(f)]];
+      if (!FA.A.length || (f.h && f.h.length)) return [[f, '']];
       const R = [];
       FA.A.forEach((a) => {
         const P = oeSchneide(f.o, FA.d, a.t0, a.t1);
-        if (P.length >= 3) R.push([{ o: P, h: [] }, a.k]);
+        if (P.length < 3) return;
+        if (!a.k) return R.push([{ o: P, h: [] }, '']);
+        const aus = oeSchneide(P, FA.n, FA.sA - sF, 1e5),
+          ein = oeSchneide(P, FA.n, -1e5, FA.sA - sF);
+        if (aus.length >= 3) R.push([{ o: aus, h: [] }, a.k]);
+        if (ein.length >= 3) R.push([{ o: ein, h: [] }, '']);
       });
       return R;
     },

@@ -397,7 +397,8 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   bearbeiten“ (`schTypHtml`, `schMusterHtml`). `schKachel` sucht die kleinste Wiederholung, `schCanvas` zeichnet sie
   (2D in Bildschirmauflösung, zu dichte Muster entfallen; 3D als Textur).
 - LOD 200: die Außenwände tragen die Farbe ihres Fassadentyps selbst (`ftWandAbschnitte`, in `l2MeshOrig` nur in der
-  Darstellung an Typwechseln geschnitten, die Wand bleibt ein Bauteil); die Attika übernimmt den Typ der Wand darunter
+  Darstellung an Typwechseln geschnitten, die Wand bleibt ein Bauteil; eingefärbt nur außen bis zur Fensterebene, dahinter
+  weiß); die Attika übernimmt den Typ der Wand darunter
   (`l2AttikaTyp`), außer die Ansicht setzt ihn gezielt (`d.at`, Inspektor „Attika“).
 - 2D: `schFuellen2D` nach dem Füllen in `fdDrawView`. 3D: die Fassadentyp-Schicht (`110-fassadentypen-3d.js`, wieder
   eingeschaltet, 1 cm vor der Wand, Öffnungen ausgespart) zeigt nur noch die Schraffurlinien (`schMaterial(…, nurLinien)`);
