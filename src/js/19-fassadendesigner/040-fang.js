@@ -302,12 +302,19 @@ function fdDrawView(g, b, V, ox, o) {
     });
     g.restore();
   }
+  // LOD 200: Fassadenfläche an den Öffnungen ausgespart (Löcher im Pfad, gerade/ungerade Regel)
+  const lod2 = fdLod() === 200,
+    Oz = lod2 ? oeListe(b, V) : [];
   F.forEach((f, i) => {
     const t = fdT(f.t);
     g.beginPath();
     [f.o].concat(f.h).forEach((r) => {
       r.forEach((p, k) => (k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))));
       g.closePath();
+    });
+    Oz.forEach((x) => {
+      if (!grInFace(f, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2)) return;
+      g.rect(X(x.u0), Y(x.v1), X(x.u1) - X(x.u0), Y(x.v0) - Y(x.v1));
     });
     g.fillStyle = t.c;
     g.fill('evenodd');
@@ -390,8 +397,8 @@ function fdDrawView(g, b, V, ox, o) {
       g.setLineDash([]);
     });
   }
-  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js
-  oeZeichnen(g, b, V, ox, o);
+  // ── Erweiterung aus 19-fassadendesigner/090-oeffnungen.js (nur LOD 200: Öffnungen, Gruppen, Balkone, Loggien)
+  if (lod2) oeZeichnen(g, b, V, ox, o);
   if (o.lab) {
     const s = fdVP().s;
     F.forEach((f, i) => {

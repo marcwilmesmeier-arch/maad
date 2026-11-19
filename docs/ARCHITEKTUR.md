@@ -409,6 +409,12 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   eingeschaltet, 1 cm vor der Wand, Öffnungen ausgespart) zeigt nur noch die Schraffurlinien (`schMaterial(…, nurLinien)`);
   Gruppenfelder mit eigenem Material dort mit Farbe. In der Explosion ausgeblendet.
 
+## Fassadendesigner: LOD 100 / 200
+
+- Umschalter neben den Ansichtsreitern (`fdLod`, `fdLodSet`, `FDS.lod`, Vorgabe 200). LOD 100: nur Kubatur und
+  Fassadentypen (`oeZeichnen` entfällt). LOD 200: Öffnungen, Gruppen, Balkone, Loggien; die Fassadenfläche wird an den
+  Öffnungen ausgespart (Löcher im Pfad der Fläche in `fdDrawView`). Werkzeug „Öffnung“/„Gruppe“ schaltet auf LOD 200.
+
 ## Ansichten: Fluchtlinien und Geländeschnitt
 
 - `19-…/140-fluchten-gelaende.js` (aus `fdDrawView`): Umriss je Fassadenebene gleicher Tiefe (`fdFluchtUmrisse`,

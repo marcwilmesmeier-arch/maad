@@ -77,6 +77,30 @@ function fdChrome(b, V, cur, F) {
         (v) =>
           `<button class="${FDS.vk === v.key ? 'on' : ''}" onclick="fdView('${v.key}')" title="${esc(v.name)} · ${fdFmt(v.area)} m²">${esc(v.name.replace('Ansicht ', ''))}</button>`,
       ).join('');
+  // Detaillierungsgrad der Ansicht: LOD 100 nur Kubatur und Fassadentypen, LOD 200 mit Öffnungen, Gruppen, Balkonen
+  // und Loggien (Fassadenfläche an den Öffnungen ausgespart)
+  if (vs) {
+    let lz = fdE('fdLod');
+    if (!lz) {
+      lz = document.createElement('div');
+      lz.id = 'fdLod';
+      lz.className = 'seg';
+      lz.setAttribute('role', 'group');
+      lz.setAttribute('aria-label', 'Detaillierungsgrad der Ansicht');
+      lz.style.marginLeft = '8px';
+      vs.after(lz);
+    }
+    const h = [
+      [100, 'Kubatur und Fassadentypen'],
+      [200, 'mit Öffnungen, Gruppen, Balkonen und Loggien'],
+    ]
+      .map(
+        ([k, t]) =>
+          `<button class="${fdLod() === k ? 'on' : ''}" aria-pressed="${fdLod() === k}" onclick="fdLodSet(${k})" title="${t}">LOD ${k}</button>`,
+      )
+      .join('');
+    if (lz.innerHTML !== h) lz.innerHTML = h;
+  }
   // Optionsleiste über der Zeichnung (je Werkzeug)
   const op = fdE('fdOpt');
   if (op && !(op.contains(document.activeElement) && /SELECT|INPUT/.test(document.activeElement.tagName))) {

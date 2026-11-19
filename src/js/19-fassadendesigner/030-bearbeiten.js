@@ -386,9 +386,21 @@ function fdPick(id) {
   fdTick(true);
   fdFit();
 }
+/** Detaillierungsgrad der Ansicht (100 oder 200, Vorgabe 200). */
+const fdLod = () => (FDS.lod === 100 ? 100 : 200);
+function fdLodSet(k) {
+  FDS.lod = k === 100 ? 100 : 200;
+  // in LOD 100 gibt es nichts zu setzen: Öffnungs- und Gruppenwerkzeug zurück auf „Auswählen“
+  if (FDS.lod === 100 && (FDS.tool === 'oe' || FDS.tool === 'gr')) fdTool('sel');
+  FDS.ps = '';
+  FDS.dirty = 1;
+  fdTick(true);
+}
 function fdTool(t) {
   // „Teilen“ ist ein Werkzeug mit drei Arten (Linie, Rechteck, Geschoss); die zuletzt genutzte bleibt gewählt
   if (t === 'teil') t = FDS.teil || 'line';
+  // Öffnungen und Gruppen setzen braucht die LOD-200-Ansicht
+  if (t === 'oe' || t === 'gr') FDS.lod = 200;
   if (t === 'line' || t === 'rect' || t === 'st') FDS.teil = t;
   FDS.tool = t;
   FDS.oeVor = null;
