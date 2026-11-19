@@ -477,8 +477,11 @@ function l2GeoStufe1(b) {
               mz = r.sa[1] + (r.sb[1] - r.sa[1]) * t,
               a = [mx + px * 0.8, mz + pz * 0.8],
               c = [mx - px * 0.8, mz - pz * 0.8],
-              innen = inP(a, eig) ? a : inP(c, eig) ? c : null;
-            frei.push(!!innen && !inP(innen, up));
+              // Innenhöfe: liegt im eigenen Geschoss nicht innen, im Geschoss darüber nicht überdeckt
+              hof = (p, jj) => znVoidsAt(b, jj).some((v) => inP(p, v.poly)),
+              imEig = (p) => inP(p, eig) && !hof(p, jB),
+              innen = imEig(a) ? a : imEig(c) ? c : null;
+            frei.push(!!innen && (!inP(innen, up) || hof(innen, jB + 1)));
           }
           const atT = [];
           let t0 = null;
@@ -718,6 +721,16 @@ function l2GeoStufe1(b) {
       znVoidsAt(b, jB).forEach((v) => {
         const ring = v.poly.map((q) => q.slice());
         if (jB < v.j1 || jB === b.levels.length - 1) hofDecke.push(ring);
+        else if (b.levels[jB + 1]) {
+          // Hof endet hier: offen zum Himmel, wo das Geschoss darüber nicht steht (Terrasse über dem Hof)
+          try {
+            boolOp([bpP(ring)], [bpP(lf(b, b.levels[jB + 1]))], 'd').forEach((P) => {
+              if (P.o && P.o.length >= 3 && Math.abs(l2QA(P.o)) > 0.05) hofDecke.push(P.o);
+            });
+          } catch (e) {
+            logErr(e, 'Hofdecke');
+          }
+        }
         if (jB === v.j0 && li === 0) hofBoden.push(ring);
       });
     const eS = (kind, fc, y0, T) => {
@@ -747,7 +760,19 @@ function l2GeoStufe1(b) {
         };
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: hinter Pfosten-Riegel-Fassaden, die ins nächste
     // Geschoss weiterlaufen, springt die Decke zurück (oeDeckenZonen)
-    const fDE = oeDeckeAussparen([mk1(offR(outerD, slOff), holes.concat(hofDecke))], y + lv.h, prZ);
+    // Innenhöfe als Polygon-Differenz (ein Hof darf über den Deckenrand hinausreichen, z. B. bis in eine Terrasse)
+    const dRing = offR(outerD, slOff);
+    let dFl = [mk1(dRing, holes.concat(hofDecke))];
+    if (hofDecke.length)
+      try {
+        const D = boolOp([{ o: dRing, h: holes }], hofDecke.map(bpP), 'd').filter(
+          (P) => P.o && P.o.length >= 3 && Math.abs(l2QA(P.o)) > 0.05,
+        );
+        if (D.length) dFl = D.map((P) => mk1(P.o, P.h || []));
+      } catch (e) {
+        logErr(e, 'Decke Innenhof');
+      }
+    const fDE = oeDeckeAussparen(dFl, y + lv.h, prZ);
     sl('DE', fDE, y + lv.h - dDE, l2T(DF.DE));
     R.els[R.els.length - 1].flatTop = li === L.length - 1 && flat;
     if (li === 0) eS('BP', mk1(outer.slice(), hofBoden), y - l2T(DF.BP).d, l2T(DF.BP));

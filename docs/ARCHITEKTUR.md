@@ -496,6 +496,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   `l2AttikaRing`): Terrassenfläche = Geschoss minus Geschoss darüber, Wandstücke an deren Außenkanten, Gehrung zwischen
   Außenkanten, stumpf an der Wand darüber; Typ wie die Wand darunter (`l2AttikaTyp(…, j)`). Die Terrassenwand selbst
   bekommt kein `hAt` mehr (nur LOD 300).
+- Innenhöfe und Terrassen (LOD 200): `l2TerrassenFlaeche` = Geschoss − Geschoss darüber − Innenhöfe; Hofkanten zählen
+  als Außenkanten (Attika, Geländer). Decken schneiden Höfe als Polygon-Differenz aus (ein Hof darf über den
+  Deckenrand reichen); endet ein Hof in einem Geschoss, bleibt die Decke nur dort, wo das Geschoss darüber steht.
 - Weißmodell (`S.dar === 'wm'`): keine Materialien an Gebäuden – `ftFarbig()` (110-fassadentypen-3d.js) sperrt
   Wandfarbe, Giebel, Attika, Loggia, Dach und die Schraffurschicht; der Wechsel baut über `ftWandSig` neu.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;

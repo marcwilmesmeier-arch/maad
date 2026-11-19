@@ -128,9 +128,17 @@ function l2AttikaRing(b) {
     d = (aw && aw.d) || 0.36,
     y0 = (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0),
     hoefe = znVoidsAt(b, j).map((v) => v.poly),
-    drin = (p) => inP(p, f) && !hoefe.some((h) => inP(p, h)),
     R = [];
-  [f].concat(hoefe).forEach((ring) => {
+  // Dachfläche = Grundriss minus Innenhöfe (ein Hof darf über den Rand hinausreichen); Attika an allen ihren Rändern
+  let D = [bpP(f)];
+  if (hoefe.length)
+    try {
+      D = boolOp([bpP(f)], hoefe.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
+    } catch (e) {
+      logErr(e, 'l2AttikaRing');
+    }
+  const drin = (p) => D.some((P) => inP(p, P.o) && !(P.h || []).some((h) => inP(p, h)));
+  D.flatMap((P) => [P.o].concat(P.h || [])).forEach((ring) => {
     const n = ring.length,
       // je Kante: Richtung und Normale zur Gebäudeseite (Prüfpunkt 5 cm daneben)
       K = ring.map((p, i) => {
@@ -193,27 +201,28 @@ function l2AttikaTerrassen(b) {
     const ob = b.levels[j + 1];
     if (l.ug || !ob) return;
     const f = lf(b, l),
-      g = lf(b, ob);
-    let T2 = [];
-    try {
-      T2 = boolOp([bpP(f)], [bpP(g)], 'd');
-    } catch (e) {
-      logErr(e, 'l2AttikaTerrassen');
-      return;
-    }
+      T2 = l2TerrassenFlaeche(b, j),
+      // Gebäudekanten: Umriss und Innenhöfe dieses Geschosses
+      kanten = [f].concat(znVoidsAt(b, j).map((v) => v.poly));
+    // je Ring der Terrassenfläche (außen und Löcher, z. B. ein Innenhof mitten in der Terrasse)
+    const ringe = [];
     T2.forEach((P) => {
       if (!P.o || P.o.length < 3 || Math.abs(l2QA(P.o)) < 1) return;
-      const r = P.o,
-        n = r.length,
+      const drin = (p) => inP(p, P.o) && !(P.h || []).some((h) => inP(p, h));
+      [P.o].concat(P.h || []).forEach((r) => ringe.push({ r, drin }));
+    });
+    ringe.forEach(({ r, drin }) => {
+      const n = r.length,
         K = r.map((p, i) => {
           const q = r[(i + 1) % n],
             L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
             u = [(q[0] - p[0]) / L, (q[1] - p[1]) / L],
             m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
           let nn = [-u[1], u[0]];
-          if (!inP([m[0] + nn[0] * 0.05, m[1] + nn[1] * 0.05], r)) nn = [u[1], -u[0]];
-          // nur Kanten auf der Gebäudeaußenkante (nicht entlang der Wand des Geschosses darüber)
-          const aussen = L > 0.05 && f.some((a, k) => proj(m, a, f[(k + 1) % f.length]).d < 0.05);
+          if (!drin([m[0] + nn[0] * 0.05, m[1] + nn[1] * 0.05])) nn = [u[1], -u[0]];
+          // nur Kanten auf der Gebäudeaußenkante bzw. am Innenhof (nicht entlang der Wand des Geschosses darüber)
+          const aussen =
+            L > 0.05 && kanten.some((F) => F.some((a, k) => proj(m, a, F[(k + 1) % F.length]).d < 0.05));
           return { p, q, u, nn, L, aussen };
         }),
         // Ecke i (Anfang der Kante i): Gehrung, wenn die Kante davor auch außen liegt, sonst senkrecht versetzt
@@ -363,7 +372,8 @@ function l2Balkone() {
       '|' +
       fdSig(b) +
       JSON.stringify([b.fd ? Object.values(b.fd).map((d) => [d.units, d.at]) : 0, S.ft, schSig()]) +
-      ftWandSig(b); // auch Material aus „Planen“ und Weißmodell
+      ftWandSig(b) + // auch Material aus „Planen“ und Weißmodell
+      JSON.stringify(b.voids || 0); // Innenhöfe (Terrassen-Attika)
     da.add(b.id);
     let o = L2BK.get(b.id);
     if (o && o.sig === sig) return;
@@ -630,6 +640,26 @@ function l2BalkoneWeg(o) {
 // ---- Terrassen: Stabgeländer auf der Terrassenfläche (Geschoss ohne Geschoss darüber an dieser Stelle), entlang
 // der Außenkante mit Abstand zur Attika. Terrassenfläche = Grundriss des Geschosses minus Grundriss darüber.
 const L2TG = new Map(); // Gebäude-ID → { sig, g }
+/**
+ * Terrassenfläche über Geschoss j: Grundriss des Geschosses minus Grundriss darüber minus Innenhöfe (des Geschosses und
+ * des Geschosses darüber) – als Polygone { o, h }.
+ */
+function l2TerrassenFlaeche(b, j) {
+  const l = b.levels[j],
+    ob = b.levels[j + 1];
+  if (!l || !ob) return [];
+  try {
+    let T2 = boolOp([bpP(lf(b, l))], [bpP(lf(b, ob))], 'd');
+    const H = znVoidsAt(b, j)
+      .concat(znVoidsAt(b, j + 1))
+      .map((v) => bpP(v.poly));
+    if (H.length && T2.length) T2 = boolOp(T2, H, 'd');
+    return T2;
+  } catch (e) {
+    logErr(e, 'l2TerrassenFlaeche');
+    return [];
+  }
+}
 /** Geländerlinien der Terrassen eines Gebäudes: [{ A, B, y }] (y = Terrassenboden). */
 function l2TerrassenLinien(b) {
   const R = [],
@@ -642,18 +672,16 @@ function l2TerrassenLinien(b) {
     const ob = b.levels[j + 1];
     if (l.ug || !ob) return;
     const f = lf(b, l),
-      g = lf(b, ob);
-    let T2 = [];
-    try {
-      T2 = boolOp([bpP(f)], [bpP(g)], 'd');
-    } catch (e) {
-      logErr(e, 'l2TerrassenLinien');
-      return;
-    }
+      T2 = l2TerrassenFlaeche(b, j),
+      kanten = [f].concat(znVoidsAt(b, j).map((v) => v.poly)),
+      ringe = [];
     T2.forEach((P) => {
       if (!P.o || P.o.length < 3 || Math.abs(l2QA(P.o)) < 2) return;
-      const r = P.o,
-        n = r.length;
+      const drin = (p) => inP(p, P.o) && !(P.h || []).some((h) => inP(p, h));
+      [P.o].concat(P.h || []).forEach((r) => ringe.push({ r, drin }));
+    });
+    ringe.forEach(({ r, drin }) => {
+      const n = r.length;
       for (let i = 0; i < n; i++) {
         const a = r[i],
           c = r[(i + 1) % n],
@@ -663,15 +691,12 @@ function l2TerrassenLinien(b) {
           uz = (c[1] - a[1]) / L,
           m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2],
           // nur Kanten auf der Gebäudeaußenkante (nicht entlang der Wand des Geschosses darüber)
-          aussen = f.some((p, k) => {
-            const q = f[(k + 1) % f.length];
-            return proj(m, p, q).d < 0.05;
-          });
+          aussen = kanten.some((F) => F.some((p, k) => proj(m, p, F[(k + 1) % F.length]).d < 0.05));
         if (!aussen) continue;
         // Richtung in die Terrasse
         let nx = -uz,
           nz = ux;
-        if (!inP([m[0] + nx * 0.2, m[1] + nz * 0.2], r)) {
+        if (!drin([m[0] + nx * 0.2, m[1] + nz * 0.2])) {
           nx = -nx;
           nz = -nz;
         }
@@ -689,7 +714,7 @@ function l2Terrassen() {
     da = new Set();
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !an || l2Einfach(b)) return; // in Bewegung oder Bearbeitung: einfacher Körper
-    const sig = skSig(b) + '|' + JSON.stringify((b.l2 && b.l2.c) || 0);
+    const sig = skSig(b) + '|' + JSON.stringify([(b.l2 && b.l2.c) || 0, b.voids || 0]);
     da.add(b.id);
     let o = L2TG.get(b.id);
     if (o && o.sig === sig) return;
