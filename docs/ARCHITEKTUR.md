@@ -401,6 +401,10 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   weiß); die Attika übernimmt den Typ der Wand darunter
   (`l2AttikaTyp`), außer die Ansicht setzt ihn gezielt (`d.at`, Inspektor „Attika“). Giebel- und Drempelwände
   (`e.tri`) außen je Dreieck im Typ der Fläche, ohne eigenen Typ im Typ der Wand darunter (`ftGiebelTyp`).
+- 3D-Darstellung der Linien genau im Shader (`schDeckung`: je Linienschar Abstand zur nächsten Linie, Striche/Lücken,
+  Kantenglättung über `fwidth`, dichte Scharen blenden weich aus); Scharen als Datentextur (`schDaten`, bis 128 Scharen,
+  8 Striche), größere Muster als Bild-Kachel. Richtung in Wandebene aus der Geometrienormale (nicht aus Ableitungen).
+- Eigene Klinker-Verbände (`SCH_KLINKER`, NF/DF, Läufer-, Block-, Kreuzverband) in Millimetern mit Fugenstärke `lw`.
 - 2D: `schFuellen2D` nach dem Füllen in `fdDrawView`. 3D: die Fassadentyp-Schicht (`110-fassadentypen-3d.js`, wieder
   eingeschaltet, 1 cm vor der Wand, Öffnungen ausgespart) zeigt nur noch die Schraffurlinien (`schMaterial(…, nurLinien)`);
   Gruppenfelder mit eigenem Material dort mit Farbe. In der Explosion ausgeblendet.

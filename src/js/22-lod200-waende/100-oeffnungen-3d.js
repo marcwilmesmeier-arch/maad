@@ -56,6 +56,8 @@ function oeWelt(b) {
           y0: base + x.v0,
           y1: base + x.v1,
           yG: top != null ? base + top : base + x.v1, // Oberkante des Geschosses (Sturz über niedrigerer Loggia)
+          vG: top != null ? top : x.v1,
+          t: x.t || '', // Material des Gruppenfelds (Rück- und Seitenwände)
           id: x.id,
         });
       }),
@@ -131,6 +133,19 @@ function oeLoggiaEinschnitte(b) {
       lg: o,
     };
   });
+}
+/** Kürzester Abstand eines Punkts m zum Rand des Vielecks P (Grundriss). */
+function oeAbstandZuRing(m, P) {
+  return Math.min(
+    ...P.map((p, i) => {
+      const q = P[(i + 1) % P.length],
+        dx = q[0] - p[0],
+        dz = q[1] - p[1],
+        l2 = dx * dx + dz * dz || 1,
+        t = Math.max(0, Math.min(1, ((m[0] - p[0]) * dx + (m[1] - p[1]) * dz) / l2));
+      return Math.hypot(m[0] - p[0] - dx * t, m[1] - p[1] - dz * t);
+    }),
+  );
 }
 /** Vieleck P um k nach außen aufgeweitet (Punkte vom Schwerpunkt weg) – für Lage-Prüfungen am Rand. */
 function oeLgAussen(P, k) {

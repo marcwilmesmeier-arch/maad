@@ -361,7 +361,10 @@ function l2Balkone() {
         // bis Oberkante Decke; im obersten Geschoss läuft darüber die Attika als eigene Wand (l2AttikaRing)
         const ya = Math.min(o.y1, o.yG - dDE),
           yb = o.yG;
-        if (yb - ya > 0.03) l2Quader(teil('wand'), o.p0, o.p1, o.n, -dW / 2, dW, ya, yb);
+        // im Fassadentyp der Fassade knapp über der Loggia (sonst Wandfarbe)
+        const ks = ftSturzTyp(b, o),
+          tw = ks ? 'ft:' + ks : 'wand';
+        if (yb - ya > 0.03) l2Quader(teil(tw), o.p0, o.p1, o.n, -dW / 2, dW, ya, yb);
         // Gehrung zu den Seitenwänden der Loggia: die Außenwände daneben enden schräg (Dreieck gehört der
         // Seitenwand); da diese unter der Decke endet, das Dreieck im Decken- und Attikabereich ergänzen
         const L = Math.hypot(o.p1[0] - o.p0[0], o.p1[1] - o.p0[1]) || 1,
@@ -373,8 +376,8 @@ function l2Balkone() {
             c = Q(o.p0, 0, dW),
             d = Q(o.p1, dW, dW),
             e = Q(o.p1, 0, dW);
-          l2Prisma(teil('wand'), [o.p0, a, c, c], y0, yb);
-          l2Prisma(teil('wand'), [o.p1, e, d, d], y0, yb);
+          l2Prisma(teil(tw), [o.p0, a, c, c], y0, yb);
+          l2Prisma(teil(tw), [o.p1, e, d, d], y0, yb);
         }
       });
     }

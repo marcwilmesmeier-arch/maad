@@ -308,6 +308,20 @@ function ftWandAbschnitte(e) {
       d = [(e.sb[0] - e.sa[0]) / L, (e.sb[1] - e.sa[1]) / L],
       fp = lf(b, b.levels[e.li]),
       m = [(e.sa[0] + e.sb[0]) / 2, (e.sa[1] + e.sb[1]) / 2];
+    // Rück- und Seitenwände einer Loggia: ganz im Typ der Loggia, eingefärbt zur Loggia hin
+    if (e.lg) {
+      // Loggia, an deren Kontur die Wandmitte liegt (Abstand bis eine Wandstärke)
+      const z = oeLoggiaEinschnitte(b).find(
+        (q) => Math.abs(q.y - e.y0) < 0.3 && oeAbstandZuRing(m, q.f) < (e.d || 0.36) + 0.05,
+      );
+      const k = z ? ftLoggiaTyp(b, z.lg) : '';
+      if (!k) return { d, A: [] };
+      let n = [-d[1], d[0]];
+      if (!inP([m[0] + n[0] * 0.2, m[1] + n[1] * 0.2], z.f)) n = [d[1], -d[0]];
+      // Außenfläche: die Seite zur Loggia (die Wand liegt dahinter)
+      const sA = Math.max(...e.quads.flat().map((p) => p[0] * n[0] + p[1] * n[1]));
+      return { d, n, sA, A: [{ t0: -1e5, t1: 1e5, k }] };
+    }
     let n = [-d[1], d[0]];
     if (fp && inP([m[0] + n[0] * 0.2, m[1] + n[1] * 0.2], fp)) n = [d[1], -d[0]]; // Normale nach außen
     let vm = 0;
@@ -371,6 +385,22 @@ function ftGiebelTyp(e, x, y, z) {
     logErr(err, 'ftGiebelTyp');
     return '';
   }
+}
+/** Fassadentyp der Fassadenfläche an der Stelle (u, v) der Ansicht vk ('' = ohne Typ). */
+function ftFassadeBei(b, vk, u, v) {
+  const V = fdViews(b).find((x) => x.key === vk);
+  if (!V) return '';
+  const f = fdFaces(b, V).find((q) => grInFace(q, u, v));
+  return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : '';
+}
+/** Typ einer Loggia (Rück- und Seitenwände): Material des Gruppenfelds, sonst der Fassadentyp an der Loggia. */
+function ftLoggiaTyp(b, o) {
+  if (o.t && S.ft.some((t) => t.k === o.t)) return o.t;
+  return ftFassadeBei(b, o.vk, (o.u0 + o.u1) / 2, (o.v0 + o.v1) / 2);
+}
+/** Typ des Sturzes über einer Loggia: Fassadentyp knapp über der Loggia. */
+function ftSturzTyp(b, o) {
+  return ftFassadeBei(b, o.vk, (o.u0 + o.u1) / 2, Math.min(o.v1 + 0.05, o.vG - 0.05));
 }
 /** Kennung der Fassadentypen eines Gebäudes (Neuaufbau der eingefärbten Wände). */
 function ftWandSig(b) {

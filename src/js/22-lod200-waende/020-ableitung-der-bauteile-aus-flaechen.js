@@ -431,12 +431,27 @@ function l2GeoStufe1(b) {
       // Loggia-Wände (im Einschnitt): keine Attika – darüber liegt die Decke bzw. das Dach
       const imLg =
         lv.lgZ &&
-        lv.lgZ.some((z) => inP([(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2], oeLgAussen(z.f, 0.1)));
+        // Rück- und Seitenwände einer Loggia: Wandlinie nahe der Loggiakontur, aber nicht auf dem Umriss (Fassadenwände
+        // daneben, z. B. schmale Pfeiler zwischen zwei Loggien, bleiben normale Außenwände)
+        (lv.fp && lv.fp.length >= 3
+          ? oeAbstandZuRing([(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2], lv.fp) > 0.02
+          : true) &&
+        lv.lgZ.some(
+          (z) =>
+            oeAbstandZuRing([(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2], z.f) < (r.d || 0.36) + 0.05,
+        );
       if (imLg) {
         r.lg = 1;
-        // unter der durchgehenden Decke: kein oberes Wandstück im Deckenbereich (läge sonst in der Deckenoberfläche)
-        r.quads2 = null;
-        r.hTop = 0;
+        // unter der durchgehenden Decke: kein oberes Wandstück im Deckenbereich (läge sonst in der Deckenoberfläche) –
+        // außer die Wand ist zugleich Außenwand (z. B. Eckpfeiler zwischen zwei Loggien): sonst fehlte dort die Wand
+        // vor der Deckenstirn
+        const ring = lv.fp && lv.fp.length >= 3 ? lv.fp : lv.faces[0] ? lv.faces[0].o : [],
+          m = [(r.sa[0] + r.sb[0]) / 2, (r.sa[1] + r.sb[1]) / 2],
+          rand = ring.length ? oeAbstandZuRing(m, ring) : 1e9;
+        if (rand > (r.d || 0.36) + 0.05) {
+          r.quads2 = null;
+          r.hTop = 0;
+        }
         // oberstes Geschoss mit Flachdach: in LOD 200 ist die Attika eine eigene, durchgehende Wand (l2AttikaRing)
       } else if (li === L.length - 1 && (!b.roof || !b.roof.type || b.roof.type === 'flat')) {
         if (C) r.atR = 1;

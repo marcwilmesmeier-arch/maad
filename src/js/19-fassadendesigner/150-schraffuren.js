@@ -1,7 +1,7 @@
 /* Schraffuren für Fassadentypen (Fassadendesigner, 2D-Ansicht und LOD 200 in 3D).
    Muster sind Linienscharen wie im PAT-Format (AutoCAD/Revit): je Schar Winkel a (Grad), Ursprung x/y, Versatz dx
    (entlang der Linie) und dy (Abstand zur nächsten Linie) sowie Strich-/Lückenlängen d (positiv Strich, negativ Lücke,
-   0 Punkt). Quellen: mitgelieferte deutsche Muster (SCH_DE), eigene einfache Muster (Editor: Linien waagerecht,
+   0 Punkt). Quellen: eigene Klinker-Verbände (SCH_KLINKER), mitgelieferte deutsche Muster (SCH_DE), eigene einfache Muster (Editor: Linien waagerecht,
    senkrecht, Kreuz, diagonal) und importierte .pat-Dateien (UTF-8 oder Latin-1). Eigene und importierte Muster liegen
    in S.sch (mit dem Projekt gespeichert und im Browser für neue Projekte gemerkt). Ein Fassadentyp verweist mit
    t.sch = { k, e, w, c } auf ein Muster: e Meter je Mustereinheit, w Drehung (Grad), c Linienfarbe.
@@ -11,6 +11,26 @@
 /** Mitgelieferte deutsche Muster (PAT-Text). */
 const SCH_DE =
   '*Boden\n-45,0,6,5.6569,5.6569,1.4142,-9.8995\n-45,0,8,5.6569,5.6569,2.8284,-8.4853\n-45,2,8,5.6569,5.6569,1.4142,-9.8995\n45,0,4,5.6569,5.6569,5.6569,-5.6569\n45,2,4,5.6569,5.6569,5.6569,-5.6569\n45,4,4,5.6569,5.6569,5.6569,-5.6569\n-45,7,7,5.6569,5.6569,1.4142,-9.8995\n*Beton_bewehrt\n45, 0,0, 0,.25\n45, .176776695,0, 0,.25, .125,-.0625\n*Beton_unbewehrt\n45, .176776695,0, 0,.25, .125,-.0625\n*Betonfertigteil1, WD\n45,0,0,0,1\n-45,0,0,0,1\n*Betonfertigteil2, ohne bes WD\n0,0,0,0,1\n90,0,0,0,1\n*DHart, Dämmung hart\n76, 0,0, 0, 0.9703\n284, 0,0, .5, 0.9703\n*Dichtstoffe\n45, 0,0, 0,.125\n135, 0,0, 0,.125\n*DvorOrt, Dämmung vor Ort ausgeschäumt\n45, 0, 0, 2.121320, 0.707107 , 0.176777, -1.237437\n45, 0.375, 0.875, 2.121320, 0.707107 , 0.176777, -1.237437\n45, 0.5, 0, 2.121320, 0.707107 , 0.176777, -1.237437\n45, 0.875, 0.875, 2.121320, 0.707107 , 0.176777, -1.237437\n71.565051, 0.125, 0.125, 4.110961, 0.316228 , 0.395285, -2.766993\n71.565051, 0.25, 0.5, 4.110961, 0.316228 , 0.395285, -2.766993\n71.565051, 0.625, 0.125, 4.110961, 0.316228 , 0.395285, -2.766993\n71.565051, 0.75, 0.5, 4.110961, 0.316228 , 0.395285, -2.766993\n135, 0.125, 0.875, -2.121320, 0.707107 , 0.176777, -1.237437\n135, 0.5, 0, -2.121320, 0.707107 , 0.176777, -1.237437\n135, 0.625, 0.875, -2.121320, 0.707107 , 0.176777, -1.237437\n135, 1, 0, -2.121320, 0.707107 , 0.176777, -1.237437\n108.434949, 0.25, 0.5, -4.110961, 0.316228 , 0.395285, -2.766993\n108.434949, 0.375, 0.125, -4.110961, 0.316228 , 0.395285, -2.766993\n108.434949, 0.75, 0.5, -4.110961, 0.316228 , 0.395285, -2.766993\n108.434949, 0.875, 0.125, -4.110961, 0.316228 , 0.395285, -2.766993\n*Dweich, Dämmung weich\n22.438445,  0.5, 0,       49.769468, 0.003742,   0.267232, -266.964877\n22.554215,  0.752, 0.897, 70.384657, 0.003724,   0.268539, -268.270099\n56.354176,  0.15, 0.35,   355.562934, 0.002784,  0.359168, -358.809316\n67.643109,  0.65, 0.649,  115.693561, 0.007458,  0.268157, -133.810179\n67.643109,  0.747, 0.102, 115.693561, 0.007458,  0.268157, -133.810179\n112.356891, 0.252, 0.102, -115.693561, 0.007458, 0.268157, -133.810179\n112.356891, 0.349, 0.649, -115.693561, 0.007458, 0.268157, -133.810179\n123.645824, 0.849, 0.35,  -355.562934, 0.002784, 0.359168, -358.809316\n157.363666, 0.247, 0.897, -254.615396, 0.003737, 0.267615, -267.347780\n157.643109, 0.5, 0,       -18.384775, 0.007458,  0.268157, -133.810179\n*Holz_laengs\n0,0,19,0,19,1,-37\n0,19,19,0,19,1,-37\n-14.036243,1,19,73.73083,18.432708,4.123106,-74.215901\n-14.036243,20,19,73.73083,18.432708,4.123106,-74.215901\n-14.036243,39,19,73.73083,18.432708,4.123106,-74.215901\n-14.036243,58,19,73.73083,18.432708,4.123106,-74.215901\n0,5,18,0,19,3,-16\n18.434949,8,18,6.008328,18.024983,3.162278,-56.920998\n18.434949,27,18,6.008328,18.024983,3.162278,-56.920998\n18.434949,46,18,6.008328,18.024983,3.162278,-56.920998\n0,11,19,0,19,1,-37\n0,30,19,0,19,1,-37\n-18.434949,12,19,54.074948,18.024983,3.162278,-56.920998\n-18.434949,31,19,54.074948,18.024983,3.162278,-56.920998\n-18.434949,50,19,54.074948,18.024983,3.162278,-56.920998\n0,15,18,0,19,1,-18\n18.434949,16,18,6.008328,18.024983,3.162278,-56.920998\n18.434949,35,18,6.008328,18.024983,3.162278,-56.920998\n18.434949,54,18,6.008328,18.024983,3.162278,-56.920998\n18.434949,0,13,6.008328,18.024983,3.162278,-56.920998\n18.434949,19,13,6.008328,18.024983,3.162278,-56.920998\n18.434949,38,13,6.008328,18.024983,3.162278,-56.920998\n0,3,14,0,19,1,-18\n-18.434949,4,14,54.074948,18.024983,3.162278,-56.920998\n-18.434949,23,14,54.074948,18.024983,3.162278,-56.920998\n-18.434949,42,14,54.074948,18.024983,3.162278,-56.920998\n0,7,13,0,19,2,-17\n18.434949,9,13,6.008328,18.024983,3.162278,-56.920998\n18.434949,28,13,6.008328,18.024983,3.162278,-56.920998\n18.434949,47,13,6.008328,18.024983,3.162278,-56.920998\n0,12,14,0,19,2,-17\n-18.434949,14,14,54.074948,18.024983,3.162278,-56.920998\n-18.434949,33,14,54.074948,18.024983,3.162278,-56.920998\n-18.434949,52,14,54.074948,18.024983,3.162278,-56.920998\n0,17,13,0,19,2,-17\n0,0,8,0,19,1,-18\n18.434949,1,8,6.008328,18.024983,3.162278,-56.920998\n18.434949,20,8,6.008328,18.024983,3.162278,-56.920998\n18.434949,39,8,6.008328,18.024983,3.162278,-56.920998\n0,4,9,0,19,2,-17\n-18.434949,6,9,54.074948,18.024983,3.162278,-56.920998\n-18.434949,25,9,54.074948,18.024983,3.162278,-56.920998\n-18.434949,44,9,54.074948,18.024983,3.162278,-56.920998\n0,9,8,0,19,2,-17\n18.434949,11,8,6.008328,18.024983,3.162278,-56.920998\n18.434949,30,8,6.008328,18.024983,3.162278,-56.920998\n18.434949,49,8,6.008328,18.024983,3.162278,-56.920998\n0,14,9,0,19,2,-17\n-18.434949,16,9,54.074948,18.024983,3.162278,-56.920998\n-18.434949,35,9,54.074948,18.024983,3.162278,-56.920998\n-18.434949,54,9,54.074948,18.024983,3.162278,-56.920998\n-18.434949,0,4,54.074948,18.024983,3.162278,-56.920998\n-18.434949,19,4,54.074948,18.024983,3.162278,-56.920998\n-18.434949,38,4,54.074948,18.024983,3.162278,-56.920998\n0,3,3,0,19,2,-17\n18.434949,5,3,6.008328,18.024983,3.162278,-56.920998\n18.434949,24,3,6.008328,18.024983,3.162278,-56.920998\n18.434949,43,3,6.008328,18.024983,3.162278,-56.920998\n0,8,4,0,19,1,-18\n-18.434949,9,4,54.074948,18.024983,3.162278,-56.920998\n-18.434949,28,4,54.074948,18.024983,3.162278,-56.920998\n-18.434949,47,4,54.074948,18.024983,3.162278,-56.920998\n0,12,3,0,19,3,-16\n18.434949,15,3,6.008328,18.024983,3.162278,-56.920998\n18.434949,34,3,6.008328,18.024983,3.162278,-56.920998\n18.434949,53,3,6.008328,18.024983,3.162278,-56.920998\n0,18,4,0,19,1,-18\n*Holz_quer\n26.565051,17,3,8.497058,16.994117,2.236068,-40.249224\n26.565051,36,3,8.497058,16.994117,2.236068,-40.249224\n45,16,2,13.435029,13.435029,1.414214,-25.455844\n63.434949,15,0,33.988233,16.994117,2.236068,-40.249224\n63.434949,15,19,33.988233,16.994117,2.236068,-40.249224\n21.801409,14,7,14.112846,35.282114,5.385165,-96.932966\n21.801409,14,26,14.112846,35.282114,5.385165,-96.932966\n21.801409,33,7,14.112846,35.282114,5.385165,-96.932966\n21.801409,33,26,14.112846,35.282114,5.385165,-96.932966\n21.801409,52,7,14.112846,35.282114,5.385165,-96.932966\n21.801409,52,26,14.112846,35.282114,5.385165,-96.932966\n21.801409,71,7,14.112846,35.282114,5.385165,-96.932966\n21.801409,71,26,14.112846,35.282114,5.385165,-96.932966\n21.801409,90,7,14.112846,35.282114,5.385165,-96.932966\n21.801409,90,26,14.112846,35.282114,5.385165,-96.932966\n45,12,5,13.435029,13.435029,2.828427,-24.041631\n68.198591,10,0,88.205286,35.282114,5.385165,-96.932966\n68.198591,10,19,88.205286,35.282114,5.385165,-96.932966\n68.198591,10,38,88.205286,35.282114,5.385165,-96.932966\n68.198591,10,57,88.205286,35.282114,5.385165,-96.932966\n68.198591,10,76,88.205286,35.282114,5.385165,-96.932966\n68.198591,29,0,88.205286,35.282114,5.385165,-96.932966\n68.198591,29,19,88.205286,35.282114,5.385165,-96.932966\n68.198591,29,38,88.205286,35.282114,5.385165,-96.932966\n68.198591,29,57,88.205286,35.282114,5.385165,-96.932966\n68.198591,29,76,88.205286,35.282114,5.385165,-96.932966\n14.036243,15,13,4.608177,18.432708,4.123106,-74.215901\n14.036243,34,13,4.608177,18.432708,4.123106,-74.215901\n14.036243,53,13,4.608177,18.432708,4.123106,-74.215901\n14.036243,72,13,4.608177,18.432708,4.123106,-74.215901\n26.565051,11,11,8.497058,16.994117,4.472136,-38.013156\n26.565051,30,11,8.497058,16.994117,4.472136,-38.013156\n45,8,8,13.435029,13.435029,4.242641,-22.627417\n63.434949,6,4,33.988233,16.994117,4.472136,-38.013156\n63.434949,6,23,33.988233,16.994117,4.472136,-38.013156\n75.963757,5,0,73.73083,18.432708,4.123106,-74.215901\n75.963757,5,19,73.73083,18.432708,4.123106,-74.215901\n75.963757,5,38,73.73083,18.432708,4.123106,-74.215901\n75.963757,5,57,73.73083,18.432708,4.123106,-74.215901\n11.309932,14,18,3.726207,18.631033,5.09902,-91.782351\n11.309932,33,18,3.726207,18.631033,5.09902,-91.782351\n11.309932,52,18,3.726207,18.631033,5.09902,-91.782351\n11.309932,71,18,3.726207,18.631033,5.09902,-91.782351\n11.309932,90,18,3.726207,18.631033,5.09902,-91.782351\n18.434949,11,17,6.008328,18.024983,3.162278,-56.920998\n18.434949,30,17,6.008328,18.024983,3.162278,-56.920998\n18.434949,49,17,6.008328,18.024983,3.162278,-56.920998\n33.690068,8,15,21.078607,31.617911,3.605551,-64.899923\n33.690068,8,34,21.078607,31.617911,3.605551,-64.899923\n33.690068,27,15,21.078607,31.617911,3.605551,-64.899923\n33.690068,27,34,21.078607,31.617911,3.605551,-64.899923\n33.690068,46,15,21.078607,31.617911,3.605551,-64.899923\n33.690068,46,34,21.078607,31.617911,3.605551,-64.899923\n45,4,11,13.435029,13.435029,5.656854,-21.213204\n56.309932,2,8,47.426867,31.617911,3.605551,-64.899923\n56.309932,2,27,47.426867,31.617911,3.605551,-64.899923\n56.309932,2,46,47.426867,31.617911,3.605551,-64.899923\n56.309932,21,8,47.426867,31.617911,3.605551,-64.899923\n56.309932,21,27,47.426867,31.617911,3.605551,-64.899923\n56.309932,21,46,47.426867,31.617911,3.605551,-64.899923\n71.565051,1,5,54.074948,18.024983,3.162278,-56.920998\n71.565051,1,24,54.074948,18.024983,3.162278,-56.920998\n71.565051,1,43,54.074948,18.024983,3.162278,-56.920998\n78.690068,0,0,93.155164,18.631033,5.09902,-91.782351\n78.690068,0,19,93.155164,18.631033,5.09902,-91.782351\n78.690068,0,38,93.155164,18.631033,5.09902,-91.782351\n78.690068,0,57,93.155164,18.631033,5.09902,-91.782351\n78.690068,0,76,93.155164,18.631033,5.09902,-91.782351\n45,0,14,13.435029,13.435029,7.071068,-19.79899\n*Holzkon2, Holzkonstruktion ungehobelt\n26.5651,0,0,0,0.8\n-26.5651,0,0,0,0.8\n*Kies\n228.0128, 0.720,1.000, 12.041365,0.074329, 0.134536,-13.319088\n184.9697, 0.630,0.900, -12.041517,0.043315, 0.230868,-22.855925\n132.5104, 0.400,0.880, -14.865942,0.061430, 0.162788,-16.116032\n267.2737, 0.010,0.630, -20.024928,0.047565, 0.210238,-20.813558\n292.8337, 0.000,0.420, -12.999910,0.048507, 0.206155,-20.409373\n357.2737, 0.080,0.230, -20.024928,0.047565, 0.210238,-20.813558\n37.6942, 0.290,0.220, -16.401180,0.035968, 0.278029,-27.524849\n72.2553, 0.510,0.390, 23.086761,0.038097, 0.262488,-25.986321\n121.4296, 0.590,0.640, 15.264264,0.047405, 0.210950,-20.884073\n175.2364, 0.480,0.820, -11.045049,0.083045, 0.240832,-11.800763\n222.3974, 0.240,0.840, 16.278789,0.032108, 0.311448,-30.833375\n138.8141, 1.000,0.620, 9.219065,0.094072, 0.106301,-10.523844\n171.4692, 0.920,0.690, -13.152853,0.049447, 0.202237,-20.021511\n225.0000, 0.720,0.720, 0.707107,0.707107, 0.141421,-1.272792\n203.1986, 0.650,0.840, -5.383564,0.131306, 0.076158,-7.539615\n291.8014, 0.580,0.810, -3.156821,0.185695, 0.107703,-5.277462\n30.9638, 0.620,0.710, 3.601470,0.171499, 0.174929,-5.656023\n161.5651, 0.770,0.800, -2.213594,0.316228, 0.126491,-3.035787\n16.3895, 0.000,0.810, 10.440154,0.056433, 0.177200,-17.542845\n70.3462, 0.170,0.860, -11.704507,0.067267, 0.148661,-14.717408\n293.1986, 0.770,1.000, -5.383564,0.131306, 0.152315,-7.463458\n343.6105, 0.830,0.860, -10.440154,0.056433, 0.177200,-17.542845\n339.4440, 0.000,0.190, -5.383893,0.117041, 0.170880,-8.373124\n294.7751, 0.160,0.130, -12.082844,0.069843, 0.143178,-14.174643\n66.8014, 0.780,0.000, 5.383564,0.131306, 0.152315,-7.463458\n17.3540, 0.840,0.140, -13.601340,0.059655, 0.167631,-16.595424\n69.4440, 0.290,0.000, -5.383893,0.117041, 0.085440,-8.458564\n101.3099, 0.720,0.000, 4.118439,0.196116, 0.050990,-5.048029\n165.9638, 0.710,0.050, -3.152963,0.242536, 0.206155,-3.916950\n186.0090, 0.510,0.100, -10.049739,0.052342, 0.191050,-18.913923\n303.6901, 0.620,0.620, -2.218801,0.277350, 0.144222,-3.461329\n353.1572, 0.700,0.500, 17.117197,0.039715, 0.251794,-24.927563\n60.9454, 0.950,0.470, -8.061673,0.097129, 0.102956,-10.192674\n90.0000, 1.000,0.560, 1.000,1.000, 0.060000,-0.940\n120.2564, 0.490,0.130, -8.061936,0.071982, 0.138924,-13.753520\n48.0128, 0.420,0.250, 12.041365,0.074329, 0.269072,-13.184552\n0.0000, 0.600,0.450, 1.000,1.000, 0.260000,-0.740\n325.3048, 0.860,0.450, -12.206392,0.063246, 0.158114,-15.653274\n254.0546, 0.990,0.360, 4.120817,0.137361, 0.145602,-7.134508\n207.6460, 0.950,0.220, 21.470869,0.042182, 0.237065,-23.469474\n175.4261, 0.740,0.110, 13.038344,0.039873, 0.250799,-24.829074\n*Sand\n37.5,   0,0,       1.123,1.567,                  0,-1.52,0,-1.7,0,-1.625\n7.5,    0,0,       2.123,2.567,                  0,-.82,0,-1.37,0,-.525\n-32.5, -1.23,0,    2.6234,1.678,                 0,-.5,0,-1.8,0,-2.35\n-42.5, -1.23,0,    1.6234,2.678,                 0,-.25,0,-1.18,0,-1.35\n*Mauerwerk\n45, 0,0, 0,.125\n*Moertel\n0, 0.040,0.020, 0,1, 0,-1\n0, 0.360,0.040, 0,1, 0,-1\n0, 0.180,0.260, 0,1, 0,-1\n0, 0.400,0.420, 0,1, 0,-1\n0, 0.140,0.480, 0,1, 0,-1\n0, 0.220,0.720, 0,1, 0,-1\n0, 0.080,0.900, 0,1, 0,-1\n0, 0.400,0.880, 0,1, 0,-1\n0, 0.640,0.920, 0,1, 0,-1\n0, 0.760,0.680, 0,1, 0,-1\n0, 0.960,0.660, 0,1, 0,-1\n0, 0.960,0.300, 0,1, 0,-1\n0, 0.780,0.180, 0,1, 0,-1\n0, 0.500,0.240, 0,1, 0,-1\n0, 0.680,0.420, 0,1, 0,-1\n0, 0.500,0.600, 0,1, 0,-1\n0, 0.920,0.040, 0,1, 0,-1\n*MW_Schuettgut1,Plattenschalung oder Schalungsteine\n45, 0, 0, 0, 1 \n45, 0.7071, 0, 0, 1, 0, -0.5\n*MW_Schuettgut2,ohne besondere Wärmedämmeigenschaft unbewehrt\n45, 0.5, 0, 0, 1, 0.5, -0.5\n*MW_Schuettgut3,ohne besondere Wärmedämmeigenschaft\n45, 0, 0, 0, 1 \n45, 0.7071, 0, 0, 1, 0.5, -0.5\n*MW_Stueckgut1,Ziegel Hohlziegel Leichtbeton\n45, 0, 0, 0, 1\n*MW_Stueckgut2, Gipsdielen Dünnwandsteine Sichtziegel\n45,0,0,0,1\n45,0.3,0,0,1\n*Punkte1,Punktreihe Abstand 1\n0, 0, 0, 0.5, 1, 0, -1\n*Punkte2,Punktreihe Abstand 1 Versatz 1\n0, 0, 0, 1, 1, 0, -1';
+/**
+ * Eigene Klinker-Verbände in der Ansicht (maad, frei verwendbar): Normalformat NF 240 × 71 mm mit Fugen, also
+ * Modul 250 mm × 83,33 mm (3 Schichten = 25 cm), Einheit Millimeter. Waagerecht die Lagerfugen, senkrecht die
+ * Stoßfugen je Schicht (Strich = eine Schicht, Lücke = übersprungene Schichten).
+ */
+const SCH_KLINKER = `*Klinker Läuferverband NF, Stoßfugen je Schicht um 1/2 Stein versetzt
+0, 0,0, 0,83.333
+90, 0,0, 83.333,125, 83.333,-83.333
+*Klinker Blockverband NF, Läufer- und Binderschichten im Wechsel
+0, 0,0, 0,83.333
+90, 0,0, 0,250, 83.333,-83.333
+90, 62.5,83.333, 0,125, 83.333,-83.333
+*Klinker Kreuzverband NF, wie Blockverband, jede zweite Läuferschicht um 1/2 Stein versetzt
+0, 0,0, 0,83.333
+90, 0,0, 0,250, 83.333,-250
+90, 125,166.667, 0,250, 83.333,-250
+90, 62.5,83.333, 0,125, 83.333,-83.333
+*Klinker Läuferverband DF, Dünnformat 240 × 52 mm (Schicht 62,5 mm)
+0, 0,0, 0,62.5
+90, 0,0, 62.5,125, 62.5,-62.5`;
 /** Arten der einfachen Muster (Editor). */
 const SCH_EINFACH = {
   h: 'Linien waagerecht',
@@ -73,7 +93,10 @@ function schEinfachLinien(p) {
 }
 /** Alle wählbaren Muster: mitgelieferte (de:Name), eigene und importierte (S.sch). */
 function schAlle() {
-  if (!SCH.de) SCH.de = schParse(SCH_DE).map((p) => ({ ...p, k: 'de:' + p.n, q: 'de' }));
+  if (!SCH.de)
+    SCH.de = schParse(SCH_KLINKER)
+      .map((p) => ({ ...p, k: 'de:' + p.n, q: 'de', e: 0.001, lw: 0.008 })) // Klinker: Millimeter, Fuge ~8 mm
+      .concat(schParse(SCH_DE).map((p) => ({ ...p, k: 'de:' + p.n, q: 'de' })));
   return SCH.de.concat(S.sch);
 }
 const schG = (k) => (k ? schAlle().find((p) => p.k === k) || null : null);
@@ -142,7 +165,7 @@ function schStdE(P) {
  */
 function schCanvas(P, e, c, pxm) {
   const L = schLinien(P),
-    key = JSON.stringify([L, e, c, pxm || 0]);
+    key = JSON.stringify([L, e, c, pxm || 0, P.lw || 0]);
   if (SCH.cache.has(key)) return SCH.cache.get(key);
   const { W, H } = schKachel(L),
     // pxm: Bildpunkte je Meter (2D-Ansicht: Kachel in Bildschirmauflösung, kein Moiré); sonst feste Auflösung (Textur)
@@ -156,7 +179,10 @@ function schCanvas(P, e, c, pxm) {
   cv.height = ch;
   const g = cv.getContext('2d');
   g.strokeStyle = g.fillStyle = c || '#3a3a3a';
-  g.lineWidth = pxm ? 1 : Math.max(1.2, Math.min(6, (0.004 / Math.max(e, 1e-6)) * kx));
+  // Linienstärke in der Wirklichkeit: P.lw (z. B. Klinkerfuge), sonst 4 mm
+  g.lineWidth = pxm
+    ? Math.max(1, Math.min(3, (P.lw || 0) * pxm))
+    : Math.max(1.2, Math.min(10, ((P.lw || 0.004) / Math.max(e, 1e-6)) * kx));
   g.lineCap = 'butt';
   // Bereich −W…2W × −H…2H zeichnen (nahtlos, da W/H die Wiederholung ist), Mustern y nach oben
   const P0 = (x, y) => [x * kx, (H - y) * ky],
@@ -225,7 +251,7 @@ function schVonTyp(t) {
   if (!P) return null;
   return {
     P,
-    e: +s.e > 0 ? +s.e : schStdE(P),
+    e: +s.e > 0 ? +s.e : P.e || schStdE(P),
     w: +s.w || 0,
     c: /^#[0-9a-f]{6}$/i.test(s.c || '') ? s.c : '#2f3337',
   };
@@ -274,43 +300,123 @@ function schTextur(H) {
   }
   return K;
 }
+/** Höchstzahl der Linienscharen bzw. Striche je Schar für die genaue Darstellung im Shader (sonst Bild-Kachel). */
+const SCH_MAXF = 128,
+  SCH_MAXD = 8;
 /**
- * Material mit der Schraffur eines Fassadentyps versehen (3D): Kachel in Wandebene (waagerecht auf Decken), Drehung w,
- * Linien über die Grundfarbe gemischt.
+ * Linienscharen als Datentextur für den Shader (4 Texel je Schar, in Metern): [cos, sin, x0, y0], [dx, dy, Periode,
+ * Anzahl Striche], Striche 1–4, Striche 5–8. Null, wenn das Muster zu groß ist.
+ */
+function schDaten(H) {
+  const L = schLinien(H.P);
+  if (!L.length || L.length > SCH_MAXF || L.some((f) => (f.d || []).length > SCH_MAXD)) return null;
+  const key = JSON.stringify([L, H.e]);
+  if (SCH.cache.has('dat' + key)) return SCH.cache.get('dat' + key);
+  const A = new Float32Array(L.length * 16);
+  L.forEach((f, i) => {
+    const a = (f.a * Math.PI) / 180,
+      d = (f.d || []).map((x) => x * H.e),
+      o = i * 16;
+    A.set([Math.cos(a), Math.sin(a), f.x * H.e, f.y * H.e], o);
+    A.set([f.dx * H.e, f.dy * H.e, d.reduce((s2, x) => s2 + Math.abs(x), 0), d.length], o + 4);
+    d.forEach((x, j) => (A[o + 8 + j] = x));
+  });
+  const tex = new T.DataTexture(A, 4, L.length, T.RGBAFormat, T.FloatType);
+  tex.magFilter = tex.minFilter = T.NearestFilter;
+  tex.needsUpdate = true;
+  const r = { tex, n: L.length };
+  SCH.cache.set('dat' + key, r);
+  return r;
+}
+/** GLSL: Deckung der Musterlinien an der Stelle uv (Meter, in Wandebene) – genau je Linie, kantengeglättet. */
+const SCH_GLSL = `float schDeckung(vec2 uv){
+  float cov=0.;
+  for(int i=0;i<${SCH_MAXF};i++){
+    if(i>=uSchN)break;
+    vec4 a=texelFetch(tSchP,ivec2(0,i),0),b=texelFetch(tSchP,ivec2(1,i),0);
+    vec2 u=a.xy,pp=vec2(-u.y,u.x),d=uv-a.zw;
+    float s=dot(d,u),q=dot(d,pp),k=abs(b.y)>1e-6?floor(q/b.y+.5):0.;
+    float dist=abs(q-k*b.y),fq=max(fwidth(q),1e-6),hw=max(uSchW,fq*.6);
+    float c=1.-smoothstep(hw-fq*.5,hw+fq*.5,dist);
+    if(b.z>1e-6){
+      vec4 d0=texelFetch(tSchP,ivec2(2,i),0),d1=texelFetch(tSchP,ivec2(3,i),0);
+      float D[8]=float[8](d0.x,d0.y,d0.z,d0.w,d1.x,d1.y,d1.z,d1.w);
+      float m=mod(s-k*b.x,b.z),fs=max(fwidth(s),1e-6),acc=0.,on=0.;
+      for(int j=0;j<8;j++){
+        if(float(j)>=b.w)break;
+        float l=D[j],al=abs(l);
+        if(l>=0.){
+          float lo=acc-(al<1e-6?hw:0.),hi=acc+al+(al<1e-6?hw:0.);
+          on=max(on,smoothstep(lo-fs*.5,lo+fs*.5,m)*(1.-smoothstep(hi-fs*.5,hi+fs*.5,m)));
+          on=max(on,smoothstep(lo-fs*.5,lo+fs*.5,m+b.z)*(1.-smoothstep(hi-fs*.5,hi+fs*.5,m+b.z)));
+        }
+        acc+=al;
+      }
+      c*=on;
+    }
+    // zu dichte Scharen (Abstand kaum größer als ein Bildpunkt) weich ausblenden statt flimmern
+    if(abs(b.y)>1e-6)c*=1.-smoothstep(abs(b.y)*.2,abs(b.y)*.45,fq);
+    cov=max(cov,c);
+  }
+  return cov;
+}`;
+/**
+ * Material mit der Schraffur eines Fassadentyps versehen (3D): Linien in Wandebene (waagerecht auf Decken), Drehung w.
+ * Genau im Shader gerechnet (schDeckung, scharf in jedem Abstand); sehr große Muster als Bild-Kachel. nurLinien: nur
+ * die Linien zeichnen (Schicht vor der eingefärbten Wand), waagerechte Flächen ohne Schraffur.
  */
 function schMaterial(m, t, nurLinien) {
   const H = schVonTyp(t);
   if (!H) return m;
-  const K = schTextur(H),
-    uni = {
-      tSch: { value: K.tex },
-      uSchM: { value: new T.Vector2(K.Wm, K.Hm) },
-      uSchR: { value: (H.w * Math.PI) / 180 },
-    };
+  const D = schDaten(H),
+    K = D ? null : schTextur(H),
+    col = new T.Color(H.c),
+    uni = D
+      ? {
+          tSchP: { value: D.tex },
+          uSchN: { value: D.n },
+          uSchW: { value: (H.P.lw || 0.004) / 2 },
+          uSchC: { value: new T.Vector3(col.r, col.g, col.b) },
+          uSchR: { value: (H.w * Math.PI) / 180 },
+        }
+      : {
+          tSch: { value: K.tex },
+          uSchM: { value: new T.Vector2(K.Wm, K.Hm) },
+          uSchR: { value: (H.w * Math.PI) / 180 },
+        },
+    linie = D ? 'float hc=schDeckung(uv);vec4 hs=vec4(uSchC,hc);' : 'vec4 hs=texture2D(tSch,uv/uSchM);',
+    kopf = D
+      ? 'uniform highp sampler2D tSchP;uniform int uSchN;uniform float uSchW;uniform vec3 uSchC;uniform float uSchR;\n' +
+        SCH_GLSL
+      : 'uniform sampler2D tSch;uniform vec2 uSchM;uniform float uSchR;';
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader =
-      'varying vec3 vSchP;\n' +
+      'varying vec3 vSchP;varying vec3 vSchN;\n' +
       sh.vertexShader.replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\nvSchP=(modelMatrix*vec4(transformed,1.0)).xyz;',
+        // Normale aus der Geometrie (exakt je Fläche) – aus Bildschirm-Ableitungen schwankte die Richtung entlang der
+        // Wand je Bildpunkt, senkrechte Linien zerfielen in Punkte
+        '#include <begin_vertex>\nvSchP=(modelMatrix*vec4(transformed,1.0)).xyz;vSchN=normalize(mat3(modelMatrix)*objectNormal);',
       );
     sh.fragmentShader =
-      'varying vec3 vSchP;\nuniform sampler2D tSch;\nuniform vec2 uSchM;\nuniform float uSchR;\n' +
+      'varying vec3 vSchP;varying vec3 vSchN;\n' +
+      kopf +
+      '\n' +
       sh.fragmentShader.replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-{vec3 wn=normalize(cross(dFdx(vSchP),dFdy(vSchP)));vec2 uv;
+{vec3 wn=normalize(vSchN);vec2 uv;
 if(abs(wn.y)>.7){uv=vSchP.xz;}else{vec2 tt=normalize(vec2(-wn.z,wn.x));uv=vec2(dot(vSchP.xz,tt),vSchP.y);}
 float cr=cos(uSchR),sr=sin(uSchR);uv=vec2(cr*uv.x+sr*uv.y,-sr*uv.x+cr*uv.y);
-vec4 hs=texture2D(tSch,uv/uSchM);${
+${linie}${
           nurLinien
-            ? 'if(hs.a<.02)discard;diffuseColor=vec4(hs.rgb,hs.a);'
+            ? 'if(hs.a<.02||abs(wn.y)>.7)discard;diffuseColor=vec4(hs.rgb,hs.a);'
             : 'diffuseColor.rgb=mix(diffuseColor.rgb,hs.rgb,hs.a);'
         }}`,
       );
   };
-  m.customProgramCacheKey = () => (nurLinien ? 'schL' : 'sch');
+  m.customProgramCacheKey = () => (D ? 'schA' : 'schT') + (nurLinien ? 'L' : '');
   return m;
 }
 /** Kennung der Schraffuren (für den Neuaufbau, wenn sich Muster ändern). */

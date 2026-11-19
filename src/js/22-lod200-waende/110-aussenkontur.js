@@ -6,6 +6,17 @@
    Hülle schiene durch die Fensterlöcher; deshalb werden je Bild die Kanten gesucht, an denen eine angrenzende Fläche
    zur Kamera und die andere von ihr weg zeigt, und als breite Linie leicht hinter dem Gebäude gezeichnet. */
 const L2KO = new Map(); // Gebäude-ID → { sig, ln }
+/**
+ * Traufhöhe an einer Grundrissecke v (geneigtes Dach): tiefster Punkt der Dachfläche (b._rp.pr) über der Ecke, sonst null.
+ */
+function l2TraufeBei(b, v) {
+  const P = b._rp && b._rp.pr;
+  if (!P || !P.length) return null;
+  let y = null;
+  for (let i = 0; i + 2 < P.length; i += 3)
+    if (Math.hypot(P[i] - v[0], P[i + 2] - v[1]) < 0.15 && (y == null || P[i + 1] < y)) y = P[i + 1];
+  return y;
+}
 /** Außenkontur von Gebäude b: p = Kantenpunkte [x, y, z, x, y, z, …], n = je Kante die Normalen der beiden
     angrenzenden Flächen [n1x, n1y, n1z, n2x, n2y, n2z, …] (für die Silhouette). */
 function l2KonturPunkte(b) {
@@ -99,7 +110,9 @@ function l2KonturPunkte(b) {
             [v[0] + (N[0][0] + N[1][0] - 2 * v[0]) * 0.01, v[1] + (N[0][1] + N[1][1] - 2 * v[1]) * 0.01],
             oben,
           );
-      out.push(v[0], x.z0, v[1], v[0], x.z1 + (terr ? 0.3 : 0), v[1]);
+      // geneigtes Dach: an der Ecke läuft die Wand (Drempel, Giebel) bis zur Traufe weiter – Kante bis dorthin
+      const zt = !flach && x.j === letzt ? l2TraufeBei(b, v) : null;
+      out.push(v[0], x.z0, v[1], v[0], Math.max(x.z1 + (terr ? 0.3 : 0), zt != null ? zt : -1e9), v[1]);
       nor.push(...wn(N[0], v), ...wn(v, N[1]));
     });
     rand(x.f, x.z0, unten, false);
