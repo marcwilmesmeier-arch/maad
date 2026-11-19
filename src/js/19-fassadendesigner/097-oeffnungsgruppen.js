@@ -1321,17 +1321,16 @@ function oegAufloesen() {
         q: 'frei',
       });
     });
-    // Felder: Rechteck als Teilung, Eigenschaften am neuen Feld
-    let g = Math.max(0, ...d.cuts.map((c) => +c[4] || 0)) + 1;
+    // Felder: Teilung wie im Raster (senkrechte und waagerechte Linien, 145-raster.js) an den Rändern der Gruppe und
+    // ihrer Felder, Eigenschaften danach am neuen Feld
+    const R = fdRaster(b, V, true);
+    R.xs.push(I.u, I.u + G.l);
+    R.ys.push(I.v, I.v + H);
     fl.forEach((x) => {
-      const id = g++;
-      d.cuts.push(
-        [gr2(x.u0), gr2(x.v0), gr2(x.u1), gr2(x.v0), id],
-        [gr2(x.u1), gr2(x.v0), gr2(x.u1), gr2(x.v1), id],
-        [gr2(x.u1), gr2(x.v1), gr2(x.u0), gr2(x.v1), id],
-        [gr2(x.u0), gr2(x.v1), gr2(x.u0), gr2(x.v0), id],
-      );
+      R.xs.push(x.u0, x.u1);
+      R.ys.push(x.v0, x.v1);
     });
+    fdRasterAnwenden(b, V);
     V._f = null;
     fl.forEach((x) => {
       const fc = fdFaces(b, V).find((q) => grInFace(q, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2));

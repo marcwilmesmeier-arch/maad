@@ -76,11 +76,51 @@ function fdRsCuts(V, R) {
       if (bei(m, y - 0.002) !== bei(m, y + 0.002)) zug({ a: 'y', k: y, s: X[i], e: X[i + 1] });
     }
   });
-  return out.map((s) =>
-    s.a === 'x'
-      ? [gr2(s.k), gr2(s.s), gr2(s.k), gr2(s.e), FD_RS]
-      : [gr2(s.s), gr2(s.k), gr2(s.e), gr2(s.k), FD_RS],
+  // nur innerhalb der Fassade: jede Linie endet an der Kontur (Traufe, Ortgang, First, Rücksprünge)
+  const K = [];
+  out.forEach((s) =>
+    fdRsKlipp(V, s.a === 'x' ? [s.k, s.s, s.k, s.e] : [s.s, s.k, s.e, s.k]).forEach((c) => K.push(c)),
   );
+  // an den Kreuzungen teilen (die Flächenzerlegung grFaces braucht Linien, die nur an ihren Enden zusammentreffen)
+  const R2 = [];
+  K.forEach((c, i) => {
+    const ts = [];
+    K.forEach((d, j) => {
+      if (i === j) return;
+      const x = grSegT(c, d);
+      if (x && x[0] > 1e-6 && x[0] < 1 - 1e-6 && x[1] >= -1e-6 && x[1] <= 1 + 1e-6) ts.push(x[0]);
+    });
+    grPieces(c, ts).forEach(([p, q]) => R2.push([gr2(p[0]), gr2(p[1]), gr2(q[0]), gr2(q[1]), FD_RS]));
+  });
+  return R2;
+}
+/**
+ * Strecke c [u0, v0, u1, v1] auf die Fassadenfläche der Ansicht kürzen: an den Randkanten (V.bs) teilen, Stücke
+ * außerhalb der Fassadenstücke (V.pcs) fallen weg.
+ */
+function fdRsKlipp(V, c) {
+  const ts = [0, 1];
+  (V.bs || []).forEach((s) => {
+    const x = grSegT(c, s);
+    if (x && x[0] > 1e-6 && x[0] < 1 - 1e-6 && x[1] >= -1e-6 && x[1] <= 1 + 1e-6) ts.push(x[0]);
+  });
+  ts.sort((a, b) => a - b);
+  const P = (t) => [c[0] + (c[2] - c[0]) * t, c[1] + (c[3] - c[1]) * t],
+    drin = (p) => (V.pcs || []).some((q) => q.ring && q.ring.length > 2 && inP(p, q.ring)),
+    R = [];
+  for (let i = 0; i + 1 < ts.length; i++) {
+    if (ts[i + 1] - ts[i] < 1e-6) continue;
+    if (!drin(P((ts[i] + ts[i + 1]) / 2))) continue;
+    const a = P(ts[i]),
+      e = P(ts[i + 1]),
+      l = R[R.length - 1];
+    // anschließende Stücke (über innere Kanten hinweg) zusammenfassen
+    if (l && Math.hypot(l[2] - a[0], l[3] - a[1]) < 1e-6) {
+      l[2] = e[0];
+      l[3] = e[1];
+    } else R.push([a[0], a[1], e[0], e[1]]);
+  }
+  return R;
 }
 /** Raster in die Schnittlinien der Ansicht übernehmen (Feldeigenschaften wandern mit, fdSetCuts). In fdEdit aufrufen. */
 function fdRasterAnwenden(b, V) {
@@ -381,13 +421,10 @@ function fdRsZeichnen(g, V, ox) {
     g.lineWidth = 1.6;
     g.setLineDash([6, 4]);
     g.beginPath();
-    if (a === 'x') {
-      g.moveTo(X(v), Y(V.v0) + 12);
-      g.lineTo(X(v), Y(V.v1) - 12);
-    } else {
-      g.moveTo(X(V.u0) - 12, Y(v));
-      g.lineTo(X(V.u1) + 12, Y(v));
-    }
+    fdRsKlipp(V, a === 'x' ? [v, V.v0 - 1, v, V.v1 + 1] : [V.u0 - 1, v, V.u1 + 1, v]).forEach((c) => {
+      g.moveTo(X(c[0]), Y(c[1]));
+      g.lineTo(X(c[2]), Y(c[3]));
+    });
     g.stroke();
     g.setLineDash([]);
     // Maß zur nächsten Linie links bzw. darunter

@@ -503,10 +503,10 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Loggien laufen unverändert über `fdFaces`/`fdSetCuts`. Werkzeuge `rx`/`ry` (Teilen, T), im Auswählen wird eine Linie
   stückweise gewählt (`fdRsTreffer`, `FDS.rl`), gezogen (`FDS.rzug`, `fdRsSchieben` – Feldpunkte wandern mit), hier
   (`fdRsVerbinden`) oder ganz entfernt. „Automatisch teilen“ (`fdRsAnFenstern`) setzt Linien an Öffnungen, gesetzten
-  Gruppen und deren Feldern. Das frühere freie Linien- und Rechteckwerkzeug ist nicht mehr erreichbar; vorhandene
+  Gruppen und deren Feldern. Die Linien werden auf die Fassadenkontur gekürzt (`fdRsKlipp`, kein Überstand über Traufe, Ortgang oder First) und an Kreuzungen geteilt (grFaces braucht genodete Linien). Das frühere freie Linien- und Rechteckwerkzeug ist nicht mehr erreichbar; vorhandene
   freie Linien bleiben sichtbar und löschbar.
 - „Gruppe hier auflösen“ (`oegAufloesen`): Öffnungen werden freie Öffnungen (in der Höhe angepasste Fenster bekommen
-  einen eigenen Typ), Felder mit Tiefe/Art/Material werden Rechteckteilungen mit Feldeigenschaften; die Gruppe bleibt in
+  einen eigenen Typ), Felder mit Tiefe/Art/Material werden Raster-Linien (senkrecht/waagerecht an Gruppen- und Feldrändern) mit Feldeigenschaften; die Gruppe bleibt in
   der Bibliothek. Pfosten-Riegel-Gruppen lassen sich nicht auflösen.
 - In den Ansichten zeichnet `oegArtZeichnen` das Symbol: Geländer 1,00 m, beim Balkon die Platte.
 - In LOD 200 baut `22-lod200-waende/130-balkone.js` (`l2Balkone`, Takt aus 030-aktionen) je Gebäude die Platten
