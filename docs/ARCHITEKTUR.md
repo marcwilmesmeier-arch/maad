@@ -482,6 +482,10 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   `FD_FE`, als `f.fe` in `fdFaces`), Inspektor `fdFeldHtml`, Setzen `fdFeldSet`. `fdFeldFlaechen` liefert sie wie
   Gruppenflächen (`gi: null`) an `oegFlaechen`, damit 3D, Grundriss und Auswertung sie ohne Sonderweg kennen. Beim
   Teilen bekommt das größte Teilstück die Eigenschaften (`fdSetCuts`).
+- Fassadenmaterial aus „Planen“ (`b.fk.mt`, Zeile „ganzes Haus“ oder je Geschoss): gilt für alle Außenwandflächen ohne
+  eigenen Typ, auch in 3D – `fkMaterialBeiV`/`fkHatMt` (120-gebaeudekonfigurator.js) als Rückfall in
+  `ftWandAbschnitte`, `ftGiebelTyp`, `ftFassadeBei`, `l2AttikaTyp` und in der Schraffurschicht von `ftBauen`
+  (Höhenbänder je Geschoss). Dachflächen bleiben unberührt. Schraffur in 3D erst unter `SCH_NAH` = 15 m Abstand.
 - Automatik je Ansicht (`fdAutoAus`/`fdAutoSet`/`fdAutoHtml`, 120-gebaeudekonfigurator.js): `d.fest = 1` hält
   `fkAnwenden` aus dieser Ansicht heraus (Gruppen aus „Planen“ werden nicht neu platziert). Schalter im Inspektor;
   „Gruppe hier auflösen“ schaltet die Automatik der Seite aus.

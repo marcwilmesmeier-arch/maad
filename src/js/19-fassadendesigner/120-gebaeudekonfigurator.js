@@ -263,6 +263,16 @@ function fkMaterial(b, j) {
   const k = mt[Math.max(0, Math.min(j, mt.length - 1))];
   return S.ft.some((t) => t.k === k && !t.df) ? k : '';
 }
+/** Hat das Gebäude ein Fassadenmaterial aus „Planen“ (ganzes Haus bzw. je Geschoss)? */
+const fkHatMt = (b) => !!(b && b.fk && b.fk.mt && b.fk.mt.some(Boolean));
+/** Material aus „Planen“ an der Höhe v einer Ansicht (Ansichtskoordinate, oberirdisch), '' = keins. */
+function fkMaterialBeiV(b, v) {
+  if (!fkHatMt(b)) return '';
+  const GS = fkGeschosse(b);
+  let j = GS.findIndex((g) => v < g.v1);
+  if (j < 0) j = GS.length - 1; // Drempel, Giebel, Attika: wie das oberste Geschoss
+  return fkMaterial(b, Math.max(0, j));
+}
 /** Fläche f einer Ansicht nach Geschossen der Voreinstellung aufteilen: [{ t, a }] (nur bei f.t === 'ohne'). */
 function fkMaterialAnteile(b, f) {
   if (!b.fk || !b.fk.mt || !b.fk.mt.length || f.t !== 'ohne') return null;
@@ -280,6 +290,8 @@ function fkMtSetze(i, k) {
   fkAendern((fk) => {
     fk.mt = fk.mt || [];
     fk.mt[i] = S.ft.some((t) => t.k === k) ? k : '';
+    // ganzes Haus ohne Material: nichts merken
+    if (!fk.mt.some(Boolean)) fk.mt = [];
   });
   FDS.dirty = 1;
 }
@@ -321,10 +333,19 @@ function fkWandstaerke(v) {
 function fkMtHtml(fk, GS) {
   const mt = fk.mt || [],
     ft = S.ft.filter((t) => !t.df);
-  let h = `<div class="mu" style="font-size:11px;margin:12px 0 6px">Fassadenmaterial je Geschoss – Voreinstellung für alle Flächen ohne eigenen Fassadentyp (auch in der Fassadenansicht).</div>`;
-  if (!mt.length)
+  let h = `<h5 style="margin:14px 0 4px">Fassadenmaterial</h5><div class="mu" style="font-size:11px;margin:0 0 6px">Für alle Außenwände ohne eigenen Fassadentyp – im Fassadentool und in den Gruppen lässt es sich je Fläche anpassen. Dachflächen bleiben unverändert.</div>`;
+  const wahl = (i, cur) =>
+      `<select class="fkn" style="flex:1;min-width:0" onchange="fkMtSetze(${i},this.value)"><option value="" ${!cur ? 'selected' : ''}>— keins —</option>${ft.map((t) => `<option value="${t.k}" ${t.k === cur ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select>`,
+    probe = (k) =>
+      `<span style="flex:none;width:56px;height:30px;border:1px solid var(--ln);border-radius:6px;background:${k ? fdT(k).c : '#f4f3f0'}"></span>`;
+  // ganzes Haus: eine Zeile; „je Geschoss“ fügt Zeilen darüber ein
+  if (mt.length <= 1)
     return (
-      h + `<button class="sm" style="width:100%" onclick="fkMtNeu(-1)">+ Material für alle Geschosse</button>`
+      h +
+      `<div class="fkz"><span class="fkl">ganzes Haus</span>${probe(mt[0])}${wahl(0, mt[0] || '')}</div>` +
+      (mt.length && GS.length > 1
+        ? `<button class="sm" style="width:100%;margin-top:6px" onclick="fkMtNeu(0)" title="Ab dem zweiten Geschoss ein anderes Material">Je Geschoss unterscheiden</button>`
+        : '')
     );
   for (let i = mt.length - 1; i >= 0; i--) {
     if (i < GS.length - 1)

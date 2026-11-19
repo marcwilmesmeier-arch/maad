@@ -182,7 +182,7 @@ function l2AttikaRing(b) {
  */
 function l2AttikaTyp(b, x, z, nn) {
   try {
-    if (!b.fd) return '';
+    if (!b.fd && !fkHatMt(b)) return '';
     const V = fdViewAt(b, -nn[0], -nn[1], x, z, 0.7);
     if (!V) return '';
     const d = fdD(b, V.key),
@@ -193,7 +193,8 @@ function l2AttikaTyp(b, x, z, nn) {
     for (let i = u0; i < b.levels.length; i++) vTop += b.levels[i].h;
     const u = x * V.n[1] - z * V.n[0],
       F = fdFaces(b, V).find((f) => grInFace(f, u, vTop - 0.3));
-    return gilt(F && F.t);
+    // ohne eigenen Typ: Material aus „Planen“ (oberstes Geschoss)
+    return gilt(F && F.t) || fkMaterialBeiV(b, vTop - 0.3);
   } catch (e) {
     logErr(e, 'l2AttikaTyp');
     return '';

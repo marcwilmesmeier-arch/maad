@@ -117,7 +117,8 @@ function ftBauen(b) {
       dAt = (m, uu) => (m ? m.dl + ((m.dr - m.dl) * (uu - m.u0)) / (m.u1 - m.u0 || 1) : 0),
       innerhalb = (m, uu, vv) => uu > m.u0 && uu < m.u1 && vv > m.v0 && vv < m.v1,
       // Fläche (Außenring mit Löchern) auf alle Wandstücke legen; Tiefe je Punkt aus tiefe(u)
-      flaeche = (pos, aussenR, lochR, tiefe) => {
+      // band [v0, v1]: nur dieser Höhenbereich (Material je Geschoss aus „Planen“)
+      flaeche = (pos, aussenR, lochR, tiefe, band) => {
         const aussen = aussenR.map((q) => new T.Vector2(q[0], q[1])),
           holes = lochR.map((h) => h.map((q) => new T.Vector2(q[0], q[1]))),
           alle = aussen.concat(...holes),
@@ -127,10 +128,11 @@ function ftBauen(b) {
           );
         V.pcs.forEach((pc) => {
           for (const [i, j, k] of tr) {
-            const poly = fdClip(
+            let poly = fdClip(
               [alle[i], alle[j], alle[k]].map((v) => [v.x, v.y]),
               pc.ring,
             );
+            if (band && poly.length >= 3) poly = fwClip(fwClip(poly, 0, 1, -band[0], 1), 0, -1, band[1], 1);
             if (poly.length < 3) continue;
             const P3 = poly.map((q) => P(pc, q[0], q[1], tiefe(q[0])));
             for (let m = 1; m < P3.length - 1; m++) pos.push(...P3[0], ...P3[m], ...P3[m + 1]);
@@ -149,21 +151,29 @@ function ftBauen(b) {
       };
     fdFaces(b, V).forEach((f) => {
       const fc = f.t && f.t !== 'ohne' && S.ft.some((x) => x.k === f.t) ? 'l:' + f.t : null, // nur Schraffur (Wand trägt die Farbe)
+        // ── Erweiterung aus 19-fassadendesigner/120-gebaeudekonfigurator.js: ohne eigenen Typ gilt das Material aus
+        // „Planen“ (ganzes Haus bzw. je Geschoss)
+        fcBei = (v) => fc || (fkMaterialBeiV(b, v) ? 'l:' + fkMaterialBeiV(b, v) : null),
+        baender = fc
+          ? []
+          : fkGeschosse(b)
+              .map((g, j, A) => ({
+                v0: j ? g.v0 : -1e4,
+                v1: j === A.length - 1 ? 1e4 : g.v1,
+                k: fkMaterial(b, j),
+              }))
+              .filter((x) => x.k),
         imFeld = (x) => grInFace(f, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2),
         Mf = M.filter(imFeld),
         Of = O.filter(imFeld),
         inR = (x) => Mf.find((m) => innerhalb(m, (x.u0 + x.u1) / 2, (x.v0 + x.v1) / 2)),
         // Gruppenfelder mit eigenem Material: Farbe und Schraffur (die Wand dahinter hat die Farbe der Fläche)
-        farbeVon = (m) => (m && m.t ? 'g:' + m.t : fc);
-      if (!fc && !Mf.some((m) => m.t)) return;
+        farbeVon = (m, v) => (m && m.t ? 'g:' + m.t : fcBei(m ? (m.v0 + m.v1) / 2 : v));
+      if (!fc && !baender.length && !Mf.some((m) => m.t)) return;
       // Hauptfläche ohne Gruppenfelder und ohne Fenster außerhalb davon (Aussparungen vereinigt)
-      if (fc)
-        flaeche(
-          farbePos(fc),
-          f.o,
-          f.h.concat(ftVereinigung(Mf.concat(Of.filter((x) => !inR(x))))),
-          () => -VOR,
-        );
+      const loecher = f.h.concat(ftVereinigung(Mf.concat(Of.filter((x) => !inR(x)))));
+      if (fc) flaeche(farbePos(fc), f.o, loecher, () => -VOR);
+      else baender.forEach((x) => flaeche(farbePos('l:' + x.k), f.o, loecher, () => -VOR, [x.v0, x.v1]));
       Mf.forEach((m) => {
         const col = farbeVon(m);
         // Feldfläche in ihrer (ggf. schrägen) Tiefe, ohne die Fenster darin
@@ -223,7 +233,7 @@ function ftBauen(b) {
             if (Math.abs(dInA - dOutA) < 0.002 && Math.abs(dInC - dOutC) < 0.002) continue;
             // nur einmal je Kante: das tiefer liegende Feld zeichnet (außen kein Gruppenfeld: dieses Feld)
             if (n && mOut > mIn) continue;
-            const col = mIn < mOut ? farbeVon(m) : farbeVon(n);
+            const col = mIn < mOut ? farbeVon(m, mv) : farbeVon(n, mv);
             if (!col) continue;
             // zur offenen (tieferen) Seite rücken
             const r = mIn > mOut ? -1 : 1;
@@ -244,7 +254,7 @@ function ftBauen(b) {
       // Laibungen der Fenster: von der (ggf. versetzten) Außenfläche bis hinter den Rahmen
       Of.forEach((x) => {
         const m = inR(x),
-          col = farbeVon(m);
+          col = farbeVon(m, (x.v0 + x.v1) / 2);
         if (!col) return;
         const um = (x.u0 + x.u1) / 2,
           dm = dAt(m, um),
@@ -301,7 +311,7 @@ function ftBauen(b) {
 function ftWandAbschnitte(e) {
   try {
     const b = oeBauteilGebaeude(e);
-    if (!b || !b.fd || e.kind !== 'AW' || !e.sa || !e.sb) return { d: null, A: [] };
+    if (!b || !(b.fd || fkHatMt(b)) || e.kind !== 'AW' || !e.sa || !e.sb) return { d: null, A: [] };
     const u0 = ugN(b);
     if (e.li < u0) return { d: null, A: [] };
     const L = Math.hypot(e.sb[0] - e.sa[0], e.sb[1] - e.sa[1]) || 1,
@@ -334,7 +344,7 @@ function ftWandAbschnitte(e) {
         const x = e.sa[0] + d[0] * s,
           z = e.sa[1] + d[1] * s,
           f = F.find((q) => grInFace(q, x * V.n[1] - z * V.n[0], vm));
-        return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : '';
+        return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : fkMaterial(b, e.li - u0);
       },
       ta = e.sa[0] * d[0] + e.sa[1] * d[1],
       N = Math.max(1, Math.ceil(L / 0.25)),
@@ -364,7 +374,7 @@ function ftWandAbschnitte(e) {
 function ftGiebelTyp(e, x, y, z) {
   try {
     const b = oeBauteilGebaeude(e);
-    if (!b || !b.fd || !e.gb) return '';
+    if (!b || !(b.fd || fkHatMt(b)) || !e.gb) return '';
     const V = fdViewAt(b, e.gb.nx, e.gb.nz, x, z, 0.7);
     if (!V) return '';
     const u0 = ugN(b);
@@ -380,7 +390,7 @@ function ftGiebelTyp(e, x, y, z) {
     // gezielt gesetzt gilt; sonst wie die Attika der Typ der Wand darunter (oberstes Vollgeschoss, Mitte der Kante u)
     let vTop = 0;
     for (let i = u0; i < b.levels.length; i++) vTop += b.levels[i].h;
-    return typ(v) || typ(vTop - 0.3);
+    return typ(v) || typ(vTop - 0.3) || fkMaterialBeiV(b, vTop - 0.3);
   } catch (err) {
     logErr(err, 'ftGiebelTyp');
     return '';
@@ -391,7 +401,7 @@ function ftFassadeBei(b, vk, u, v) {
   const V = fdViews(b).find((x) => x.key === vk);
   if (!V) return '';
   const f = fdFaces(b, V).find((q) => grInFace(q, u, v));
-  return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : '';
+  return f && f.t && f.t !== 'ohne' && S.ft.some((t) => t.k === f.t) ? f.t : fkMaterialBeiV(b, v);
 }
 /** Typ einer Loggia (Rück- und Seitenwände): Material des Gruppenfelds, sonst der Fassadentyp an der Loggia. */
 function ftLoggiaTyp(b, o) {
@@ -404,8 +414,13 @@ function ftSturzTyp(b, o) {
 }
 /** Kennung der Fassadentypen eines Gebäudes (Neuaufbau der eingefärbten Wände). */
 function ftWandSig(b) {
-  return b && b.fd
-    ? JSON.stringify([Object.values(b.fd).map((d) => d && d.units), S.ft.map((t) => [t.k, t.c]), fdSig(b)])
+  return b && (b.fd || fkHatMt(b))
+    ? JSON.stringify([
+        Object.values(b.fd || {}).map((d) => d && d.units),
+        S.ft.map((t) => [t.k, t.c]),
+        fdSig(b),
+        b.fk && b.fk.mt,
+      ])
     : '';
 }
 /** Flächen aller Gebäude abgleichen (nur geänderte neu bauen). */
@@ -416,8 +431,8 @@ function ftSync() {
   // erst ab LOD 200 im Modell; in LOD 100 dienen die Fassadentypen nur der Auswertung
   const an = FT3.aktiv && l2on();
   S.bld.forEach((b) => {
-    if (!an || b.ex || !b.fd || b._y == null) return;
-    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg, schSig()]),
+    if (!an || b.ex || !(b.fd || fkHatMt(b)) || b._y == null) return;
+    const sg = JSON.stringify([fdSig(b), b.fd, S.ft, S.oet, S.oeg, schSig(), b.fk && b.fk.mt]),
       alt = FT3.bau.get(b.id);
     da.add(b.id);
     if (alt && alt.sg === sg) return;
