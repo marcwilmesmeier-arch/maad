@@ -296,7 +296,7 @@ function roofGeo(b, yr, clip) {
     Cz = tc * tz + sc * sz,
     TT = (p) => (p[0] - Cx) * tx + (p[1] - Cz) * tz,
     SS = (p) => (p[0] - Cx) * sx + (p[1] - Cz) * sz;
-  const RF = roofField(r.type, fp, TT, SS, a, bb, tn, r.dir != null && r.dir !== ''),
+  const RF = roofField(r.type, fp, TT, SS, a, bb, tn, roofFest(b)),
     hf = RF.hf,
     lines = RF.lines.concat(RF.vl),
     vl = RF.vl,
@@ -422,9 +422,15 @@ function roofSet(k, v) {
     if (v !== 'flat') {
       r.angle = RD[v].angle;
       if (r.dremp == null) r.dremp = 0;
-      r.dir = null;
+      delete r.dir;
+      r.dv = 0;
     }
-  } else if (k === 'dir') r.dir = v === '' || v == null ? null : +v;
+  } else if (k === 'dir') {
+    // Drehung gegenüber der Ausgangslage (0 = parallel zur längsten Seite)
+    const n = v === '' || v == null ? 0 : +String(v).replace(',', '.');
+    r.dv = isFinite(n) ? Math.round(((((n % 360) + 540) % 360) - 180) * 10) / 10 : 0;
+    delete r.dir;
+  }
   // Dachmaterial: Fassadentyp-Schlüssel (Farbe und Schraffur in LOD 200), '' = wie bisher
   else if (k === 'mt') {
     if (S.ft.some((t) => t.k === v && !t.df && t.k !== 'pr')) r.mt = v;
@@ -490,7 +496,7 @@ function roofCtl(b) {
       .map((t) => `<option value="${t.k}" ${t.k === r.mt ? 'selected' : ''}>${esc(t.n)}</option>`)
       .join('')}</select>`;
   if (r.type !== 'flat')
-    h += `Neigung (°)<input type="number" min="1" max="75" step="1" value="${r.angle}" onchange="roofSet('angle',this.value)">Drempelhöhe (m)<input type="number" min="0" max="3" step="0.05" value="${r.dremp || 0}" onchange="roofSet('dremp',this.value)">${b._rp && b._rp.mehr > 1 ? `Firstrichtung<div class="mu" style="font-size:11px;margin:2px 0 6px">Je Flügel automatisch (${b._rp.mehr} Flügel): jeder First folgt der längeren Seite seines Flügels, angeschlossene Flügel laufen quer ins Hauptdach.</div>` : `${r.type === 'pult' ? 'Richtung der Dachneigung' : 'Firstrichtung'} (°)<div style="display:flex;gap:4px"><input type="number" step="5" value="${roofDir(b)}" onchange="roofSet('dir',this.value)"><button class="sm" onclick="roofSet('dir',null)">Auto</button></div>`}${kv('Höhe Dachgeschoss', f1(b._roofH || 0, 2) + ' m')}`;
+    h += `Neigung (°)<input type="number" min="1" max="75" step="1" value="${r.angle}" onchange="roofSet('angle',this.value)">Drempelhöhe (m)<input type="number" min="0" max="3" step="0.05" value="${r.dremp || 0}" onchange="roofSet('dremp',this.value)">${b._rp && b._rp.mehr > 1 ? `Firstrichtung<div class="mu" style="font-size:11px;margin:2px 0 6px">Je Flügel automatisch (${b._rp.mehr} Flügel): jeder First folgt der längeren Seite seines Flügels, angeschlossene Flügel laufen quer ins Hauptdach.</div>` : `<span title="0° = ${r.type === 'pult' ? 'Neigung quer' : 'First parallel'} zur längsten Hausseite${r.type === 'walm' ? ', die Grate laufen genau auf die Hausecken' : ''}">Drehung ${r.type === 'pult' ? 'der Dachneigung' : 'des Firsts'} (°)</span><div style="display:flex;gap:4px"><input type="number" step="90" min="-180" max="180" value="${roofVersatz(b)}" onchange="roofSet('dir',this.value)" style="font-variant-numeric:tabular-nums"><button class="sm" onclick="roofSet('dir',0)" title="Zurück auf die Ausgangslage">0°</button></div>`}${kv('Höhe Dachgeschoss', f1(b._roofH || 0, 2) + ' m')}`;
   h += `<button class="sm" style="margin-top:8px;width:100%" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner öffnen</button>`;
   return h;
 }

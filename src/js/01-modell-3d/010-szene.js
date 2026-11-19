@@ -177,12 +177,29 @@ function autoDir(b, type) {
       ang = Math.atan2(c[1] - a[1], c[0] - a[0]);
     }
   });
-  return ((Math.round((ang * 180) / Math.PI + (type === 'pult' ? 90 : 0)) % 360) + 360) % 360;
+  // exakt (nicht auf ganze Grad gerundet): sonst liegt ein Walmdach auf einem gedrehten Haus leicht schief und die Grate
+  // treffen die Hausecken nicht
+  return ((((ang * 180) / Math.PI + (type === 'pult' ? 90 : 0)) % 360) + 360) % 360;
+}
+/**
+ * Drehung des Firsts gegenüber der Ausgangslage (Grad, −180…180; 0 = parallel zur längsten Seite, Grate genau auf den
+ * Ecken). Gespeichert als b.roof.dv; früher stand dort eine absolute Richtung b.roof.dir – sie wird umgerechnet, bis
+ * auf 1° an die Ausgangslage heran gilt sie als 0 (frühere Rundung).
+ */
+function roofVersatz(b) {
+  const r = b.roof || {};
+  if (isFinite(+r.dv) && r.dv !== null && r.dv !== '') return +r.dv;
+  if (r.dir == null || r.dir === '') return 0;
+  let v = ((((+r.dir - autoDir(b, r.type)) % 360) + 540) % 360) - 180;
+  if (Math.abs(v) < 1 || Math.abs(Math.abs(v) - 180) < 1) v = 0;
+  return Math.round(v * 10) / 10;
 }
 function roofDir(b) {
   const r = b.roof || {};
-  return r.dir != null && r.dir !== '' ? +r.dir : autoDir(b, r.type);
+  return (autoDir(b, r.type) + roofVersatz(b) + 360) % 360;
 }
+/** Firstrichtung von Hand gedreht (gilt dann nur für einfache Körper, roofField). */
+const roofFest = (b) => Math.abs(roofVersatz(b)) > 1e-6;
 function splitPoly(poly, f) {
   const A = [],
     B = [];
@@ -242,7 +259,7 @@ function roofAreas(b) {
     Cz = tc * tz + sc * sz,
     TT = (p) => (p[0] - Cx) * tx + (p[1] - Cz) * tz,
     SS = (p) => (p[0] - Cx) * sx + (p[1] - Cz) * sz;
-  const hf = roofField(r.type, fp, TT, SS, a, bb, tn, r.dir != null && r.dir !== '').hf;
+  const hf = roofField(r.type, fp, TT, SS, a, bb, tn, roofFest(b)).hf;
   const st = Math.max(0.1, Math.sqrt(((x1 - x0) * (z1 - z0)) / 40000)),
     cell = st * st;
   let n2 = 0,

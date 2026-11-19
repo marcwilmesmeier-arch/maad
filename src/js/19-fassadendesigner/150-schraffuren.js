@@ -338,9 +338,9 @@ function schTextur(H) {
   }
   return K;
 }
-/** Schraffur in 3D erst ab dieser Nähe (m Abstand zur Kamera) einblenden, weich über die letzten 2 m – aus der Ferne
+/** Schraffur in 3D erst ab dieser Nähe (m Abstand zur Kamera) einblenden, weich über die letzten 5 m – aus der Ferne
     würde das Bild sonst zu unruhig. */
-const SCH_NAH = 15;
+const SCH_NAH = 40;
 /** Höchstzahl der Linienscharen bzw. Striche je Schar für die genaue Darstellung im Shader (sonst Bild-Kachel). */
 const SCH_MAXF = 128,
   SCH_MAXD = 8;
@@ -504,7 +504,7 @@ function schMaterial(m, t, nurLinien) {
 {vec3 wn=normalize(vSchN);vec2 uv;
 if(abs(wn.y)>.7){uv=vSchP.xz;}else{vec2 tt=normalize(vec2(-wn.z,wn.x));uv=vec2(dot(vSchP.xz,tt),vSchP.y);}
 float cr=cos(uSchR),sr=sin(uSchR);uv=vec2(cr*uv.x+sr*uv.y,-sr*uv.x+cr*uv.y);
-${linie}hs.a*=1.-smoothstep(${SCH_NAH - 2}.,${SCH_NAH}.,distance(vSchP,cameraPosition));${
+${linie}hs.a*=1.-smoothstep(${SCH_NAH - 5}.,${SCH_NAH}.,distance(vSchP,cameraPosition));${
           nurLinien
             ? 'if(hs.a<.02||abs(wn.y)>.7)discard;diffuseColor=vec4(hs.rgb,hs.a);'
             : 'diffuseColor.rgb=mix(diffuseColor.rgb,hs.rgb,hs.a);'

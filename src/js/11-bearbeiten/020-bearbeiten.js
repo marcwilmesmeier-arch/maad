@@ -10,6 +10,11 @@ function btStart(e) {
     if (!b._g || !rc.intersectObjects(b._g.children, true)[0]) return;
   }
   const c = cen(b.fp);
+  // frühere absolute Firstrichtung in die Drehung gegenüber der Ausgangslage umrechnen: die dreht mit dem Haus mit
+  if (b.roof && b.roof.dir != null && b.roof.dir !== '') {
+    b.roof.dv = roofVersatz(b);
+    delete b.roof.dir;
+  }
   dr.v = undefined;
   dr.bt = {
     b,
@@ -18,7 +23,6 @@ function btStart(e) {
     a0: Math.atan2(g[1] - c[1], g[0] - c[0]),
     fp0: b.fp.map((q) => q.slice()),
     lv0: b.levels.map((l) => (l.fp ? l.fp.map((q) => q.slice()) : null)),
-    dir0: b.roof && b.roof.dir != null && b.roof.dir !== '' ? +b.roof.dir : null,
     mv: 0,
   };
   hist();
@@ -60,7 +64,6 @@ function btMove(e) {
         z = q[1] - t.c[1];
       return [t.c[0] + x * co - z * si, t.c[1] + x * si + z * co];
     });
-    if (t.dir0 != null) b.roof.dir = ((Math.round(t.dir0 + deg) % 360) + 360) % 360;
     $('hud').textContent = `Drehen · ${f1(deg, 1)}°` + (e.shiftKey ? '' : ' · Shift = 15°-Raster');
   }
   mesh(b);

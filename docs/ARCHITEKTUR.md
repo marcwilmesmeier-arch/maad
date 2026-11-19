@@ -485,7 +485,10 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Fassadenmaterial aus „Planen“ (`b.fk.mt`, Zeile „ganzes Haus“ oder je Geschoss): gilt für alle Außenwandflächen ohne
   eigenen Typ, auch in 3D – `fkMaterialBeiV`/`fkHatMt` (120-gebaeudekonfigurator.js) als Rückfall in
   `ftWandAbschnitte`, `ftGiebelTyp`, `ftFassadeBei`, `l2AttikaTyp` und in der Schraffurschicht von `ftBauen`
-  (Höhenbänder je Geschoss). Dachflächen bleiben unberührt. Schraffur in 3D erst unter `SCH_NAH` = 15 m Abstand.
+  (Höhenbänder je Geschoss). Dachflächen bleiben unberührt. Schraffur in 3D erst unter `SCH_NAH` = 40 m Abstand.
+- Firstrichtung: `autoDir` exakt (ungerundet), Eingabe als Drehung gegenüber der Ausgangslage `b.roof.dv` (0 = parallel
+  zur längsten Seite, Walmgrate auf den Ecken); `roofVersatz` rechnet die frühere absolute Richtung `b.roof.dir` um,
+  `roofFest` ersetzt die alte Prüfung auf `dir`.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;
   `fdDachTyp` färbt in LOD 200 das Dachbauteil (RD) bzw. beim Flachdach die oberste Decke (`flatTop`) samt Schraffur
   (`l2MeshOrig`, Grundfarbe in `material.userData.c0` für das Isolieren).
