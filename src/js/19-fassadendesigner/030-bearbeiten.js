@@ -51,7 +51,13 @@ function fdSetCuts(b, V, cuts) {
 }
 /** Ansicht ohne eigene Angaben (keine Linien, Felder, Öffnungen, Gruppen, Raster, Attika-Typ) – darf entfallen. */
 const fdAnsichtLeer = (d) =>
-  !d.cuts.length && !d.units.length && !(d.oe && d.oe.length) && !(d.gr && d.gr.length) && !d.rs && !d.at;
+  !d.cuts.length &&
+  !d.units.length &&
+  !(d.oe && d.oe.length) &&
+  !(d.gr && d.gr.length) &&
+  !d.rs &&
+  !d.at &&
+  !d.fest;
 function fdAttr(b, V, face, patch) {
   const d = fdD(b, V.key, true);
   let u = d.units.find((q) => grInFace(face, q.p[0], q.p[1]));

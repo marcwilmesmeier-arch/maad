@@ -128,6 +128,8 @@ function fkAnwenden(b) {
   if (!fk) return;
   const GS = fkGeschosse(b);
   fdViews(b).forEach((V) => {
+    // Ansicht von Hand gestaltet (Automatik aus, fdAutoSet): Gruppen bleiben, wie sie sind
+    if (fdAutoAus(b, V)) return;
     const L = oegDaten(b, V.key, true),
       hand = L.filter((I) => !I.a),
       F0 = fdFaces(b, V),
@@ -509,4 +511,32 @@ function fkCard(b) {
   h += fkMtHtml(fk, GS);
   h += `<div style="display:flex;gap:4px;margin-top:8px"><button class="sm" style="flex:1" onclick="fdOpen('${esc(b.id)}')">▦ Fassadendesigner</button><button class="sm" style="flex:1" onclick="okOpen(null,'gr')">Gruppen …</button></div></div>`;
   return h;
+}
+
+// ---- Automatik je Ansicht: Gruppen aus „Planen“ (fkAnwenden) nicht mehr neu platzieren
+/** true, wenn die Gruppen dieser Ansicht nicht mehr automatisch platziert werden (d.fest). */
+const fdAutoAus = (b, V) => !!(fdD(b, V.key) || {}).fest;
+/** Automatik der aktuellen Ansicht ein- (an = true) oder ausschalten. Beim Einschalten wird neu platziert. */
+function fdAutoSet(an) {
+  const b = fdB(),
+    V = fdCurV();
+  if (!b || !V) return;
+  fdEdit((b) => {
+    const V = fdCurV(),
+      d = fdD(b, V.key, true);
+    if (an) delete d.fest;
+    else d.fest = 1;
+    if (an) fkAnwenden(b);
+  });
+  fdNote(
+    an
+      ? 'Automatik an: die Gruppen aus „Planen“ werden auf dieser Seite wieder platziert.'
+      : 'Automatik aus: diese Seite bleibt, wie sie ist – Änderungen in „Planen“ setzen hier keine Gruppen mehr.',
+  );
+}
+/** Schalter im Inspektor (nur bei Gebäuden mit Gruppen aus „Planen“). */
+function fdAutoHtml(b, V) {
+  if (!fkDaten(b)) return '';
+  const aus = fdAutoAus(b, V);
+  return `<h4>Automatik</h4><label style="display:flex;gap:8px;align-items:center" title="Die Gruppen aus „Planen“ (Gebäudekonfigurator) werden bei Änderungen am Gebäude automatisch neu platziert. Ausschalten, um diese Seite von Hand zu gestalten."><input type="checkbox" style="width:auto" ${aus ? '' : 'checked'} onchange="fdAutoSet(this.checked)">Gruppen automatisch platzieren</label><div class="mu" style="margin-top:4px">${aus ? 'Aus – diese Seite wird von Hand gestaltet.' : 'An – Änderungen in „Planen“ setzen die Gruppen neu.'}</div>`;
 }

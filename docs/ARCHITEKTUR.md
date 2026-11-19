@@ -482,6 +482,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   `FD_FE`, als `f.fe` in `fdFaces`), Inspektor `fdFeldHtml`, Setzen `fdFeldSet`. `fdFeldFlaechen` liefert sie wie
   Gruppenflächen (`gi: null`) an `oegFlaechen`, damit 3D, Grundriss und Auswertung sie ohne Sonderweg kennen. Beim
   Teilen bekommt das größte Teilstück die Eigenschaften (`fdSetCuts`).
+- Automatik je Ansicht (`fdAutoAus`/`fdAutoSet`/`fdAutoHtml`, 120-gebaeudekonfigurator.js): `d.fest = 1` hält
+  `fkAnwenden` aus dieser Ansicht heraus (Gruppen aus „Planen“ werden nicht neu platziert). Schalter im Inspektor;
+  „Gruppe hier auflösen“ schaltet die Automatik der Seite aus.
 - Teilen im Fassadendesigner wie in der Gruppe (`19-…/145-raster.js`): je Ansicht ein Raster `d.rs = { xs, ys, vb }`
   (senkrechte/waagerechte Linien über die ganze Seite in Ansichtskoordinaten, verbundene Felder als Rechtecke).
   `fdRasterAnwenden` schreibt daraus die Schnittlinien mit Kennung `FD_RS = −1` in `d.cuts`; Felder, Typen, Tiefe und
