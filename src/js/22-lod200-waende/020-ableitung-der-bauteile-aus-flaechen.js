@@ -29,7 +29,8 @@ function l2GeoStufe1(b) {
   try {
     prZ = oeDeckenZonen(b);
     // Loggien als Einschnitt in die Raumflächen: echte Außenwände entlang der Loggia (oeLoggiaEinschnitte)
-    if (!l23()) lgZ = oeLoggiaEinschnitte(b);
+    // nur in der LOD-200-Darstellung (in LOD 100 rechnet die Auswertung mit dem einfachen Modell)
+    if (l2on() && !l23()) lgZ = oeLoggiaEinschnitte(b);
   } catch (e) {
     logErr(e, 'l2Geo>oeDeckenZonen');
   }

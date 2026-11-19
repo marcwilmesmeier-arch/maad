@@ -44,6 +44,7 @@ function l2BalkonListe(b) {
  */
 function lbBoeden(b) {
   const out = [];
+  if (!l2on()) return out; // wie lbFlaechen: Balkone und Loggien nur in LOD 200
   try {
     l2BalkonListe(b).forEach((x) => {
       const n = x.n,

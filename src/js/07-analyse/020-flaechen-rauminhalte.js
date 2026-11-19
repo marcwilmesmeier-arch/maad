@@ -60,7 +60,8 @@ function terrOf(b) {
  */
 function lbFlaechen(b) {
   const out = [];
-  if (!b.fd || b.ex) return out;
+  // nur in der LOD-200-Darstellung: in LOD 100 zählt das einfache Modell ohne Balkone und Loggien
+  if (!b.fd || b.ex || !l2on()) return out;
   try {
     const B = fdStoreys(b),
       u = ugN(b),

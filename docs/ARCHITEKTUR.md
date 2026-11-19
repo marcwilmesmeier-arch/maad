@@ -397,6 +397,12 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Gelände unter dem EG: in LOD 200 schneidet bei Gebäuden mit Öffnungen auch der EG-Grundriss das Gelände aus
   (`plmFoot`), damit man durch Glas auf die Bodenplatte sieht.
 
+## Auswertung je Darstellung (LOD)
+
+- Die Auswertung folgt der eingeschalteten Darstellung: in LOD 100 das einfache Modell, in LOD 200 zusätzlich Balkone
+  und Loggien. `lbFlaechen`/`lbBoeden` liefern nur bei `l2on()`, die Loggia-Einschnitte der Wandableitung (NGF, KF)
+  ebenso. Beim Wechsel (`lotlod`) werden Kennzahlen (`rr`) und Hervorhebung (`hlApply`) neu aufgebaut.
+
 ## LOD 200: Anbauten in Explosion und Isolieren
 
 - `l2Balkone`/`l2Terrassen` (`22-…/130-balkone.js`) legen je Geschoss eine Untergruppe an (`userData.k`, Geschoss des

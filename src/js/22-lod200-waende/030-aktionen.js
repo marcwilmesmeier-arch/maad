@@ -447,6 +447,14 @@ document.addEventListener('lotlod', () => {
   } catch (e) {
     logErr(e, 'init>anonym');
   }
+  // Auswertung folgt der Darstellung (LOD 100: einfaches Modell, LOD 200: mit Balkonen und Loggien):
+  // Kennzahlen und Hervorhebung neu
+  try {
+    if (S.hlk) hlApply();
+    rr();
+  } catch (e) {
+    logErr(e, 'lotlod>Auswertung');
+  }
 });
 // grDraw(): Erweiterung zusammengeführt, siehe 15-grundriss/120-zeichnen.js
 function l2Draw() {
