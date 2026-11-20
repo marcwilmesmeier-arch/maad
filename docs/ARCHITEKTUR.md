@@ -501,6 +501,10 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Deckenrand reichen); endet ein Hof in einem Geschoss, bleibt die Decke nur dort, wo das Geschoss darüber steht.
 - Weißmodell und Baumschalen: `S.fx.wm` (trees, tv, nadel); `fxOn` lässt im Weißmodell nur Laub- und Nadelschalen zu,
   das Layer-Panel zeigt dort dieselbe Auswahl wie in den anderen Darstellungen (ohne Wasser-Shader).
+- Umgebungsverdeckung in Realistisch+ (`S.atm.ao`, Regler „Umgebungsverdeckung“): im Albedo-Shader (`ATM.lin`,
+  Funktion `verdeckung`) aus Tiefe und Normalenbild, dämpft nur das Himmelslicht (Ecken, Wandfüße, unter Balkonen).
+  Das Licht vom Boden (`um`) ist entfallen. LOD-200-Konturlinien (`userData.l2ko`) schaltet nur `l2Kontur`, der Layer
+  „Gebäudekontur“ setzt nur ihre Farbe (vorher Flackern durch zwei Schreiber).
 - Glas in Realistisch+ (`06-darstellung/050-glas-realistisch-plus.js`): Meshes mit `userData.glas` (LOD-200-Öffnungen)
   bekommen während `atmRender` ein Shader-Material (Himmel aus `WAS.env`, Sonnenglanz, 50 % Deckkraft mit Fresnel);
   die gespiegelte Strahldichte wird durch die geschätzte Beleuchtung geteilt und als Grundfarbe ausgegeben, damit die

@@ -17,7 +17,9 @@ function bkApply(force) {
   S.edgeC = col;
   sc.traverse((o) => {
     if (!(o.isLineSegments && o.userData && o.userData.kont)) return;
-    o.visible = on && !S.noK;
+    // ── Erweiterung aus 22-lod200-waende/110-aussenkontur.js: LOD-200-Konturen schaltet l2Kontur (Isolieren,
+    // Explosion), hier nur die Farbe
+    if (!o.userData.l2ko) o.visible = on && !S.noK;
     const m = o.material;
     if (!m) return;
     o.userData._kc = new T.Color(col).getHex();

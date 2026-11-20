@@ -192,8 +192,14 @@ function l2Kontur() {
       const K = l2KonturPunkte(b),
         ge = new T.BufferGeometry();
       ge.setAttribute('position', new T.BufferAttribute(new Float32Array(K.p), 3));
-      const ln = new T.LineSegments(ge, new T.LineBasicMaterial({ color: 0x4a4a4a }));
+      const ln = new T.LineSegments(
+        ge,
+        new T.LineBasicMaterial({ color: new T.Color(S.lc.bkont || '#9b9b97') }),
+      );
       ln.userData.kont = 1;
+      // Sichtbarkeit nur hier (l2Kontur), Farbe aus dem Layer „Gebäudekontur“ (bkApply) – sonst schalteten beide
+      // abwechselnd und die Linien flackerten
+      ln.userData.l2ko = 1;
       ln.raycast = () => {};
       G.l2.add(ln);
       // fette Kontur: Silhouette, je Bild aus den Kanten neu bestimmt (l2KonturSil)

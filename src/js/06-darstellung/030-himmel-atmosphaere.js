@@ -51,7 +51,7 @@ const ATM_QUAL = [
 ];
 /** Einstellungen (werden mit Projekt und Ansichten gespeichert). */
 function atmDefault() {
-  return { wo: true, wd: 0.15, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6, lf: 0.5 };
+  return { wo: true, wd: 0.15, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6, lf: 0.5, ao: 0.8 };
 }
 S.atm = atmDefault();
 
@@ -141,7 +141,26 @@ function atmAufbau(L) {
   // Grundfarbe: maads Bild (gammakodiert) linear machen und im Schatten abdunkeln; Himmel (Tiefe 1) unverändert
   ATM.lin = new L.Effect(
     'MaadAlbedo',
-    'uniform float uK, uSat, uLf;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
+    'uniform float uK, uSat, uLf, uAo, uPy;\nuniform mat4 uPInv;\nuniform vec3 uSonneV, uObenV, uSonneC, uHimmelC, uBodenC;\nuniform sampler2D tMaske, tNormal;\n' +
+      // Umgebungsverdeckung (Alchemy-AO aus Tiefe und Normalenbild): Ecken, Wandfüße, Laibungen und Flächen unter
+      // Balkonen bekommen weniger Himmelslicht; Radius etwa 1,2 m in der Welt
+      'vec3 vpos(vec2 q, float d) { vec4 v = uPInv * vec4(q * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }\n' +
+      'float verdeckung(vec2 uv, float depth, vec3 n) {\n' +
+      '  if (uAo <= 0.0) return 1.0;\n' +
+      '  vec3 p = vpos(uv, depth);\n' +
+      '  float R = 1.2, rpx = clamp(R * uPy * 0.5 * resolution.y / max(-p.z, 0.1), 3.0, 90.0), s = 0.0;\n' +
+      '  vec2 gp = mod(floor(uv * resolution), 4.0);\n' +
+      '  float rot = (mod(gp.x * 4.0 + gp.y * 7.0, 16.0) / 16.0) * 6.2831;\n' +
+      '  for (int i = 0; i < 16; i++) {\n' +
+      '    float a = float(i) * 2.39996 + rot, r = rpx * sqrt((float(i) + 0.5) / 16.0);\n' +
+      '    vec2 q = uv + vec2(cos(a), sin(a)) * r * texelSize;\n' +
+      '    float d2 = readDepth(q);\n' +
+      '    if (d2 >= 1.0 - 1e-7) continue;\n' +
+      '    vec3 v = vpos(q, d2) - p;\n' +
+      '    float vv = dot(v, v);\n' +
+      '    s += max(dot(v, n) - 0.02 * length(p) * 0.02, 0.0) / (vv + 0.02) * (1.0 - smoothstep(R * R, 4.0 * R * R, vv));\n' +
+      '  }\n' +
+      '  return clamp(1.0 - uAo * s * 2.0 / 16.0, 0.15, 1.0);\n}\n' +
       'void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {\n' +
       '  if (depth >= 1.0 - 1e-7) { outputColor = inputColor; return; }\n' +
       '  vec4 mk = texture2D(tMaske, uv);\n' +
@@ -163,7 +182,8 @@ function atmAufbau(L) {
       '  vec3 sonneSoll = mix(vec3(dot(uSonneC, Y)), uSonneC, uLf);\n' +
       // Himmelslicht im Schatten etwas weniger blau als die Sonne gedämpft (sonst wirken Schatten bläulich)
       '  vec3 himmelSoll = mix(vec3(dot(himmel, Y)), himmel, uLf * 0.6);\n' +
-      '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll + uBodenC * (0.5 - 0.5 * oben);\n' +
+      '  float ao = verdeckung(uv, depth, n);\n' +
+      '  vec3 soll = sonneSoll * nl * (1.0 - schatten) + himmelSoll * ao + uBodenC * (0.5 - 0.5 * oben);\n' +
       '  vec3 k = min(soll / max(nach, vec3(1e-4)), vec3(8.0));\n' +
       '  outputColor = vec4(a * k, inputColor.a);\n}\n',
     {
@@ -173,6 +193,9 @@ function atmAufbau(L) {
         ['uK', new T.Uniform(0.6)],
         ['uSat', new T.Uniform(0.85)],
         ['uLf', new T.Uniform(0.5)],
+        ['uAo', new T.Uniform(0.8)],
+        ['uPy', new T.Uniform(1)],
+        ['uPInv', new T.Uniform(new T.Matrix4())],
         ['uSonneV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uObenV', new T.Uniform(new T.Vector3(0, 1, 0))],
         ['uSonneC', new T.Uniform(new T.Vector3(1, 1, 1))],
@@ -239,6 +262,11 @@ function atmWolkenTexturen(L) {
   );
 }
 
+/** Stärke der Umgebungsverdeckung (S.atm.ao, 0 = aus) an den Albedo-Shader geben. */
+function atmAo() {
+  if (!ATM.lin) return;
+  ATM.lin.uniforms.get('uAo').value = Math.max(0, +S.atm.ao || 0);
+}
 /** Wolken-Einstellungen übernehmen. */
 function atmWolken() {
   if (!ATM.cl) return;
@@ -307,7 +335,8 @@ function atmUmgebung() {
     sc0 = ATM.sonne.color,
     h = ATM.himmel.sh.coefficients[0].clone().multiplyScalar(Math.sqrt(Math.PI)),
     hoch = Math.max(0, ATM.sonneW.y),
-    boden = 0.25 * (S.atm.um ?? 1);
+    // Licht vom Boden entfällt (wirkte unrealistisch); die Ecken dunkelt die Umgebungsverdeckung ab
+    boden = 0;
   u.get('uSonneC').value.set(sc0.r, sc0.g, sc0.b);
   u.get('uHimmelC').value.copy(h);
   u.get('uBodenC').value.set(
@@ -436,6 +465,8 @@ function atmRender(scn, cm) {
     atmDurchgang('s', ATM.maske, cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
     ATM.lin.uniforms.get('uObenV').value.set(0, 1, 0).transformDirection(cm.matrixWorldInverse);
+    ATM.lin.uniforms.get('uPInv').value.copy(cm.projectionMatrixInverse);
+    ATM.lin.uniforms.get('uPy').value = cm.projectionMatrix.elements[5];
     ren.toneMappingExposure = S.atm.bel * brK();
     ATM.lin.uniforms.get('uSat').value = S.atm.sat ?? 0.85;
     ATM.lin.uniforms.get('uLf').value = S.atm.lf ?? 0.5;
@@ -467,8 +498,9 @@ function atmRender(scn, cm) {
 function atmSet(k, v) {
   S.atm[k] = v;
   atmWolken();
+  atmAo();
   if (k === 'um' && ATM.st === 'bereit') atmUmgebung();
-  if (k === 'wd' || k === 'bel' || k === 'um' || k === 'sat' || k === 'wh' || k === 'lf') {
+  if (k === 'wd' || k === 'bel' || k === 'um' || k === 'sat' || k === 'wh' || k === 'lf' || k === 'ao') {
     // Regler: nur die Anzeige anpassen (Neuaufbau würde das Ziehen unterbrechen)
     const b = $('atmV_' + k);
     if (b) b.textContent = k === 'bel' ? String(v) : Math.round(v * 100) + ' %';
@@ -500,12 +532,20 @@ function atmUi() {
     regler('bel', 'Belichtung', a.bel, 2, 30, 1) +
     regler('lf', 'Lichtfarbe', Math.round((a.lf ?? 0.5) * 100) + ' %', 0, 1, 0.05) +
     regler('sat', 'Farbsättigung', Math.round((a.sat ?? 0.85) * 100) + ' %', 0, 1.5, 0.05) +
-    regler('um', 'Umgebungslicht (vom Boden)', Math.round((a.um ?? 1) * 100) + ' %', 0, 3, 0.1) +
+    regler(
+      'ao',
+      'Umgebungsverdeckung (Ecken, Wandfüße)',
+      Math.round((a.ao ?? 0.8) * 100) + ' %',
+      0,
+      1.5,
+      0.05,
+    ) +
     (st ? `<div class="dmu">${st}</div>` : '');
 }
 /** Projekt/Ansicht laden: fehlende Werte mit Standard füllen. */
 function atmLaden(x) {
   S.atm = Object.assign(atmDefault(), x && typeof x === 'object' ? x : {});
   atmWolken();
+  atmAo();
   atmUi();
 }
