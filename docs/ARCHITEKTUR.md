@@ -501,6 +501,13 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Deckenrand reichen); endet ein Hof in einem Geschoss, bleibt die Decke nur dort, wo das Geschoss darüber steht.
 - Weißmodell und Baumschalen: `S.fx.wm` (trees, tv, nadel); `fxOn` lässt im Weißmodell nur Laub- und Nadelschalen zu,
   das Layer-Panel zeigt dort dieselbe Auswahl wie in den anderen Darstellungen (ohne Wasser-Shader).
+- Glas in Realistisch+ (`06-darstellung/050-glas-realistisch-plus.js`): Meshes mit `userData.glas` (LOD-200-Öffnungen)
+  bekommen während `atmRender` ein Shader-Material (Himmel aus `WAS.env`, Sonnenglanz, 50 % Deckkraft mit Fresnel);
+  die gespiegelte Strahldichte wird durch die geschätzte Beleuchtung geteilt und als Grundfarbe ausgegeben, damit die
+  Nachbeleuchtung sie wieder herstellt (`glasVorher`/`glasNachher`).
+- Analyse in den Metriken (`ZI.sp`, `S.l2.iso`): keine Gebäudematerialien (`ftFarbig`), nicht gewählte Gebäude samt
+  Fassadentyp-Schichten und Konturen ausgeblendet (`l2IsoSicht`). Esc beendet Metrik-Filter, Bauteil-Isolieren,
+  Hervorhebung und Explosionsansicht (Esc-Handler in 11-bearbeiten/010-werkzeug.js).
 - Weißmodell (`S.dar === 'wm'`): keine Materialien an Gebäuden – `ftFarbig()` (110-fassadentypen-3d.js) sperrt
   Wandfarbe, Giebel, Attika, Loggia, Dach und die Schraffurschicht; der Wechsel baut über `ftWandSig` neu.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;

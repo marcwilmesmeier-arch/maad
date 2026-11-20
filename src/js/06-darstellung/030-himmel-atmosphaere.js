@@ -430,6 +430,8 @@ function atmRender(scn, cm) {
       ATM.normalRT.setSize(sz.x, sz.y);
     }
     wasVorher(cm);
+    // ── Erweiterung aus 06-darstellung/050-glas-realistisch-plus.js: Fensterglas spiegelt
+    glasVorher();
     atmDurchgang('n', ATM.normalRT, cm);
     atmDurchgang('s', ATM.maske, cm);
     ATM.lin.uniforms.get('uSonneV').value.copy(ATM.sonneW).transformDirection(cm.matrixWorldInverse);
@@ -449,6 +451,7 @@ function atmRender(scn, cm) {
       ren.outputColorSpace = oc;
       ATM.himmelM.visible = false;
       wasNachher();
+      glasNachher();
     }
     return true;
   } catch (e) {

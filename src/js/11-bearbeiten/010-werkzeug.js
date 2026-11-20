@@ -847,6 +847,22 @@ addEventListener('keydown', (e) => {
     } catch (e) {
       logErr(e, 'init>anonym');
     }
+    // zurück in die normale Darstellung (LOD 100/200): Filter und Hervorhebungen aus den Metriken, Bauteil-Isolieren
+    // und Explosionsansicht aus
+    try {
+      if (typeof ZI !== 'undefined' && ZI.sp) zoIsoClear(true);
+      if (S.l2 && S.l2.iso) {
+        S.l2.iso = null;
+        l2IsoApply(true);
+      }
+      if (S.hlk || S.hlG) {
+        S.hlw = 0;
+        hlClear(1);
+      }
+      if (S.expl && S.expl.on) tgExp();
+    } catch (e) {
+      logErr(e, 'Esc>Metriken');
+    }
     H();
     hpos();
     drawOv();

@@ -308,8 +308,11 @@ function ftBauen(b) {
  * (t = Punkt · d), Typ k der Fassadenfläche in Geschossmitte ('' = ohne Typ). Damit wird die Wand selbst eingefärbt
  * (nur in der Darstellung in Stücke geschnitten, l2MeshOrig); leer, wenn die Wand keinen Typ trägt.
  */
-/** Materialien (Farbe, Schraffur) der Gebäude zeigen – im Weißmodell nicht: dort bleiben die Bauteile weiß. */
-const ftFarbig = () => S.dar !== 'wm';
+/**
+ * Materialien (Farbe, Schraffur) der Gebäude zeigen – im Weißmodell nicht (dort bleiben die Bauteile weiß) und nicht
+ * während einer Analyse aus den Metriken (Isolieren von Bauteilen oder einer Auswahl): dort zählt die Hervorhebung.
+ */
+const ftFarbig = () => S.dar !== 'wm' && !(S.l2 && S.l2.iso) && !(typeof ZI !== 'undefined' && ZI.sp);
 function ftWandAbschnitte(e) {
   if (!ftFarbig()) return { d: null, A: [] };
   try {

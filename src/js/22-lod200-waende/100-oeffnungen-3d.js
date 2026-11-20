@@ -705,6 +705,8 @@ function oeKoerper(O) {
     m.receiveShadow = true;
     m.raycast = () => {};
     m.userData.oe = 1;
+    // Glas: in Realistisch+ spiegelndes Glas (06-darstellung/050-glas-realistisch-plus.js)
+    if (glas) m.userData.glas = 1;
     g.add(m);
   });
   return g;
