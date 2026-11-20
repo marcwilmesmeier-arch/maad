@@ -463,5 +463,6 @@ function ftSync() {
       FT3.bau.delete(id);
     }
   // in Explosions- und Einheitenansicht ausblenden (Geschosse verschoben bzw. Baukörper ausgeblendet)
-  FT3.bau.forEach((it) => (it.g.visible = !explodiert && !einheiten));
+  // ── Erweiterung aus 22-lod200-waende/080-isolieren: beim Isolieren nur die sichtbaren Gebäude
+  FT3.bau.forEach((it, id) => (it.g.visible = !explodiert && !einheiten && l2IsoSicht(id)));
 }

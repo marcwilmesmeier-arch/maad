@@ -116,7 +116,7 @@ function pitBuild() {
       if (!l2on() || !b.levels || !b.levels.length) return;
       const r = lf(b, b.levels[0]);
       if (!r || r.length < 3) return;
-      items.push({ r, y0: b._y - 0.4, g: gi % 4 });
+      items.push({ r, y0: b._y - 0.4, g: gi % 4, eg: 1 });
       gi++;
       return;
     }
@@ -131,7 +131,9 @@ function pitBuild() {
       gi++;
     });
   });
-  const key = JSON.stringify(items.map((i) => [i.r, i.y0]));
+  // ohne Untergeschoss (nur unter der Bodenplatte ausgespart): in der Geländefarbe statt Baugrubenbraun
+  const gel = S.lc && S.lc.terrain ? S.lc.terrain : '#b9b4a8',
+    key = JSON.stringify([items.map((i) => [i.r, i.y0]), gel]);
   if (key === PIT.k) return;
   PIT.k = key;
   while (PIT.g.children.length) {
@@ -150,10 +152,14 @@ function pitBuild() {
     });
   });
   PIT.u.uN.value = n;
-  const pos = [],
-    idx = [];
+  const pos_ = [],
+    idx_ = [],
+    posE = [],
+    idxE = [];
   items.forEach((it) => {
-    const r = it.r;
+    const r = it.r,
+      pos = it.eg ? posE : pos_,
+      idx = it.eg ? idxE : idx_;
     r.forEach((p, i) => {
       const q = r[(i + 1) % r.length],
         L = Math.hypot(q[0] - p[0], q[1] - p[1]),
@@ -170,20 +176,24 @@ function pitBuild() {
       }
     });
   });
-  if (pos.length) {
+  [
+    [pos_, idx_, 0x9a8a74],
+    [posE, idxE, gel],
+  ].forEach(([pos, idx, farbe]) => {
+    if (!pos.length) return;
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
     g.setIndex(idx);
     g.computeVertexNormals();
-    const m = new T.Mesh(g, new T.MeshLambertMaterial({ color: 0x9a8a74, side: T.DoubleSide }));
+    const m = new T.Mesh(g, new T.MeshLambertMaterial({ color: farbe, side: T.DoubleSide }));
     m.receiveShadow = true;
     PIT.g.add(m);
-  }
+  });
   items.forEach((it) => {
     const sh = new T.Shape(it.r.map((p) => new T.Vector2(p[0], -p[1]))),
       g = new T.ShapeGeometry(sh);
     g.rotateX(-Math.PI / 2);
-    const m = new T.Mesh(g, new T.MeshLambertMaterial({ color: 0x7d705e, side: T.DoubleSide }));
+    const m = new T.Mesh(g, new T.MeshLambertMaterial({ color: it.eg ? gel : 0x7d705e, side: T.DoubleSide }));
     m.position.y = it.y0 - 0.02;
     m.receiveShadow = true;
     PIT.g.add(m);

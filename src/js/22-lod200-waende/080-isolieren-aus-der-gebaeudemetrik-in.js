@@ -128,29 +128,42 @@ function l2NetShow(iso) {
  * ein- und ausblenden: beim Isolieren aus der Gebäudemetrik (iso) ausgeblendet, bei einer Auswertung (sp) nur bei
  * Gebäuden sichtbar, von denen etwas angezeigt wird. Jeden Takt, da diese Gruppen neu entstehen können.
  */
+/**
+ * Ist das Gebäude id beim Isolieren (Bauteil-Isolieren S.l2.iso bzw. Auswahl aus den Metriken ZI.sp) sichtbar? Für alles,
+ * was nicht Teil der Bauteilliste L2I ist: Balkone, Attika, Terrassengeländer, Konturen, Fassadentyp-Schichten.
+ */
+function l2IsoSicht(id) {
+  return l2IsoSichtMit(S.l2 && S.l2.iso, typeof ZI !== 'undefined' && ZI.sp, id);
+}
 function l2IsoAnbauten(iso, sp) {
-  const sicht = (id) => {
-    if (iso) return false;
-    if (!sp) return true;
-    const b = S.bld.find((z) => z.id === id);
-    if (!b) return true;
-    try {
-      return (
-        b.levels.some((l, i) => zoIsoHit(sp, b, { hull: 1, k: i })) || zoIsoHit(sp, b, { hull: 1, k: 'roof' })
-      );
-    } catch (e) {
-      logErr(e, 'l2IsoAnbauten');
-      return true;
-    }
-  };
+  const sicht = (id) => l2IsoSichtMit(iso, sp, id);
   [L2BK, L2TG].forEach((M) =>
     M.forEach((o, id) => {
       if (o && o.g) o.g.visible = sicht(id);
     }),
   );
   L2KO.forEach((o, id) => {
-    if (o && o.ln) o.ln.visible = sicht(id);
+    if (o && o.ln) o.ln.visible = o.ln.visible && sicht(id);
+    if (o && o.fett) o.fett.visible = o.fett.visible && sicht(id);
   });
+  // Fassadentyp-Schichten (Farbe, Schraffur) des Gebäudes
+  FT3.bau.forEach((it, id) => {
+    if (it && it.g && !sicht(id)) it.g.visible = false;
+  });
+}
+function l2IsoSichtMit(iso, sp, id) {
+  if (iso) return false;
+  if (!sp) return true;
+  const b = S.bld.find((z) => z.id === id);
+  if (!b) return true;
+  try {
+    return (
+      b.levels.some((l, i) => zoIsoHit(sp, b, { hull: 1, k: i })) || zoIsoHit(sp, b, { hull: 1, k: 'roof' })
+    );
+  } catch (e) {
+    logErr(e, 'l2IsoSicht');
+    return true;
+  }
 }
 function l2IsoApply(force) {
   const iso = S.l2.iso,

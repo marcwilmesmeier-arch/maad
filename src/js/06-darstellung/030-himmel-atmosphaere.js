@@ -51,7 +51,7 @@ const ATM_QUAL = [
 ];
 /** Einstellungen (werden mit Projekt und Ansichten gespeichert). */
 function atmDefault() {
-  return { wo: true, wd: 0.35, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6, lf: 0.5 };
+  return { wo: true, wd: 0.15, wq: 'low', bel: 10, um: 1, sat: 0.85, wh: 0.6, lf: 0.5 };
 }
 S.atm = atmDefault();
 

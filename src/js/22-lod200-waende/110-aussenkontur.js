@@ -204,8 +204,10 @@ function l2Kontur() {
       o = { sig, ln, fett, p: K.p, n: K.n, ck: '' };
       L2KO.set(b.id, o);
     }
-    o.ln.visible = duenn && !S.noK && !ex;
-    if (o.fett) o.fett.visible = !ex;
+    // ── Erweiterung aus 080-isolieren: beim Isolieren nur die Kontur der sichtbaren Gebäude
+    const iso = l2IsoSicht(b.id);
+    o.ln.visible = duenn && !S.noK && !ex && iso;
+    if (o.fett) o.fett.visible = !ex && iso;
   });
   L2KO.forEach((o, id) => {
     if (da.has(id)) return;
