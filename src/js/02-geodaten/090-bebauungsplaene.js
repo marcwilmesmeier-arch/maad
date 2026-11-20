@@ -509,6 +509,9 @@ function demoOff() {
     logErr(e, 'demoOff');
   }
   clr(G.roads);
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßenfläche ist mit G.roads geleert
+  STR.aktiv = false;
+  STR.sig = '';
   clr(G.green);
   clr(G.parcels);
   clr(G.trees);

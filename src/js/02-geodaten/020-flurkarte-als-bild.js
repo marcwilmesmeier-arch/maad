@@ -660,6 +660,12 @@ function ctxPaint(acc) {
   } catch (e) {
     console.error(e);
   }
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßen als Vektorfläche im Gelände (bauen bzw. umfärben)
+  try {
+    strAktualisieren(acc);
+  } catch (e) {
+    logErr(e, 'ctxPaint>Straßenflächen');
+  }
 }
 function recomp() {
   // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
@@ -747,6 +753,8 @@ function recomp() {
         uRoads(x, K, X);
         continue;
       }
+      // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßen liegen als Vektorfläche im Gelände
+      if (k === 'roads' && STR.aktiv) continue;
       const L = LY.find((l) => l[1] === k);
       if (!L || !L[2]) continue;
       x.globalAlpha = L[3];

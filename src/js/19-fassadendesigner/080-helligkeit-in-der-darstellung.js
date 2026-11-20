@@ -84,7 +84,11 @@ G.terrain.add(PIT.g);
 function pitPatch(m) {
   if (!m || m.userData.pit) return;
   m.userData.pit = 1;
-  m.onBeforeCompile = (sh) => {
+  // eine schon vorhandene Erweiterung (z. B. Loch für die Straßenfläche, 02-geodaten/100) zuerst anwenden
+  const vor = m.onBeforeCompile !== T.Material.prototype.onBeforeCompile ? m.onBeforeCompile : null,
+    vorKey = vor && m.customProgramCacheKey ? m.customProgramCacheKey() : '';
+  m.onBeforeCompile = (sh, r) => {
+    if (vor) vor(sh, r);
     Object.assign(sh.uniforms, PIT.u);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', 'varying vec3 vPw;\n#include <common>')
@@ -102,7 +106,7 @@ function pitPatch(m) {
         '#include <clipping_planes_fragment>\nif(uN>0){vec4 cn=vec4(0.0);vec2 p=vPw.xz;for(int i=0;i<128;i++){if(i>=uN)break;vec4 e=uE[i];if((e.y>p.y)!=(e.w>p.y)){if(p.x<(e.z-e.x)*(p.y-e.y)/(e.w-e.y)+e.x){vec4 mk=vec4(equal(vec4(uG[i]),vec4(0.0,1.0,2.0,3.0)));cn+=mk;}}}\n if(mod(cn.x,2.0)>.5||mod(cn.y,2.0)>.5||mod(cn.z,2.0)>.5||mod(cn.w,2.0)>.5)discard;}\nif(uCn>0){vec4 cm=vec4(0.0);vec2 q=vPw.xz;for(int i=0;i<96;i++){if(i>=uCn)break;vec4 e=uC[i];if((e.y>q.y)!=(e.w>q.y)){if(q.x<(e.z-e.x)*(q.y-e.y)/(e.w-e.y)+e.x){cm+=vec4(equal(vec4(uCG[i]),vec4(0.0,1.0,2.0,3.0)));}}}\n if(mod(cm.x,2.0)>.5||mod(cm.y,2.0)>.5||mod(cm.z,2.0)>.5||mod(cm.w,2.0)>.5)discard;}',
       );
   };
-  m.customProgramCacheKey = () => 'pit2';
+  m.customProgramCacheKey = () => 'pit2' + vorKey;
   m.needsUpdate = true;
 }
 function pitBuild() {

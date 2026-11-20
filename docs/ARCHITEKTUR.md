@@ -614,3 +614,17 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   und laufen mit einer Kehle ins Hauptdach.
 - Dachkanten (`roofKanten`) werden aus der Dachform bestimmt, nicht aus den Dreiecken: Neigungswechsel über 15° oder
   Rand des Grundrisses, dazu der Umriss der Giebelwände. Das gilt für LOD 100 und die LOD-200-Kontur.
+
+## Straßenflächen als Vektorfläche (`02-geodaten/100-strassenflaechen.js`)
+
+- Nach `ctxPaint` (`strAktualisieren`, nur bei geänderten Straßen/Gelände neu, sonst nur umfärben): aus den OSM-Achsen
+  (`GEO.acc.line.roads`, Breite `w`) wird ein Band `w + 2r` gerastert (0,25 m), per Abstandsfeld (`strEdt`,
+  Felzenszwalb) um `r` verschmälert = morphologisches Schließen → Einmündungen mit `STR.r` (4 m) ausgerundet;
+  Umriss per Marching Squares (`strUmriss`) als Ringe mit Löchern (`STR.ringe`).
+- Darstellung: Straßenfläche = Geländenetz 15 cm tiefer (`STR.tief`), im Shader nur innerhalb des Umrisses (Maske
+  `STR.uM`, R = Abstand zum Rand), Bordstein senkrecht entlang des Umrisses; das Gelände bekommt dort ein Loch
+  (`strGelaendeShader`, verträgt sich mit `pitPatch`, beide verketten `onBeforeCompile`). Farbe = Layer-Farbe Straßen
+  (`S.lc.roads`); im Kartenbild (`recomp`) entfällt die Straßenebene, solange die Fläche besteht (`STR.aktiv`).
+- Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den
+  Ufern; dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
+  Stirnseite.

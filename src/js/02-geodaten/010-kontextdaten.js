@@ -392,6 +392,14 @@ function rebuildTerrain() {
   GEO.tex.anisotropy = Math.min(16, ren.capabilities.getMaxAnisotropy());
   S.terr.material.dispose();
   S.terr.material = new T.MeshLambertMaterial({ map: GEO.tex });
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Loch für die Straßenfläche, die dem neuen Gelände folgt
+  try {
+    strGelaendeShader(S.terr.material);
+    STR.sig = '';
+    if (GEO.acc) strAktualisieren(GEO.acc);
+  } catch (e) {
+    logErr(e, 'rebuildTerrain>Straßenflächen');
+  }
   skirtBuild();
   // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js (danach)
   try {
