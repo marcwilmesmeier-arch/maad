@@ -148,13 +148,21 @@ function zoBldHtml(b, k, R, A, B, P) {
   if (on)
     h += zoD(
       'ng' + id,
-      ab('NGF', 'Nettogeschossfläche'),
-      A(n.o + n.u),
-      l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch'), A(n.o), 's', ['ngf', id, 'o']) +
+      ab('NGF', 'Nettogeschossfläche: Regelfall R und Sonderfall S (DIN 277)'),
+      A(n.o + n.u + (sz && sz.a > 0 ? sz.a - sz.lo : 0)),
+      l2R(
+        ab('NGFoi', 'Nettogeschossfläche oberirdisch, R und S'),
+        A(n.o + (sz && sz.a > 0 ? sz.a - sz.lo : 0)),
+        's',
+        ['ngf', id, 'o'],
+      ) +
         (n.u ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u), 's', ['ngf', id, 'u']) : '') +
         (sz && sz.a > 0
-          ? R('', ab('NGF (R)', 'Regelfall: ohne Loggien'), A(n.o + n.u - sz.lo), 's') +
-            l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(sz.a), 's', ['s', id, 'all'])
+          ? l2R(ab('NGF (R)', 'Regelfall: ohne Balkone und Loggien'), A(n.o + n.u - sz.lo), 's', [
+              'ngfr',
+              id,
+              'all',
+            ]) + l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(sz.a), 's', ['s', id, 'all'])
           : ''),
       [
         { n: 'oberirdisch', c: '#4e79a7', v: n.o },

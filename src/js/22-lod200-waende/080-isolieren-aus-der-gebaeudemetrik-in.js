@@ -95,8 +95,16 @@ function l2NetShow(iso) {
       // voller Körper stäche an den Dachschrägen durch das Dach
       const dg = !!lv.dg;
       if (!l2LvMatch(b, i, iso.sel) || (!dg && !G_.lv[i])) return;
-      const qs = G_.els
-          .filter((e) => e.li === i && e.quads && (e.kind === 'AW' || e.kind === 'TW' || e.kind === 'TH'))
+      // Dachgeschoss: Drempel- und Giebelwände stehen auf den Außenwänden des obersten Geschosses – deren Grundfläche abziehen
+      const liW = dg ? b.levels.length - 1 : i,
+        qs = G_.els
+          .filter(
+            (e) =>
+              !dg &&
+              e.li === liW &&
+              e.quads &&
+              (dg ? e.kind === 'AW' : e.kind === 'AW' || e.kind === 'TW' || e.kind === 'TH'),
+          )
           .reduce((r, e) => r.concat(e.quads), []),
         y0 = dg ? oben : G_.lv[i].y0,
         hh = dg ? Math.max(0.3, (+(b.roof && b.roof.dremp) || 0) - 0.05) : Math.max(0.1, lv.h - dDE),
@@ -107,7 +115,10 @@ function l2NetShow(iso) {
             .filter((z) => z.y > y0 - 0.1 && z.y < y0 + lv.h - 0.1)
             .map((z) => z.f),
         );
-      lv.faces.forEach((f) => {
+      // Dachgeschoss: ein Raumkörper über dem Grundriss des obersten Geschosses, um die Außenwand nach innen versetzt
+      // (die Raumaufteilung ergäbe Spalten und Grate unter den Dachflächen)
+      const flaechen = dg ? [{ o: l2Innen(lf(b, b.levels[b.levels.length - 1]), l2DickeAW(G_)) }] : lv.faces;
+      flaechen.forEach((f) => {
         let ps = [f.o];
         qs.forEach((q) => {
           ps = ps.reduce((r, p) => r.concat(l2Diff(p, q)), []);
@@ -128,10 +139,12 @@ function l2NetShow(iso) {
           );
           if ((2 * l2Ar(p)) / Math.max(U, 1e-6) < 0.15) return;
           try {
-            const P = grPrism({ o: p, h: hs || [] }, 0, hh),
+            // Dachgeschoss: Raumkörper unter der Dachfläche (Dachaufbau etwa 30 cm), sonst Prisma bis unter die Decke
+            const gDg = dg ? l2DgKoerper(b, p, y0, 0.3) : null,
+              P = gDg ? { g: gDg } : grPrism({ o: p, h: hs || [] }, 0, hh),
               m = new T.Mesh(P.g, mat);
-            m.position.y = y0;
-            m.userData = { bid: b.id, li: i, y0 };
+            m.position.y = gDg ? 0 : y0;
+            m.userData = { bid: b.id, li: i, y0: gDg ? 0 : y0 }; // Dachgeschoss: Geometrie schon in Weltlage
             m.castShadow = false;
             m.raycast = () => {};
             G.l2n.add(m);
@@ -147,6 +160,113 @@ function l2NetShow(iso) {
   } catch (e) {
     logErr(e, 'l2NetShow');
   }
+}
+/** Stärke der Außenwand (m) aus den LOD-200-Bauteilen. */
+const l2DickeAW = (G_) => (G_.els.find((e) => e.kind === 'AW') || {}).d || 0.36;
+/** Vieleck r um d nach innen versetzen (Schnitt der versetzten Kanten). */
+function l2Innen(r, d) {
+  const n = r.length,
+    A = r.reduce((s2, p, i) => s2 + p[0] * r[(i + 1) % n][1] - r[(i + 1) % n][0] * p[1], 0),
+    sg = A > 0 ? 1 : -1,
+    L = r.map((p, i) => {
+      const q = r[(i + 1) % n],
+        l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1,
+        nx = (-(q[1] - p[1]) / l) * sg,
+        nz = ((q[0] - p[0]) / l) * sg;
+      return { p: [p[0] + nx * d, p[1] + nz * d], u: [(q[0] - p[0]) / l, (q[1] - p[1]) / l] };
+    });
+  return L.map((c, i) => {
+    const a = L[(i + n - 1) % n],
+      det = a.u[0] * c.u[1] - a.u[1] * c.u[0];
+    if (Math.abs(det) < 1e-9) return c.p;
+    const t = ((c.p[0] - a.p[0]) * c.u[1] - (c.p[1] - a.p[1]) * c.u[0]) / det;
+    return [a.p[0] + a.u[0] * t, a.p[1] + a.u[1] * t];
+  });
+}
+/**
+ * Raumkörper des Dachgeschosses über der Fläche poly (Grundriss) ab Fußboden y0 bis unter die Dachfläche: die Fläche
+ * wird an den Dreiecken der Dachfläche (b._rp.pr) geteilt, jedes Stück endet oben auf seiner Dachebene (abzüglich
+ * Dachaufbau d). Ergebnis: BufferGeometry (Weltkoordinaten) oder null.
+ */
+function l2DgKoerper(b, poly, y0, d) {
+  const P = b._rp && b._rp.pr;
+  if (!P || !P.length || poly.length < 3) return null;
+  const pos = [],
+    // Sutherland-Hodgman: Vieleck p an einem konvexen Dreieck (gegen den Uhrzeigersinn) schneiden
+    schneide = (p, T3) => {
+      let out = p;
+      for (let i = 0; i < 3 && out.length; i++) {
+        const A = T3[i],
+          B = T3[(i + 1) % 3],
+          s = (q) => (B[0] - A[0]) * (q[1] - A[1]) - (B[1] - A[1]) * (q[0] - A[0]),
+          inp = out;
+        out = [];
+        inp.forEach((q, j) => {
+          const r = inp[(j + 1) % inp.length],
+            sq = s(q),
+            sr = s(r);
+          if (sq >= -1e-9) out.push(q);
+          if (sq >= -1e-9 !== sr >= -1e-9) {
+            const t = sq / (sq - sr);
+            out.push([q[0] + (r[0] - q[0]) * t, q[1] + (r[1] - q[1]) * t]);
+          }
+        });
+      }
+      return out;
+    },
+    flaeche = (p) =>
+      p.reduce((a, q, i) => a + q[0] * p[(i + 1) % p.length][1] - p[(i + 1) % p.length][0] * q[1], 0) / 2,
+    // Randkante von poly? (Mittelpunkt der Kante liegt auf einer Kante von poly)
+    aufRand = (a, c) => {
+      const m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+      return poly.some((q, i) => proj(m, q, poly[(i + 1) % poly.length]).d < 1e-3);
+    };
+  for (let i = 0; i + 8 < P.length; i += 9) {
+    const A = [P[i], P[i + 1], P[i + 2]],
+      B = [P[i + 3], P[i + 4], P[i + 5]],
+      C = [P[i + 6], P[i + 7], P[i + 8]],
+      // Ebene des Dreiecks: y(x, z)
+      ux = B[0] - A[0],
+      uy = B[1] - A[1],
+      uz = B[2] - A[2],
+      vx = C[0] - A[0],
+      vy = C[1] - A[1],
+      vz = C[2] - A[2],
+      nx = uy * vz - uz * vy,
+      ny = uz * vx - ux * vz,
+      nz = ux * vy - uy * vx;
+    if (Math.abs(ny) < 1e-6) continue; // senkrechte Flächen (Giebel) begrenzen nicht nach oben
+    const yAn = (x, z) => A[1] - (nx * (x - A[0]) + nz * (z - A[2])) / ny - d;
+    let T3 = [
+      [A[0], A[2]],
+      [B[0], B[2]],
+      [C[0], C[2]],
+    ];
+    if (flaeche(T3) < 0) T3 = [T3[0], T3[2], T3[1]];
+    let p = poly.slice();
+    if (flaeche(p) < 0) p = p.slice().reverse();
+    const s = schneide(p, T3);
+    if (s.length < 3 || Math.abs(flaeche(s)) < 1e-4) continue;
+    const top = s.map((q) => [q[0], Math.max(y0 + 0.05, yAn(q[0], q[1])), q[1]]);
+    // Boden und Deckel (Fächer, das Stück ist konvex)
+    for (let k = 1; k + 1 < s.length; k++) {
+      pos.push(s[0][0], y0, s[0][1], s[k + 1][0], y0, s[k + 1][1], s[k][0], y0, s[k][1]);
+      pos.push(...top[0], ...top[k], ...top[k + 1]);
+    }
+    // Seitenwände nur am Rand der Fläche (innere Schnittkanten zwischen den Stücken bleiben offen)
+    s.forEach((q, k) => {
+      const r = s[(k + 1) % s.length];
+      if (!aufRand(q, r)) return;
+      const tq = top[k],
+        tr = top[(k + 1) % s.length];
+      pos.push(q[0], y0, q[1], r[0], y0, r[1], ...tr, q[0], y0, q[1], ...tr, ...tq);
+    });
+  }
+  if (!pos.length) return null;
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+  g.computeVertexNormals();
+  return g;
 }
 /** Körper der Flächen im Sonderfall S (DIN 277) zeigen: iso.sel 'all', 'ba' (Balkone) oder 'lo' (Loggien). */
 function l2SShow(iso) {
@@ -230,9 +350,11 @@ function l2IsoApply(force) {
     l2NetShow(null);
     return;
   }
-  l2NetShow(iso && iso.m === 'ngf' ? iso : null);
+  // NGF: Regelfall R und Sonderfall S zusammen; 'ngfr' nur R; 's' nur S (DIN 277)
+  l2NetShow(iso && (iso.m === 'ngf' || iso.m === 'ngfr') ? iso : null);
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && iso.m === 's') l2SShow(iso);
+  if (iso && iso.m === 'ngf' && iso.sel !== 'u') l2SShow({ ...iso, sel: 'all' });
   for (const it of L2I.values()) {
     const e = it.el,
       b = S.bld.find((z) => z.id === e.bid);

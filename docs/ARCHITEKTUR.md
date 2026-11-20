@@ -505,7 +505,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Fassade ein Körper (Balkon, Loggia oder Balkon + Loggia zusammen; Höhe Loggia = Geschoss minus Platte darüber, Balkon = Geländer).
   Metriken: BGF (R) = BGF − Loggia-Anteil, BGF (S), NGF (R)/(S), Gruppe „Sonderfall S“ mit BRI (S); Hervorhebung
   `L2ISO('s', …)` → `l2SShow` (dunkleres Grün als die NGF). Terrassen im EG (z. B. vor Loggien) folgen, wenn sie
-  eigens modelliert werden. NGF-Darstellung zeigt das Dachgeschoss (bis Drempelhöhe) und lässt schmale Reste weg.
+  eigens modelliert werden. NGF/NGFoi = R + S und zeigt beide (R grün, S dunkelgrün), NGF (R) nur R (`'ngfr'`),
+  NGF (S) nur S. Dachgeschoss in der NGF-Darstellung: ein Raumkörper unter der Dachfläche (`l2DgKoerper`, Grundriss
+  des obersten Geschosses um die Außenwand versetzt, an den Dachdreiecken `b._rp.pr` geteilt). Schmale Reste fallen weg.
 - Umgebungsverdeckung in Realistisch+ (`S.atm.ao`, Regler „Umgebungsverdeckung“): im Albedo-Shader (`ATM.lin`,
   Funktion `verdeckung`) aus Tiefe und Normalenbild, dämpft nur das Himmelslicht (Ecken, Wandfüße, unter Balkonen).
   Das Licht vom Boden (`um`) ist entfallen. LOD-200-Konturlinien (`userData.l2ko`) schaltet nur `l2Kontur`, der Layer
