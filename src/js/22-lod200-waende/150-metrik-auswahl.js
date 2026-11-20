@@ -101,6 +101,10 @@ function mzInfo(m) {
     const ra = b._roofA || {};
     if (vol) return 'Dachraum · ' + f1(ra.vol || 0, 1) + ' m³';
     if (flaeche) return 'Dachgeschoss · ' + f1(ra.wf || 0, 1) + ' m²';
+  } else if (typeof u.k === 'number' && flaeche && bLv(b)[u.k]) {
+    // BGF-Fläche: Name und Fläche wie in der Geschossliste (auch Dachgeschoss)
+    const L = bLv(b)[u.k];
+    return L.n + ' · ' + f1(L.a, 1) + ' m²';
   } else if (typeof u.k === 'number' && b.levels[u.k] && (vol || flaeche)) {
     const l = b.levels[u.k],
       a = larea(b, l);

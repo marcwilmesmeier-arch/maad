@@ -202,7 +202,7 @@ function zoBldHtml(b, k, R, A, B, P) {
               'nrir',
               id,
               'all',
-            ]) + l2R(ab('NRI (S)', 'Sonderfall: Balkone und Loggien'), m3(sV), 's', ['s', id, 'all'])
+            ]) + l2R(ab('NRI (S)', 'Sonderfall: Balkone und Loggien'), m3(sV), 's', ['nris', id, 'all'])
           : ''),
       null,
     );

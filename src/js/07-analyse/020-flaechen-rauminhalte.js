@@ -380,13 +380,17 @@ function hlApply() {
         if ((oi && !ug) || (ui && ug)) {
           const sh = new T.Shape(f.map((q) => new T.Vector2(q[0], -q[1])));
           hoefe.forEach((p) => sh.holes.push(znPath(p)));
-          const ge = new T.ExtrudeGeometry(sh, {
-            depth: l.h,
-            bevelEnabled: false,
-          });
+          // BGF als Fläche (Boden des Geschosses), BRI als Körper
+          const flach = k === 'bgf' || k === 'bgfoi' || k === 'bgfui',
+            ge = flach
+              ? new T.ShapeGeometry(sh)
+              : new T.ExtrudeGeometry(sh, {
+                  depth: l.h,
+                  bevelEnabled: false,
+                });
           ge.rotateX(-Math.PI / 2);
           const m = new T.Mesh(ge, ug ? mtu : mt);
-          m.position.y = z0;
+          m.position.y = z0 + (flach ? 0.03 : 0);
           m.renderOrder = ug ? 12 : 9;
           g.add(m);
         }
@@ -466,7 +470,20 @@ function hlApply() {
         });
       const rp = b._rp;
       if (rp) {
-        if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
+        if (oi && (k === 'bgf' || k === 'bgfoi')) {
+          // BGF als Fläche: Dachgeschoss als Boden über dem obersten Geschoss (nur, wenn es zur BGF zählt)
+          if (bLv(b).length > b.levels.length) {
+            const L = b.levels.at(-1),
+              sh = new T.Shape(lf(b, L).map((q) => new T.Vector2(q[0], -q[1])));
+            znVoidsAt(b, b.levels.length - 1).forEach((v) => sh.holes.push(znPath(v.poly)));
+            const ge = new T.ShapeGeometry(sh);
+            ge.rotateX(-Math.PI / 2);
+            const m = new T.Mesh(ge, mt);
+            m.position.y = b._y + b.levels.reduce((s2, l) => s2 + l.h, 0) + 0.03;
+            m.userData.k = b.levels.length; // Explosion: wie das Dachgeschoss (NGF-Körper li = Geschosszahl)
+            g.add(m);
+          }
+        } else if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
         if (k === 'fas' && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
         if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
       } else if (k === 'dach' && b.levels.length) {

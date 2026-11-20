@@ -239,6 +239,75 @@ function l2AttikaRing(b) {
   });
   return R.concat(T_);
 }
+/** Überstand der Schürze unter der Deckenunterkante (m). */
+const L2_SCHUERZE = 0.1;
+/**
+ * Schürze unter auskragenden Geschossen (LOD 200), wie die Attika nach unten: wo ein Geschoss über das darunter
+ * hinausragt, läuft seine Außenwand in derselben Flucht bis 10 cm unter die Deckenunterkante weiter (Außenwandstärke,
+ * nach innen versetzt). Nur an den Außenkanten der auskragenden Fläche, nicht an der Fassade darunter.
+ * [{ Q, y0, y1, ft, j }]
+ */
+function l2UeberhangSchuerzen(b) {
+  const R = [];
+  if (!l2on()) return R;
+  try {
+    const els = l2Els(b).els,
+      aw = els.find((e) => e.kind === 'AW'),
+      d = (aw && aw.d) || 0.36,
+      dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22,
+      u = ugN(b);
+    let z = b._y || 0;
+    b.levels.forEach((l, j) => {
+      const yj = z;
+      z += l.h;
+      if (j < 1 || j - 1 < u) return;
+      const f = lf(b, l),
+        g = lf(b, b.levels[j - 1]);
+      if (!f || !g || f.length < 3 || g.length < 3) return;
+      let U = [];
+      try {
+        U = boolOp([bpP(f)], [bpP(g)], 'd').filter((P) => P.o && P.o.length >= 3);
+      } catch (e) {
+        logErr(e, 'l2UeberhangSchuerzen');
+        return;
+      }
+      // Abstand eines Punktes zum Umriss des auskragenden Geschosses (Außenkante)
+      const aufF = (p) =>
+        f.some((a, i) => {
+          const c = f[(i + 1) % f.length],
+            dx = c[0] - a[0],
+            dz = c[1] - a[1],
+            L2 = dx * dx + dz * dz || 1,
+            t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / L2));
+          return Math.hypot(a[0] + dx * t - p[0], a[1] + dz * t - p[1]) < 0.01;
+        });
+      U.forEach((P) => {
+        const drin = (p) => inP(p, P.o) && !(P.h || []).some((h) => inP(p, h));
+        [P.o].concat(P.h || []).forEach((ring) => {
+          ring.forEach((p, i) => {
+            const q = ring[(i + 1) % ring.length],
+              L = Math.hypot(q[0] - p[0], q[1] - p[1]);
+            if (L < 0.05) return;
+            const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+            if (!aufF(m)) return;
+            let nn = [-(q[1] - p[1]) / L, (q[0] - p[0]) / L];
+            if (!drin([m[0] + nn[0] * 0.05, m[1] + nn[1] * 0.05])) nn = [-nn[0], -nn[1]];
+            // 2 mm vor die Fassadenebene: liegt sonst deckungsgleich mit der Deckenstirn (Flimmern, sichtbare Fuge)
+            const dd = Math.min(d, 0.45),
+              o = -0.002,
+              P0 = [p[0] + nn[0] * o, p[1] + nn[1] * o],
+              P1 = [q[0] + nn[0] * o, q[1] + nn[1] * o],
+              Q = [P0, P1, [q[0] + nn[0] * dd, q[1] + nn[1] * dd], [p[0] + nn[0] * dd, p[1] + nn[1] * dd]];
+            R.push({ Q, y0: yj - dDE - L2_SCHUERZE, y1: yj, ft: l2AttikaTyp(b, m[0], m[1], nn, j), j });
+          });
+        });
+      });
+    });
+  } catch (e) {
+    logErr(e, 'l2UeberhangSchuerzen');
+  }
+  return R;
+}
 /**
  * Attika an Terrassen (LOD 200) wie am Dach als eigene Wand: Terrassenfläche = Grundriss des Geschosses minus Grundriss
  * darüber; an jeder ihrer Kanten auf der Gebäudeaußenkante ein Wandstück der Stärke der Außenwand, nach innen versetzt,
@@ -427,7 +496,8 @@ function l2Balkone() {
       fdSig(b) +
       JSON.stringify([b.fd ? Object.values(b.fd).map((d) => [d.units, d.at]) : 0, S.ft, schSig()]) +
       ftWandSig(b) + // auch Material aus „Planen“ und Weißmodell
-      JSON.stringify(b.voids || 0); // Innenhöfe (Terrassen-Attika)
+      JSON.stringify(b.voids || 0) + // Innenhöfe (Terrassen-Attika)
+      JSON.stringify([b.fp, b.levels.map((l) => [l.h, l.fp || 0])]); // Geschossumrisse (Schürzen unter Überhängen)
     da.add(b.id);
     let o = L2BK.get(b.id);
     if (o && o.sig === sig) return;
@@ -537,6 +607,11 @@ function l2Balkone() {
     l2AttikaRing(b).forEach((q) => {
       // Terrassen-Attika gehört in der Explosionsansicht zum Geschoss darunter
       eb = q.j != null ? lvOfY(b, q.y0 - 0.1) : 'roof';
+      l2Prisma(teil(q.ft ? 'ft:' + q.ft : 'wand'), q.Q, q.y0, q.y1);
+    });
+    // ── Schürze unter auskragenden Geschossen (gehört in der Explosionsansicht zum auskragenden Geschoss)
+    l2UeberhangSchuerzen(b).forEach((q) => {
+      eb = q.j;
       l2Prisma(teil(q.ft ? 'ft:' + q.ft : 'wand'), q.Q, q.y0, q.y1);
     });
     // Attika, Stürze und Balkonplatten in der Farbe der Außenwände dieses Gebäudes (kein Farbsprung am Übergang)

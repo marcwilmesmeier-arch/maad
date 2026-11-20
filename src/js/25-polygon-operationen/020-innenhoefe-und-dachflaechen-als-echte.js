@@ -241,35 +241,3 @@ function znInterior(outer, poly) {
     !znEdgesX(outer, poly)
   );
 }
-function znStats(b) {
-  const o = { voidA: 0, voidV: 0, voidF: 0, n: 0 };
-  (b.voids || []).forEach((v) => {
-    const a = area(v.poly);
-    o.voidA += a;
-    o.n++;
-    let per = 0;
-    v.poly.forEach((p, i) => {
-      const c = v.poly[(i + 1) % v.poly.length];
-      per += Math.hypot(c[0] - p[0], c[1] - p[1]);
-    });
-    for (let i = v.j0; i <= v.j1 && i < b.levels.length; i++) {
-      o.voidV += a * b.levels[i].h;
-      o.voidF += per * b.levels[i].h;
-    }
-  });
-  return o;
-}
-function znRows(b, R, A, zoD) {
-  const o = znStats(b);
-  if (!o.n) return '';
-  const f = (v) => f1(v, 1).replace('.', ',');
-  return zoD(
-    'zn' + b.id,
-    'Innenhöfe',
-    '',
-    R('#555', 'Innenhöfe (' + o.n + ')', A(o.voidA), '') +
-      R('', 'Fassade zu den Höfen', A(o.voidF), '') +
-      R('', 'Hofvolumen', f(o.voidV) + ' m³', ''),
-    null,
-  );
-}

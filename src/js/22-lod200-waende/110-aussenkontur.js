@@ -46,7 +46,8 @@ function l2KonturPunkte(b) {
     // Ring f auf Höhe y abgehen; Stücke, an denen die Wand gerade weiterläuft (Nachbargeschoss g), auslassen
     // oben: Kante oben am Geschoss (true) oder unten (false)
     // att: Attika-Höhe an Terrassenrändern (Rand oben, kein Geschoss darüber)
-    rand = (f, y, g, oben, att) => {
+    // ab: Unterkante der Schürze unter einem Überhang (Rand unten, kein Geschoss darunter; l2UeberhangSchuerzen)
+    rand = (f, y, g, oben, att, ab) => {
       const n = f.length,
         sg = flaeche(f) > 0 ? 1 : -1;
       for (let i = 0; i < n; i++) {
@@ -77,7 +78,13 @@ function l2KonturPunkte(b) {
             // waagerechte Nachbarfläche: oben Dach (nach oben) bzw. Terrasse davor; unten Unterseite bzw. Sockel
             const w = [nx, 0, nz],
               h = art === 1 ? [0, oben ? 1 : -1, 0] : [0, oben ? -1 : 1, 0];
-            seg(start, P, y + (oben && art === 1 ? att || 0 : 0), w, h);
+            seg(
+              start,
+              P,
+              y + (oben && art === 1 ? att || 0 : 0) - (!oben && art === 1 && g ? ab || 0 : 0),
+              w,
+              h,
+            );
             start = null;
           }
           if (a2 && !start) {
@@ -93,6 +100,8 @@ function l2KonturPunkte(b) {
   L.forEach((x) => {
     if (flach && x.j === letzt) x.z1 += 0.3;
   });
+  // Schürze unter Überhängen: Deckenstärke plus Überstand unter der Deckenunterkante
+  const schuerze = ((l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22) + L2_SCHUERZE;
   L.forEach((x, q) => {
     const unten = L[q - 1] && L[q - 1].j === x.j - 1 ? L[q - 1].f : null,
       oben = L[q + 1] && L[q + 1].j === x.j + 1 ? L[q + 1].f : null;
@@ -116,10 +125,24 @@ function l2KonturPunkte(b) {
           );
       // geneigtes Dach: an der Ecke läuft die Wand (Drempel, Giebel) bis zur Traufe weiter – Kante bis dorthin
       const zt = !flach && x.j === letzt ? l2TraufeBei(b, v) : null;
-      out.push(v[0], x.z0, v[1], v[0], Math.max(x.z1 + (terr ? 0.3 : 0), zt != null ? zt : -1e9), v[1]);
+      // Ecke eines Überhangs (nicht über dem Geschoss darunter): Kante ab Unterkante Schürze
+      const ueber =
+        unten &&
+        !inP(
+          [v[0] + (N[0][0] + N[1][0] - 2 * v[0]) * 0.01, v[1] + (N[0][1] + N[1][1] - 2 * v[1]) * 0.01],
+          unten,
+        );
+      out.push(
+        v[0],
+        x.z0 - (ueber ? schuerze : 0),
+        v[1],
+        v[0],
+        Math.max(x.z1 + (terr ? 0.3 : 0), zt != null ? zt : -1e9),
+        v[1],
+      );
       nor.push(...wn(N[0], v), ...wn(v, N[1]));
     });
-    rand(x.f, x.z0, unten, false);
+    rand(x.f, x.z0, unten, false, 0, schuerze);
     // geneigtes Dach: über dem obersten Geschoss laufen Drempel und Giebel in derselben Ebene weiter – keine Kante
     if (flach || x.j !== letzt) rand(x.f, x.z1, oben, true, oben ? 0.3 : 0);
   });

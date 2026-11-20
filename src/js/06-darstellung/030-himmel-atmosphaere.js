@@ -358,6 +358,22 @@ function atmVariante(m, art) {
       ? new T.MeshNormalMaterial({ flatShading: art === 'nf' })
       : new T.ShadowMaterial({ color: 0xffffff, opacity: 1, transparent: false, blending: T.NoBlending });
   v.side = m.side;
+  // Schattenmaske: den Normalenversatz der Schattenabfrage (normalBias) immer zur Sonne richten. Umgebungsgebäude
+  // mit verdrehter Flächenorientierung (LoD2) hätten sonst eine nach innen zeigende Normale – die Abfrage läge im
+  // Gebäude, und sonnenbeschienene Wände wären bei bestimmtem Sonnenstand ganz beschattet
+  const zurSonne = (sh) => {
+    sh.uniforms.uSonneW = { value: ATM.sonneW }; // derselbe Vektor, wird bei jedem Sonnenstand gesetzt
+    sh.vertexShader =
+      'uniform vec3 uSonneW;\n' +
+      sh.vertexShader.replace(
+        '#include <shadowmap_vertex>',
+        T.ShaderChunk.shadowmap_vertex.replace(
+          '\tvec4 shadowWorldPosition;\n#endif',
+          '\tif (dot(shadowWorldNormal, uSonneW) < 0.0) shadowWorldNormal = -shadowWorldNormal;\n\tvec4 shadowWorldPosition;\n#endif',
+        ),
+      );
+  };
+  if (art === 's') v.onBeforeCompile = zurSonne;
   if (
     m.onBeforeCompile &&
     !m.isShaderMaterial &&
@@ -368,6 +384,7 @@ function atmVariante(m, art) {
       if (!sh.fragmentShader.includes('#include <common>'))
         sh.fragmentShader = '#include <common>\n' + sh.fragmentShader;
       m.onBeforeCompile.call(this, sh, r);
+      if (art === 's') zurSonne(sh);
     };
     v.customProgramCacheKey = () => art + '|' + m.customProgramCacheKey();
   }

@@ -542,6 +542,17 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Terrassenfläche (`terrOf`): genau aus Polygonen (Geschoss − Geschoss darüber − Innenhöfe, `l2TerrassenFlaeche`),
   Hervorhebung `zoTerrGeo` trianguliert dieselben Polygone; Rasterzellen `q` nur noch für den Export-Plan. In der
   Explosion liegt die Terrasse in LOD 200 auf der Decke (Geschoss i+1), Dachflächen auf dem Dach (`exHlOff`: wie RD).
+- Flächen vs. Körper in den Metriken: BGF (`hlApply`, Schlüssel bgf*) und NGF (`l2NetShow` mit `nurFlaeche`,
+  `l2FlachGeo`) sowie BGF/NGF (S) (`l2SShow`, nicht 'bri'/'bris'/'nri'/'nris') als waagerechte Bodenflächen;
+  BRI und NRI als Körper (NRI (S) = Modus 'nris'). Flächen sind wie Körper anklickbar (`mzTreffer`); BGF-Info aus `bLv`.
+  Die Gruppe „Innenhöfe“ in der Gebäudemetrik ist entfallen (Höfe sind in BGF/NGF/BRI/Terrasse abgezogen).
+- Schürze unter Überhängen (LOD 200, `l2UeberhangSchuerzen`, 130-balkone.js): an den Außenkanten der Fläche, die
+  über das Geschoss darunter auskragt, Wand in Außenwandstärke bis `L2_SCHUERZE` (0,10 m) unter die Deckenunterkante,
+  2 mm vor der Fassadenebene (sonst deckungsgleich mit der Deckenstirn). Kontur (`l2KonturPunkte`): untere Kante und
+  Ecken des Überhangs an der Unterkante der Schürze.
+- Schattenmaske Realistisch+ (`atmVariante` 's'): der Normalenversatz der Schattenabfrage zeigt immer zur Sonne
+  (`zurSonne`, Uniform `uSonneW` = `ATM.sonneW`). LoD2-Umgebungsgebäude mit verdrehter Flächenorientierung waren sonst
+  bei bestimmtem Sonnenstand auf ganzen sonnenbeschienenen Wänden beschattet (in Realistisch nicht, dort nur die Maske).
 - Analyse in den Metriken (`ZI.sp`, `S.l2.iso`): keine Gebäudematerialien (`ftFarbig`), nicht gewählte Gebäude samt
   Fassadentyp-Schichten und Konturen ausgeblendet (`l2IsoSicht`). Esc beendet Metrik-Filter, Bauteil-Isolieren,
   Hervorhebung und Explosionsansicht (Esc-Handler in 11-bearbeiten/010-werkzeug.js).

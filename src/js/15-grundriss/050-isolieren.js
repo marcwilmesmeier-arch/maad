@@ -273,11 +273,6 @@ function zoRender() {
               ],
             );
             h += zoBldHtml(b, k, R, A, B, P);
-            try {
-              h += znRows(b, R, A, zoD);
-            } catch (e) {
-              logErr(e, 'zoRender>anonym');
-            }
           });
           zoPies.bgfx = {
             t: 'BGF oberirdisch / unterirdisch',

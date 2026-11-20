@@ -88,13 +88,15 @@ function l2NetShow(iso) {
     nri = iso.m === 'nri' || iso.m === 'nrir';
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
-    l2NetKoerper(b, iso.sel).forEach((k) => {
-      const m = new T.Mesh(k.g, mat);
-      m.position.y = k.y0;
+    // NGF als Fläche (Boden des Raumkörpers), NRI als Körper
+    l2NetKoerper(b, iso.sel, !nri).forEach((k) => {
+      const m = new T.Mesh(nri ? k.g : l2FlachGeo(k.p, k.hs), mat),
+        y0 = nri ? k.y0 : k.yb + 0.03;
+      m.position.y = y0;
       m.userData = {
         bid: b.id,
         li: k.li,
-        y0: k.y0,
+        y0,
         info: nri ? k.nm + ' · NRI (R) · ' + f1(k.v, 1) + ' m³' : k.nm + ' · NGF (R) · ' + f1(k.a, 1) + ' m²',
       };
       m.castShadow = false;
@@ -171,7 +173,16 @@ function l2NetKoerper(b, sel, nurFlaeche) {
         const aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0),
           ug = !dg && i < ugN(b);
         if (nurFlaeche) {
-          r.push({ li: i, f, a: aN, ug });
+          r.push({
+            li: i,
+            f,
+            a: aN,
+            ug,
+            p,
+            hs: hs || [],
+            yb: y0,
+            nm: dg ? 'Dachgeschoss' : (bLv(b)[i] || {}).n || lname(b, i),
+          });
           return;
         }
         try {
@@ -219,6 +230,14 @@ function l2NetFlaechen(b) {
   });
   b._ngf = { s, r };
   return r;
+}
+/** Waagerechte Fläche (Polygon p mit Löchern hs, Grundriss [x, z]) auf Höhe 0 – für Flächen-Darstellungen der Metriken. */
+function l2FlachGeo(p, hs) {
+  const sh = new T.Shape(p.map((q) => new T.Vector2(q[0], -q[1])));
+  (hs || []).forEach((h) => sh.holes.push(new T.Path(h.map((q) => new T.Vector2(q[0], -q[1])))));
+  const g = new T.ShapeGeometry(sh);
+  g.rotateX(-Math.PI / 2);
+  return g;
 }
 /** Rauminhalt eines geschlossenen Körpers (m³, Summe der Tetraeder über die Dreiecke). */
 function l2Volumen(g) {
@@ -416,8 +435,12 @@ function l2BriShow(iso) {
   }
 }
 /** Körper der Flächen im Sonderfall S (DIN 277) zeigen: iso.sel 'all', 'ba' (Balkone) oder 'lo' (Loggien). */
-/** lvSel: nur Flächen dieser Geschosse (wie l2LvMatch; für NGF/NRI nach Geschoss), sonst alle. */
+/**
+ * lvSel: nur Flächen dieser Geschosse (wie l2LvMatch; für NGF/NRI nach Geschoss), sonst alle. Als Körper nur bei
+ * Rauminhalten (BRI, NRI); bei Flächen (BGF/NGF (S)) nur der Boden.
+ */
 function l2SShow(iso, farbe, lvSel) {
+  const flach = !['bri', 'bris', 'nri', 'nris'].includes(iso.m);
   const mat = new T.MeshLambertMaterial({ color: new T.Color(farbe || ISOC.s), side: T.DoubleSide });
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
@@ -425,21 +448,17 @@ function l2SShow(iso, farbe, lvSel) {
       if (iso.sel !== 'all' && iso.sel !== s.art) return;
       if (lvSel && !l2LvMatch(b, s.li === 'roof' ? b.levels.length : s.li, lvSel)) return;
       try {
-        const P = grPrism({ o: s.pts, h: [] }, 0, s.h),
-          m = new T.Mesh(P.g, mat);
-        m.position.y = s.y;
+        const m = new T.Mesh(flach ? l2FlachGeo(s.pts) : grPrism({ o: s.pts, h: [] }, 0, s.h).g, mat);
+        m.position.y = s.y + (flach ? 0.03 : 0);
         m.userData = {
           bid: b.id,
           li: s.li,
-          y0: s.y,
+          y0: m.position.y,
           info:
             ({ ba: 'Balkon', lo: 'Loggia', bl: 'Balkon + Loggia' }[s.art] || 'Sonderfall S') +
             (s.li === 'roof' ? '' : ' · ' + lname(b, s.li)) +
             ' · S · ' +
-            f1(s.a, 1) +
-            ' m² · ' +
-            f1(s.a * s.h, 1) +
-            ' m³',
+            (flach ? f1(s.a, 1) + ' m²' : f1(s.a * s.h, 1) + ' m³'),
         };
         m.castShadow = false;
         m.raycast = () => {};
@@ -514,7 +533,7 @@ function l2IsoApply(force) {
   // NGF: Regelfall R und Sonderfall S zusammen; 'ngfr' nur R; 's' nur S (DIN 277)
   l2NetShow(iso && ['ngf', 'ngfr', 'nri', 'nrir'].includes(iso.m) ? iso : null);
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
-  if (iso && iso.m === 's') l2SShow(iso);
+  if (iso && (iso.m === 's' || iso.m === 'nris')) l2SShow(iso);
   // NRI: dieselben Körper wie die NGF, Angaben als Rauminhalt
   if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u')
     l2SShow({ ...iso, sel: 'all' }, null, iso.sel);
