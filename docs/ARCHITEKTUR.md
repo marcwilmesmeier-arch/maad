@@ -628,3 +628,5 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den Ufern, abgenommen `STR.ufer` (3 m) hinter der Uferkante (Böschung) –
   dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
   Stirnseite.
+  Mit DOM (`GEO.dmFull`, `strDomH`): Brückenhöhe = Median einiger DOM-Punkte über dem Wasser, höchstens 2,5 m über
+  dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern.

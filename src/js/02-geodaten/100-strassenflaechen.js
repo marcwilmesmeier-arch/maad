@@ -336,6 +336,17 @@ function strFarbe() {
   STR.mat.color.set(S.lc.roads || '#a8a8a8');
   STR.matK.color.set(shade(S.lc.roads || '#a8a8a8', 0.82));
 }
+/** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) an (x, z) in maad-Höhen, sonst null. */
+function strDomH(x, z) {
+  const D = GEO.dmFull;
+  if (!D || D.fail || !D.data || !D.res) return null;
+  const [E, N] = ll2utm(GEO.lon + x / GEO.kx, GEO.lat - z / 110574, D.zone || 32),
+    i = Math.floor((E - D.minx) / D.res),
+    j = Math.floor((D.maxy - N) / (D.resY || D.res));
+  if (i < 0 || j < 0 || i >= D.w || j >= D.h) return null;
+  const h = D.data[j * D.w + i];
+  return h > -400 && h < 4500 ? h - (GEO.e0 || 0) : null;
+}
 /**
  * Brücken: jede Straßenachse alle 1 m abtasten; Abschnitte über Wasser (Wasserebene des Kartenbilds) bekommen die
  * Höhe linear zwischen den Ufern statt der Geländehöhe (das Geländemodell enthält keine Brücken, die Straße fiele
@@ -389,9 +400,18 @@ function strBruecken(roads, G) {
           hb = b ? b.h : a.h,
           q0 = a ? ia + 1 : k,
           q1 = b ? ib - 1 : e;
+        // Brückenhöhe aus dem Oberflächenmodell (DOM, enthält die Brücke): Median einiger Punkte über dem Wasser,
+        // höchstens 2,5 m über dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern
+        const dh = [];
+        for (let q = k; q <= e; q += 2) {
+          const h = strDomH(P[q].x, P[q].z);
+          if (h != null) dh.push(h);
+        }
+        dh.sort((x1, x2) => x1 - x2);
+        const hd = dh.length ? Math.min(Math.max(ha, hb) + 2.5, dh[dh.length >> 1]) : -1e9;
         for (let q = q0; q <= q1; q++) {
           const t = (q - q0 + 1) / (q1 - q0 + 2);
-          P[q].h = ha + (hb - ha) * t;
+          P[q].h = Math.max(ha + (hb - ha) * t, hd);
           const z = zelle(P[q].x, P[q].z);
           if (!proben.has(z)) proben.set(z, []);
           proben.get(z).push(P[q]);
