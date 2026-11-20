@@ -151,62 +151,30 @@ function zoBldHtml(b, k, R, A, B, P) {
     'bg' + id,
     ab('BGF', 'Bruttogeschossfläche'),
     A(g),
-    R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(k.bgfoi), 's', B('bgfoi', 'BGFoi')) +
+    // LOD 200: als blaue Bodenflächen wie die BRI (L2ISO 'bgf' / 'bgfr' / 'bgfs'), sonst Hervorhebung wie bisher
+    (on
+      ? l2R(ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(k.bgfoi), 's', ['bgf', id, 'o'])
+      : R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(k.bgfoi), 's', B('bgfoi', 'BGFoi'))) +
       (k.bgfui
-        ? R('', ab('BGFui', 'Bruttogeschossfläche unterirdisch'), A(k.bgfui), 's', B('bgfui', 'BGFui'))
+        ? on
+          ? l2R(ab('BGFui', 'Bruttogeschossfläche unterirdisch'), A(k.bgfui), 's', ['bgf', id, 'u'])
+          : R('', ab('BGFui', 'Bruttogeschossfläche unterirdisch'), A(k.bgfui), 's', B('bgfui', 'BGFui'))
         : '') +
       (sz && sz.a > 0
-        ? R('', ab('BGF (R)', 'Regelfall: allseitig umschlossene Räume (ohne Loggien)'), A(g - sz.lo), 's') +
+        ? l2R(ab('BGF (R)', 'Regelfall: allseitig umschlossene Räume (ohne Loggien)'), A(g - sz.lo), 's', [
+            'bgfr',
+            id,
+            'all',
+          ]) +
           l2R(ab('BGF (S)', 'Sonderfall: Balkone und Loggien, getrennt ausgewiesen'), A(sz.a), 's', [
-            's',
+            'bgfs',
             id,
             'all',
           ])
         : ''),
     USES.filter((u) => bu[u]).map((u) => ({ n: u, c: S.uses[u], v: bu[u] })),
   );
-  if (on)
-    h += zoD(
-      'ng' + id,
-      ab('NGF', 'Nettogeschossfläche: Regelfall R und Sonderfall S (DIN 277)'),
-      A(n.o + n.u + n.so + n.su),
-      l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch, R und S'), A(n.o + n.so), 's', ['ngf', id, 'o']) +
-        (n.u
-          ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u + n.su), 's', ['ngf', id, 'u'])
-          : '') +
-        (sz && sz.a > 0
-          ? l2R(ab('NGF (R)', 'Regelfall: ohne Balkone und Loggien'), A(n.o + n.u), 's', [
-              'ngfr',
-              id,
-              'all',
-            ]) + l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(n.so + n.su), 's', ['s', id, 'all'])
-          : ''),
-      [
-        { n: 'oberirdisch', c: '#4e79a7', v: n.o + n.so },
-        { n: 'unterirdisch', c: '#9aa5b1', v: n.u + n.su },
-      ],
-    );
-  // Netto-Rauminhalt (LOD 200): wie die NGF, als Rauminhalt; R und S zusammen, darunter getrennt
-  if (on) {
-    const nr = l2Nri(b),
-      sV = sz && sz.a > 0 ? sz.bri : 0,
-      m3 = (v) => f1(v, 0) + ' m³';
-    h += zoD(
-      'nr' + id,
-      ab('NRI', 'Netto-Rauminhalt: Regelfall R und Sonderfall S (DIN 277)'),
-      m3(nr.o + nr.u + sV),
-      l2R(ab('NRIoi', 'Netto-Rauminhalt oberirdisch, R und S'), m3(nr.o + sV), 's', ['nri', id, 'o']) +
-        (nr.u ? l2R(ab('NRIui', 'Netto-Rauminhalt unterirdisch'), m3(nr.u), 's', ['nri', id, 'u']) : '') +
-        (sV
-          ? l2R(ab('NRI (R)', 'Regelfall: ohne Balkone und Loggien'), m3(nr.o + nr.u), 's', [
-              'nrir',
-              id,
-              'all',
-            ]) + l2R(ab('NRI (S)', 'Sonderfall: Balkone und Loggien'), m3(sV), 's', ['nris', id, 'all'])
-          : ''),
-      null,
-    );
-  }
+  // BRI direkt unter der BGF
   h += zoD(
     'br' + id,
     ab('BRI', 'Bruttorauminhalt'),
@@ -253,6 +221,48 @@ function zoBldHtml(b, k, R, A, B, P) {
   );
   if (on)
     h += zoD(
+      'ng' + id,
+      ab('NGF', 'Nettogeschossfläche: Regelfall R und Sonderfall S (DIN 277)'),
+      A(n.o + n.u + n.so + n.su),
+      l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch, R und S'), A(n.o + n.so), 's', ['ngf', id, 'o']) +
+        (n.u
+          ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u + n.su), 's', ['ngf', id, 'u'])
+          : '') +
+        (sz && sz.a > 0
+          ? l2R(ab('NGF (R)', 'Regelfall: ohne Balkone und Loggien'), A(n.o + n.u), 's', [
+              'ngfr',
+              id,
+              'all',
+            ]) + l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(n.so + n.su), 's', ['s', id, 'all'])
+          : ''),
+      [
+        { n: 'oberirdisch', c: '#4e79a7', v: n.o + n.so },
+        { n: 'unterirdisch', c: '#9aa5b1', v: n.u + n.su },
+      ],
+    );
+  // Netto-Rauminhalt (LOD 200): wie die NGF, als Rauminhalt; R und S zusammen, darunter getrennt
+  if (on) {
+    const nr = l2Nri(b),
+      sV = sz && sz.a > 0 ? sz.bri : 0,
+      m3 = (v) => f1(v, 0) + ' m³';
+    h += zoD(
+      'nr' + id,
+      ab('NRI', 'Netto-Rauminhalt: Regelfall R und Sonderfall S (DIN 277)'),
+      m3(nr.o + nr.u + sV),
+      l2R(ab('NRIoi', 'Netto-Rauminhalt oberirdisch, R und S'), m3(nr.o + sV), 's', ['nri', id, 'o']) +
+        (nr.u ? l2R(ab('NRIui', 'Netto-Rauminhalt unterirdisch'), m3(nr.u), 's', ['nri', id, 'u']) : '') +
+        (sV
+          ? l2R(ab('NRI (R)', 'Regelfall: ohne Balkone und Loggien'), m3(nr.o + nr.u), 's', [
+              'nrir',
+              id,
+              'all',
+            ]) + l2R(ab('NRI (S)', 'Sonderfall: Balkone und Loggien'), m3(sV), 's', ['nris', id, 'all'])
+          : ''),
+      null,
+    );
+  }
+  if (on)
+    h += zoD(
       'kf' + id,
       ab('KF', 'Konstruktionsfläche'),
       A(n.wo + n.wu),
@@ -263,7 +273,8 @@ function zoBldHtml(b, k, R, A, B, P) {
         .map((l) => l2R(l.n, A(l.w), 's', ['kf', id, 'n:' + l.n]))
         .join(''),
     );
-  const fdr = fdRows(b),
+  // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: eingezogene Flächen der Loggien (nur LOD 200)
+  const fdr = fdRows(b) + l2LoggiaZeilen(b, k.fas),
     fas = fdr
       ? zoD(
           'bfa' + id,

@@ -637,3 +637,15 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Stirnseite.
   Mit DOM (`GEO.dmFull`, `strDomH`): Brückenhöhe = Median einiger DOM-Punkte über dem Wasser, höchstens 2,5 m über
   dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern.
+
+## Metriken LOD 200: BGF, Umrisse, Loggia-Wände
+
+- Reihenfolge der Gruppen: BGF, BRI, NGF, NRI, KF, Flächen.
+- BGF in LOD 200 wie BRI über `L2ISO`: 'bgf' (R + S), 'bgfr', 'bgfs' – `l2BgfShow` zeigt je Geschoss den Grundriss
+  ohne Innenhöfe und Loggien als blaue Bodenfläche (`ISOC.bri`), Dachgeschoss auf dem obersten Geschoss; S als
+  Bodenflächen in `ISOC.bris`.
+- `l2Umrisse`: jede Fläche und jeder Körper in `G.l2n` bekommt Kantenlinien (30°) als Kind (folgt der Explosion,
+  wird mit dem Körper freigegeben).
+- Fassade (`22-lod200-waende/160-loggia-fassade.js`): unter „Fassade“ die eingezogenen Flächen der Loggien –
+  Öffnungen in der Fassadenebene (abgezogen), Rück- und Seitenwände (anklickbar, Modus 'lgw', einzeln mit Info) und
+  die abgewickelte Fassadenfläche.

@@ -82,6 +82,11 @@ function l2NetShow(iso) {
     const o = G.l2n.children.pop();
     o.geometry && o.geometry.dispose();
     o.material && o.material.dispose && o.material.dispose();
+    // Umrisslinien (l2Umrisse)
+    o.children.forEach((c) => {
+      c.geometry && c.geometry.dispose();
+      c.material && c.material.dispose && c.material.dispose();
+    });
   }
   if (!iso) return;
   const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC.ngf), side: T.DoubleSide }),
@@ -434,6 +439,66 @@ function l2BriShow(iso) {
     logErr(e, 'l2BriShow');
   }
 }
+/**
+ * BGF in LOD 200 als Bodenflächen (blau wie BRI): je Geschoss der Grundriss ohne Innenhöfe und Loggien (Regelfall R),
+ * Dachgeschoss auf dem obersten Geschoss, wenn es zur BGF zählt. iso.sel wie l2LvMatch.
+ */
+function l2BgfShow(iso) {
+  const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC.bri), side: T.DoubleSide });
+  S.bld.forEach((b) => {
+    if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
+    const LG = oeLoggiaEinschnitte(b),
+      add = (o, h, y0, li, nm) => {
+        const a = l2Ar(o) - (h || []).reduce((s2, x) => s2 + l2Ar(x), 0),
+          m = new T.Mesh(l2FlachGeo(o, h), mat);
+        m.position.y = y0 + 0.03;
+        m.userData = { bid: b.id, li, y0: y0 + 0.03, info: nm + ' · BGF (R) · ' + f1(a, 1) + ' m²' };
+        m.castShadow = false;
+        m.raycast = () => {};
+        G.l2n.add(m);
+      };
+    let y = b._y;
+    b.levels.forEach((l, j) => {
+      const y0 = y;
+      y += l.h;
+      if (!l2LvMatch(b, j, iso.sel)) return;
+      const aus = znVoidsAt(b, j)
+        .map((v) => v.poly)
+        .concat(LG.filter((z) => z.y > y0 - 0.1 && z.y < y0 + l.h - 0.1).map((z) => z.f));
+      let PP = [bpP(lf(b, l))];
+      if (aus.length)
+        try {
+          PP = boolOp(PP, aus.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
+        } catch (e) {
+          logErr(e, 'l2BgfShow');
+        }
+      PP.forEach((P) => add(P.o, P.h, y0, j, lname(b, j)));
+    });
+    // Dachgeschoss (zählt zur BGF, wenn bLv es führt)
+    const n = b.levels.length;
+    if (bLv(b).length > n && l2LvMatch(b, n, iso.sel)) add(lf(b, b.levels[n - 1]), [], y, n, 'Dachgeschoss');
+  });
+  try {
+    exApply();
+  } catch (e) {
+    logErr(e, 'l2BgfShow');
+  }
+}
+/** Umrisslinien (Kanten über 30°) an den Körpern und Flächen der LOD-200-Auswertung, als Kind (folgt der Explosion). */
+function l2Umrisse() {
+  G.l2n.children.forEach((m) => {
+    if (!m.isMesh || m.userData.umriss) return;
+    m.userData.umriss = 1;
+    const c =
+        m.material && m.material.color
+          ? m.material.color.clone().multiplyScalar(0.55)
+          : new T.Color(0x333333),
+      ln = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), new T.LineBasicMaterial({ color: c }));
+    ln.raycast = () => {};
+    ln.userData.nurFarbe = 1;
+    m.add(ln);
+  });
+}
 /** Körper der Flächen im Sonderfall S (DIN 277) zeigen: iso.sel 'all', 'ba' (Balkone) oder 'lo' (Loggien). */
 /**
  * lvSel: nur Flächen dieser Geschosse (wie l2LvMatch; für NGF/NRI nach Geschoss), sonst alle. Als Körper nur bei
@@ -534,12 +599,20 @@ function l2IsoApply(force) {
   l2NetShow(iso && ['ngf', 'ngfr', 'nri', 'nrir'].includes(iso.m) ? iso : null);
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && (iso.m === 's' || iso.m === 'nris')) l2SShow(iso);
+  // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Wände der Loggien
+  if (iso && iso.m === 'lgw') l2LgwShow(iso);
   // NRI: dieselben Körper wie die NGF, Angaben als Rauminhalt
   if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u')
     l2SShow({ ...iso, sel: 'all' }, null, iso.sel);
   // BRI: 'bri' R und S, 'brir' nur R, 'bris' nur S
   if (iso && (iso.m === 'bri' || iso.m === 'brir')) l2BriShow(iso);
   if (iso && (iso.m === 'bri' || iso.m === 'bris')) l2SShow({ ...iso, sel: 'all' }, ISOC.bris);
+  // BGF: wie BRI, aber als Bodenflächen ('bgf' R und S, 'bgfr' nur R, 'bgfs' nur S)
+  if (iso && (iso.m === 'bgf' || iso.m === 'bgfr')) l2BgfShow(iso);
+  if (iso && (iso.m === 'bgf' || iso.m === 'bgfs') && iso.sel !== 'u')
+    l2SShow({ ...iso, sel: 'all' }, ISOC.bris, iso.m === 'bgf' ? iso.sel : null);
+  // Umrisslinien an allen Körpern und Flächen der Auswertung (sonst schlecht zu unterscheiden)
+  l2Umrisse();
   for (const it of L2I.values()) {
     const e = it.el,
       b = S.bld.find((z) => z.id === e.bid);
