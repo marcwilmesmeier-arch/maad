@@ -106,11 +106,13 @@ function l2SFlaechen(b) {
 }
 /** Summen im Sonderfall S: Fläche (Balkone und Loggien zusammen), davon hinter der Fassade (lo), BRI (S). */
 function l2SZahlen(b) {
-  const r = { a: 0, lo: 0, bri: 0 };
+  const r = { a: 0, lo: 0, bri: 0, loV: 0 };
   l2SFlaechen(b).forEach((s) => {
     r.a += s.a;
     r.lo += s.lo; // liegt im Grundriss und gehört nicht zum Regelfall R
     r.bri += s.a * s.h;
+    // Rauminhalt der Loggia im Bruttorauminhalt des Geschosses (volle Geschosshöhe): vom BRI (R) abziehen
+    r.loV += s.lo * (s.li === 'roof' ? 0 : b.levels[s.li].h);
   });
   return r;
 }

@@ -172,8 +172,33 @@ function zoBldHtml(b, k, R, A, B, P) {
   h += zoD(
     'br' + id,
     ab('BRI', 'Bruttorauminhalt'),
-    f1(k.brioi + k.briui, 0) + ' m³',
-    R('', ab('BRIoi', 'Bruttorauminhalt oberirdisch'), f1(k.brioi, 0) + ' m³', 's', B('brioi', 'BRIoi')) +
+    f1(k.brioi + k.briui + (sz && sz.a > 0 ? sz.bri - sz.loV : 0), 0) + ' m³',
+    // LOD 200 mit Balkonen/Loggien: BRIoi = Regelfall R (ohne Loggien) und Sonderfall S zusammen, darunter getrennt
+    (sz && sz.a > 0
+      ? l2R(
+          ab('BRIoi', 'Bruttorauminhalt oberirdisch, Regelfall R und Sonderfall S'),
+          f1(k.brioi - sz.loV + sz.bri, 0) + ' m³',
+          's',
+          ['bri', id, 'o'],
+        ) +
+        l2R(ab('BRI (R)', 'Regelfall: ohne Loggien'), f1(k.brioi - sz.loV, 0) + ' m³', 's', [
+          'brir',
+          id,
+          'o',
+        ]) +
+        l2R(
+          ab('BRI (S)', 'Sonderfall: Balkone (bis Oberkante Geländer) und Loggien (bis unter die Decke)'),
+          f1(sz.bri, 0) + ' m³',
+          's',
+          ['bris', id, 'o'],
+        )
+      : R(
+          '',
+          ab('BRIoi', 'Bruttorauminhalt oberirdisch'),
+          f1(k.brioi, 0) + ' m³',
+          's',
+          B('brioi', 'BRIoi'),
+        )) +
       (k.briui
         ? R(
             '',
@@ -188,24 +213,6 @@ function zoBldHtml(b, k, R, A, B, P) {
       { n: 'unterirdisch', c: '#bfa58a', v: k.briui },
     ],
   );
-  // Sonderfall S nach DIN 277: Balkone und Loggien getrennt ausgewiesen, im Modell als eigener Körper
-  if (sz && sz.a > 0)
-    h += zoD(
-      's' + id,
-      ab(
-        'Sonderfall S',
-        'DIN 277: nicht allseitig umschlossene Flächen (Balkone, Loggien), getrennt vom Regelfall R',
-      ),
-      A(sz.a),
-      l2R('Balkone und Loggien', A(sz.a), 's', ['s', id, 'all']) +
-        l2R(
-          ab('BRI (S)', 'Rauminhalt der Balkone (bis Oberkante Geländer) und Loggien (bis Decke)'),
-          f1(sz.bri, 0) + ' m³',
-          's',
-          ['s', id, 'all'],
-        ),
-      null,
-    );
   if (on)
     h += zoD(
       'kf' + id,

@@ -503,8 +503,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   das Layer-Panel zeigt dort dieselbe Auswahl wie in den anderen Darstellungen (ohne Wasser-Shader).
 - DIN 277 Regelfall R / Sonderfall S (LOD 200): `l2SFlaechen`/`l2SZahlen` (130-balkone.js) – je Feld aus der
   Fassade ein Körper (Balkon, Loggia oder Balkon + Loggia zusammen; Höhe Loggia = Geschoss minus Platte darüber, Balkon = Geländer).
-  Metriken: BGF (R) = BGF − Loggia-Anteil, BGF (S), NGF (R)/(S), Gruppe „Sonderfall S“ mit BRI (S); Hervorhebung
-  `L2ISO('s', …)` → `l2SShow` (dunkleres Grün als die NGF). Terrassen im EG (z. B. vor Loggien) folgen, wenn sie
+  Metriken: BGF (R) = BGF − Loggia-Anteil, BGF (S), NGF (R)/(S); BRIoi = R + S, darunter BRI (R) (ohne Loggia-Volumen
+  `loV`, nur LOD 200) und BRI (S). Hervorhebung `L2ISO`: 's' (S grün), 'bri'/'brir'/'bris' (`l2BriShow`, R blau,
+  S dunkleres Blau). Terrassen im EG (z. B. vor Loggien) folgen, wenn sie
   eigens modelliert werden. NGF/NGFoi = R + S und zeigt beide (R grün, S dunkelgrün), NGF (R) nur R (`'ngfr'`),
   NGF (S) nur S. Dachgeschoss in der NGF-Darstellung: ein Raumkörper unter der Dachfläche (`l2DgKoerper`, Grundriss
   des obersten Geschosses um die Außenwand versetzt, an den Dachdreiecken `b._rp.pr` geteilt). Schmale Reste fallen weg.

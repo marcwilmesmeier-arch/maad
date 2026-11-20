@@ -1,6 +1,7 @@
 // ---- Isolieren aus der Gebäudemetrik in LOD 200: Volumenkörper wie LOD 100; NGF = Körper ohne Wände; KF = nur Wände
 // s: Sonderfall S (Balkone, Loggien) – dunkleres Grün als die Nettofläche im Regelfall R
-const ISOC = { kf: '#e08a2c', ngf: '#4f9d77', tr: '#3f6f9f', s: '#2f6e50' };
+// bri/bris: Bruttorauminhalt Regelfall R und Sonderfall S (dunkler)
+const ISOC = { kf: '#e08a2c', ngf: '#4f9d77', tr: '#3f6f9f', s: '#2f6e50', bri: '#7fa6cc', bris: '#46709a' };
 let L2IK = '';
 G.l2n = new T.Group();
 sc.add(G.l2n);
@@ -268,9 +269,62 @@ function l2DgKoerper(b, poly, y0, d) {
   g.computeVertexNormals();
   return g;
 }
+/**
+ * Bruttorauminhalt im Regelfall R (LOD 200, oberirdisch): je Geschoss der Grundriss ohne Innenhöfe und Loggien über die
+ * volle Geschosshöhe, beim geneigten Dach der Dachraum bis zur Dachfläche.
+ */
+function l2BriShow(iso) {
+  const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC.bri), side: T.DoubleSide });
+  S.bld.forEach((b) => {
+    if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
+    const u = ugN(b),
+      LG = oeLoggiaEinschnitte(b),
+      add = (g, y0, li) => {
+        const m = new T.Mesh(g, mat);
+        m.position.y = y0;
+        m.userData = { bid: b.id, li, y0 };
+        m.castShadow = false;
+        m.raycast = () => {};
+        G.l2n.add(m);
+      };
+    let y = b._y;
+    b.levels.forEach((l, j) => {
+      const y0 = y;
+      y += l.h;
+      if (j < u) return;
+      const aus = znVoidsAt(b, j)
+        .map((v) => v.poly)
+        .concat(LG.filter((z) => z.y > y0 - 0.1 && z.y < y0 + l.h - 0.1).map((z) => z.f));
+      let PP = [bpP(lf(b, l))];
+      if (aus.length)
+        try {
+          PP = boolOp(PP, aus.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
+        } catch (e) {
+          logErr(e, 'l2BriShow');
+        }
+      PP.forEach((P) => {
+        try {
+          add(grPrism({ o: P.o, h: P.h || [] }, 0, l.h).g, y0, j);
+        } catch (e) {
+          logErr(e, 'l2BriShow');
+        }
+      });
+    });
+    // Dachraum (geneigtes Dach) bis zur Dachfläche
+    if (b.roof && b.roof.type && b.roof.type !== 'flat') {
+      const g = l2DgKoerper(b, lf(b, b.levels[b.levels.length - 1]), y, 0);
+      if (g) add(g, 0, 'roof');
+    }
+  });
+  try {
+    exApply();
+  } catch (e) {
+    logErr(e, 'l2BriShow');
+  }
+}
 /** Körper der Flächen im Sonderfall S (DIN 277) zeigen: iso.sel 'all', 'ba' (Balkone) oder 'lo' (Loggien). */
-function l2SShow(iso) {
-  const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC.s), side: T.DoubleSide });
+function l2SShow(iso, farbe) {
+  const mat = new T.MeshLambertMaterial({ color: new T.Color(farbe || ISOC.s), side: T.DoubleSide });
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
     l2SFlaechen(b).forEach((s) => {
@@ -355,6 +409,9 @@ function l2IsoApply(force) {
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && iso.m === 's') l2SShow(iso);
   if (iso && iso.m === 'ngf' && iso.sel !== 'u') l2SShow({ ...iso, sel: 'all' });
+  // BRI: 'bri' R und S, 'brir' nur R, 'bris' nur S
+  if (iso && (iso.m === 'bri' || iso.m === 'brir')) l2BriShow(iso);
+  if (iso && (iso.m === 'bri' || iso.m === 'bris')) l2SShow({ ...iso, sel: 'all' }, ISOC.bris);
   for (const it of L2I.values()) {
     const e = it.el,
       b = S.bld.find((z) => z.id === e.bid);
