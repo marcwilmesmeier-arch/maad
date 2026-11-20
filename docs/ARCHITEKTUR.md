@@ -508,6 +508,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Analyse in den Metriken (`ZI.sp`, `S.l2.iso`): keine Gebäudematerialien (`ftFarbig`), nicht gewählte Gebäude samt
   Fassadentyp-Schichten und Konturen ausgeblendet (`l2IsoSicht`). Esc beendet Metrik-Filter, Bauteil-Isolieren,
   Hervorhebung und Explosionsansicht (Esc-Handler in 11-bearbeiten/010-werkzeug.js).
+- Administration → Darstellung übernehmen (`admModeCap`): Layer, Licht, Konturen, Effekte (`S.fx[drKey]`), Helligkeit
+  (`rb`, jede Darstellung), in Realistisch/Realistisch+ Himmelfarbe, Kantenglättung, Datum/Uhrzeit, in Realistisch+
+  Himmel & Atmosphäre (`atm`). `gfxDefGet` übernimmt alles in neue Projekte, `admModeApply` auf der Startseite.
 - Weißmodell (`S.dar === 'wm'`): keine Materialien an Gebäuden – `ftFarbig()` (110-fassadentypen-3d.js) sperrt
   Wandfarbe, Giebel, Attika, Loggia, Dach und die Schraffurschicht; der Wechsel baut über `ftWandSig` neu.
 - Dachmaterial (`b.roof.mt`, Auswahl „Material“ unter Dach in „Planen“, `roofSet('mt')`): Fassadentyp-Schlüssel;

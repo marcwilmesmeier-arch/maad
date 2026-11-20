@@ -83,8 +83,11 @@ function gfxDefGet() {
       const d = c.modes[m];
       if (d.lyM) o.lyM[m] = d.lyM;
       if (d.kon) o.kon[m] = d.kon;
-      if (d.fx) o.fx[m] = d.fx;
+      if (d.fx) o.fx[drKey(m)] = d.fx; // Realistisch+ teilt die Effekte mit Realistisch
+      if (d.atm) o.atm = d.atm; // Himmel & Atmosphäre (Realistisch+)
       if (d.lt) o.light.lt[m] = d.lt;
+      if (d.dt) o.light.dt = d.dt;
+      if (d.hr != null) o.light.hr = d.hr;
       if (d.sky) o.sky = d.sky;
       if (d.aa != null) o.aa = d.aa;
       if (d.rb != null) o.rb = d.rb;
@@ -194,8 +197,11 @@ function admModeCap(m) {
   if (drReal(m)) {
     d.sky = JSON.parse(JSON.stringify(S.sky));
     d.aa = S.aa;
-    d.rb = S.rb;
+    // Sonnenstand (Datum und Uhrzeit) gehört zur realistischen Darstellung
+    d.dt = $('dt').value;
+    d.hr = $('hr').value;
   }
+  d.rb = S.rb; // Helligkeit gilt in jeder Darstellung
   if (m === 'realp') d.atm = JSON.parse(JSON.stringify(S.atm));
   return d;
 }
@@ -411,12 +417,16 @@ function admModeApply(m) {
     sky: d.sky || b.sky,
     aa: d.aa != null ? d.aa : b.aa,
     rb: d.rb != null ? d.rb : b.rb,
+    // Himmel & Atmosphäre: gespeicherte Werte der Darstellung, sonst die aktuellen (nicht auf Standard zurücksetzen)
+    atm: JSON.parse(JSON.stringify(d.atm || S.atm)),
   };
   x.light.lt = Object.assign({}, (b.light && b.light.lt) || {});
   if (d.lyM) x.lyM[m] = d.lyM;
   if (d.kon) x.kon[m] = d.kon;
   if (d.fx) x.fx[drKey(m)] = d.fx;
   if (d.lt) x.light.lt[m] = d.lt;
+  if (d.dt) x.light.dt = d.dt;
+  if (d.hr != null) x.light.hr = d.hr;
   admApply(x);
   if (d.atm) atmLaden(d.atm);
   drSet(m);
