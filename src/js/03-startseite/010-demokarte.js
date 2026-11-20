@@ -296,7 +296,33 @@ async function projSaveServer(p, rec) {
     } else throw e;
   }
 }
-async function projSave() {
+/**
+ * Vorschaubild eines Projekts: immer in der Darstellung „Schattiert“, mit dem gewählten Grundstück im Blick
+ * (sonst der Mitte der Karte).
+ */
+async function projVorschau() {
+  const poly =
+      (S.par && S.par.poly) || ((typeof P !== 'undefined' ? P : []).find((q) => q.site && q.poly) || {}).poly,
+    c = poly && poly.length > 2 ? cen(poly) : [0, 0],
+    r = poly && poly.length > 2 ? Math.max(...poly.map((q) => Math.hypot(q[0] - c[0], q[1] - c[1]))) : 60,
+    // Darstellung direkt umschalten: „Schattiert“ bringt seine eigenen Farben und Ebenen mit (S.lyM)
+    back = S.dar === 'sch' ? null : S.dar;
+  if (back) drSet('sch');
+  try {
+    // die Darstellung übernimmt Farben und Materialien erst nach einigen Bildern
+    if (back) await new Promise((ok) => setTimeout(ok, 700));
+    return layShot(
+      { m3: true, tx: c[0], tz: c[1], d: Math.max(120, r * 3.2), az: V.az, pol: 1.0 },
+      480,
+      300,
+      0.7,
+    );
+  } finally {
+    if (back) drSet(back);
+  }
+}
+/** bild: Vorschaubild neu (beim Öffnen der Projektübersicht, beim Verlassen); sonst nur, wenn noch keines da ist. */
+async function projSave(bild) {
   const p = S.project;
   if (!p || !p.id || !GEO.snap || !S.geo) return;
   try {
@@ -304,17 +330,14 @@ async function projSave() {
     const server = ablageServer();
     if (!server && !(await idbGet('snap:' + p.id))) await idbSet('snap:' + p.id, await snapPack());
     const old = server ? null : await idbGet('proj:' + p.id);
-    let thumb = old && old.thumb;
-    try {
-      thumb = layShot(
-        { m3: true, tx: V.tx, tz: V.tz, d: Math.max(V.d, 220), az: V.az, pol: Math.min(V.pol, 1.1) },
-        480,
-        300,
-        0.7,
-      );
-    } catch (e) {
-      logErr(e, 'projSave');
-    }
+    let thumb = (old && old.thumb) || (server && p._thumb) || null;
+    if (bild || !thumb)
+      try {
+        thumb = await projVorschau();
+        p._thumb = thumb;
+      } catch (e) {
+        logErr(e, 'projSave');
+      }
     const rec = {
       id: p.id,
       name: p.name,
@@ -524,7 +547,7 @@ setInterval(() => {
 }, 4000);
 const projFlush = () => {
   const p = S.project;
-  if (p && p.id && !HOME.open && S.geo) projSave();
+  if (p && p.id && !HOME.open && S.geo) projSave(true);
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) projFlush();

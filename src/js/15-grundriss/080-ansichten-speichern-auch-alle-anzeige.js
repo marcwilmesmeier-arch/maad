@@ -468,7 +468,8 @@ function grUnB(b) {
     const mk = (geo, c, lines, dg) => {
       const m = new T.Mesh(
         geo,
-        new T.MeshLambertMaterial({ color: c, side: dg ? T.DoubleSide : T.FrontSide }),
+        // beidseitig: Flächen mit umgekehrter Orientierung fielen sonst weg (Körper wirkten durchsichtig)
+        new T.MeshLambertMaterial({ color: c, side: T.DoubleSide }),
       );
       m.raycast = () => {};
       m.castShadow = true;

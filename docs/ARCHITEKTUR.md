@@ -650,3 +650,15 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Fassade (`22-lod200-waende/160-loggia-fassade.js`): unter „Fassade“ die eingezogenen Flächen der Loggien –
   Öffnungen in der Fassadenebene (abgezogen), Rück- und Seitenwände (anklickbar, Modus 'lgw', einzeln mit Info) und
   die abgewickelte Fassadenfläche.
+
+## Metriken und Startseite (Ergänzungen)
+
+- Grundstück (GRZ, GFZ) einmal unter allen Gebäuden (`zoGrundHtml`, 070-nettogeschossflaeche.js); alle Gebäude stehen
+  auf einem Grundstück, `kw()` rechnet sie zusammen.
+- Reiter Einheiten: je Gebäude ein Block (Flächenart, DIN 277, Nutzung, Geschoss, Einheiten; Kennungen `u1|<id>` …),
+  bei mehreren Gebäuden darunter „Gesamt“ (`u1` …). Einfärbung und Legende nutzen die ersten zwei Zeichen der Kennung.
+- Einheitenkörper beidseitig gezeichnet (`grUnB`), sonst fielen falsch orientierte Flächen weg.
+- BGF in LOD 100: Geschosskörper während der Hervorhebung ausgeblendet (`S._hlKoerper`), nur Kontur und Flächen.
+- Vorschaubild der Projekte (`projVorschau`, 03-startseite/010-demokarte.js): immer „Schattiert“ (kurz umgeschaltet),
+  Blick auf das gewählte Grundstück bzw. die Kartenmitte; neu beim Öffnen der Projektübersicht und beim Verlassen,
+  sonst nur, wenn noch keines da ist (die Sicherung alle 4 s schaltet nicht um).

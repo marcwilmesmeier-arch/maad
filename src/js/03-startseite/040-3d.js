@@ -316,7 +316,7 @@ function homeSetup() {
   }
 }
 function homeOpen(first) {
-  if (S.project && S.project.id) projSave();
+  if (S.project && S.project.id) projSave(true);
   HOME.open = true;
   cloudsInit();
   HOME.st = 0;

@@ -300,34 +300,43 @@ function zoBldHtml(b, k, R, A, B, P) {
     h +
     R('', 'Gebäudehöhe', f1(b._hTot || b._hAbove || 0, 2) + ' m', 'ind', B('', 'Gebäudehöhe')) +
     vgHtml(b, R, ab) +
-    gkHtml(b) +
-    (() => {
-      try {
-        const q = kw(b);
-        if (!q) return '';
-        const lim = (v) => R('', 'zulässig (Planungsrecht)', f1(v, 2), 's');
-        return (
-          '<h5 style="font-size:12px">Grundstück</h5>' +
-          R('', 'Grundstücksfläche', A(q.A), '') +
-          zoD(
-            'grz' + id,
-            ab('GRZ', 'Grundflächenzahl'),
-            f1(q.grz, 2),
-            R('', ab('GR', 'Grundfläche (überbaute Fläche)'), A(q.fp), 's') + lim(S.lim.grz),
-            null,
-          ) +
-          zoD(
-            'gfz' + id,
-            ab('GFZ', 'Geschossflächenzahl'),
-            f1(q.gfz, 2),
-            R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(q.gfz * q.A), 's') + lim(S.lim.gfz),
-            null,
-          )
-        );
-      } catch (_) {
-        return '';
-      }
-    })()
+    gkHtml(b)
+  );
+}
+/**
+ * Grundstück (GRZ, GFZ) einmal unter allen Gebäuden: alle Gebäude stehen auf einem Grundstück; kw() rechnet die
+ * Gebäude darauf zusammen.
+ */
+function zoGrundHtml(P, R, A) {
+  const ab = zoAb;
+  let q = null;
+  for (const b of P) {
+    try {
+      q = kw(b);
+    } catch (e) {
+      logErr(e, 'zoGrundHtml');
+    }
+    if (q) break;
+  }
+  if (!q) return '';
+  const lim = (v) => R('', 'zulässig (Planungsrecht)', f1(v, 2), 's');
+  return (
+    '<h5 style="font-size:12px">Grundstück</h5>' +
+    R('', 'Grundstücksfläche', A(q.A), '') +
+    zoD(
+      'grzg',
+      ab('GRZ', 'Grundflächenzahl'),
+      f1(q.grz, 2),
+      R('', ab('GR', 'Grundfläche (überbaute Fläche)'), A(q.fp), 's') + lim(S.lim.grz),
+      null,
+    ) +
+    zoD(
+      'gfzg',
+      ab('GFZ', 'Geschossflächenzahl'),
+      f1(q.gfz, 2),
+      R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(q.gfz * q.A), 's') + lim(S.lim.gfz),
+      null,
+    )
   );
 }
 function zoBldTot(P, R, A, t) {

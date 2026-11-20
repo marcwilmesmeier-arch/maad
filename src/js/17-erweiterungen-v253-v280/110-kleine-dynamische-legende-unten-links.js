@@ -11,7 +11,7 @@ try {
 const LGD = [
   function () {
     if (typeof G === 'undefined' || !G.un || !G.un.visible || !G.un.children.length) return null;
-    const pid = (S.zo && S.zo.m === 'u' && S.zo.pi && S.zo.pi.u) || 'u1',
+    const pid = ((S.zo && S.zo.m === 'u' && S.zo.pi && S.zo.pi.u) || 'u1').slice(0, 2),
       m = new Map();
     G.un.traverse((o) => {
       if (!o.isMesh || !o.userData.u || o.userData.u.fa === undefined || !o.material || !o.material.color)

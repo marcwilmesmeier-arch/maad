@@ -148,7 +148,8 @@ function zoPie(id) {
 // 3D-Einheitenkörper nach der zuletzt angeklickten Überschrift (Flächenart, DIN 277, Nutzung, Geschoss) in den Legendenfarben einfärben
 function zoUnPaint() {
   if (!G.un || !G.un.children.length) return;
-  const pid = S.zo.m === 'u' ? (S.zo.pi && S.zo.pi.u) || 'u1' : 'u1',
+  // Diagramm je Gebäude ('u2|<id>') färbt wie das Gesamtdiagramm ('u2')
+  const pid = (S.zo.m === 'u' ? (S.zo.pi && S.zo.pi.u) || 'u1' : 'u1').slice(0, 2),
     lvc = {};
   if (pid === 'u4') {
     const ks = {};
@@ -289,6 +290,8 @@ function zoRender() {
             ],
           };
           if (P.length > 1) h += zoBldTot(P, R, A, { tg, to, tu, tv, tbo, tbu, tr });
+          // ── Erweiterung aus 22-lod200-waende/070-nettogeschossflaeche.js: Grundstück einmal unter allen Gebäuden
+          h += zoGrundHtml(P, R, A);
         } else if (m === 'f') {
           const lv = {},
             use = {};
@@ -351,139 +354,159 @@ function zoRender() {
             USES.filter((u) => use[u]).map((u) => ({ n: u, c: S.uses[u], v: use[u] })),
           );
         } else {
-          const fa = {},
-            lv = {},
-            din = {},
-            nu = {},
-            rows = [];
-          let ta = 0,
-            tr = 0,
-            any = 0;
-          P.forEach((b) => {
-            if (!b.ub) return;
-            grData(b).forEach((g) => {
-              const us = [];
-              g.faces.forEach((f) => {
-                if (!f.un) return;
-                any = 1;
-                const d = grFA(f.fa) || grDefFa(g.use),
-                  x = fa[d.k] || (fa[d.k] = { n: 0, a: 0, r: 0, d });
-                x.n++;
-                x.a += f.a;
-                x.r += (f.a * d.f) / 100;
-                lv[g.sn] = (lv[g.sn] || 0) + f.a;
-                const q = din[d.d] || (din[d.d] = { a: 0, r: 0 });
-                q.a += f.a;
-                q.r += (f.a * d.f) / 100;
-                nu[d.u] = (nu[d.u] || 0) + f.a;
-                ta += f.a;
-                tr += (f.a * d.f) / 100;
-                us.push({
-                  nr: g.sn + '.' + f.idx,
-                  sn: g.sn,
-                  fi: f.idx,
-                  bid: b.id,
-                  n: f.n || d.n,
-                  fa: d.n,
-                  c: d.c,
-                  a: f.a,
-                  b: P.length > 1 ? b.name || b.id : '',
+          // je Gebäude aufgeschlüsselt wie im Reiter „Gebäude“, bei mehreren Gebäuden darunter „Gesamt“
+          const blk = (P, sfx) => {
+            let h = '';
+            const fa = {},
+              lv = {},
+              din = {},
+              nu = {},
+              rows = [];
+            let ta = 0,
+              tr = 0,
+              any = 0;
+            P.forEach((b) => {
+              if (!b.ub) return;
+              grData(b).forEach((g) => {
+                const us = [];
+                g.faces.forEach((f) => {
+                  if (!f.un) return;
+                  any = 1;
+                  const d = grFA(f.fa) || grDefFa(g.use),
+                    x = fa[d.k] || (fa[d.k] = { n: 0, a: 0, r: 0, d });
+                  x.n++;
+                  x.a += f.a;
+                  x.r += (f.a * d.f) / 100;
+                  lv[g.sn] = (lv[g.sn] || 0) + f.a;
+                  const q = din[d.d] || (din[d.d] = { a: 0, r: 0 });
+                  q.a += f.a;
+                  q.r += (f.a * d.f) / 100;
+                  nu[d.u] = (nu[d.u] || 0) + f.a;
+                  ta += f.a;
+                  tr += (f.a * d.f) / 100;
+                  us.push({
+                    nr: g.sn + '.' + f.idx,
+                    sn: g.sn,
+                    fi: f.idx,
+                    bid: b.id,
+                    n: f.n || d.n,
+                    fa: d.n,
+                    c: d.c,
+                    a: f.a,
+                    b: P.length > 1 ? b.name || b.id : '',
+                  });
                 });
+                if (us.length) rows.push({ sn: g.sn, us });
               });
-              if (us.length) rows.push({ sn: g.sn, us });
             });
-          });
-          if (!any)
+
+            if (!any) return { h: '', any };
+            {
+              const AL = { t: 'all', lab: 'Alle Einheiten' };
+              h += zoD(
+                'u1' + sfx,
+                'Flächenart',
+                A(ta),
+                S.fa
+                  .filter((f) => fa[f.k])
+                  .map((f) =>
+                    R(f.c, esc(f.n) + ' <span class="mu">' + fa[f.k].n + '×</span>', A(fa[f.k].a), '', {
+                      t: 'fa',
+                      k: f.k,
+                      lab: f.n,
+                    }),
+                  )
+                  .join('') +
+                  R('', 'Einheiten gesamt', A(ta), 't', AL) +
+                  R('', 'anrechenbar', A(tr), 's', AL),
+                S.fa.filter((f) => fa[f.k]).map((f) => ({ n: f.n, c: f.c, v: fa[f.k].a })),
+              );
+              h += zoD(
+                'u2' + sfx,
+                'DIN 277',
+                A(ta),
+                Object.keys(GRDIN)
+                  .filter((k) => din[k])
+                  .map((k) =>
+                    R(
+                      S.din[k],
+                      k + ' <span class="mu">' + GRDIN[k].replace(/ \(.*/, '') + '</span>',
+                      A(din[k].a),
+                      '',
+                      { t: 'din', d: k, lab: k },
+                    ),
+                  )
+                  .join(''),
+                Object.keys(GRDIN)
+                  .filter((k) => din[k])
+                  .map((k) => ({ n: k, c: S.din[k] || '#9aa0a6', v: din[k].a })),
+              );
+              h += zoD(
+                'u3' + sfx,
+                'Nutzung',
+                A(ta),
+                USES.filter((u) => nu[u])
+                  .map((u) => R(S.uses[u], u, A(nu[u]), '', { t: 'uuse', u, lab: u }))
+                  .join(''),
+                USES.filter((u) => nu[u]).map((u) => ({ n: u, c: S.uses[u], v: nu[u] })),
+              );
+              h += zoD(
+                'u4' + sfx,
+                'Geschoss',
+                A(ta),
+                Object.keys(lv)
+                  .sort((a, b) => zoRank(b) - zoRank(a))
+                  .map((n, i) =>
+                    R(ZPAL[i % ZPAL.length], zoLvN(n), A(lv[n]), '', { t: 'ulv', sn: n, lab: zoLvN(n) }),
+                  )
+                  .join(''),
+                Object.keys(lv)
+                  .sort((a, b) => zoRank(b) - zoRank(a))
+                  .map((n, i) => ({ n: zoLvN(n), c: ZPAL[i % ZPAL.length], v: lv[n] })),
+              );
+              h += zoD(
+                'u5' + sfx,
+                'Einheiten',
+                rows.reduce((n, r) => n + r.us.length, 0) + '×',
+                rows
+                  .sort((a, b) => zoRank(b.sn) - zoRank(a.sn))
+                  .map((r) =>
+                    r.us
+                      .map((u) =>
+                        R(
+                          u.c,
+                          esc(u.n) + ' <span class="mu">' + u.nr + (u.b ? ' · ' + esc(u.b) : '') + '</span>',
+                          A(u.a),
+                          '',
+                          { t: 'unit', bid: u.bid, sn: u.sn, fi: u.fi, lab: u.n + ' ' + u.nr },
+                        ),
+                      )
+                      .join(''),
+                  )
+                  .join(''),
+                rows.reduce(
+                  (l, r) => l.concat(r.us.map((u) => ({ n: u.n + ' ' + u.nr, c: u.c, v: u.a }))),
+                  [],
+                ),
+              );
+            }
+
+            return { h, any };
+          };
+          const mitE = P.filter((b) => b.ub),
+            ges = blk(P, '');
+          if (!ges.any)
             h +=
               '<div class="mu" style="margin-top:8px">Noch keine Einheiten vergeben. Im Grundriss (Taste G) mit Linie oder Rechteck schneiden und Flächenarten zuweisen.</div>';
           // ── Erweiterung aus 15-grundriss/055-wohnungsmix.js
           h += wmxHtml(P, R, A);
-          if (any) {
-            const AL = { t: 'all', lab: 'Alle Einheiten' };
-            h += zoD(
-              'u1',
-              'Flächenart',
-              A(ta),
-              S.fa
-                .filter((f) => fa[f.k])
-                .map((f) =>
-                  R(f.c, esc(f.n) + ' <span class="mu">' + fa[f.k].n + '×</span>', A(fa[f.k].a), '', {
-                    t: 'fa',
-                    k: f.k,
-                    lab: f.n,
-                  }),
-                )
-                .join('') +
-                R('', 'Einheiten gesamt', A(ta), 't', AL) +
-                R('', 'anrechenbar', A(tr), 's', AL),
-              S.fa.filter((f) => fa[f.k]).map((f) => ({ n: f.n, c: f.c, v: fa[f.k].a })),
-            );
-            h += zoD(
-              'u2',
-              'DIN 277',
-              A(ta),
-              Object.keys(GRDIN)
-                .filter((k) => din[k])
-                .map((k) =>
-                  R(
-                    S.din[k],
-                    k + ' <span class="mu">' + GRDIN[k].replace(/ \(.*/, '') + '</span>',
-                    A(din[k].a),
-                    '',
-                    { t: 'din', d: k, lab: k },
-                  ),
-                )
-                .join(''),
-              Object.keys(GRDIN)
-                .filter((k) => din[k])
-                .map((k) => ({ n: k, c: S.din[k] || '#9aa0a6', v: din[k].a })),
-            );
-            h += zoD(
-              'u3',
-              'Nutzung',
-              A(ta),
-              USES.filter((u) => nu[u])
-                .map((u) => R(S.uses[u], u, A(nu[u]), '', { t: 'uuse', u, lab: u }))
-                .join(''),
-              USES.filter((u) => nu[u]).map((u) => ({ n: u, c: S.uses[u], v: nu[u] })),
-            );
-            h += zoD(
-              'u4',
-              'Geschoss',
-              A(ta),
-              Object.keys(lv)
-                .sort((a, b) => zoRank(b) - zoRank(a))
-                .map((n, i) =>
-                  R(ZPAL[i % ZPAL.length], zoLvN(n), A(lv[n]), '', { t: 'ulv', sn: n, lab: zoLvN(n) }),
-                )
-                .join(''),
-              Object.keys(lv)
-                .sort((a, b) => zoRank(b) - zoRank(a))
-                .map((n, i) => ({ n: zoLvN(n), c: ZPAL[i % ZPAL.length], v: lv[n] })),
-            );
-            h += zoD(
-              'u5',
-              'Einheiten',
-              rows.reduce((n, r) => n + r.us.length, 0) + '×',
-              rows
-                .sort((a, b) => zoRank(b.sn) - zoRank(a.sn))
-                .map((r) =>
-                  r.us
-                    .map((u) =>
-                      R(
-                        u.c,
-                        esc(u.n) + ' <span class="mu">' + u.nr + (u.b ? ' · ' + esc(u.b) : '') + '</span>',
-                        A(u.a),
-                        '',
-                        { t: 'unit', bid: u.bid, sn: u.sn, fi: u.fi, lab: u.n + ' ' + u.nr },
-                      ),
-                    )
-                    .join(''),
-                )
-                .join(''),
-              rows.reduce((l, r) => l.concat(r.us.map((u) => ({ n: u.n + ' ' + u.nr, c: u.c, v: u.a }))), []),
-            );
-          }
+          if (mitE.length > 1) {
+            mitE.forEach((b) => {
+              const e1 = blk([b], '|' + b.id);
+              if (e1.any) h += `<div class="bd">${esc(b.name || b.id)}</div>` + e1.h;
+            });
+            if (ges.any) h += '<h5>Gesamt</h5>' + ges.h;
+          } else h += ges.h;
           h += '<button class="ac" onclick="grOpen()">Grundriss öffnen (G)</button>';
         }
       }

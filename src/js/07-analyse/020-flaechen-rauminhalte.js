@@ -274,6 +274,11 @@ function flHtml(b) {
   return h;
 }
 function hlClear(restoreOnly) {
+  // BGF in LOD 100: ausgeblendete Geschosskörper wieder zeigen
+  if (S._hlKoerper) {
+    S._hlKoerper.forEach((o) => (o.visible = true));
+    S._hlKoerper = null;
+  }
   if (S.hlG) {
     S.hlG.parent && S.hlG.parent.remove(S.hlG);
     S.hlG.traverse((o) => {
@@ -526,6 +531,18 @@ function hlApply() {
     g.visible = !(S.zo && S.zo.m === 'u');
     sc.add(g);
     S.hlG = g;
+    // BGF in LOD 100: Geschosskörper nur als Kontur, damit die Flächen zu sehen sind
+    if ((k === 'bgf' || k === 'bgfoi' || k === 'bgfui') && !l2on()) {
+      S._hlKoerper = [];
+      for (const b of hlBs())
+        if (b._g)
+          b._g.traverse((o) => {
+            if (o.isMesh && o.visible && !o.userData.kont) {
+              o.visible = false;
+              S._hlKoerper.push(o);
+            }
+          });
+    }
     try {
       exApply();
     } catch (e) {
