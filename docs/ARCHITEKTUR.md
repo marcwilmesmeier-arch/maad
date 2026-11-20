@@ -617,14 +617,20 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 
 ## Straßenflächen als Vektorfläche (`02-geodaten/100-strassenflaechen.js`)
 
+- Zwei Ebenen (`STR.E`): Straßen (`roads`, 15 cm tief, Ausrundung 4 m, Gruppe `G.roads`, Farbe `S.lc.roads`) und
+  Fuß-/Radwege samt Fußgängerflächen (`paths`: `line.paths` + `line.cycle` + `fill.paths`, 5 cm, 1,5 m, `G.paths`,
+  `S.lc.paths`). Je Ebene eine Maske (`E.uM`); der Geländeshader schneidet beide aus, Wege weichen Straßen (kein
+  Weg und kein Wegbordstein, wo eine Straße liegt). Das Abstandsfeld wird vor der Umrissbildung geglättet
+  (`strGlaetten`, 2 × 5 × 5 Zellen) – sonst welliger Rand aus den Rasterstufen.
+
 - Nach `ctxPaint` (`strAktualisieren`, nur bei geänderten Straßen/Gelände neu, sonst nur umfärben): aus den OSM-Achsen
   (`GEO.acc.line.roads`, Breite `w`) wird ein Band `w + 2r` gerastert (0,25 m), per Abstandsfeld (`strEdt`,
-  Felzenszwalb) um `r` verschmälert = morphologisches Schließen → Einmündungen mit `STR.r` (4 m) ausgerundet;
+  Felzenszwalb) um `r` verschmälert = morphologisches Schließen → Einmündungen mit `E.r` ausgerundet;
   Umriss per Marching Squares (`strUmriss`) als Ringe mit Löchern (`STR.ringe`).
-- Darstellung: Straßenfläche = Geländenetz 15 cm tiefer (`STR.tief`), im Shader nur innerhalb des Umrisses (Maske
-  `STR.uM`, R = Abstand zum Rand), Bordstein senkrecht entlang des Umrisses; das Gelände bekommt dort ein Loch
+- Darstellung: Straßenfläche = Geländenetz `E.tief` tiefer, im Shader nur innerhalb des Umrisses (Maske
+  `E.uM`, R = Abstand zum Rand), Bordstein senkrecht entlang des Umrisses; das Gelände bekommt dort ein Loch
   (`strGelaendeShader`, verträgt sich mit `pitPatch`, beide verketten `onBeforeCompile`). Farbe = Layer-Farbe Straßen
-  (`S.lc.roads`); im Kartenbild (`recomp`) entfällt die Straßenebene, solange die Fläche besteht (`STR.aktiv`).
+  (`S.lc.roads`); im Kartenbild (`recomp`) entfällt die Straßenebene, solange die Fläche besteht (`E.aktiv`; ebenso Wege und Radwege).
 - Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den Ufern, abgenommen `STR.ufer` (3 m) hinter der Uferkante (Böschung) –
   dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
   Stirnseite.

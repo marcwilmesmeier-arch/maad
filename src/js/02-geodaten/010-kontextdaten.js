@@ -395,7 +395,7 @@ function rebuildTerrain() {
   // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Loch für die Straßenfläche, die dem neuen Gelände folgt
   try {
     strGelaendeShader(S.terr.material);
-    STR.sig = '';
+    Object.values(STR.E).forEach((E) => (E.sig = ''));
     if (GEO.acc) strAktualisieren(GEO.acc);
   } catch (e) {
     logErr(e, 'rebuildTerrain>Straßenflächen');

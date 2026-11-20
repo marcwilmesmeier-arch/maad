@@ -753,8 +753,9 @@ function recomp() {
         uRoads(x, K, X);
         continue;
       }
-      // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßen liegen als Vektorfläche im Gelände
-      if (k === 'roads' && STR.aktiv) continue;
+      // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßen und Wege liegen als Vektorfläche im Gelände
+      if (k === 'roads' && STR.E.roads.aktiv) continue;
+      if ((k === 'paths' || k === 'cycle') && STR.E.paths.aktiv) continue;
       const L = LY.find((l) => l[1] === k);
       if (!L || !L[2]) continue;
       x.globalAlpha = L[3];
