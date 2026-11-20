@@ -62,6 +62,55 @@ function lbBoeden(b) {
   }
   return out;
 }
+/**
+ * Flächen im Sonderfall S nach DIN 277 (nicht allseitig umschlossen): Balkone (vor der Fassade, Auskragung) und Loggien
+ * (hinter der Fassade, Rücksprung) – bei Balkon + Loggia beide Teile. Je Teil { art: 'ba'|'lo', pts, y, h, a }:
+ * Körper vom Boden bis zur Decke (Loggia, Geschosshöhe) bzw. bis Oberkante Geländer (Balkon). Terrassen (kleine Flächen
+ * etwa vor Loggien) folgen, wenn sie eigens modelliert werden; Dachterrassen gehören nicht dazu.
+ */
+function l2SFlaechen(b) {
+  const out = [];
+  if (!l2on()) return out;
+  try {
+    l2BalkonListe(b).forEach((x) => {
+      const n = x.n,
+        A = x.p0,
+        B = x.p1,
+        w = Math.hypot(B[0] - A[0], B[1] - A[1]),
+        vor = x.a === 'ba' || x.a === 'bl' ? x.tb : 0,
+        zur = x.a === 'lo' || x.a === 'bl' ? x.d : 0,
+        P = (p, s) => [p[0] + n[0] * s, p[1] + n[1] * s],
+        li = lvOfY(b, x.y0 + 0.1),
+        hG = li === 'roof' ? 2.5 : b.levels[li].h,
+        hB = x.gel && x.gel.ga !== 'ke' ? x.gel.gh || 1 : 1;
+      // eine Fläche je Feld (Balkon und Loggia sind dieselbe Flächenart): Balkon + Loggia als ein Körper von der
+      // Rückwand der Loggia bis zur Vorderkante des Balkons, Höhe wie die Loggia; lo = Anteil hinter der Fassade
+      if (vor + zur > 0.05)
+        out.push({
+          art: zur > 0.05 ? (vor > 0.05 ? 'bl' : 'lo') : 'ba',
+          pts: [P(A, -zur), P(B, -zur), P(B, vor), P(A, vor)],
+          y: x.y0,
+          h: zur > 0.05 ? hG : hB,
+          a: w * (vor + zur),
+          lo: w * zur,
+          li,
+        });
+    });
+  } catch (e) {
+    logErr(e, 'l2SFlaechen');
+  }
+  return out;
+}
+/** Summen im Sonderfall S: Fläche (Balkone und Loggien zusammen), davon hinter der Fassade (lo), BRI (S). */
+function l2SZahlen(b) {
+  const r = { a: 0, lo: 0, bri: 0 };
+  l2SFlaechen(b).forEach((s) => {
+    r.a += s.a;
+    r.lo += s.lo; // liegt im Grundriss und gehört nicht zum Regelfall R
+    r.bri += s.a * s.h;
+  });
+  return r;
+}
 /** Quader zwischen den Grundrisspunkten (Strecke A–B, Breite w quer, versetzt um o nach n) von ya bis yb. */
 function l2Quader(pos, A, B, n, o, w, ya, yb) {
   const P = (p, s) => [p[0] + n[0] * (o + s), p[1] + n[1] * (o + s)],

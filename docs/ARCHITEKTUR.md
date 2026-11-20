@@ -501,6 +501,11 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Deckenrand reichen); endet ein Hof in einem Geschoss, bleibt die Decke nur dort, wo das Geschoss darüber steht.
 - Weißmodell und Baumschalen: `S.fx.wm` (trees, tv, nadel); `fxOn` lässt im Weißmodell nur Laub- und Nadelschalen zu,
   das Layer-Panel zeigt dort dieselbe Auswahl wie in den anderen Darstellungen (ohne Wasser-Shader).
+- DIN 277 Regelfall R / Sonderfall S (LOD 200): `l2SFlaechen`/`l2SZahlen` (130-balkone.js) – je Feld aus der
+  Fassade ein Körper (Balkon, Loggia oder Balkon + Loggia zusammen; Höhe Loggia = Geschoss, Balkon = Geländer).
+  Metriken: BGF (R) = BGF − Loggia-Anteil, BGF (S), NGF (R)/(S), Gruppe „Sonderfall S“ mit BRI (S); Hervorhebung
+  `L2ISO('s', …)` → `l2SShow` (dunkleres Grün als die NGF). Terrassen im EG (z. B. vor Loggien) folgen, wenn sie
+  eigens modelliert werden. NGF-Darstellung zeigt das Dachgeschoss (bis Drempelhöhe) und lässt schmale Reste weg.
 - Umgebungsverdeckung in Realistisch+ (`S.atm.ao`, Regler „Umgebungsverdeckung“): im Albedo-Shader (`ATM.lin`,
   Funktion `verdeckung`) aus Tiefe und Normalenbild, dämpft nur das Himmelslicht (Ecken, Wandfüße, unter Balkonen).
   Das Licht vom Boden (`um`) ist entfallen. LOD-200-Konturlinien (`userData.l2ko`) schaltet nur `l2Kontur`, der Layer

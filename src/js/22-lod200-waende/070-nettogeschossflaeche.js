@@ -110,6 +110,8 @@ function zoBldHtml(b, k, R, A, B, P) {
     id = b.id,
     nm = esc(b.name || b.id),
     n = on ? l2Ngf(b) : null,
+    // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S nach DIN 277 (Balkone, Loggien)
+    sz = on ? l2SZahlen(b) : null,
     ab = zoAb;
   let h =
     `<div class="bd">${nm} <span class="mu gr">${ab('GR', 'Grundfläche')} ${A(grOf(b))}</span></div>` +
@@ -132,6 +134,14 @@ function zoBldHtml(b, k, R, A, B, P) {
     R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(k.bgfoi), 's', B('bgfoi', 'BGFoi')) +
       (k.bgfui
         ? R('', ab('BGFui', 'Bruttogeschossfläche unterirdisch'), A(k.bgfui), 's', B('bgfui', 'BGFui'))
+        : '') +
+      (sz && sz.a > 0
+        ? R('', ab('BGF (R)', 'Regelfall: allseitig umschlossene Räume (ohne Loggien)'), A(g - sz.lo), 's') +
+          l2R(ab('BGF (S)', 'Sonderfall: Balkone und Loggien, getrennt ausgewiesen'), A(sz.a), 's', [
+            's',
+            id,
+            'all',
+          ])
         : ''),
     USES.filter((u) => bu[u]).map((u) => ({ n: u, c: S.uses[u], v: bu[u] })),
   );
@@ -141,7 +151,11 @@ function zoBldHtml(b, k, R, A, B, P) {
       ab('NGF', 'Nettogeschossfläche'),
       A(n.o + n.u),
       l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch'), A(n.o), 's', ['ngf', id, 'o']) +
-        (n.u ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u), 's', ['ngf', id, 'u']) : ''),
+        (n.u ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u), 's', ['ngf', id, 'u']) : '') +
+        (sz && sz.a > 0
+          ? R('', ab('NGF (R)', 'Regelfall: ohne Loggien'), A(n.o + n.u - sz.lo), 's') +
+            l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(sz.a), 's', ['s', id, 'all'])
+          : ''),
       [
         { n: 'oberirdisch', c: '#4e79a7', v: n.o },
         { n: 'unterirdisch', c: '#9aa5b1', v: n.u },
@@ -166,6 +180,24 @@ function zoBldHtml(b, k, R, A, B, P) {
       { n: 'unterirdisch', c: '#bfa58a', v: k.briui },
     ],
   );
+  // Sonderfall S nach DIN 277: Balkone und Loggien getrennt ausgewiesen, im Modell als eigener Körper
+  if (sz && sz.a > 0)
+    h += zoD(
+      's' + id,
+      ab(
+        'Sonderfall S',
+        'DIN 277: nicht allseitig umschlossene Flächen (Balkone, Loggien), getrennt vom Regelfall R',
+      ),
+      A(sz.a),
+      l2R('Balkone und Loggien', A(sz.a), 's', ['s', id, 'all']) +
+        l2R(
+          ab('BRI (S)', 'Rauminhalt der Balkone (bis Oberkante Geländer) und Loggien (bis Decke)'),
+          f1(sz.bri, 0) + ' m³',
+          's',
+          ['s', id, 'all'],
+        ),
+      null,
+    );
   if (on)
     h += zoD(
       'kf' + id,
