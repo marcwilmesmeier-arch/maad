@@ -9,7 +9,8 @@
 // selbst, aufgenommen aus seiner Mitte mit maads Lichtern wie in Realistisch (wasLicht). Neu nur, wenn sich Modell
 // oder Sonne ändern, höchstens ein Gebäude je Bild. Abgefragt mit Kastenkorrektur (Kasten um das Gebäude, Boden auf
 // Geländehöhe): so liegt der gespiegelte Boden und die Nachbarschaft auch an Fenstern weit von der Mitte etwa richtig.
-// Wo die Würfeltextur leer ist (Alpha 0), spiegelt der Himmel.
+// Wo die Würfeltextur leer ist (Alpha 0), spiegelt der Himmel. Die Umgebung spiegelt gedämpft (Faktor 0,45): Gebäude
+// und Boden sind deutlich dunkler als der Himmel, ungedämpft überstrahlten sie die Fenster.
 
 const GLAS = { mat: null, n: null, liste: [], t: 0, um: new Map(), mats: new Map() };
 /** Größe der Umgebungs-Würfeltextur (Pixel je Seite) und halbe Kastenbreite um das Gebäude (m). */
@@ -49,7 +50,7 @@ function glasMaterial() {
       'vec3 sp=mix(uBoden,textureCube(tEnv,R).rgb,smoothstep(-.04,.04,R.y));\n' +
       // Umgebung: Strahl vom Fenster bis an den Kasten, Richtung von der Aufnahmemitte dorthin
       'if(uUm>.5){vec3 t1=(uBmax-vW)/R,t2=(uBmin-vW)/R,tf=max(t1,t2);float t=min(min(tf.x,tf.y),tf.z);\n' +
-      'vec4 u=textureCube(tUm,vW+R*t-uC);sp=mix(sp,u.rgb*uR,u.a);}\n' +
+      'vec4 u=textureCube(tUm,vW+R*t-uC);sp=mix(sp,u.rgb*uR*.45,u.a);}\n' +
       // Sonnenglanz (schmale Keule, glattes Glas)
       'sp+=uSonneC*pow(max(dot(R,uSonneV),0.),3000.)*400.;\n' +
       // 50 % Spiegelung / 50 % durchsichtig, flach betrachtet spiegelt Glas mehr (Fresnel); Glas schluckt einen Teil
@@ -192,10 +193,24 @@ function glasUmgebung(bids) {
   um.max.set(c.x + r, c.y + 200, c.z + r);
   um.cam.position.copy(c);
   um.cam.updateMatrixWorld();
-  // ohne das Gebäude selbst, ohne Glas und Wasser (deren Spiegelmaterialien gehören zur Hauptkamera)
+  // ohne das Gebäude selbst, ohne Glas und Wasser (deren Spiegelmaterialien gehören zur Hauptkamera) und ohne
+  // Einblendungen: Auswahl-, Hover- und Hervorhebungsflächen (ohne Normalen bzw. nurFarbe), Linien, Beschriftungen
+  const einbl = [];
+  sc.traverseVisible((o) => {
+    if (
+      o.isLine ||
+      o.isPoints ||
+      o.isSprite ||
+      (o.isMesh && (o.userData.nurFarbe || (o.geometry && !o.geometry.getAttribute('normal'))))
+    )
+      einbl.push(o);
+  });
   const aus = glasEigeneTeile(b).concat(
       GLAS.liste.map((x) => x.o),
       WAS.mesh ? [WAS.mesh] : [],
+      S.hlG ? [S.hlG] : [],
+      G.l2n ? [G.l2n] : [],
+      einbl,
     ),
     vis = aus.map((o) => o.visible);
   aus.forEach((o) => (o.visible = false));

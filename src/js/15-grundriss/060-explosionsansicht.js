@@ -103,7 +103,7 @@ function exApply() {
     S.hlG.children.forEach((m) => {
       if (m.userData.k == null) return;
       const b = S.bld.find((x) => x.id === m.userData.bid);
-      if (b) m.position.y = m.userData.y0 + exOff(b, m.userData.k);
+      if (b) m.position.y = m.userData.y0 + exHlOff(b, m.userData.k);
     });
   }
   try {
@@ -220,6 +220,17 @@ function exApply() {
   } catch (e) {
     logErr(e, 'exApply');
   }
+}
+/**
+ * Versatz einer Hervorhebung (hlG) in der Explosion. Dachflächen in LOD 200 liegen auf dem Dach: das Dachbauteil (RD)
+ * wandert eine Stufe weiter als sein Geschoss (060-stutzen-dehnen.js in exApply), die Hervorhebung ebenso.
+ */
+function exHlOff(b, k) {
+  if (k === 'roof' && l2on()) {
+    const rd = l2Els(b).els.find((e) => e.kind === 'RD');
+    if (rd) return exOff(b, rd.li) + S.expl.cur * exP().v;
+  }
+  return exOff(b, k);
 }
 // Hervorhebung (hlG) folgt der Explosion und bekommt bei weißer Auswahl eine weiße Kontur
 function lvOfY(b, y) {

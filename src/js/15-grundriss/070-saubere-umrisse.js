@@ -64,107 +64,33 @@ function zoFasLab(FA) {
     });
 }
 // exakte Differenz A\B (Polygone) als Trapezstreifen + echte Randsegmente
+/** Terrassenfläche eines Geschosses als Dreiecke (pos) und Umriss (ol), genau aus den Polygonen (terrOf: P). */
 function zoTerrGeo(b, L) {
-  const A = lf(b, b.levels[L.i]),
-    B = lf(b, b.levels[L.i + 1]),
-    y = L.y + 0.04,
-    xs = new Set();
-  A.concat(B).forEach((p) => xs.add(p[0]));
-  for (let i = 0; i < A.length; i++) {
-    const a = A[i],
-      c = A[(i + 1) % A.length];
-    for (let j = 0; j < B.length; j++) {
-      const d = B[j],
-        e = B[(j + 1) % B.length],
-        r = [c[0] - a[0], c[1] - a[1]],
-        q = [e[0] - d[0], e[1] - d[1]],
-        den = r[0] * q[1] - r[1] * q[0];
-      if (Math.abs(den) < 1e-12) continue;
-      const t = ((d[0] - a[0]) * q[1] - (d[1] - a[1]) * q[0]) / den,
-        u = ((d[0] - a[0]) * r[1] - (d[1] - a[1]) * r[0]) / den;
-      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) xs.add(a[0] + t * r[0]);
-    }
-  }
-  const X = [...xs].sort((p, q) => p - q),
-    ey = (e, x) => e[0][1] + ((e[1][1] - e[0][1]) * (x - e[0][0])) / (e[1][0] - e[0][0]),
-    iv = (P, x) => {
-      const c = [];
-      for (let i = 0; i < P.length; i++) {
-        const a = P[i],
-          d = P[(i + 1) % P.length];
-        if (a[0] <= x !== d[0] <= x) c.push({ e: [a, d], y: ey([a, d], x) });
-      }
-      c.sort((p, q) => p.y - q.y);
-      const o = [];
-      for (let i = 0; i + 1 < c.length; i += 2) o.push({ lo: c[i].e, hi: c[i + 1].e });
-      return o;
-    },
-    sl = [];
-  for (let k = 0; k + 1 < X.length; k++) {
-    const x0 = X[k],
-      x1 = X[k + 1];
-    if (x1 - x0 < 1e-7) {
-      sl.push({ x0, x1, p: [] });
-      continue;
-    }
-    const xm = (x0 + x1) / 2,
-      ib = iv(B, xm);
-    let out = [];
-    for (const pa of iv(A, xm)) {
-      let pc = [pa];
-      for (const pb of ib) {
-        const nx = [];
-        for (const q of pc) {
-          const ql = ey(q.lo, xm),
-            qh = ey(q.hi, xm),
-            bl = ey(pb.lo, xm),
-            bh = ey(pb.hi, xm);
-          if (bh <= ql || bl >= qh) {
-            nx.push(q);
-            continue;
-          }
-          if (bl > ql) nx.push({ lo: q.lo, hi: pb.lo });
-          if (bh < qh) nx.push({ lo: pb.hi, hi: q.hi });
-        }
-        pc = nx;
-      }
-      out = out.concat(pc);
-    }
-    sl.push({ x0, x1, p: out });
-  }
-  const sub = (a, b, list) => {
-      let r = [[a, b]];
-      for (const [l, h] of list) {
-        const n = [];
-        for (const [p, q] of r) {
-          if (h <= p + 1e-7 || l >= q - 1e-7) {
-            n.push([p, q]);
-            continue;
-          }
-          if (l > p + 1e-7) n.push([p, l]);
-          if (h < q - 1e-7) n.push([h, q]);
-        }
-        r = n;
-      }
-      return r.filter((s) => s[1] - s[0] > 1e-5);
-    },
+  const y = L.y + 0.04,
     pos = [],
     ol = [];
-  sl.forEach((s, k) => {
-    const pv = k > 0 ? sl[k - 1] : null,
-      nx = k + 1 < sl.length ? sl[k + 1] : null;
-    for (const q of s.p) {
-      const a0 = ey(q.lo, s.x0),
-        a1 = ey(q.lo, s.x1),
-        b0 = ey(q.hi, s.x0),
-        b1 = ey(q.hi, s.x1);
-      pos.push(s.x0, y, a0, s.x1, y, a1, s.x1, y, b1, s.x0, y, a0, s.x1, y, b1, s.x0, y, b0);
-      ol.push(s.x0, y, a0, s.x1, y, a1, s.x0, y, b0, s.x1, y, b1);
-      const lc = pv && Math.abs(pv.x1 - s.x0) < 1e-9 ? pv.p.map((r) => [ey(r.lo, s.x0), ey(r.hi, s.x0)]) : [],
-        rc = nx && Math.abs(nx.x0 - s.x1) < 1e-9 ? nx.p.map((r) => [ey(r.lo, s.x1), ey(r.hi, s.x1)]) : [];
-      sub(a0, b0, lc).forEach(([p, r]) => ol.push(s.x0, y, p, s.x0, y, r));
-      sub(a1, b1, rc).forEach(([p, r]) => ol.push(s.x1, y, p, s.x1, y, r));
-    }
+  (L.P || []).forEach((x) => {
+    const H = x.h || [],
+      v2 = (r) => r.map((p) => new T.Vector2(p[0], p[1])),
+      alle = [x.o].concat(H);
+    T.ShapeUtils.triangulateShape(v2(x.o), H.map(v2)).forEach((t) =>
+      t.forEach((k) => {
+        let n = k;
+        for (const r of alle) {
+          if (n < r.length) {
+            pos.push(r[n][0], y, r[n][1]);
+            break;
+          }
+          n -= r.length;
+        }
+      }),
+    );
+    alle.forEach((r) =>
+      r.forEach((a, k) => {
+        const c = r[(k + 1) % r.length];
+        ol.push(a[0], y, a[1], c[0], y, c[1]);
+      }),
+    );
   });
   return { pos, ol };
 }

@@ -8,9 +8,13 @@ const wallA = (b, l) => {
   });
   return P * l.h;
 };
+/**
+ * Terrassen eines Gebäudes: je Geschoss die Fläche, die das Geschoss darüber nicht überdeckt, ohne Innenhöfe.
+ * Fläche genau aus den Polygonen (P, wie l2TerrassenFlaeche), q/st = Rasterzellen für den Export-Plan.
+ */
 function terrOf(b) {
   const u = ugN(b),
-    key = JSON.stringify([b.fp, b.levels.map((l) => [l.h, l.fp, l.ug])]);
+    key = JSON.stringify([b.fp, b.levels.map((l) => [l.h, l.fp, l.ug]), b.voids || null]);
   if (b._tk === key && b._tv) return b._tv;
   const out = { area: 0, lv: [] };
   let z = b._y;
@@ -21,6 +25,13 @@ function terrOf(b) {
     const A = lf(b, l),
       B = lf(b, b.levels[i + 1]);
     if (JSON.stringify(A) === JSON.stringify(B)) return;
+    // genaue Terrassenfläche: Geschoss − Geschoss darüber − Innenhöfe (beider Geschosse)
+    const P = l2TerrassenFlaeche(b, i),
+      H = znVoidsAt(b, i)
+        .concat(znVoidsAt(b, i + 1))
+        .map((v) => v.poly),
+      pa = P.reduce((s2, x) => s2 + area(x.o) - (x.h || []).reduce((s3, h) => s3 + area(h), 0), 0);
+    if (pa < 0.01) return;
     let x0 = 1e9,
       x1 = -1e9,
       y0 = 1e9,
@@ -38,17 +49,15 @@ function terrOf(b) {
     for (let x = x0 + st / 2; x < x1; x += st)
       for (let y = y0 + st / 2; y < y1; y += st) {
         const pt = [x, y];
-        if (inP(pt, A) && !inP(pt, B)) {
+        if (inP(pt, A) && !inP(pt, B) && !H.some((h) => inP(pt, h))) {
           q.push([x - st / 2, y - st / 2]);
           sx += x;
           sz += y;
         }
       }
-    if (q.length > 3) {
-      const ar = q.length * st * st;
-      out.lv.push({ i, y: z1, st, q, area: ar, cx: sx / q.length, cz: sz / q.length });
-      out.area += ar;
-    }
+    const c = q.length ? [sx / q.length, sz / q.length] : cen(P[0].o);
+    out.lv.push({ i, y: z1, st, q, P, area: pa, cx: c[0], cz: c[1] });
+    out.area += pa;
   });
   b._tk = key;
   b._tv = out;
@@ -418,7 +427,8 @@ function hlApply() {
           const o = zoTerrGeo(b, L);
           if (o.pos.length) {
             const tm = new T.Mesh(gm(o.pos), mt);
-            tm.userData.k = L.i;
+            // Explosion: in LOD 200 liegt die Terrasse auf der Decke, die mit dem Geschoss darüber wandert
+            tm.userData.k = l2on() ? L.i + 1 : L.i;
             tm.userData.ol = o.ol;
             g.add(tm);
           }

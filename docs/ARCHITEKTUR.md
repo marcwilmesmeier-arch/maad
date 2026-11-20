@@ -530,7 +530,8 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   Umgebung im Glas: je Gebäude eine Würfeltextur der Szene ohne das Gebäude selbst (`glasUmgebung`, `GLAS.um`,
   256 px, aus der Gebäudemitte, Lichter wie in Realistisch über `wasLicht`), neu nur bei geändertem Modell (`L2GEN`,
   Hüllen) oder Sonnenstand, höchstens ein Gebäude je Bild; Abfrage mit Kastenkorrektur (Kasten ±45 m um das
-  Gebäude, Boden auf Geländehöhe). Je Gebäude ein geklontes Glasmaterial (`GLAS.mats`).
+  Gebäude, Boden auf Geländehöhe). Je Gebäude ein geklontes Glasmaterial (`GLAS.mats`). Ohne Einblendungen
+  (Auswahl/Hover/Hervorhebung, Linien) aufgenommen; Umgebung gedämpft (× 0,45) gegenüber dem Himmel.
 - `atmDurchgang` erfasst die Objektliste bei jedem Durchgang neu – neu entstandene Hover-/Auswahlflächen kamen
   sonst mit eigenem Material ins Normalenbild und färbten die Fassade beim Überfahren schwarz.
 - Modellier-Rahmen (`skDraw`, Gebäuderahmen `updSel2`): ab der ersten Ansicht der Gebäudemetrik (`ZI.sp`, `S.hlk`,
@@ -538,6 +539,9 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - NGF genau (LOD 200): `l2Ngf` und die Grundrissbeschriftung (`l2NetFace`) nehmen die Flächen der Netto-Polygone
   (`l2NetFlaechen`, zwischengespeichert in `b._ngf`) – dieselben wie die NGF-Körper; je Geschoss `ngf` (R) und
   `s` (Balkone/Loggien). Gesamtzeilen und „NGF nach Geschoss“ = R + S. KF bleibt die Wandgrundfläche.
+- Terrassenfläche (`terrOf`): genau aus Polygonen (Geschoss − Geschoss darüber − Innenhöfe, `l2TerrassenFlaeche`),
+  Hervorhebung `zoTerrGeo` trianguliert dieselben Polygone; Rasterzellen `q` nur noch für den Export-Plan. In der
+  Explosion liegt die Terrasse in LOD 200 auf der Decke (Geschoss i+1), Dachflächen auf dem Dach (`exHlOff`: wie RD).
 - Analyse in den Metriken (`ZI.sp`, `S.l2.iso`): keine Gebäudematerialien (`ftFarbig`), nicht gewählte Gebäude samt
   Fassadentyp-Schichten und Konturen ausgeblendet (`l2IsoSicht`). Esc beendet Metrik-Filter, Bauteil-Isolieren,
   Hervorhebung und Explosionsansicht (Esc-Handler in 11-bearbeiten/010-werkzeug.js).
