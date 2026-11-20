@@ -643,7 +643,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Reihenfolge der Gruppen: BGF, BRI, NGF, NRI, KF, Flächen.
 - BGF in LOD 200 wie BRI über `L2ISO`: 'bgf' (R + S), 'bgfr', 'bgfs' – `l2BgfShow` zeigt je Geschoss den Grundriss
   ohne Innenhöfe und Loggien als blaue Bodenfläche (`ISOC.bri`), Dachgeschoss auf dem obersten Geschoss; S als
-  Bodenflächen in `ISOC.bris`.
+  Bodenflächen in `ISOC.bris`. BRI (S) brutto mit Platte (`l2SFlaechen().dP`, Körper ab Unterkante Platte), NRI (S)
+  netto (lichte Höhe, `l2SZahlen().nri`).
 - `l2Umrisse`: jede Fläche und jeder Körper in `G.l2n` bekommt Kantenlinien (30°) als Kind (folgt der Explosion,
   wird mit dem Körper freigegeben).
 - Fassade (`22-lod200-waende/160-loggia-fassade.js`): unter „Fassade“ die eingezogenen Flächen der Loggien –

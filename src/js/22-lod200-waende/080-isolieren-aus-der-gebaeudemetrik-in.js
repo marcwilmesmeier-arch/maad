@@ -513,8 +513,11 @@ function l2SShow(iso, farbe, lvSel) {
       if (iso.sel !== 'all' && iso.sel !== s.art) return;
       if (lvSel && !l2LvMatch(b, s.li === 'roof' ? b.levels.length : s.li, lvSel)) return;
       try {
-        const m = new T.Mesh(flach ? l2FlachGeo(s.pts) : grPrism({ o: s.pts, h: [] }, 0, s.h).g, mat);
-        m.position.y = s.y + (flach ? 0.03 : 0);
+        // BRI brutto: Körper ab Unterkante der Platte; NRI netto: lichte Höhe; Flächen: nur der Boden
+        const brutto = iso.m === 'bri' || iso.m === 'bris',
+          hK = s.h + (brutto ? s.dP : 0),
+          m = new T.Mesh(flach ? l2FlachGeo(s.pts) : grPrism({ o: s.pts, h: [] }, 0, hK).g, mat);
+        m.position.y = s.y + (flach ? 0.03 : brutto ? -s.dP : 0);
         m.userData = {
           bid: b.id,
           li: s.li,
@@ -523,7 +526,7 @@ function l2SShow(iso, farbe, lvSel) {
             ({ ba: 'Balkon', lo: 'Loggia', bl: 'Balkon + Loggia' }[s.art] || 'Sonderfall S') +
             (s.li === 'roof' ? '' : ' · ' + lname(b, s.li)) +
             ' · S · ' +
-            (flach ? f1(s.a, 1) + ' m²' : f1(s.a * s.h, 1) + ' m³'),
+            (flach ? f1(s.a, 1) + ' m²' : f1(s.a * hK, 1) + ' m³'),
         };
         m.castShadow = false;
         m.raycast = () => {};

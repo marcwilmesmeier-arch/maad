@@ -243,7 +243,7 @@ function zoBldHtml(b, k, R, A, B, P) {
   // Netto-Rauminhalt (LOD 200): wie die NGF, als Rauminhalt; R und S zusammen, darunter getrennt
   if (on) {
     const nr = l2Nri(b),
-      sV = sz && sz.a > 0 ? sz.bri : 0,
+      sV = sz && sz.a > 0 ? sz.nri : 0,
       m3 = (v) => f1(v, 0) + ' m³';
     h += zoD(
       'nr' + id,
