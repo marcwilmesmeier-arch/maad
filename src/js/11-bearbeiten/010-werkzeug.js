@@ -850,6 +850,7 @@ addEventListener('keydown', (e) => {
     // zurück in die normale Darstellung (LOD 100/200): Filter und Hervorhebungen aus den Metriken, Bauteil-Isolieren
     // und Explosionsansicht aus
     try {
+      if (MZ.sel) mzWahl(null);
       if (typeof ZI !== 'undefined' && ZI.sp) zoIsoClear(true);
       if (S.l2 && S.l2.iso) {
         S.l2.iso = null;

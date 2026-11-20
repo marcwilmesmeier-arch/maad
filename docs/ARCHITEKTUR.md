@@ -509,6 +509,11 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
   eigens modelliert werden. NGF/NGFoi = R + S und zeigt beide (R grün, S dunkelgrün), NGF (R) nur R (`'ngfr'`),
   NGF (S) nur S. Dachgeschoss in der NGF-Darstellung: ein Raumkörper unter der Dachfläche (`l2DgKoerper`, Grundriss
   des obersten Geschosses um die Außenwand versetzt, an den Dachdreiecken `b._rp.pr` geteilt). Schmale Reste fallen weg.
+- Einzelkörper der Metriken wählen (`22-…/150-metrik-auswahl.js`): Klick auf einen Körper der Hervorhebung (`S.hlG`,
+  `G.l2n`) wählt ihn (oranger Rahmen als Kind des Körpers, folgt der Explosion); die Beschriftung zeigt nur seine
+  Angaben (`userData.info` bzw. aus Geschoss und Auswertung, `mzInfo`) statt Zahlen an allen Körpern. Eigene
+  Zeiger-Handler in der Erfassungsphase (vor Modellieren und Bearbeiten), nur wenn ein Körper getroffen ist.
+  In der Explosionsansicht entfallen die Gebäude-Auswahlrahmen (folgen den Geschossen nicht).
 - Umgebungsverdeckung in Realistisch+ (`S.atm.ao`, Regler „Umgebungsverdeckung“): im Albedo-Shader (`ATM.lin`,
   Funktion `verdeckung`) aus Tiefe und Normalenbild, dämpft nur das Himmelslicht (Ecken, Wandfüße, unter Balkonen).
   Das Licht vom Boden (`um`) ist entfallen. LOD-200-Konturlinien (`userData.l2ko`) schaltet nur `l2Kontur`, der Layer

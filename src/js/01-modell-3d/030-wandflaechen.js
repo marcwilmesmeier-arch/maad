@@ -924,7 +924,7 @@ function selOk() {
 }
 function updSel() {
   const f = selOk();
-  sq.visible = sl.visible = !!f && f.i >= 0;
+  sq.visible = sl.visible = !!f && f.i >= 0 && !(S.expl && S.expl.cur > 0.05);
   if (!sq.visible) return;
   const b = f.b,
     L = b.levels,
@@ -965,6 +965,11 @@ function updSel() {
   ]);
 }
 function dimLabels() {
+  // ── Erweiterung aus 22-lod200-waende/150-metrik-auswahl.js: Angaben nur am gewählten Körper der Auswertung
+  // (folgt der Explosion); ohne Wahl keine Zahlen an allen Körpern
+  const mz = mzLabel();
+  if (mz) return [mz];
+  if (S.hlk || (S.l2 && S.l2.iso)) return [];
   if (!S.hlk) return [];
   const out = [],
     k = S.hlk,
@@ -1087,7 +1092,9 @@ const dimEl = $('dim'),
   dpool = [];
 function updDim() {
   const labs =
-      S.tool === 'f' && !S.closed ? [] : dimLabels().filter((l) => (l.t.endsWith('m²') ? S.sa : S.sd)),
+      S.tool === 'f' && !S.closed
+        ? []
+        : dimLabels().filter((l) => l.mz || (l.t.endsWith('m²') ? S.sa : S.sd)),
     w = mid.clientWidth,
     h = mid.clientHeight,
     cm = act();
@@ -1159,11 +1166,13 @@ function updSel2() {
   let t = null;
   if (f && f.i < 0) t = { b: f.b, k: f.k };
   else if (!f && S.sel && !S.sel.ex && S.bld.includes(S.sel)) t = { b: S.sel, k: -1 };
-  so.visible = !!t && !(S.tool === 'f' && !S.closed);
+  // in der Explosionsansicht keine Gebäuderahmen (sie folgen den Geschossen nicht); dort wählt man Einzelkörper
+  const exp = !!(S.expl && S.expl.cur > 0.05);
+  so.visible = !!t && !(S.tool === 'f' && !S.closed) && !exp;
   if (so.visible) setLines(so, t.b, t.k, -1);
   const hb = S.hvB,
     ok = hb && S.m3 && S.bld.includes(hb) && (S.tool === 'v' || S.tool === 'b' || S.tool === 't');
-  hlB.visible = !!ok;
+  hlB.visible = !!ok && !exp;
   if (ok) setLines(hlB, hb, -1, -1);
 }
 function nearOuter(hit) {

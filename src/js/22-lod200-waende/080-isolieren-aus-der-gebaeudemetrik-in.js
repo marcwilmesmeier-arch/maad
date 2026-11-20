@@ -145,7 +145,14 @@ function l2NetShow(iso) {
               P = gDg ? { g: gDg } : grPrism({ o: p, h: hs || [] }, 0, hh),
               m = new T.Mesh(P.g, mat);
             m.position.y = gDg ? 0 : y0;
-            m.userData = { bid: b.id, li: i, y0: gDg ? 0 : y0 }; // Dachgeschoss: Geometrie schon in Weltlage
+            const aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0),
+              nm = dg ? 'Dachgeschoss' : (bLv(b)[i] || {}).n || lname(b, i);
+            m.userData = {
+              bid: b.id,
+              li: i,
+              y0: gDg ? 0 : y0,
+              info: nm + ' · NGF (R) · ' + f1(aN, 1) + ' m²',
+            };
             m.castShadow = false;
             m.raycast = () => {};
             G.l2n.add(m);
@@ -279,10 +286,10 @@ function l2BriShow(iso) {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
     const u = ugN(b),
       LG = oeLoggiaEinschnitte(b),
-      add = (g, y0, li) => {
+      add = (g, y0, li, info) => {
         const m = new T.Mesh(g, mat);
         m.position.y = y0;
-        m.userData = { bid: b.id, li, y0 };
+        m.userData = { bid: b.id, li, y0, info };
         m.castShadow = false;
         m.raycast = () => {};
         G.l2n.add(m);
@@ -304,7 +311,13 @@ function l2BriShow(iso) {
         }
       PP.forEach((P) => {
         try {
-          add(grPrism({ o: P.o, h: P.h || [] }, 0, l.h).g, y0, j);
+          const aP = l2Ar(P.o) - (P.h || []).reduce((s2, h) => s2 + l2Ar(h), 0);
+          add(
+            grPrism({ o: P.o, h: P.h || [] }, 0, l.h).g,
+            y0,
+            j,
+            lname(b, j) + ' · BRI (R) · ' + f1(aP * l.h, 1) + ' m³',
+          );
         } catch (e) {
           logErr(e, 'l2BriShow');
         }
@@ -313,7 +326,7 @@ function l2BriShow(iso) {
     // Dachraum (geneigtes Dach) bis zur Dachfläche
     if (b.roof && b.roof.type && b.roof.type !== 'flat') {
       const g = l2DgKoerper(b, lf(b, b.levels[b.levels.length - 1]), y, 0);
-      if (g) add(g, 0, 'roof');
+      if (g) add(g, 0, 'roof', 'Dachraum · BRI (R) · ' + f1((b._roofA && b._roofA.vol) || 0, 1) + ' m³');
     }
   });
   try {
@@ -333,7 +346,19 @@ function l2SShow(iso, farbe) {
         const P = grPrism({ o: s.pts, h: [] }, 0, s.h),
           m = new T.Mesh(P.g, mat);
         m.position.y = s.y;
-        m.userData = { bid: b.id, li: s.li, y0: s.y };
+        m.userData = {
+          bid: b.id,
+          li: s.li,
+          y0: s.y,
+          info:
+            ({ ba: 'Balkon', lo: 'Loggia', bl: 'Balkon + Loggia' }[s.art] || 'Sonderfall S') +
+            (s.li === 'roof' ? '' : ' · ' + lname(b, s.li)) +
+            ' · S · ' +
+            f1(s.a, 1) +
+            ' m² · ' +
+            f1(s.a * s.h, 1) +
+            ' m³',
+        };
         m.castShadow = false;
         m.raycast = () => {};
         G.l2n.add(m);
