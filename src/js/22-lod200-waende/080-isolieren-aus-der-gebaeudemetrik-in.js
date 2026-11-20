@@ -94,16 +94,30 @@ function l2NetShow(iso) {
           .filter((e) => e.li === i && e.quads && (e.kind === 'AW' || e.kind === 'TW' || e.kind === 'TH'))
           .reduce((r, e) => r.concat(e.quads), []),
         y0 = G_.lv[i].y0,
-        hh = Math.max(0.1, lv.h - dDE);
+        hh = Math.max(0.1, lv.h - dDE),
+        // keine Nettofläche in Innenhöfen und Loggien (Einschnitte dieses Geschosses)
+        jB = b.levels.indexOf(lv.obj),
+        aus = (jB >= 0 ? znVoidsAt(b, jB).map((v) => v.poly) : []).concat(
+          oeLoggiaEinschnitte(b)
+            .filter((z) => z.y > y0 - 0.1 && z.y < y0 + lv.h - 0.1)
+            .map((z) => z.f),
+        );
       lv.faces.forEach((f) => {
         let ps = [f.o];
         qs.forEach((q) => {
           ps = ps.reduce((r, p) => r.concat(l2Diff(p, q)), []);
         });
-        ps.forEach((p) => {
+        let PP = ps.map((p) => ({ o: p, h: [] }));
+        if (aus.length)
+          try {
+            PP = boolOp(PP, aus.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
+          } catch (e) {
+            logErr(e, 'l2NetShow Höfe');
+          }
+        PP.forEach(({ o: p, h: hs }) => {
           if (l2Ar(p) < 2e-3) return;
           try {
-            const P = grPrism({ o: p, h: [] }, 0, hh),
+            const P = grPrism({ o: p, h: hs || [] }, 0, hh),
               m = new T.Mesh(P.g, mat);
             m.position.y = y0;
             m.userData = { bid: b.id, li: i, y0 };
