@@ -621,7 +621,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Fuß-/Radwege samt Fußgängerflächen (`paths`: `line.paths` + `line.cycle` + `fill.paths`, 5 cm, 1,5 m, `G.paths`,
   `S.lc.paths`). Je Ebene eine Maske (`E.uM`); der Geländeshader schneidet beide aus, Wege weichen Straßen (kein
   Weg und kein Wegbordstein, wo eine Straße liegt). Das Abstandsfeld wird vor der Umrissbildung geglättet
-  (`strGlaetten`, 2 × 5 × 5 Zellen) – sonst welliger Rand aus den Rasterstufen.
+  (`strGlaetten`); gerade Ränder kommen exakt aus Achse und halber Breite (`strExakt`), das Raster nur dort, wo das
+  Schließen die Fläche erweitert (Ausrundungen).
 
 - Nach `ctxPaint` (`strAktualisieren`, nur bei geänderten Straßen/Gelände neu, sonst nur umfärben): aus den OSM-Achsen
   (`GEO.acc.line.roads`, Breite `w`) wird ein Band `w + 2r` gerastert (0,25 m), per Abstandsfeld (`strEdt`,

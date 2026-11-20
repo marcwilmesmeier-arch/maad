@@ -104,6 +104,60 @@ function strGlaetten(F, N, r) {
     for (let y = 0; y < N; y++) F[y * N + x] = t[y];
   }
 }
+/**
+ * Exaktes Abstandsfeld der Achsen (m, > 0 innen): je Zelle das größte w/2 − Abstand zur Achse, nur im Band bis 1 m
+ * außerhalb des Randes (sonst −1e9). Je Segment nur die Zellen seiner Kapsel (Zeile für Zeile).
+ */
+function strExakt(roads, N, c, G) {
+  const Fx = new Float32Array(N * N).fill(-1e9),
+    h0 = G / 2;
+  for (const { l, w } of roads) {
+    if (!l || l.length < 2) continue;
+    const hw = w / 2,
+      R = hw + 1;
+    for (let k = 0; k + 1 < l.length; k++) {
+      const ax = l[k][0],
+        az = l[k][1],
+        bx = l[k + 1][0],
+        bz = l[k + 1][1],
+        dx = bx - ax,
+        dz = bz - az,
+        L2 = dx * dx + dz * dz || 1e-12,
+        j0 = Math.max(0, Math.floor((Math.min(az, bz) - R + h0) / c)),
+        j1 = Math.min(N - 1, Math.ceil((Math.max(az, bz) + R + h0) / c)),
+        i0 = Math.max(0, Math.floor((Math.min(ax, bx) - R + h0) / c)),
+        i1 = Math.min(N - 1, Math.ceil((Math.max(ax, bx) + R + h0) / c)),
+        L = Math.sqrt(L2),
+        // Zeilenweise: x-Bereich der Kapsel über die Senkrechte zur Achse eingrenzen
+        nx = -dz / L,
+        nz = dx / L;
+      for (let j = j0; j <= j1; j++) {
+        const z = -h0 + (j + 0.5) * c;
+        let xa = -h0 + (i0 + 0.5) * c,
+          xb = -h0 + (i1 + 0.5) * c;
+        if (Math.abs(nx) > 0.2) {
+          // Band |n·(p − a)| ≤ R → x-Intervall, erweitert um die Endkappen (Bounding der Kapsel)
+          const m = (nx * ax + nz * az - nz * z) / nx,
+            hb = R / Math.abs(nx);
+          xa = Math.max(xa, m - hb);
+          xb = Math.min(xb, m + hb);
+        }
+        const ia = Math.max(i0, Math.floor((xa + h0) / c)),
+          ib = Math.min(i1, Math.ceil((xb + h0) / c)),
+          o = j * N;
+        for (let i = ia; i <= ib; i++) {
+          const x = -h0 + (i + 0.5) * c,
+            t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)),
+            ex = ax + dx * t - x,
+            ez = az + dz * t - z,
+            v = hw - Math.sqrt(ex * ex + ez * ez);
+          if (v > Fx[o + i]) Fx[o + i] = v;
+        }
+      }
+    }
+  }
+  return Fx;
+}
 /** Ring vereinfachen (Douglas-Peucker, Toleranz e in m). */
 function strVereinfachen(r, e) {
   const n = r.length;
@@ -179,9 +233,17 @@ function strFlaechen(roads, G, r, fills) {
     // Abstand zum Rand der geschlossenen Fläche (m), > 0 innen
     F = new Float32Array(N * N);
   for (let i = 0; i < N * N; i++) F[i] = D[i] * c - r;
-  // Treppenstufen des Rasters glätten (sonst welliger Rand): zweimal Mittelwert über 5 × 5 Zellen (≈ ±0,5 m)
+  // Treppenstufen des Rasters glätten: zweimal Mittelwert über 5 × 5 Zellen (≈ ±0,5 m)
   strGlaetten(F, N, 2);
   strGlaetten(F, N, 2);
+  // Gerade Ränder exakt: Abstand zur Achse minus halbe Breite; das Raster bleibt nur dort, wo das Schließen die
+  // Fläche erweitert (Ausrundungen an Einmündungen) – sanft übergeblendet
+  const Fx = strExakt(roads, N, c, G);
+  for (let i = 0; i < N * N; i++) {
+    const d = F[i] - Fx[i],
+      t = Math.max(0, Math.min(1, (d - 0.12) / 0.25));
+    F[i] = Fx[i] + d * t * t * (3 - 2 * t);
+  }
   return { ringe: strUmriss(F, N, c, G), F, N, c };
 }
 /** Umriss der Fläche F > 0 (Zellmitten) als Ringe mit Löchern: [{ o, h }]. */
