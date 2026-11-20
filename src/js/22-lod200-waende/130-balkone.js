@@ -81,7 +81,10 @@ function l2SFlaechen(b) {
         zur = x.a === 'lo' || x.a === 'bl' ? x.d : 0,
         P = (p, s) => [p[0] + n[0] * s, p[1] + n[1] * s],
         li = lvOfY(b, x.y0 + 0.1),
-        hG = li === 'roof' ? 2.5 : b.levels[li].h,
+        // bis Unterkante der Platte darüber (Decke über der Loggia bzw. Balkonplatte darüber, 20 cm): die Platte gehört
+        // nicht zum Raum im Sonderfall S
+        dP = Math.max(0.2, (l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22),
+        hG = (li === 'roof' ? 2.5 : b.levels[li].h) - dP,
         hB = x.gel && x.gel.ga !== 'ke' ? x.gel.gh || 1 : 1;
       // eine Fläche je Feld (Balkon und Loggia sind dieselbe Flächenart): Balkon + Loggia als ein Körper von der
       // Rückwand der Loggia bis zur Vorderkante des Balkons, Höhe wie die Loggia; lo = Anteil hinter der Fassade

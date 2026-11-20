@@ -502,7 +502,7 @@ und `r.gel`. Das Geländer setzt `l2Terrassen` (130-balkone) auf die Terrassenfl
 - Weißmodell und Baumschalen: `S.fx.wm` (trees, tv, nadel); `fxOn` lässt im Weißmodell nur Laub- und Nadelschalen zu,
   das Layer-Panel zeigt dort dieselbe Auswahl wie in den anderen Darstellungen (ohne Wasser-Shader).
 - DIN 277 Regelfall R / Sonderfall S (LOD 200): `l2SFlaechen`/`l2SZahlen` (130-balkone.js) – je Feld aus der
-  Fassade ein Körper (Balkon, Loggia oder Balkon + Loggia zusammen; Höhe Loggia = Geschoss, Balkon = Geländer).
+  Fassade ein Körper (Balkon, Loggia oder Balkon + Loggia zusammen; Höhe Loggia = Geschoss minus Platte darüber, Balkon = Geländer).
   Metriken: BGF (R) = BGF − Loggia-Anteil, BGF (S), NGF (R)/(S), Gruppe „Sonderfall S“ mit BRI (S); Hervorhebung
   `L2ISO('s', …)` → `l2SShow` (dunkleres Grün als die NGF). Terrassen im EG (z. B. vor Loggien) folgen, wenn sie
   eigens modelliert werden. NGF-Darstellung zeigt das Dachgeschoss (bis Drempelhöhe) und lässt schmale Reste weg.
