@@ -625,6 +625,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   `STR.uM`, R = Abstand zum Rand), Bordstein senkrecht entlang des Umrisses; das Gelände bekommt dort ein Loch
   (`strGelaendeShader`, verträgt sich mit `pitPatch`, beide verketten `onBeforeCompile`). Farbe = Layer-Farbe Straßen
   (`S.lc.roads`); im Kartenbild (`recomp`) entfällt die Straßenebene, solange die Fläche besteht (`STR.aktiv`).
-- Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den
-  Ufern; dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
+- Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den Ufern, abgenommen `STR.ufer` (3 m) hinter der Uferkante (Böschung) –
+  dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
   Stirnseite.

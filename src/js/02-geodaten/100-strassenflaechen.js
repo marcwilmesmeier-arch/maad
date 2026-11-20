@@ -7,6 +7,7 @@
 
 const STR = {
   r: 4, // Ausrundungsradius an Einmündungen (m)
+  ufer: 3, // Brücken: Straßenhöhe so weit hinter der Uferkante abnehmen (Böschung, m)
   tief: 0.15, // Versatz ins Gelände (m)
   sig: '',
   aktiv: false,
@@ -376,20 +377,26 @@ function strBruecken(roads, G) {
       if (!P[k].n) continue;
       let e = k;
       while (e + 1 < P.length && P[e + 1].n) e++;
-      const a = k > 0 ? P[k - 1] : null,
-        b = e + 1 < P.length ? P[e + 1] : null;
+      // Höhe am Ufer STR.ufer m hinter der Uferkante abnehmen (an der Kante liegt meist eine Böschung, die Straße
+      // tiefer); bis dorthin läuft die Fahrbahn schon auf Brückenhöhe
+      const ia = k > 0 ? Math.max(0, k - 1 - STR.ufer) : -1,
+        ib = e + 1 < P.length ? Math.min(P.length - 1, e + 1 + STR.ufer) : -1,
+        a = ia >= 0 ? P[ia] : null,
+        b = ib >= 0 ? P[ib] : null;
       // ganz im Wasser (Fähre, Kartenfehler) oder sehr lang: nicht überbrücken
       if ((a || b) && e - k < 400) {
         const ha = a ? a.h : b.h,
-          hb = b ? b.h : a.h;
-        for (let q = k; q <= e; q++) {
-          const t = (q - k + 1) / (e - k + 2);
+          hb = b ? b.h : a.h,
+          q0 = a ? ia + 1 : k,
+          q1 = b ? ib - 1 : e;
+        for (let q = q0; q <= q1; q++) {
+          const t = (q - q0 + 1) / (q1 - q0 + 2);
           P[q].h = ha + (hb - ha) * t;
           const z = zelle(P[q].x, P[q].z);
           if (!proben.has(z)) proben.set(z, []);
           proben.get(z).push(P[q]);
         }
-        linien.push({ l: P.slice(Math.max(0, k - 1), e + 2).map((p) => [p.x, p.z]), w });
+        linien.push({ l: P.slice(Math.max(0, q0 - 1), q1 + 2).map((p) => [p.x, p.z]), w });
       }
       k = e;
     }
