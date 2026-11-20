@@ -29,7 +29,7 @@ maad ist eine klassische Browser-Anwendung ohne Framework. `tools/build.mjs` set
   `package.json` anpassen, `npm install`, `npm run vendor`.
 - Realistisch+ (`'realp'`, teilt Einstellungen mit Realistisch über `drKey()`): maad rendert die Szene mit
   gleichmäßigem weißem Licht (Bild = Grundfarbe), beleuchtet wird in der Nachbearbeitung (AerialPerspectiveEffect,
-  wie im three.js-Beispiel webgl_loader_3dtiles). Zwei Hilfsdurchgänge mit Ersatzmaterialien (`atmDurchgang`,
+  wie im three.js-Beispiel webgl_loader_3dtiles; Zwischenbild mit MSAA ×4, danach SMAA). Zwei Hilfsdurchgänge mit Ersatzmaterialien (`atmDurchgang`,
   übernehmen Seite und `onBeforeCompile` des Originals): Normalenbild und Schattenmaske (Alpha = maads Schatten,
   r = nachbeleuchten ja/nein). Wasser (`040-wasser-realistisch-plus.js`) spiegelt den Himmel aus einer Würfeltextur
   und ist von der Nachbeleuchtung ausgenommen; Tiefenversatz (`polygonOffset` −4/−8) in allen Durchgängen wie beim

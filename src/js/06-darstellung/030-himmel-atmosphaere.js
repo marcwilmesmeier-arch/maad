@@ -206,7 +206,11 @@ function atmAufbau(L) {
     },
   );
   ATM.tm = new L.ToneMappingEffect({ mode: L.ToneMappingMode.AGX });
-  ATM.comp = new L.EffectComposer(ren, { frameBufferType: T.HalfFloatType, multisampling: 0 });
+  // MSAA im Zwischenbild: ohne glättet nur SMAA am Ende – dünne Linien (Geländer, Rahmen) blieben treppig
+  ATM.comp = new L.EffectComposer(ren, {
+    frameBufferType: T.HalfFloatType,
+    multisampling: Math.min(4, (ren.capabilities && ren.capabilities.maxSamples) || 0),
+  });
   ATM.comp.addPass(new L.RenderPass(sc, cm));
   ATM.comp.addPass(new L.EffectPass(cm, ATM.lin));
   ATM.comp.addPass(new L.EffectPass(cm, ATM.cl, ATM.ap));
