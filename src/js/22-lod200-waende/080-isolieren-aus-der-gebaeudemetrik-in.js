@@ -597,6 +597,12 @@ function L2ISO(m, bid, sel) {
     S.l2.iso = { m, bid, sel, key: k };
     try {
       zoIsoClear(true);
+      // eine Hervorhebung aus den Metriken (z. B. BGF-Flächen) weicht der LOD-200-Auswertung
+      if (S.hlk || S.hlG) {
+        S.hlk = null;
+        S.hlb = null;
+        hlClear();
+      }
     } catch (e) {
       logErr(e, 'L2ISO');
     }

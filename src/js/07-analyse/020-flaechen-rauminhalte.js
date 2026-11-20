@@ -303,6 +303,15 @@ function anTog(id, k, bid) {
   if (k && !same && S.anO[id]) {
     S.hlk = k;
     S.hlb = bid;
+    // ── Erweiterung aus 22-lod200-waende/080-isolieren-aus-der-gebaeudemetrik-in.js: LOD-200-Auswertung weicht
+    if (S.l2 && S.l2.iso) {
+      S.l2.iso = null;
+      try {
+        l2IsoApply(true);
+      } catch (e) {
+        logErr(e, 'anTog');
+      }
+    }
     hlApply();
   } else if (k && same && !S.anO[id]) {
     S.hlk = null;
@@ -322,6 +331,16 @@ function hlSet(k, bid) {
   }
   S.hlk = k;
   S.hlb = bid;
+  // ── Erweiterung aus 22-lod200-waende/080-isolieren-aus-der-gebaeudemetrik-in.js: eine LOD-200-Auswertung (z. B.
+  // BRI-Körper) weicht der neuen Hervorhebung, sonst blieben beide sichtbar
+  if (S.l2 && S.l2.iso) {
+    S.l2.iso = null;
+    try {
+      l2IsoApply(true);
+    } catch (e) {
+      logErr(e, 'hlSet');
+    }
+  }
   hlApply();
   rr();
 }
