@@ -14,6 +14,7 @@ var SK = {
   op: null,
   key: '',
   ver: 0,
+  mzAus: false, // Rahmen aus seit einer Ansicht der Gebäudemetrik, bis Esc (skDraw)
 };
 SK.on = true;
 function mdlHit() {

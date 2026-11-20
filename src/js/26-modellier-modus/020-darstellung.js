@@ -72,6 +72,7 @@ function skQuadsBasis(ents, col, op, line) {
     );
     me.renderOrder = 7;
     me.raycast = () => {};
+    me.userData.nurFarbe = 1; // Einblendung: nicht ins Normalenbild/die Maske von Realistisch+ (atmDurchgang)
     o.push(me);
   }
   if (line && lp.length) {
@@ -104,8 +105,13 @@ function skSig(b) {
   return s;
 }
 function skDraw() {
-  // in der Explosionsansicht keine Auswahl- und Hover-Rahmen (sie folgen den Geschossen nicht)
-  const on = skAct() && !(S.expl && S.expl.cur > 0.05);
+  // in der Explosionsansicht (Rahmen folgen den Geschossen nicht) keine Auswahl- und Hover-Rahmen; ebenso ab der ersten
+  // Ansicht der Gebäudemetrik (Isolieren, Hervorhebung, LOD-200-Auswertung), bis Esc zur Standardansicht zurückführt
+  if ((ZI.sp || S.hlk || (S.l2 && S.l2.iso)) && !SK.mzAus) {
+    SK.mzAus = true;
+    updSel2();
+  }
+  const on = skAct() && !(S.expl && S.expl.cur > 0.05) && !SK.mzAus;
   SKG.visible = on;
   if (!on) {
     SK.key = '';
@@ -355,6 +361,8 @@ addEventListener(
           SK.sel = [];
           SK.ver++;
           skSync();
+          // in einer Metrik-Ansicht (Rahmen ausgeblendet) führt dasselbe Esc auch zur Standardansicht zurück
+          if (SK.mzAus) return;
           e.stopImmediatePropagation();
         }
         return;

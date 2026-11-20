@@ -514,7 +514,7 @@ function zoRender() {
             const x = lv[l.n] || (lv[l.n] = { a: 0, w: 0, n: 0 });
             x.a += l.a;
             x.w += l.w;
-            x.n += l.ngf;
+            x.n += l.ngf + l.s;
           }),
         );
         const ks = Object.keys(lv).reverse();
@@ -528,7 +528,7 @@ function zoRender() {
             ks
               .map((k) =>
                 R(
-                  k + ' <span class="mu">BGF ' + A(lv[k].a) + ' − Wände ' + A(lv[k].w) + '</span>',
+                  k + ' <span class="mu">BGF ' + A(lv[k].a) + ', Wände ' + A(lv[k].w) + '</span>',
                   A(lv[k].n),
                   '',
                   ['ngf', '*', 'n:' + k],
@@ -564,6 +564,12 @@ function zoRender() {
     }
     return r;
   })();
+  // ── Erweiterung aus 26-modellier-modus/020-darstellung.js: Modellier-Rahmen in Metrik-Ansichten ausblenden
+  try {
+    skDraw();
+  } catch (e) {
+    logErr(e, 'zoRender>skDraw');
+  }
   try {
     const e = document.getElementById('zol');
     if (!e) return r;

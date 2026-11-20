@@ -861,6 +861,10 @@ addEventListener('keydown', (e) => {
         hlClear(1);
       }
       if (S.expl && S.expl.on) tgExp();
+      // ── Erweiterung aus 26-modellier-modus/020-darstellung.js: Modellier-Rahmen wieder zeigen
+      SK.mzAus = false;
+      skDraw();
+      updSel2();
     } catch (e) {
       logErr(e, 'Esc>Metriken');
     }

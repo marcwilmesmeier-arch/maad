@@ -111,9 +111,10 @@ function l2NetShow(iso) {
 /**
  * Netto-Raumkörper (Regelfall R) eines Gebäudes in LOD 200: je Geschoss die Nettofläche (ohne Wände, Innenhöfe und
  * Loggien) bis unter die Decke, im Dachgeschoss der Raum unter der Dachfläche.
- * [{ g, y0, li, a (m²), v (m³), nm, ug }] – Grundlage für NGF- und NRI-Darstellung und die NRI-Zahl.
+ * [{ g, y0, li, f, a (m²), v (m³), nm, ug }] – Grundlage für NGF- und NRI-Darstellung und beider Zahlen
+ * (l2NetFlaechen). nurFlaeche: ohne Körper und Rauminhalt (schnell, für die Flächenzahlen).
  */
-function l2NetKoerper(b, sel) {
+function l2NetKoerper(b, sel, nurFlaeche) {
   const r = [],
     dDE = l2T(S.l2.defs.DE).d,
     G_ = l2Els(b),
@@ -167,19 +168,25 @@ function l2NetKoerper(b, sel) {
           0,
         );
         if ((2 * l2Ar(p)) / Math.max(U, 1e-6) < 0.15) return;
+        const aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0),
+          ug = !dg && i < ugN(b);
+        if (nurFlaeche) {
+          r.push({ li: i, f, a: aN, ug });
+          return;
+        }
         try {
           // Dachgeschoss: Raumkörper unter der Dachfläche (Dachaufbau etwa 30 cm), sonst Prisma bis unter die Decke
           const gDg = dg ? l2DgKoerper(b, p, y0, 0.3) : null,
-            g = gDg || grPrism({ o: p, h: hs || [] }, 0, hh).g,
-            aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0);
+            g = gDg || grPrism({ o: p, h: hs || [] }, 0, hh).g;
           r.push({
             g,
             y0: gDg ? 0 : y0,
             li: i,
+            f,
             a: aN,
             v: gDg ? l2Volumen(gDg) : aN * hh,
             nm: dg ? 'Dachgeschoss' : (bLv(b)[i] || {}).n || lname(b, i),
-            ug: !dg && i < ugN(b),
+            ug,
           });
         } catch (e) {
           logErr(e, 'l2NetKoerper');
@@ -187,6 +194,30 @@ function l2NetKoerper(b, sel) {
       });
     });
   });
+  return r;
+}
+/**
+ * Nettoflächen (Regelfall R) je Geschoss und je Grundrissfläche, genau aus den Netto-Polygonen von l2NetKoerper –
+ * dieselben Flächen wie die angezeigten Körper. Zwischengespeichert, solange Bauteile, Grundriss und Loggien gleich
+ * bleiben. { lv: [m² je Geschoss], f: Map(Grundrissfläche → m²) }
+ */
+function l2NetFlaechen(b) {
+  const G_ = l2Els(b),
+    s =
+      G_.k +
+      '|' +
+      grSig(b) +
+      '|' +
+      JSON.stringify(oeLoggiaEinschnitte(b).map((z) => [z.y, z.f])) +
+      '|' +
+      JSON.stringify(b.voids || null);
+  if (b._ngf && b._ngf.s === s) return b._ngf.r;
+  const r = { lv: [], f: new Map() };
+  l2NetKoerper(b, 'all', true).forEach((k) => {
+    r.lv[k.li] = (r.lv[k.li] || 0) + k.a;
+    r.f.set(k.f, (r.f.get(k.f) || 0) + k.a);
+  });
+  b._ngf = { s, r };
   return r;
 }
 /** Rauminhalt eines geschlossenen Körpers (m³, Summe der Tetraeder über die Dreiecke). */
@@ -385,12 +416,14 @@ function l2BriShow(iso) {
   }
 }
 /** Körper der Flächen im Sonderfall S (DIN 277) zeigen: iso.sel 'all', 'ba' (Balkone) oder 'lo' (Loggien). */
-function l2SShow(iso, farbe) {
+/** lvSel: nur Flächen dieser Geschosse (wie l2LvMatch; für NGF/NRI nach Geschoss), sonst alle. */
+function l2SShow(iso, farbe, lvSel) {
   const mat = new T.MeshLambertMaterial({ color: new T.Color(farbe || ISOC.s), side: T.DoubleSide });
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
     l2SFlaechen(b).forEach((s) => {
       if (iso.sel !== 'all' && iso.sel !== s.art) return;
+      if (lvSel && !l2LvMatch(b, s.li === 'roof' ? b.levels.length : s.li, lvSel)) return;
       try {
         const P = grPrism({ o: s.pts, h: [] }, 0, s.h),
           m = new T.Mesh(P.g, mat);
@@ -483,7 +516,8 @@ function l2IsoApply(force) {
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && iso.m === 's') l2SShow(iso);
   // NRI: dieselben Körper wie die NGF, Angaben als Rauminhalt
-  if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u') l2SShow({ ...iso, sel: 'all' });
+  if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u')
+    l2SShow({ ...iso, sel: 'all' }, null, iso.sel);
   // BRI: 'bri' R und S, 'brir' nur R, 'bris' nur S
   if (iso && (iso.m === 'bri' || iso.m === 'brir')) l2BriShow(iso);
   if (iso && (iso.m === 'bri' || iso.m === 'bris')) l2SShow({ ...iso, sel: 'all' }, ISOC.bris);

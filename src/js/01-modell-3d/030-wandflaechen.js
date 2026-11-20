@@ -1167,7 +1167,8 @@ function updSel2() {
   if (f && f.i < 0) t = { b: f.b, k: f.k };
   else if (!f && S.sel && !S.sel.ex && S.bld.includes(S.sel)) t = { b: S.sel, k: -1 };
   // in der Explosionsansicht keine Gebäuderahmen (sie folgen den Geschossen nicht); dort wählt man Einzelkörper
-  const exp = !!(S.expl && S.expl.cur > 0.05);
+  // ebenso in den Ansichten der Gebäudemetrik bis Esc (SK.mzAus, 26-modellier-modus/020-darstellung.js)
+  const exp = !!(S.expl && S.expl.cur > 0.05) || (typeof SK !== 'undefined' && SK.mzAus);
   so.visible = !!t && !(S.tool === 'f' && !S.closed) && !exp;
   if (so.visible) setLines(so, t.b, t.k, -1);
   const hb = S.hvB,

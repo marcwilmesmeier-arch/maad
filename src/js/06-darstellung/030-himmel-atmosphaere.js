@@ -30,7 +30,6 @@ const ATM = {
   varianten: { n: new WeakMap(), nf: new WeakMap(), s: new WeakMap() }, // Ersatzmaterialien je Original
   liste: [],
   flach: new WeakSet(), // Gebäude (Normalenbild mit Flächennormalen) // sichtbare Objekte für die Hilfsdurchgänge (alle 1 s neu)
-  listeT: 0,
   m: new T.Matrix4(), // Welt (maad: x Ost, y oben, z Süd) -> ECEF
   ll: '', // Ort, für den m berechnet ist
   ref: 1, // Bezugshelligkeit der Sonne (hoher Sonnenstand), Einheit der Bibliothek
@@ -383,18 +382,17 @@ function atmVariante(m, art) {
  * sonst das Gelände als sonnig abdecken. Die Seitenwände des Geländes empfangen dort keinen Schatten (sonst Streifen).
  */
 function atmDurchgang(art, ziel, cm) {
-  const jetzt = performance.now();
-  if (jetzt - ATM.listeT > 1000) {
-    ATM.listeT = jetzt;
-    ATM.liste = [];
-    sc.traverseVisible((o) => {
-      if (o !== sc && o !== ATM.himmelM && (o.isMesh || o.isLine || o.isPoints || o.isSprite))
-        ATM.liste.push(o);
-    });
-    // Gebäude: exakte Flächennormalen (gemittelte Normalen über First/Kanten ließen Dachseiten gleich hell wirken)
-    ATM.flach = new WeakSet();
-    G.buildings.traverse((o) => o.isMesh && ATM.flach.add(o));
-  }
+  // Liste bei jedem Durchgang neu (unter 0,1 ms bei üblichen Szenen): Objekte, die zwischen zwei Erfassungen
+  // entstehen (z. B. Hover- und Auswahlflächen beim Überfahren), kämen sonst mit ihrem eigenen Material ins
+  // Normalenbild und in die Maske – die Fassade darunter würde schwarz nachbeleuchtet
+  ATM.liste = [];
+  sc.traverseVisible((o) => {
+    if (o !== sc && o !== ATM.himmelM && (o.isMesh || o.isLine || o.isPoints || o.isSprite))
+      ATM.liste.push(o);
+  });
+  // Gebäude: exakte Flächennormalen (gemittelte Normalen über First/Kanten ließen Dachseiten gleich hell wirken)
+  ATM.flach = new WeakSet();
+  G.buildings.traverse((o) => o.isMesh && ATM.flach.add(o));
   const rt = ren.getRenderTarget(),
     cc = ren.getClearColor(new T.Color()),
     ca = ren.getClearAlpha(),
@@ -404,7 +402,13 @@ function atmDurchgang(art, ziel, cm) {
   try {
     for (const o of ATM.liste) {
       // nurFarbe: Einblendungen (Analyse-Flächen, Strömungsstreifen) gehören nicht in Normalenbild und Maske
-      const aus = !o.isMesh || o.userData.nurFarbe || (art === 's' && !o.castShadow && !o.receiveShadow);
+      // Flächen ohne Normalen (Einblendungen wie Hover- und Auswahlflächen) ergäben im Normalenbild „keine Richtung“
+      // und würden die Fläche darunter schwarz nachbeleuchten
+      const aus =
+        !o.isMesh ||
+        o.userData.nurFarbe ||
+        (!o.userData.atmVar && o.geometry && !o.geometry.getAttribute('normal')) ||
+        (art === 's' && !o.castShadow && !o.receiveShadow);
       alt.push([o, o.visible, o.material, o.receiveShadow]);
       if (aus) o.visible = false;
       else if (o.userData.atmVar) o.material = o.userData.atmVar[art];

@@ -183,6 +183,26 @@ function wasSpiegel(cm, m) {
     .set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1)
     .multiply(vc.projectionMatrix)
     .multiply(vc.matrixWorldInverse);
+  m.visible = false;
+  wasLicht(() => {
+    ren.clippingPlanes = [new T.Plane(new T.Vector3(0, 1, 0), -(h0 - 0.05))];
+    ren.setRenderTarget(WAS.rt);
+    ren.setClearColor(0x000000, 0);
+    ren.clear();
+    ren.render(sc, vc);
+  });
+  const u = m.material.uniforms;
+  u.tR.value = WAS.rt.texture;
+  // gleiche Umrechnung wie die Grundfarbe (atmAlbedo): sonnenbeschienene weiße Fläche ≈ Sonnenlicht / π
+  u.uR.value = (ATM.lin.uniforms.get('uK').value * atmY(ATM.sonne.color)) / Math.PI;
+}
+
+/**
+ * Für einen Spiegel-Durchgang maads Lichter wie in Realistisch setzen (in Realistisch+ stehen sie sonst auf
+ * gleichmäßigem Weiß für die Grundfarbe), fn ausführen, danach Lichter, Renderziel, Clipping und Löschfarbe zurück.
+ * Auch für die Umgebung im Fensterglas (050-glas-realistisch-plus.js).
+ */
+function wasLicht(fn) {
   const alt = {
       rt: ren.getRenderTarget(),
       cp: ren.clippingPlanes,
@@ -197,18 +217,13 @@ function wasSpiegel(cm, m) {
     },
     k = brK();
   try {
-    m.visible = false;
     hemi.intensity = 0.5 * k * LICHT;
     hemi.color.set(0xcfe3ff);
     hemi.groundColor.set(0xa49a8c);
     sunL.intensity = (ATM.sonneW.y > 0 ? 1.1 : 0.1) * 0.7 * k * LICHT;
     sunL.color.set(drWarm((Math.asin(Math.max(-1, Math.min(1, ATM.sonneW.y))) * 180) / Math.PI));
     ren.shadowMap.autoUpdate = false;
-    ren.clippingPlanes = [new T.Plane(new T.Vector3(0, 1, 0), -(h0 - 0.05))];
-    ren.setRenderTarget(WAS.rt);
-    ren.setClearColor(0x000000, 0);
-    ren.clear();
-    ren.render(sc, vc);
+    fn();
   } finally {
     ren.setRenderTarget(alt.rt);
     ren.clippingPlanes = alt.cp;
@@ -220,10 +235,6 @@ function wasSpiegel(cm, m) {
     sunL.intensity = alt.si;
     sunL.color.copy(alt.scol);
   }
-  const u = m.material.uniforms;
-  u.tR.value = WAS.rt.texture;
-  // gleiche Umrechnung wie die Grundfarbe (atmAlbedo): sonnenbeschienene weiße Fläche ≈ Sonnenlicht / π
-  u.uR.value = (ATM.lin.uniforms.get('uK').value * atmY(ATM.sonne.color)) / Math.PI;
 }
 
 /** Vor dem Rendern in Realistisch+: Spiegelungen aktualisieren und Wasser einblenden. */

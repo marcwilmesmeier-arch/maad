@@ -63,6 +63,13 @@ function l2WallA(b) {
   return a;
 }
 function l2NetFace(b, lv, f) {
+  // genau: Nettofläche der Grundrissfläche aus den Netto-Polygonen (wie NGF-Zahl und Körper)
+  try {
+    const n = l2NetFlaechen(b).f.get(f);
+    if (n != null) return n;
+  } catch (e) {
+    logErr(e, 'l2NetFace');
+  }
   const G = l2Els(b),
     qs = [];
   G.els.forEach((e) => {
@@ -78,20 +85,33 @@ function l2NetFace(b, lv, f) {
   return Math.max(0, f.a - w);
 }
 // grLabelTxt(): Erweiterung zusammengeführt, siehe 15-grundriss/100-kopf.js
+/**
+ * NGF je Geschoss (LOD 200), genau aus den Netto-Polygonen (l2NetFlaechen: ohne Wände, Innenhöfe, Loggien) – dieselbe
+ * Fläche wie die NGF-Körper. ngf = Regelfall R, s = Sonderfall S (Balkone, Loggien) des Geschosses, w = Wände (KF).
+ * { o, u (R), so, su (S), wo, wu, lv: [{ n, ug, a, w, ngf, s }] }
+ */
 function l2Ngf(b) {
-  const u = ugN(b),
-    L = bLv(b),
+  const L = bLv(b),
     wa = l2WallA(b),
-    r = { o: 0, u: 0, wo: 0, wu: 0, lv: [] };
+    nf = l2NetFlaechen(b),
+    sl = [],
+    r = { o: 0, u: 0, so: 0, su: 0, wo: 0, wu: 0, lv: [] };
+  l2SFlaechen(b).forEach((x) => {
+    const i = x.li === 'roof' ? b.levels.length : x.li;
+    sl[i] = (sl[i] || 0) + x.a;
+  });
   L.forEach((l, i) => {
     const w = wa[i] || 0,
-      n = Math.max(0, l.a - w);
-    r.lv.push({ n: l.n, ug: l.ug, a: l.a, w, ngf: n });
+      n = nf.lv[i] || 0,
+      sa = sl[i] || 0;
+    r.lv.push({ n: l.n, ug: l.ug, a: l.a, w, ngf: n, s: sa });
     if (l.ug) {
       r.u += n;
+      r.su += sa;
       r.wu += w;
     } else {
       r.o += n;
+      r.so += sa;
       r.wo += w;
     }
   });
@@ -149,24 +169,21 @@ function zoBldHtml(b, k, R, A, B, P) {
     h += zoD(
       'ng' + id,
       ab('NGF', 'Nettogeschossfläche: Regelfall R und Sonderfall S (DIN 277)'),
-      A(n.o + n.u + (sz && sz.a > 0 ? sz.a - sz.lo : 0)),
-      l2R(
-        ab('NGFoi', 'Nettogeschossfläche oberirdisch, R und S'),
-        A(n.o + (sz && sz.a > 0 ? sz.a - sz.lo : 0)),
-        's',
-        ['ngf', id, 'o'],
-      ) +
-        (n.u ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u), 's', ['ngf', id, 'u']) : '') +
+      A(n.o + n.u + n.so + n.su),
+      l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch, R und S'), A(n.o + n.so), 's', ['ngf', id, 'o']) +
+        (n.u
+          ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(n.u + n.su), 's', ['ngf', id, 'u'])
+          : '') +
         (sz && sz.a > 0
-          ? l2R(ab('NGF (R)', 'Regelfall: ohne Balkone und Loggien'), A(n.o + n.u - sz.lo), 's', [
+          ? l2R(ab('NGF (R)', 'Regelfall: ohne Balkone und Loggien'), A(n.o + n.u), 's', [
               'ngfr',
               id,
               'all',
-            ]) + l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(sz.a), 's', ['s', id, 'all'])
+            ]) + l2R(ab('NGF (S)', 'Sonderfall: Balkone und Loggien'), A(n.so + n.su), 's', ['s', id, 'all'])
           : ''),
       [
-        { n: 'oberirdisch', c: '#4e79a7', v: n.o },
-        { n: 'unterirdisch', c: '#9aa5b1', v: n.u },
+        { n: 'oberirdisch', c: '#4e79a7', v: n.o + n.so },
+        { n: 'unterirdisch', c: '#9aa5b1', v: n.u + n.su },
       ],
     );
   // Netto-Rauminhalt (LOD 200): wie die NGF, als Rauminhalt; R und S zusammen, darunter getrennt
@@ -312,8 +329,8 @@ function zoBldTot(P, R, A, t) {
   if (on)
     P.forEach((b) => {
       const n = l2Ngf(b);
-      no += n.o;
-      nu += n.u;
+      no += n.o + n.so;
+      nu += n.u + n.su;
       w += n.wo + n.wu;
     });
   return (
@@ -322,7 +339,11 @@ function zoBldTot(P, R, A, t) {
     R('', ab('BGFoi', 'Bruttogeschossfläche oberirdisch'), A(t.to), 's', AL) +
     (t.tu ? R('', ab('BGFui', 'Bruttogeschossfläche unterirdisch'), A(t.tu), 's', AL) : '') +
     (on
-      ? l2R(ab('NGF', 'Nettogeschossfläche'), A(no + nu), 't', ['ngf', '*', 'all']) +
+      ? l2R(ab('NGF', 'Nettogeschossfläche: Regelfall R und Sonderfall S'), A(no + nu), 't', [
+          'ngf',
+          '*',
+          'all',
+        ]) +
         l2R(ab('NGFoi', 'Nettogeschossfläche oberirdisch'), A(no), 's', ['ngf', '*', 'o']) +
         (nu ? l2R(ab('NGFui', 'Nettogeschossfläche unterirdisch'), A(nu), 's', ['ngf', '*', 'u']) : '')
       : '') +
