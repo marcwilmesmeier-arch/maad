@@ -85,82 +85,21 @@ function l2NetShow(iso) {
   }
   if (!iso) return;
   const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC.ngf), side: T.DoubleSide }),
-    dDE = l2T(S.l2.defs.DE).d;
+    nri = iso.m === 'nri' || iso.m === 'nrir';
   S.bld.forEach((b) => {
     if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
-    const G_ = l2Els(b),
-      L = grData(b),
-      oben = b._y + b.levels.reduce((s2, l) => s2 + l.h, 0);
-    L.forEach((lv, i) => {
-      // Dachgeschoss (geneigtes Dach): Fläche wie in der Zahl, als Körper bis zur Drempelhöhe (mind. 30 cm) – ein
-      // voller Körper stäche an den Dachschrägen durch das Dach
-      const dg = !!lv.dg;
-      if (!l2LvMatch(b, i, iso.sel) || (!dg && !G_.lv[i])) return;
-      // Dachgeschoss: Drempel- und Giebelwände stehen auf den Außenwänden des obersten Geschosses – deren Grundfläche abziehen
-      const liW = dg ? b.levels.length - 1 : i,
-        qs = G_.els
-          .filter(
-            (e) =>
-              !dg &&
-              e.li === liW &&
-              e.quads &&
-              (dg ? e.kind === 'AW' : e.kind === 'AW' || e.kind === 'TW' || e.kind === 'TH'),
-          )
-          .reduce((r, e) => r.concat(e.quads), []),
-        y0 = dg ? oben : G_.lv[i].y0,
-        hh = dg ? Math.max(0.3, (+(b.roof && b.roof.dremp) || 0) - 0.05) : Math.max(0.1, lv.h - dDE),
-        // keine Nettofläche in Innenhöfen und Loggien (Einschnitte dieses Geschosses)
-        jB = b.levels.indexOf(lv.obj),
-        aus = (jB >= 0 ? znVoidsAt(b, jB).map((v) => v.poly) : []).concat(
-          oeLoggiaEinschnitte(b)
-            .filter((z) => z.y > y0 - 0.1 && z.y < y0 + lv.h - 0.1)
-            .map((z) => z.f),
-        );
-      // Dachgeschoss: ein Raumkörper über dem Grundriss des obersten Geschosses, um die Außenwand nach innen versetzt
-      // (die Raumaufteilung ergäbe Spalten und Grate unter den Dachflächen)
-      const flaechen = dg ? [{ o: l2Innen(lf(b, b.levels[b.levels.length - 1]), l2DickeAW(G_)) }] : lv.faces;
-      flaechen.forEach((f) => {
-        let ps = [f.o];
-        qs.forEach((q) => {
-          ps = ps.reduce((r, p) => r.concat(l2Diff(p, q)), []);
-        });
-        let PP = ps.map((p) => ({ o: p, h: [] }));
-        if (aus.length)
-          try {
-            PP = boolOp(PP, aus.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
-          } catch (e) {
-            logErr(e, 'l2NetShow Höfe');
-          }
-        PP.forEach(({ o: p, h: hs }) => {
-          if (l2Ar(p) < 2e-3) return;
-          // schmale Reste (z. B. zwischen Loggia-Einschnitt und Wand) nicht zeigen: mittlere Breite unter 15 cm
-          const U = p.reduce(
-            (s2, q, k) => s2 + Math.hypot(p[(k + 1) % p.length][0] - q[0], p[(k + 1) % p.length][1] - q[1]),
-            0,
-          );
-          if ((2 * l2Ar(p)) / Math.max(U, 1e-6) < 0.15) return;
-          try {
-            // Dachgeschoss: Raumkörper unter der Dachfläche (Dachaufbau etwa 30 cm), sonst Prisma bis unter die Decke
-            const gDg = dg ? l2DgKoerper(b, p, y0, 0.3) : null,
-              P = gDg ? { g: gDg } : grPrism({ o: p, h: hs || [] }, 0, hh),
-              m = new T.Mesh(P.g, mat);
-            m.position.y = gDg ? 0 : y0;
-            const aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0),
-              nm = dg ? 'Dachgeschoss' : (bLv(b)[i] || {}).n || lname(b, i);
-            m.userData = {
-              bid: b.id,
-              li: i,
-              y0: gDg ? 0 : y0,
-              info: nm + ' · NGF (R) · ' + f1(aN, 1) + ' m²',
-            };
-            m.castShadow = false;
-            m.raycast = () => {};
-            G.l2n.add(m);
-          } catch (e) {
-            logErr(e, 'l2NetShow>anonym');
-          }
-        });
-      });
+    l2NetKoerper(b, iso.sel).forEach((k) => {
+      const m = new T.Mesh(k.g, mat);
+      m.position.y = k.y0;
+      m.userData = {
+        bid: b.id,
+        li: k.li,
+        y0: k.y0,
+        info: nri ? k.nm + ' · NRI (R) · ' + f1(k.v, 1) + ' m³' : k.nm + ' · NGF (R) · ' + f1(k.a, 1) + ' m²',
+      };
+      m.castShadow = false;
+      m.raycast = () => {};
+      G.l2n.add(m);
     });
   });
   try {
@@ -168,6 +107,116 @@ function l2NetShow(iso) {
   } catch (e) {
     logErr(e, 'l2NetShow');
   }
+}
+/**
+ * Netto-Raumkörper (Regelfall R) eines Gebäudes in LOD 200: je Geschoss die Nettofläche (ohne Wände, Innenhöfe und
+ * Loggien) bis unter die Decke, im Dachgeschoss der Raum unter der Dachfläche.
+ * [{ g, y0, li, a (m²), v (m³), nm, ug }] – Grundlage für NGF- und NRI-Darstellung und die NRI-Zahl.
+ */
+function l2NetKoerper(b, sel) {
+  const r = [],
+    dDE = l2T(S.l2.defs.DE).d,
+    G_ = l2Els(b),
+    L = grData(b),
+    oben = b._y + b.levels.reduce((s2, l) => s2 + l.h, 0);
+  L.forEach((lv, i) => {
+    // Dachgeschoss (geneigtes Dach): Fläche wie in der Zahl, als Körper bis zur Drempelhöhe (mind. 30 cm) – ein
+    // voller Körper stäche an den Dachschrägen durch das Dach
+    const dg = !!lv.dg;
+    if (!l2LvMatch(b, i, sel) || (!dg && !G_.lv[i])) return;
+    // Dachgeschoss: Drempel- und Giebelwände stehen auf den Außenwänden des obersten Geschosses – deren Grundfläche abziehen
+    const liW = dg ? b.levels.length - 1 : i,
+      qs = G_.els
+        .filter(
+          (e) =>
+            !dg &&
+            e.li === liW &&
+            e.quads &&
+            (dg ? e.kind === 'AW' : e.kind === 'AW' || e.kind === 'TW' || e.kind === 'TH'),
+        )
+        .reduce((r, e) => r.concat(e.quads), []),
+      y0 = dg ? oben : G_.lv[i].y0,
+      hh = dg ? Math.max(0.3, (+(b.roof && b.roof.dremp) || 0) - 0.05) : Math.max(0.1, lv.h - dDE),
+      // keine Nettofläche in Innenhöfen und Loggien (Einschnitte dieses Geschosses)
+      jB = b.levels.indexOf(lv.obj),
+      aus = (jB >= 0 ? znVoidsAt(b, jB).map((v) => v.poly) : []).concat(
+        oeLoggiaEinschnitte(b)
+          .filter((z) => z.y > y0 - 0.1 && z.y < y0 + lv.h - 0.1)
+          .map((z) => z.f),
+      );
+    // Dachgeschoss: ein Raumkörper über dem Grundriss des obersten Geschosses, um die Außenwand nach innen versetzt
+    // (die Raumaufteilung ergäbe Spalten und Grate unter den Dachflächen)
+    const flaechen = dg ? [{ o: l2Innen(lf(b, b.levels[b.levels.length - 1]), l2DickeAW(G_)) }] : lv.faces;
+    flaechen.forEach((f) => {
+      let ps = [f.o];
+      qs.forEach((q) => {
+        ps = ps.reduce((r, p) => r.concat(l2Diff(p, q)), []);
+      });
+      let PP = ps.map((p) => ({ o: p, h: [] }));
+      if (aus.length)
+        try {
+          PP = boolOp(PP, aus.map(bpP), 'd').filter((P) => P.o && P.o.length >= 3);
+        } catch (e) {
+          logErr(e, 'l2NetShow Höfe');
+        }
+      PP.forEach(({ o: p, h: hs }) => {
+        if (l2Ar(p) < 2e-3) return;
+        // schmale Reste (z. B. zwischen Loggia-Einschnitt und Wand) nicht zeigen: mittlere Breite unter 15 cm
+        const U = p.reduce(
+          (s2, q, k) => s2 + Math.hypot(p[(k + 1) % p.length][0] - q[0], p[(k + 1) % p.length][1] - q[1]),
+          0,
+        );
+        if ((2 * l2Ar(p)) / Math.max(U, 1e-6) < 0.15) return;
+        try {
+          // Dachgeschoss: Raumkörper unter der Dachfläche (Dachaufbau etwa 30 cm), sonst Prisma bis unter die Decke
+          const gDg = dg ? l2DgKoerper(b, p, y0, 0.3) : null,
+            g = gDg || grPrism({ o: p, h: hs || [] }, 0, hh).g,
+            aN = l2Ar(p) - (hs || []).reduce((s2, h) => s2 + l2Ar(h), 0);
+          r.push({
+            g,
+            y0: gDg ? 0 : y0,
+            li: i,
+            a: aN,
+            v: gDg ? l2Volumen(gDg) : aN * hh,
+            nm: dg ? 'Dachgeschoss' : (bLv(b)[i] || {}).n || lname(b, i),
+            ug: !dg && i < ugN(b),
+          });
+        } catch (e) {
+          logErr(e, 'l2NetKoerper');
+        }
+      });
+    });
+  });
+  return r;
+}
+/** Rauminhalt eines geschlossenen Körpers (m³, Summe der Tetraeder über die Dreiecke). */
+function l2Volumen(g) {
+  if (g.index) g = g.toNonIndexed();
+  const p = g.getAttribute('position');
+  if (!p) return 0;
+  let v = 0;
+  for (let i = 0; i + 2 < p.count; i += 3) {
+    const ax = p.getX(i),
+      ay = p.getY(i),
+      az = p.getZ(i),
+      bx = p.getX(i + 1),
+      by = p.getY(i + 1),
+      bz = p.getZ(i + 1),
+      cx = p.getX(i + 2),
+      cy = p.getY(i + 2),
+      cz = p.getZ(i + 2);
+    v += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
+  }
+  return Math.abs(v);
+}
+/** Netto-Rauminhalt (LOD 200, Regelfall R) als Summe der Netto-Raumkörper: { o, u } in m³. */
+function l2Nri(b) {
+  const r = { o: 0, u: 0 };
+  l2NetKoerper(b, 'all').forEach((k) => {
+    r[k.ug ? 'u' : 'o'] += k.v;
+    k.g.dispose();
+  });
+  return r;
 }
 /** Stärke der Außenwand (m) aus den LOD-200-Bauteilen. */
 const l2DickeAW = (G_) => (G_.els.find((e) => e.kind === 'AW') || {}).d || 0.36;
@@ -430,10 +479,11 @@ function l2IsoApply(force) {
     return;
   }
   // NGF: Regelfall R und Sonderfall S zusammen; 'ngfr' nur R; 's' nur S (DIN 277)
-  l2NetShow(iso && (iso.m === 'ngf' || iso.m === 'ngfr') ? iso : null);
+  l2NetShow(iso && ['ngf', 'ngfr', 'nri', 'nrir'].includes(iso.m) ? iso : null);
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && iso.m === 's') l2SShow(iso);
-  if (iso && iso.m === 'ngf' && iso.sel !== 'u') l2SShow({ ...iso, sel: 'all' });
+  // NRI: dieselben Körper wie die NGF, Angaben als Rauminhalt
+  if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u') l2SShow({ ...iso, sel: 'all' });
   // BRI: 'bri' R und S, 'brir' nur R, 'bris' nur S
   if (iso && (iso.m === 'bri' || iso.m === 'brir')) l2BriShow(iso);
   if (iso && (iso.m === 'bri' || iso.m === 'bris')) l2SShow({ ...iso, sel: 'all' }, ISOC.bris);

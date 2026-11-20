@@ -169,6 +169,27 @@ function zoBldHtml(b, k, R, A, B, P) {
         { n: 'unterirdisch', c: '#9aa5b1', v: n.u },
       ],
     );
+  // Netto-Rauminhalt (LOD 200): wie die NGF, als Rauminhalt; R und S zusammen, darunter getrennt
+  if (on) {
+    const nr = l2Nri(b),
+      sV = sz && sz.a > 0 ? sz.bri : 0,
+      m3 = (v) => f1(v, 0) + ' m³';
+    h += zoD(
+      'nr' + id,
+      ab('NRI', 'Netto-Rauminhalt: Regelfall R und Sonderfall S (DIN 277)'),
+      m3(nr.o + nr.u + sV),
+      l2R(ab('NRIoi', 'Netto-Rauminhalt oberirdisch, R und S'), m3(nr.o + sV), 's', ['nri', id, 'o']) +
+        (nr.u ? l2R(ab('NRIui', 'Netto-Rauminhalt unterirdisch'), m3(nr.u), 's', ['nri', id, 'u']) : '') +
+        (sV
+          ? l2R(ab('NRI (R)', 'Regelfall: ohne Balkone und Loggien'), m3(nr.o + nr.u), 's', [
+              'nrir',
+              id,
+              'all',
+            ]) + l2R(ab('NRI (S)', 'Sonderfall: Balkone und Loggien'), m3(sV), 's', ['s', id, 'all'])
+          : ''),
+      null,
+    );
+  }
   h += zoD(
     'br' + id,
     ab('BRI', 'Bruttorauminhalt'),

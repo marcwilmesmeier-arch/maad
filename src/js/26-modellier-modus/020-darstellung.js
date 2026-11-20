@@ -104,7 +104,8 @@ function skSig(b) {
   return s;
 }
 function skDraw() {
-  const on = skAct();
+  // in der Explosionsansicht keine Auswahl- und Hover-Rahmen (sie folgen den Geschossen nicht)
+  const on = skAct() && !(S.expl && S.expl.cur > 0.05);
   SKG.visible = on;
   if (!on) {
     SK.key = '';

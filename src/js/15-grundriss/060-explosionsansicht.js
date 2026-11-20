@@ -205,6 +205,7 @@ function exApply() {
     if (c !== exLastE) {
       exLastE = c;
       updSel2();
+      skDraw();
     }
   } catch (e) {
     logErr(e, 'exApply');
