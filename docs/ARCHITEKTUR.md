@@ -665,8 +665,10 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 
 ## Vorspann beim Start (`03-startseite/060-vorspann.js`)
 
-- Einmal je Sitzung (`sessionStorage` 'maad-vorspann') beim ersten `homeOpen`: Fläche in Schiefernacht, Zeilen oben und
-  unten, Logo groß; die Buchstaben (`vspBuchstaben` zerlegt den Logopfad in Teilpfade je Buchstabe) steigen gestaffelt
-  auf, der Punkt zuletzt. Unten rechts `GEO.status` und Prozent; ist `HOME.ready` und sind 2,2 s vergangen, öffnen
-  zwei Flügel, das Logo fliegt auf `#hLogoSvg`. Klick/Taste/Mausrad überspringen; „Bewegung reduzieren“: kein Vorspann.
-  Gestaltung angelehnt an einen Ladebildschirm mit Bildunterschriften, umgesetzt in maads Farben und Schrift.
+- Einmal je Sitzung (`sessionStorage` 'maad-vorspann') beim ersten `homeOpen`: hellblaue Fläche (maad-Blau). Die
+  Buchstaben (`vspBuchstaben` zerlegt den Logopfad in Teilpfade je Buchstabe, mit Ausmaßen) fliegen als schwarze
+  Rechtecke von links, oben, unten und rechts ein und gehen in die Buchstaben über (Rechteck rundet sich und blendet aus,
+  Buchstabe federt ein); der Punkt fällt zuletzt von oben. Ist `HOME.ready`: die Fläche zieht sich zur Karte um den
+  großen Schriftzug zusammen (Verhältnisse wie `#hLogo`), dann verkleinert sich alles auf `#hLogo`/`#hLogoSvg` der
+  Startseite. Wartet die Karte noch, steht `GEO.status` unter dem Schriftzug. Klick/Taste/Mausrad überspringen;
+  „Bewegung reduzieren“: kein Vorspann. Spätere Animationen am selben Element füllen nur vorwärts.
