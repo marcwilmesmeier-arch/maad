@@ -662,3 +662,11 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Vorschaubild der Projekte (`projVorschau`, 03-startseite/010-demokarte.js): immer „Schattiert“ (kurz umgeschaltet),
   Blick auf das gewählte Grundstück bzw. die Kartenmitte; neu beim Öffnen der Projektübersicht und beim Verlassen,
   sonst nur, wenn noch keines da ist (die Sicherung alle 4 s schaltet nicht um).
+
+## Vorspann beim Start (`03-startseite/060-vorspann.js`)
+
+- Einmal je Sitzung (`sessionStorage` 'maad-vorspann') beim ersten `homeOpen`: Fläche in Schiefernacht, Zeilen oben und
+  unten, Logo groß; die Buchstaben (`vspBuchstaben` zerlegt den Logopfad in Teilpfade je Buchstabe) steigen gestaffelt
+  auf, der Punkt zuletzt. Unten rechts `GEO.status` und Prozent; ist `HOME.ready` und sind 2,2 s vergangen, öffnen
+  zwei Flügel, das Logo fliegt auf `#hLogoSvg`. Klick/Taste/Mausrad überspringen; „Bewegung reduzieren“: kein Vorspann.
+  Gestaltung angelehnt an einen Ladebildschirm mit Bildunterschriften, umgesetzt in maads Farben und Schrift.

@@ -336,6 +336,12 @@ function homeOpen(first) {
   if (first) {
     HOME.hmLate = 1;
     bootCur(1);
+    // ── Erweiterung aus 03-startseite/060-vorspann.js: Vorspann einmal je Sitzung
+    try {
+      vspStart();
+    } catch (e) {
+      logErr(e, 'homeOpen>Vorspann');
+    }
   } else
     try {
       hmShow();
