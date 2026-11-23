@@ -387,6 +387,9 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
   zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor: das Element wird in
   `oeWandOeffnungen` nicht auf die Wandhöhe (unter der Decke) begrenzt, sondern läuft bis zur Geschossgrenze.
+  Das Wandstück vor der Deckenstirn (`quads2`, äußere Wandhälfte auf Deckenhöhe) entfällt dort (`oeDeckenband`,
+  gezeichnet in `l2Mesh`), sonst stünde es als Band vor der zurückgesetzten Decke. An Außenecken reicht die
+  Aussparung um die Rücksprungtiefe weiter.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Schraffuren der Fassadentypen

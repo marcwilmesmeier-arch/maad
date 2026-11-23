@@ -245,11 +245,16 @@ function oeDeckenZonen(b) {
         t = (p) => (p[0] - u.p0[0]) * e[0] + (p[1] - u.p0[1]) * e[1],
         q = (o.p0[0] - u.p0[0]) * u.n[0] + (o.p0[1] - u.p0[1]) * u.n[1];
       if (Math.abs(q) > 0.05) return; // nicht in derselben Ebene
-      const a = Math.max(0, Math.min(t(o.p0), t(o.p1))),
+      let a = Math.max(0, Math.min(t(o.p0), t(o.p1))),
         c = Math.min(l, Math.max(t(o.p0), t(o.p1)));
       if (c - a < 0.05) return;
       const D = (u.T.pt || 0.16) + OE_PR_DECKE,
-        X = (k, s) => [u.p0[0] + e[0] * k + u.n[0] * s, u.p0[1] + e[1] * k + u.n[1] * s];
+        X = (k, s) => [u.p0[0] + e[0] * k + u.n[0] * s, u.p0[1] + e[1] * k + u.n[1] * s],
+        // an einer Außenecke des Gebäudes endet das Element am Eckpfosten: die Aussparung reicht dort um die
+        // Rücksprungtiefe weiter, sonst bliebe die Deckenecke in der Fassadenebene stehen und stäche durch
+        aussen = (k) => !inP(X(k, -0.05), b.fp);
+      if (aussen(a - D)) a -= D + 0.05;
+      if (aussen(c + D)) c += D + 0.05;
       R.push({ y: u.y1, r: [X(a, 0.5), X(c, 0.5), X(c, -D), X(a, -D)] });
     }),
   );
@@ -480,6 +485,23 @@ function oeWandTeilen(e, O) {
     });
   }
   return R;
+}
+/**
+ * Wandstück vor der Deckenstirn (quads2, Höhe hTop über der Wand) in Stücken wie oeWandTeilen: wo eine
+ * Pfosten-Riegel-Fassade über die Wandoberkante bis zur Geschossgrenze läuft, entfällt es – dort steht das Element vor
+ * der zurückgesetzten Decke (oeDeckenZonen).
+ */
+function oeDeckenband(e) {
+  const voll = () => e.quads2.map((q) => [{ o: q, h: [] }, 0, e.hTop]);
+  let O = [];
+  try {
+    O = oeWandOeffnungen(e)
+      .filter((o) => !o.r && o.T && o.T.a === 'pr' && o.y1 > e.h + 0.01)
+      .map((o) => Object.assign({}, o, { y0: Math.max(0, o.y0 - e.h), y1: o.y1 - e.h }));
+  } catch (er) {
+    logErr(er, 'oeDeckenband');
+  }
+  return O.length ? oeWandTeilen({ quads: e.quads2, h: e.hTop }, O) : voll();
 }
 /** Rechteck [t0,t1]×[y0,y1] ohne die Rechtecke L (in Teilrechtecke zerlegt). */
 function oeRechteckOhne(t0, t1, y0, y1, L) {

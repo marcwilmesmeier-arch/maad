@@ -246,11 +246,14 @@ function l2MeshOrig(e) {
       if (Oe.length) g.add(oeKoerper(Oe));
     } else e.quads.forEach((q) => add({ o: q, h: [] }));
   } else e.faces.forEach((f) => add(f));
-  if (e.quads2) {
-    const n0 = g.children.length;
-    e.quads2.forEach((q) => add({ o: q, h: [] }, e.hTop));
-    for (let i = n0; i < g.children.length; i++) g.children[i].position.y = e.h;
-  }
+  if (e.quads2)
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Wandstück vor der Deckenstirn ohne die Abschnitte, vor
+    // denen eine Pfosten-Riegel-Fassade durchläuft (oeDeckenband)
+    oeDeckenband(e).forEach(([f, ya, yb]) => {
+      const n0 = g.children.length;
+      add(f, yb - ya);
+      for (let i = n0; i < g.children.length; i++) g.children[i].position.y = e.h + ya;
+    });
   if (e.hAt) {
     const n1 = g.children.length;
     l2AtQuads(e).forEach((q) => add({ o: q, h: [] }, e.hAt));
