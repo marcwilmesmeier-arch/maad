@@ -385,7 +385,8 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Eckpfosten (`T._ek`); der Eckpfosten ist ein Parallelogramm zwischen beiden Ebenen (passt zu jedem Winkel), verbindet beide
   Fassaden (3D in `l2Balkone`, Grundriss in `l2BalkonGrundriss`).
 - Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
-  zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor.
+  zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor: das Element wird in
+  `oeWandOeffnungen` nicht auf die Wandhöhe (unter der Decke) begrenzt, sondern läuft bis zur Geschossgrenze.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Schraffuren der Fassadentypen

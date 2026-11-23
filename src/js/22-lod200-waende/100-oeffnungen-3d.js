@@ -383,8 +383,12 @@ function oeWandOeffnungen(e) {
       t = (mx - e.sa[0]) * dx + (mz - e.sa[1]) * dz,
       q = Math.abs((mx - e.sa[0]) * -dz + (mz - e.sa[1]) * dx);
     if (t < -0.05 || t > len + 0.05 || q > (e.d || 0.4) + 0.6) return;
-    const y0 = Math.max(0, o.y0 - e.y0),
-      y1 = Math.min(e.h, o.y1 - e.y0);
+    // Pfosten-Riegel läuft bis zu seiner Oberkante (Geschossgrenze) vor der Decke weiter – die Wand endet unter der
+    // Decke, sonst bliebe zwischen den Riegeln zweier Geschosse die Deckenstärke frei (Decke springt dort zurück,
+    // oeDeckenZonen)
+    const pr = !!(o.T && o.T.a === 'pr'),
+      y0 = Math.max(0, o.y0 - e.y0),
+      y1 = pr ? o.y1 - e.y0 : Math.min(e.h, o.y1 - e.y0);
     if (y1 - y0 < 0.05) return;
     const A = oeWandAchse(e, o.n),
       t0 = o.p0[0] * A.d[0] + o.p0[1] * A.d[1],
