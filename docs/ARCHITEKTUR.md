@@ -392,6 +392,11 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Aussparung um die Rücksprungtiefe weiter.
   Innenwände, die auf eine solche Außenwand treffen, enden an der zurückgesetzten Deckenkante statt an der
   Wandinnenseite (`endV` in `l2GeoStufe1`, Rücksprung `d` aus `oeDeckenZonen`).
+- Außenwand = Fassade (LOD 200): wo ein Pfosten-Riegel-Abschnitt das ganze Geschoss abdeckt (`oePrGeschoss`), wird
+  die Außenkante geteilt (`oePrKanten`) und dieser Abschnitt ist eine eigene Außenwand vom Typ „Pfosten-Riegel-Fassade“
+  in Pfostentiefe (`oePrWandTyp`, `T.pr`). Grundriss, Einheiten, NGF und 3D rechnen damit; die Decke endet dort
+  2 cm hinter den Pfosten (`slOff`). Stellen, die „die“ Außenwandstärke brauchen (Attika, Schürze, Decke), nehmen
+  eine Außenwand ohne `T.pr`.
 - Attika (Flachdach): reicht ein Pfosten-Riegel-Abschnitt bis zur Dachkante (`oeAttikaPr`), läuft er als Paneelband in
   Attikahöhe weiter (`oeAttikaBand` → `oeKoerper`, Einteilung `oegPrAttika`: durchlaufende Pfosten, Paneele,
   Abschlussriegel); die Attika-Wand springt dort um Bautiefe + 2 cm zurück (`l2AttikaStuecke`, für Dach

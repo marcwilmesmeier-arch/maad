@@ -261,6 +261,52 @@ function oeDeckenZonen(b) {
   );
   return R;
 }
+/**
+ * Geschosshohe Pfosten-Riegel-Abschnitte eines Geschosses (Unterkante y, Wandhöhe h): [{ p0, p1, n, pt, rf }]. Dort ist
+ * die Außenwand in LOD 200 die Fassade selbst (oePrKanten, oePrWandTyp).
+ */
+function oePrGeschoss(b, y, h) {
+  if (!b.fd) return [];
+  return oeWelt(b)
+    .filter((o) => o.T && o.T.a === 'pr' && o.y0 <= y + 0.1 && o.y1 >= y + h - 0.05)
+    .map((o) => ({ p0: o.p0, p1: o.p1, n: o.n, pt: +(o.T.pt || 0.16).toFixed(3), rf: o.T.rf }));
+}
+/** Außenkante e ({ p, q, f, ek }) an den Abschnitten P teilen; Teile vor einer Fassade tragen pr. Null = ungeteilt. */
+function oePrKanten(e, P) {
+  const L = Math.hypot(e.q[0] - e.p[0], e.q[1] - e.p[1]);
+  if (L < 0.1) return null;
+  const u = [(e.q[0] - e.p[0]) / L, (e.q[1] - e.p[1]) / L],
+    t = (p) => (p[0] - e.p[0]) * u[0] + (p[1] - e.p[1]) * u[1],
+    q = (p) => Math.abs((p[0] - e.p[0]) * -u[1] + (p[1] - e.p[1]) * u[0]),
+    Z = P.filter((o) => q(o.p0) < 0.05 && q(o.p1) < 0.05)
+      .map((o) => [Math.max(0, Math.min(t(o.p0), t(o.p1))), Math.min(L, Math.max(t(o.p0), t(o.p1))), o])
+      .filter(([a, c]) => c - a > 0.05);
+  if (!Z.length) return null;
+  const gr = [...new Set([0, L, ...Z.flatMap(([a, c]) => [a, c])])].sort((a, c) => a - c),
+    pt = (k) => [e.p[0] + u[0] * k, e.p[1] + u[1] * k],
+    out = [];
+  for (let i = 0; i + 1 < gr.length; i++) {
+    const a = gr[i],
+      c = gr[i + 1];
+    if (c - a < 0.01) continue;
+    const z = Z.find(([p, r]) => p <= (a + c) / 2 && r >= (a + c) / 2);
+    out.push({ p: pt(a), q: pt(c), f: e.f, ek: e.ek, sub: 1, pr: z ? { pt: z[2].pt, rf: z[2].rf } : null });
+  }
+  return out.length > 1 || out[0].pr ? out : null;
+}
+/** Wandtyp „Pfosten-Riegel-Fassade“ in Pfostentiefe (aus dem Außenwandtyp T abgeleitet). */
+function oePrWandTyp(T, pr) {
+  const n = 'Pfosten-Riegel-Fassade';
+  return Object.assign({}, T, {
+    id: 'pr' + Math.round(pr.pt * 100),
+    nm: n,
+    full: n,
+    dl: n + ' · ' + String(Math.round(pr.pt * 1000) / 10).replace('.', ',') + ' cm',
+    d: pr.pt,
+    layers: [L2L(n, pr.pt, T.kg, '')],
+    pr: 1,
+  });
+}
 /** Oberkante der Attika-Wand eines Gebäudes mit Flachdach (Weltkoordinaten) oder null. */
 function oeDachOK(b) {
   if (b.roof && b.roof.type && b.roof.type !== 'flat') return null;

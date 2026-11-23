@@ -181,7 +181,9 @@ function l2AttikaRing(b) {
   const f = lf(b, b.levels[j]);
   if (!f || f.length < 3) return [];
   const els = l2Els(b).els,
-    aw = els.find((e) => e.kind === 'AW' && e.li === j) || els.find((e) => e.kind === 'AW'),
+    aw =
+      els.find((e) => e.kind === 'AW' && e.li === j && !e.T.pr) ||
+      els.find((e) => e.kind === 'AW' && !e.T.pr),
     d = (aw && aw.d) || 0.36,
     y0 = (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0),
     hoefe = znVoidsAt(b, j).map((v) => v.poly),
@@ -290,7 +292,7 @@ function l2UeberhangSchuerzen(b) {
   if (!l2on()) return R;
   try {
     const els = l2Els(b).els,
-      aw = els.find((e) => e.kind === 'AW'),
+      aw = els.find((e) => e.kind === 'AW' && !e.T.pr),
       d = (aw && aw.d) || 0.36,
       dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22,
       u = ugN(b);
@@ -354,7 +356,7 @@ function l2UeberhangSchuerzen(b) {
 function l2AttikaTerrassen(b) {
   const R = [],
     els = l2Els(b).els,
-    aw = els.find((e) => e.kind === 'AW'),
+    aw = els.find((e) => e.kind === 'AW' && !e.T.pr),
     d = (aw && aw.d) || 0.36,
     prA = oeAttikaPr(b);
   let y = b._y || 0;
@@ -616,7 +618,7 @@ function l2Balkone() {
     // bis Oberkante Decke – im obersten Geschoss mit Flachdach weiter bis Oberkante Attika wie die übrigen Außenwände
     {
       const els = l2Els(b).els,
-        aw = els.find((e) => e.kind === 'AW'),
+        aw = els.find((e) => e.kind === 'AW' && !e.T.pr),
         dW = (aw && aw.d) || 0.36,
         dDE = (els.find((e) => e.kind === 'DE') || {}).d || 0.22;
       oeLoggiaEinschnitte(b).forEach((z) => {

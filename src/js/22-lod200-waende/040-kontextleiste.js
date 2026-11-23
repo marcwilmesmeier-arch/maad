@@ -78,7 +78,7 @@ function l2Bar(force) {
       bar.id = 'l2bar';
       cw.appendChild(bar);
     }
-    bar.innerHTML = `<span class="k"><i style="background:${K.c2}"></i>${K.n}</span>
+    bar.innerHTML = `<span class="k"><i style="background:${K.c2}"></i>${el.T.pr ? 'Fassade' : K.n}</span>
 <button onclick="GR.l2.cfg()" title="Bauteilkonfigurator öffnen">⚙</button><button class="ty" onclick="GR.l2.pick()" title="${l23() ? 'Wandtyp wählen – Kategorie ▸ Funktion ▸ Bauweise ▸ Typ' : 'Stärke wählen'}">${esc(el.T.dl)} ▾</button>
 <span class="sp"></span>${
       AW

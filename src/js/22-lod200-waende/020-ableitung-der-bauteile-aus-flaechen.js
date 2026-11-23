@@ -97,7 +97,17 @@ function l2GeoStufe1(b) {
     );
     const edges = [];
     const EL = [];
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Außenkanten an geschosshohen Pfosten-Riegel-Fassaden
+    // teilen; diese Abschnitte werden zur Wand „Pfosten-Riegel-Fassade“ in Pfostentiefe (oePrKanten)
+    const prW = C ? oePrGeschoss(b, y, lv.h - dDE) : [];
     for (const e0 of E.values()) {
+      if (e0.f.length === 1 && prW.length) {
+        const sp = oePrKanten(e0, prW);
+        if (sp) {
+          sp.forEach((x) => EL.push(x));
+          continue;
+        }
+      }
       if (e0.f.length === 1 && b.fd && !C) {
         const sp = l2SplitEdge(b, li, lv, e0);
         if (sp) {
@@ -166,7 +176,7 @@ function l2GeoStufe1(b) {
         B,
         ta: Math.min(t0, t1),
         tb: Math.max(t0, t1),
-        key: kind + '|' + gid + '|' + ang + '|' + off + '|' + ftk,
+        key: kind + '|' + gid + '|' + ang + '|' + off + '|' + ftk + (e.pr ? '|pr' + e.pr.pt : ''),
         L: Ln,
       });
     }
@@ -219,6 +229,8 @@ function l2GeoStufe1(b) {
         r.sb = [g.kx * r.tb - g.kz * o0, g.kz * r.tb + g.kx * o0];
       }
       r.T = r.kind === 'AW' && r.ftk ? l2FacT(tyOf(r.kind, pm), r.ftk) : tyOf(r.kind, pm);
+      // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Pfosten-Riegel-Fassade als Außenwand in Pfostentiefe
+      if (r.kind === 'AW' && g.e.pr) r.T = oePrWandTyp(r.T, g.e.pr);
       r.d = r.T.d;
       if (r.kind === 'AW' && !C) {
         r.tOut = l2Tout(r.T);
@@ -682,7 +694,8 @@ function l2GeoStufe1(b) {
         return r || c.p;
       });
     };
-    const dAW = (ext[0] && ext[0].d) || l2T(DF.AW).d,
+    // Pfosten-Riegel-Fassaden (T.pr) zählen nicht als Außenwandstärke
+    const dAW = (ext.find((r) => !r.T.pr) || {}).d || l2T(DF.AW).d,
       flat = !b.roof || !b.roof.type || b.roof.type === 'flat';
     const shaft = lv.faces.filter((f) => f.fa === 'th' || f.fa === 'az'),
       mk1 = (ring, hs) => ({ o: ring, h: hs, a: l2QA(ring) - hs.reduce((s, h) => s + l2QA(h), 0), fa: 'ge' });
@@ -751,7 +764,14 @@ function l2GeoStufe1(b) {
       outerD = upFp ? l2Union(outer, upFp) || outer : outer;
     /* LOD300: Deckenkontur endet exakt an der Außenfläche der tragenden Schicht der jeweiligen Wand */
     const slOff = C
-      ? dAW / 2
+      ? (p, q) => {
+          // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: vor einer Pfosten-Riegel-Fassade endet die Decke
+          // 2 cm hinter den Pfosten
+          const mx = (p[0] + q[0]) / 2,
+            mz = (p[1] + q[1]) / 2,
+            r = ext.find((r) => r.T.pr && l2Seg(mx, mz, [r.sa[0], r.sa[1], r.sb[0], r.sb[1]]) < 0.02);
+          return r ? r.d + OE_PR_DECKE : dAW / 2;
+        }
       : (p, q) => {
           const mx = (p[0] + q[0]) / 2,
             mz = (p[1] + q[1]) / 2;

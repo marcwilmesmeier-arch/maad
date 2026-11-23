@@ -274,7 +274,7 @@ function l2Nri(b) {
   return r;
 }
 /** Stärke der Außenwand (m) aus den LOD-200-Bauteilen. */
-const l2DickeAW = (G_) => (G_.els.find((e) => e.kind === 'AW') || {}).d || 0.36;
+const l2DickeAW = (G_) => (G_.els.find((e) => e.kind === 'AW' && !e.T.pr) || {}).d || 0.36;
 /** Vieleck r um d nach innen versetzen (Schnitt der versetzten Kanten). */
 function l2Innen(r, d) {
   const n = r.length,
