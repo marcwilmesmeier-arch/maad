@@ -267,32 +267,92 @@ function oeDachOK(b) {
   return (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0);
 }
 /**
- * Pfosten-Riegel-Abschnitte, die bis zur Dachkante (Flachdach) laufen: dort läuft die Fassade als Paneelband in
- * Attikahöhe weiter (oeAttikaBand), die Attika-Wand springt um Bautiefe + OE_PR_DECKE dahinter zurück
- * (l2AttikaRing). Ergebnis: [{ p0, p1, n, d }] im Grundriss.
+ * Pfosten-Riegel-Abschnitte, über denen eine Attika steht – an der Dachkante (Flachdach) oder am Rand einer Terrasse
+ * (das Geschoss darüber steht dort nicht): die Fassade läuft als Paneelband in Attikahöhe weiter (oeAttikaBand), die
+ * Attika-Wand springt um Bautiefe + OE_PR_DECKE dahinter zurück (l2AttikaRing, l2AttikaTerrassen).
+ * Ergebnis: [{ p0, p1, n, d, y }] im Grundriss, y = Unterkante der Attika.
  */
 function oeAttikaPr(b) {
-  const y = oeDachOK(b);
-  if (y == null) return [];
-  return oeWelt(b)
-    .filter((o) => o.T && o.T.a === 'pr' && Math.abs(o.y1 - y) < 0.05)
-    .map((o) => ({ p0: o.p0, p1: o.p1, n: o.n, d: (o.T.pt || 0.16) + OE_PR_DECKE }));
+  const yD = oeDachOK(b),
+    G = [];
+  let y = b._y || 0;
+  b.levels.forEach((l, j) => {
+    y += l.h;
+    if (b.levels[j + 1]) G.push({ y, f: lf(b, b.levels[j + 1]) });
+  });
+  const R = [];
+  oeWelt(b).forEach((o) => {
+    if (!o.T || o.T.a !== 'pr') return;
+    const z = { n: o.n, d: (o.T.pt || 0.16) + OE_PR_DECKE, y: o.y1 };
+    if (yD != null && Math.abs(o.y1 - yD) < 0.05) {
+      R.push(Object.assign(z, { p0: o.p0, p1: o.p1 }));
+      return;
+    }
+    const g = G.find((q) => Math.abs(q.y - o.y1) < 0.05);
+    if (!g || !g.f || g.f.length < 3) return;
+    // Terrasse: Abschnitte, hinter denen (30 cm innen) kein Geschoss darüber steht; Raster 5 cm
+    const L = Math.hypot(o.p1[0] - o.p0[0], o.p1[1] - o.p0[1]),
+      N = Math.max(1, Math.round(L / 0.05)),
+      P = (k) => [o.p0[0] + ((o.p1[0] - o.p0[0]) * k) / N, o.p0[1] + ((o.p1[1] - o.p0[1]) * k) / N],
+      frei = (k) => {
+        const p = P(k + 0.5);
+        return !inP([p[0] - o.n[0] * 0.3, p[1] - o.n[1] * 0.3], g.f);
+      };
+    let a = null;
+    for (let k = 0; k <= N; k++) {
+      const f = k < N && frei(k);
+      if (f && a == null) a = k;
+      if (!f && a != null) {
+        if (k - a >= 2) R.push(Object.assign({}, z, { p0: P(a), p1: P(k) }));
+        a = null;
+      }
+    }
+  });
+  return R;
 }
-/** Paneelbänder in Attikahöhe über den Pfosten-Riegel-Abschnitten einer Wand (Elemente für oeKoerper). */
+/** Paneelbänder in Attikahöhe über den Pfosten-Riegel-Abschnitten einer Wand (Elemente für oeKoerper, LOD 200). */
 function oeAttikaBand(e) {
-  if (!e.atR) return [];
-  const b = oeBauteilGebaeude(e),
-    yOK = b ? oeDachOK(b) : null;
-  if (yOK == null) return [];
-  return oeWandOeffnungen(e)
-    .filter((o) => !o.r && o.T && o.T.a === 'pr' && Math.abs(e.y0 + o.y1 - yOK) < 0.05)
-    .map((o) =>
-      Object.assign({}, o, {
-        y0: o.y1,
-        y1: o.y1 + L2_ATTIKA,
-        T: Object.assign({}, o.T, { _att: L2_ATTIKA, _hU: o.T.h, h: L2_ATTIKA }),
-      }),
-    );
+  if (l23()) return [];
+  const b = oeBauteilGebaeude(e);
+  if (!b) return [];
+  const Z = oeAttikaPr(b);
+  if (!Z.length) return [];
+  const R = [];
+  oeWandOeffnungen(e).forEach((o) => {
+    if (o.r || !o.T || o.T.a !== 'pr') return;
+    const t = (p) => p[0] * o.A.d[0] + p[1] * o.A.d[1],
+      q = (p) => p[0] * o.A.n[0] + p[1] * o.A.n[1],
+      w = o.t1 - o.t0;
+    Z.forEach((z) => {
+      if (Math.abs(z.y - e.y0 - o.y1) > 0.05 || z.n[0] * o.A.n[0] + z.n[1] * o.A.n[1] < 0.99) return;
+      const a = Math.max(o.t0, Math.min(t(z.p0), t(z.p1))),
+        c = Math.min(o.t1, Math.max(t(z.p0), t(z.p1)));
+      if (c - a < 0.05 || w < 0.05) return;
+      // Ebene: der Abschnitt liegt in der Fassadenebene dieses Elements (nicht auf einer parallelen Fassade)
+      if (Math.abs(q(z.p0) - q(e.sa)) > (e.d || 0.4) + 0.6) return;
+      const b = o.T.b;
+      R.push(
+        Object.assign({}, o, {
+          y0: o.y1,
+          y1: o.y1 + L2_ATTIKA,
+          T: Object.assign({}, o.T, {
+            _att: L2_ATTIKA,
+            _hU: o.T.h,
+            h: L2_ATTIKA,
+            _attX: [((a - o.t0) / w) * b, ((c - o.t0) / w) * b],
+          }),
+        }),
+      );
+    });
+  });
+  return R;
+}
+/** Eckpfosten (oeEcken) bis Oberkante Attika verlängern, wenn über beiden Fassaden das Attikaband läuft. */
+function oeEckeBisAttika(b, e) {
+  const nah = (p) => Math.hypot(p[0] - e.c[0], p[1] - e.c[1]) < 0.05;
+  return oeAttikaPr(b).some((z) => Math.abs(z.y - e.y1) < 0.05 && (nah(z.p0) || nah(z.p1)))
+    ? e.y1 + L2_ATTIKA
+    : e.y1;
 }
 /** Deckenflächen (faces) auf Höhe der Geschossgrenze y ohne die Aussparungen hinter Pfosten-Riegel-Fassaden. */
 function oeDeckeAussparen(faces, y, Z) {

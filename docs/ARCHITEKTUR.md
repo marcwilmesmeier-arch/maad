@@ -394,7 +394,9 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Wandinnenseite (`endV` in `l2GeoStufe1`, Rücksprung `d` aus `oeDeckenZonen`).
 - Attika (Flachdach): reicht ein Pfosten-Riegel-Abschnitt bis zur Dachkante (`oeAttikaPr`), läuft er als Paneelband in
   Attikahöhe weiter (`oeAttikaBand` → `oeKoerper`, Einteilung `oegPrAttika`: durchlaufende Pfosten, Paneele,
-  Abschlussriegel); die Attika-Wand (`l2AttikaRing`) springt dort um Bautiefe + 2 cm zurück.
+  Abschlussriegel); die Attika-Wand springt dort um Bautiefe + 2 cm zurück (`l2AttikaStuecke`, für Dach
+  `l2AttikaRing` und Terrassen `l2AttikaTerrassen`). An Terrassen gilt das nur für den Teil des Elements, über dem
+  kein Geschoss steht (`T._attX`). Eckpfosten laufen bis Oberkante Attika mit (`oeEckeBisAttika`).
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Schraffuren der Fassadentypen

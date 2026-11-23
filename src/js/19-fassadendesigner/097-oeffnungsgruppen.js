@@ -406,6 +406,15 @@ function oegPrAttika(T) {
       .filter(([a, c, d, e]) => e >= hU - 0.004 && e - d > c - a + 0.01 && e - d > 0.3)
       .map(([a, c]) => [a, c])
       .sort((p, q) => p[0] - q[0]);
+  // nur über einem Teil (Terrasse endet im Element, T._attX): Pfosten in dem Bereich, am offenen Ende ein Randprofil
+  const X = T._attX;
+  if (X) {
+    const drin = po.filter(([a, c]) => (a + c) / 2 >= X[0] - 0.01 && (a + c) / 2 <= X[1] + 0.01);
+    if (!drin.length || drin[0][0] > X[0] + pb) drin.unshift([X[0], X[0] + pb]);
+    if (drin[drin.length - 1][1] < X[1] - pb) drin.push([X[1] - pb, X[1]]);
+    po.length = 0;
+    po.push(...drin);
+  }
   if (!po.length) return { pb, pp: pb, stege: [], felder: [], oben: [], ns: [] };
   const x0 = po[0][0],
     x1 = po[po.length - 1][1],
