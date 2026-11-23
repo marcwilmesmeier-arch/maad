@@ -226,7 +226,7 @@ function oeEckenFinden(L) {
   return E;
 }
 /** Abstand der zurückgesetzten Deckenstirn hinter der Bautiefe der Pfosten-Riegel-Profile (m). */
-const OE_PR_DECKE = 0.1;
+const OE_PR_DECKE = 0.02;
 /**
  * Aussparungen der Geschossdecken hinter durchgehenden Pfosten-Riegel-Fassaden: wo ein Pfosten-Riegel-Abschnitt im
  * Geschoss darüber weiterläuft (gleiche Fassadenebene, Unterkante = Oberkante des unteren), springt die Decke um

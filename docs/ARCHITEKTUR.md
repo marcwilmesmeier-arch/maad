@@ -384,7 +384,7 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
 - Über Eck (`oeEckenFinden` in `oeWelt`): an Außenecken entfallen die Randprofile (`T._rd`), die Fassaden enden am
   Eckpfosten (`T._ek`); der Eckpfosten ist ein Parallelogramm zwischen beiden Ebenen (passt zu jedem Winkel), verbindet beide
   Fassaden (3D in `l2Balkone`, Grundriss in `l2BalkonGrundriss`).
-- Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 10 cm
+- Über mehrere Geschosse (`oeDeckenZonen`, `oeDeckeAussparen`): die Geschossdecke springt dort um Bautiefe + 2 cm
   zurück (in `l2GeoStufe1`, Teil des Schlüssels), die Fassaden der Geschosse treffen sich davor: das Element wird in
   `oeWandOeffnungen` nicht auf die Wandhöhe (unter der Decke) begrenzt, sondern läuft bis zur Geschossgrenze.
   Das Wandstück vor der Deckenstirn (`quads2`, äußere Wandhälfte auf Deckenhöhe) entfällt dort (`oeDeckenband`,
