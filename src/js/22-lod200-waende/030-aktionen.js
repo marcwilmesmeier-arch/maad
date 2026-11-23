@@ -238,15 +238,19 @@ function l2MeshOrig(e) {
         for (let i = n0; i < g.children.length; i++) g.children[i].position.y = ya;
       };
       // Löcher: Öffnungen und Rücksprünge; Vorsprünge lassen die Wand unverändert
+      // Pfosten-Riegel-Fassade als Außenwand (T.pr): kein Wandkörper – die Fassade ist die Wand; Reststücke an
+      // Schnittlinien, deren Element der Nachbarwand zugeordnet ist, stünden sonst vor dem Glas
       const loecher = O.filter((o) => !o.r || Math.max(o.ra, o.re) > 0);
-      if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
-      else e.quads.forEach((q) => add({ o: q, h: [] }));
+      if (!e.T.pr) {
+        if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
+        else e.quads.forEach((q) => add({ o: q, h: [] }));
+      }
       oeRuecksprungKoerper(O).forEach(stueck);
       const Oe = O.filter((o) => !o.r).concat(oeAttikaBand(e));
       if (Oe.length) g.add(oeKoerper(Oe));
-    } else e.quads.forEach((q) => add({ o: q, h: [] }));
+    } else if (!e.T.pr) e.quads.forEach((q) => add({ o: q, h: [] }));
   } else e.faces.forEach((f) => add(f));
-  if (e.quads2)
+  if (e.quads2 && !e.T.pr)
     // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Wandstück vor der Deckenstirn ohne die Abschnitte, vor
     // denen eine Pfosten-Riegel-Fassade durchläuft (oeDeckenband)
     oeDeckenband(e).forEach(([f, ya, yb]) => {

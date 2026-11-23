@@ -396,7 +396,8 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   die Außenkante geteilt (`oePrKanten`) und dieser Abschnitt ist eine eigene Außenwand vom Typ „Pfosten-Riegel-Fassade“
   in Pfostentiefe (`oePrWandTyp`, `T.pr`). Grundriss, Einheiten, NGF und 3D rechnen damit; die Decke endet dort
   2 cm hinter den Pfosten (`slOff`). Stellen, die „die“ Außenwandstärke brauchen (Attika, Schürze, Decke), nehmen
-  eine Außenwand ohne `T.pr`.
+  eine Außenwand ohne `T.pr`. Die Wand `T.pr` hat keinen Wandkörper (`l2Mesh`): nur die Elemente, sonst blieben an
+  Schnittlinien Reststücke vor dem Glas stehen, deren Element der Nachbarwand zugeordnet ist.
 - Attika (Flachdach): reicht ein Pfosten-Riegel-Abschnitt bis zur Dachkante (`oeAttikaPr`), läuft er als Paneelband in
   Attikahöhe weiter (`oeAttikaBand` → `oeKoerper`, Einteilung `oegPrAttika`: durchlaufende Pfosten, Paneele,
   Abschlussriegel); die Attika-Wand springt dort um Bautiefe + 2 cm zurück (`l2AttikaStuecke`, für Dach
