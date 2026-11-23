@@ -1,5 +1,14 @@
 // ---- Umschalten ----
 function drSet(m) {
+  // Kartenbild nur einmal am Ende neu aufbauen (Ebenen, Farben und Weißmodell rufen recomp sonst mehrfach)
+  RECOMP.aus++;
+  try {
+    return drSetKern.apply(this, arguments);
+  } finally {
+    recompFrei();
+  }
+}
+function drSetKern(m) {
   // ── Erweiterung aus 28-erweiterungen-v486-v519/060-darstellung.js
   if (m === 'sw' && S.m3) return;
   if (m === 'sw' && !S.lyM.sw) S.lyM.sw = swDefault();
@@ -45,6 +54,12 @@ function drSet(m) {
     if (S.dar === 'wm' && !(S.lyM.wm && S.lyM.wm.wv === 2)) wmDefApply();
   } catch (e) {
     console.error(e);
+  }
+  // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Fassadentyp-Farben umfärben statt neu bauen
+  try {
+    ftWmFarben();
+  } catch (e) {
+    logErr(e, 'drSet');
   }
   // ── Erweiterung aus 28-erweiterungen-v486-v519/060-darstellung.js (danach)
   try {
@@ -159,6 +174,12 @@ function drTick(cm) {
   }
   // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
   if (drReal() && ++brTickN % 20 === 0) brPatch();
+  // ── Erweiterung aus 24-erweiterungen-v344-v436/010-fokus.js: Fokus-Ansicht hält ausgeblendete Elemente aus
+  try {
+    iso3Halten();
+  } catch (e) {
+    logErr(e, 'drTick');
+  }
 }
 function drInit() {
   $('drAA').onchange = (e) => {

@@ -180,6 +180,8 @@ function iso3Apply(force) {
       ISO3.saved.delete(x._g);
     }
   });
+  ISO3.ids = new Set(L.map((x) => x.id));
+  iso3Halten();
   if (ISO3.clr !== 'w') {
     ren.setClearColor(0xffffff);
     ISO3.clr = 'w';
@@ -192,7 +194,24 @@ function iso3Apply(force) {
   }
   iso3Ui();
 }
+/**
+ * Vor jedem Bild (drTick): Ausgeblendetes bleibt aus, auch wenn andere Stellen es zwischendurch wieder einblenden
+ * (Wechsel der Perspektive, Ebenen, Darstellung); LOD-200-Bauteile anderer Gebäude ebenso.
+ */
+function iso3Halten() {
+  if (!ISO3.on) return;
+  ISO3.saved.forEach((v, o) => {
+    if (o.visible) o.visible = false;
+  });
+  if (ISO3.ids)
+    for (const it of L2I.values())
+      if (it.g.visible && !ISO3.ids.has(it.el.bid)) {
+        if (!ISO3.saved.has(it.g)) ISO3.saved.set(it.g, true);
+        it.g.visible = false;
+      }
+}
 function iso3Off() {
+  ISO3.ids = null;
   if (ISO3.cl) {
     ISO3.cl.forEach((v, m) => {
       m.clippingPlanes = v || null;

@@ -284,15 +284,17 @@ function ftBauen(b) {
     const m = new T.Mesh(
       ge,
       schMaterial(
-        new T.MeshLambertMaterial({
-          color: new T.Color(t.c),
-          side: T.DoubleSide,
-          transparent: nur,
-          depthWrite: !nur,
-          polygonOffset: true,
-          polygonOffsetFactor: -2,
-          polygonOffsetUnits: -2,
-        }),
+        ftFarbe(
+          new T.MeshLambertMaterial({
+            side: T.DoubleSide,
+            transparent: nur,
+            depthWrite: !nur,
+            polygonOffset: true,
+            polygonOffsetFactor: -2,
+            polygonOffsetUnits: -2,
+          }),
+          t.c,
+        ),
         t,
         nur,
       ),
@@ -309,10 +311,30 @@ function ftBauen(b) {
  * (nur in der Darstellung in Stücke geschnitten, l2MeshOrig); leer, wenn die Wand keinen Typ trägt.
  */
 /**
- * Materialien (Farbe, Schraffur) der Gebäude zeigen – im Weißmodell nicht (dort bleiben die Bauteile weiß) und nicht
- * während einer Analyse aus den Metriken (Isolieren von Bauteilen oder einer Auswahl): dort zählt die Hervorhebung.
+ * Materialien (Farbe, Schraffur) der Gebäude zeigen – nicht während einer Analyse aus den Metriken (Isolieren von
+ * Bauteilen oder einer Auswahl): dort zählt die Hervorhebung. Das Weißmodell baut nichts neu, es färbt nur um
+ * (ftFarbe, ftWmFarben).
  */
-const ftFarbig = () => S.dar !== 'wm' && !(S.l2 && S.l2.iso) && !(typeof ZI !== 'undefined' && ZI.sp);
+const ftFarbig = () => !(S.l2 && S.l2.iso) && !(typeof ZI !== 'undefined' && ZI.sp);
+/** Farbe der Bauteile im Weißmodell anstelle der Farbe des Fassadentyps. */
+const FT_WM = '#ffffff';
+/** Farbe c eines Fassadentyps an Material m setzen (im Weißmodell weiß); merkt sie für ftWmFarben. */
+function ftFarbe(m, c) {
+  m.userData.ftC = c;
+  m.color.set(S.dar === 'wm' ? FT_WM : c);
+  return m;
+}
+/** Beim Wechsel der Darstellung: Fassadentyp-Farben und Schraffuren umfärben (Weißmodell weiß, ohne Neuaufbau). */
+function ftWmFarben() {
+  const wm = S.dar === 'wm';
+  SCH_AN.value = wm ? 0 : 1;
+  sc.traverse((o) => {
+    const M = o.material;
+    (Array.isArray(M) ? M : [M]).forEach((m) => {
+      if (m && m.userData && m.userData.ftC) m.color.set(wm ? FT_WM : m.userData.ftC);
+    });
+  });
+}
 function ftWandAbschnitte(e) {
   if (!ftFarbig()) return { d: null, A: [] };
   try {

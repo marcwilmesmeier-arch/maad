@@ -667,7 +667,21 @@ function ctxPaint(acc) {
     logErr(e, 'ctxPaint>Straßenflächen');
   }
 }
+/** Kartenbild-Neuaufbau aufschieben (aus > 0: recomp merkt sich den Wunsch, recompFrei baut einmal neu). */
+const RECOMP = { aus: 0, offen: false };
+function recompFrei() {
+  RECOMP.aus = Math.max(0, RECOMP.aus - 1);
+  if (!RECOMP.aus && RECOMP.offen) {
+    RECOMP.offen = false;
+    recomp();
+  }
+}
 function recomp() {
+  // während eines Darstellungswechsels nur einmal am Ende (drSet)
+  if (RECOMP.aus) {
+    RECOMP.offen = true;
+    return;
+  }
   // ── Erweiterung aus 18-erweiterungen-v280-v325/040-gruenflaechen-aus-corine.js
   try {
     if (clgOn()) {

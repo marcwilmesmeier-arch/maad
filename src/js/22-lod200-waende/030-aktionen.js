@@ -116,11 +116,11 @@ function l2MeshOrig(e) {
   const dachK = (e.kind === 'RD' || e.flatTop) && !l23() && ftFarbig() ? fdDachTyp(oeBauteilGebaeude(e)) : '';
   const K = L2K[e.kind],
     mat0 = new T.MeshLambertMaterial({
-      color: new T.Color(dachK ? fdT(dachK).c : K.c),
+      color: new T.Color(K.c),
       side: T.DoubleSide,
       emissive: new T.Color(0x000000),
     }),
-    mat = dachK ? schMaterial(mat0, fdT(dachK), false) : mat0,
+    mat = dachK ? schMaterial(ftFarbe(mat0, fdT(dachK).c), fdT(dachK), false) : mat0,
     // ── Erweiterung aus 19-fassadendesigner/110-fassadentypen-3d.js: Außenwand in der Farbe ihres Fassadentyps,
     // nur in der Darstellung an Typwechseln geschnitten (die Wand bleibt ein Bauteil); Schraffur als Schicht davor
     FA = e.kind === 'AW' && e.quads ? ftWandAbschnitte(e) : { A: [] },
@@ -130,11 +130,7 @@ function l2MeshOrig(e) {
       if (!mats.has(k))
         mats.set(
           k,
-          new T.MeshLambertMaterial({
-            color: new T.Color(fdT(k).c),
-            side: T.DoubleSide,
-            emissive: new T.Color(0),
-          }),
+          ftFarbe(new T.MeshLambertMaterial({ side: T.DoubleSide, emissive: new T.Color(0) }), fdT(k).c),
         );
       return mats.get(k);
     },

@@ -460,6 +460,8 @@ const SCH_GLSL = `float schDeckung(vec2 uv){
  * Genau im Shader gerechnet (schDeckung, scharf in jedem Abstand); sehr große Muster als Bild-Kachel. nurLinien: nur
  * die Linien zeichnen (Schicht vor der eingefärbten Wand), waagerechte Flächen ohne Schraffur.
  */
+/** Schraffuren zeigen (1) oder nicht (0, Weißmodell) – gemeinsamer Wert aller Schraffur-Materialien (ftWmFarben). */
+const SCH_AN = { value: 1 };
 function schMaterial(m, t, nurLinien) {
   const H = schVonTyp(t);
   if (!H) return m;
@@ -473,17 +475,19 @@ function schMaterial(m, t, nurLinien) {
           uSchW: { value: (H.P.lw || 0.004) / 2 },
           uSchC: { value: new T.Vector3(col.r, col.g, col.b) },
           uSchR: { value: (H.w * Math.PI) / 180 },
+          uSchAn: SCH_AN,
         }
       : {
           tSch: { value: K.tex },
           uSchM: { value: new T.Vector2(K.Wm, K.Hm) },
           uSchR: { value: (H.w * Math.PI) / 180 },
+          uSchAn: SCH_AN,
         },
     linie = D ? 'float hc=schDeckung(uv);vec4 hs=vec4(uSchC,hc);' : 'vec4 hs=texture2D(tSch,uv/uSchM);',
     kopf = D
-      ? 'uniform highp sampler2D tSchP;uniform int uSchN;uniform float uSchW;uniform vec3 uSchC;uniform float uSchR;\n' +
+      ? 'uniform highp sampler2D tSchP;uniform int uSchN;uniform float uSchW;uniform vec3 uSchC;uniform float uSchR;uniform float uSchAn;\n' +
         SCH_GLSL
-      : 'uniform sampler2D tSch;uniform vec2 uSchM;uniform float uSchR;';
+      : 'uniform sampler2D tSch;uniform vec2 uSchM;uniform float uSchR;uniform float uSchAn;';
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader =
@@ -504,7 +508,7 @@ function schMaterial(m, t, nurLinien) {
 {vec3 wn=normalize(vSchN);vec2 uv;
 if(abs(wn.y)>.7){uv=vSchP.xz;}else{vec2 tt=normalize(vec2(-wn.z,wn.x));uv=vec2(dot(vSchP.xz,tt),vSchP.y);}
 float cr=cos(uSchR),sr=sin(uSchR);uv=vec2(cr*uv.x+sr*uv.y,-sr*uv.x+cr*uv.y);
-${linie}hs.a*=1.-smoothstep(${SCH_NAH - 5}.,${SCH_NAH}.,distance(vSchP,cameraPosition));${
+${linie}hs.a*=uSchAn*(1.-smoothstep(${SCH_NAH - 5}.,${SCH_NAH}.,distance(vSchP,cameraPosition)));${
           nurLinien
             ? 'if(hs.a<.02||abs(wn.y)>.7)discard;diffuseColor=vec4(hs.rgb,hs.a);'
             : 'diffuseColor.rgb=mix(diffuseColor.rgb,hs.rgb,hs.a);'

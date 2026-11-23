@@ -714,7 +714,7 @@ function l2Balkone() {
               shadowSide: T.BackSide,
             }),
           );
-        if (ftT) schMaterial(m.material, ftT);
+        if (ftT) schMaterial(ftFarbe(m.material, ftT.c), ftT);
         m.castShadow = !glas;
         m.receiveShadow = true;
         m.raycast = () => {};

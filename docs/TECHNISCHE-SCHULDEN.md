@@ -272,3 +272,9 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   (Realistisch+, Glas, Wasser, Geländeabsenkung, Schraffuren) und der `EffectComposer` müssten nach TSL, WebGL-Rückfall
   bleibt nötig. Reihenfolge, wenn es wieder ansteht: messen und bündeln (Instanzen) → Windlöser als WebGPU-Compute mit
   Worker als Rückfall → Renderer umstellen, wenn der WebGPU-Renderer ausgereift ist.
+- Darstellungswechsel: Weißmodell baut nichts mehr neu (`ftFarbe`/`ftWmFarben` färben Fassadentyp-Materialien um,
+  `SCH_AN` schaltet Schraffuren); `recomp` läuft während `drSet` nur einmal am Ende (`RECOMP`). Rest-Dauer eines
+  Wechsels vor allem das Kartenbild (`recomp`, im Testbrowser ca. 250 ms je Aufruf) – Kandidat für Zwischenspeicher je
+  Darstellung.
+- Fokus-Ansicht: Ausgeblendetes wird vor jedem Bild gehalten (`iso3Halten` in `drTick`); die Suche nach Gebäuden und
+  Grundstück (`iso3Apply`) läuft weiter alle 400 ms.
