@@ -242,7 +242,7 @@ function l2MeshOrig(e) {
       if (loecher.length) oeWandTeilen(e, loecher).forEach(stueck);
       else e.quads.forEach((q) => add({ o: q, h: [] }));
       oeRuecksprungKoerper(O).forEach(stueck);
-      const Oe = O.filter((o) => !o.r);
+      const Oe = O.filter((o) => !o.r).concat(oeAttikaBand(e));
       if (Oe.length) g.add(oeKoerper(Oe));
     } else e.quads.forEach((q) => add({ o: q, h: [] }));
   } else e.faces.forEach((f) => add(f));

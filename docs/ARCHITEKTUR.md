@@ -390,6 +390,11 @@ untersten Hofgeschoss bleibt als Hofboden. Beginnt der Hof im untersten Geschoss
   Das Wandstück vor der Deckenstirn (`quads2`, äußere Wandhälfte auf Deckenhöhe) entfällt dort (`oeDeckenband`,
   gezeichnet in `l2Mesh`), sonst stünde es als Band vor der zurückgesetzten Decke. An Außenecken reicht die
   Aussparung um die Rücksprungtiefe weiter.
+  Innenwände, die auf eine solche Außenwand treffen, enden an der zurückgesetzten Deckenkante statt an der
+  Wandinnenseite (`endV` in `l2GeoStufe1`, Rücksprung `d` aus `oeDeckenZonen`).
+- Attika (Flachdach): reicht ein Pfosten-Riegel-Abschnitt bis zur Dachkante (`oeAttikaPr`), läuft er als Paneelband in
+  Attikahöhe weiter (`oeAttikaBand` → `oeKoerper`, Einteilung `oegPrAttika`: durchlaufende Pfosten, Paneele,
+  Abschlussriegel); die Attika-Wand (`l2AttikaRing`) springt dort um Bautiefe + 2 cm zurück.
 - Konfigurator: Material „Pfosten-Riegel-Fassade“, darunter Maße im Abschnitt „Gruppe“ (ältere Gruppen mit `G.pr.an` werden beim Laden auf das Material umgestellt), `okGrRaster` teilt in gleiche Achsen.
 
 ## Schraffuren der Fassadentypen

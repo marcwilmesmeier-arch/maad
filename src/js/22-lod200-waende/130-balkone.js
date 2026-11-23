@@ -185,6 +185,9 @@ function l2AttikaRing(b) {
     d = (aw && aw.d) || 0.36,
     y0 = (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0),
     hoefe = znVoidsAt(b, j).map((v) => v.poly),
+    // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: vor dem Attikaband einer Pfosten-Riegel-Fassade
+    // springt die Attika-Wand zurück (oeAttikaPr)
+    prA = oeAttikaPr(b),
     R = [];
   // Dachfläche = Grundriss minus Innenhöfe (ein Hof darf über den Rand hinausreichen); Attika an allen ihren Rändern
   let D = [bpP(f)];
@@ -233,10 +236,35 @@ function l2AttikaRing(b) {
         // innen: an den Kantenenden die Gehrungspunkte, dazwischen senkrecht versetzt
         Ii = (t) =>
           t <= 0 ? I[i] : t >= 1 ? I[(i + 1) % n] : [A(t)[0] + k.nn[0] * d, A(t)[1] + k.nn[1] * d];
+      // Abschnitte mit Pfosten-Riegel-Band davor: [ta, tb, Rücksprung]
+      const zr = prA
+          .filter(
+            (z) =>
+              Math.abs(z.n[0] * k.nn[0] + z.n[1] * k.nn[1]) > 0.99 &&
+              Math.abs((z.p0[0] - k.p[0]) * k.nn[0] + (z.p0[1] - k.p[1]) * k.nn[1]) < 0.05,
+          )
+          .map((z) => {
+            const t = (p) => ((p[0] - k.p[0]) * k.u[0] + (p[1] - k.p[1]) * k.u[1]) / k.l,
+              a = Math.max(0, Math.min(t(z.p0), t(z.p1))),
+              c = Math.min(1, Math.max(t(z.p0), t(z.p1)));
+            return [a, c, z.d];
+          })
+          .filter(([a, c]) => c - a > 0.01 / k.l),
+        aussen = (t, o) => [A(t)[0] + k.nn[0] * o, A(t)[1] + k.nn[1] * o];
       st.forEach((x, j) => {
         const t0 = x.t0,
-          t1 = j + 1 < st.length ? st[j + 1].t0 : 1;
-        R.push({ Q: [A(t0), A(t1), Ii(t1), Ii(t0)], y0, y1: y0 + L2_ATTIKA, ft: x.ft });
+          t1 = j + 1 < st.length ? st[j + 1].t0 : 1,
+          gr = [t0, t1, ...zr.flatMap(([a, c]) => [a, c]).filter((v) => v > t0 && v < t1)].sort(
+            (p, q) => p - q,
+          );
+        for (let i = 0; i < gr.length - 1; i++) {
+          const a = gr[i],
+            c = gr[i + 1];
+          if (c - a < 1e-6) continue;
+          const z = zr.find(([p, q]) => p <= (a + c) / 2 && q >= (a + c) / 2),
+            o = z ? Math.min(z[2], d - 0.05) : 0;
+          R.push({ Q: [aussen(a, o), aussen(c, o), Ii(c), Ii(a)], y0, y1: y0 + L2_ATTIKA, ft: x.ft });
+        }
       });
     });
   });

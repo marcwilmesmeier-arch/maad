@@ -342,6 +342,8 @@ function oegPrFelder(G, H, rd) {
  * Pfostentiefe) und Felder. Randprofile nach T._rd (halb an Pfosten-Riegel-Nachbarn).
  */
 function oegPrAufteilung(T) {
+  // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Band in Attikahöhe über dem Element (oeAttikaBand)
+  if (T._att) return oegPrAttika(T);
   const G = T._g,
     P = oegPr(G),
     r = T._rd || OEG_PR_RAND,
@@ -386,6 +388,32 @@ function oegPrAufteilung(T) {
       fe = felder.map((f) => ({ ...f, x0: k(f.x0), x1: k(f.x1) })).filter((f) => f.x1 - f.x0 > 0.01);
     return { pb, pp: pb, stege: st, felder: fe, oben: fe, ns: [] };
   }
+  return { pb, pp: pb, stege, felder, oben: felder, ns: [] };
+}
+/**
+ * Einteilung des Attikabands über einer Pfosten-Riegel-Fassade (T._att = Höhe, T._hU = Höhe des Elements darunter):
+ * die Pfosten, die oben am Element ankommen, laufen durch, dazwischen Paneele, oben ein Abschlussriegel.
+ */
+function oegPrAttika(T) {
+  const U = oegPrAufteilung(Object.assign({}, T, { _att: 0, h: T._hU })),
+    hU = T._hU,
+    h = T._att,
+    pb = U.pb,
+    P = oegPr(T._g),
+    kr = P.rt / P.pt,
+    // senkrechte Stege, die bis zur Oberkante reichen (Rand- und Zwischenpfosten)
+    po = U.stege
+      .filter(([a, c, d, e]) => e >= hU - 0.004 && e - d > c - a + 0.01 && e - d > 0.3)
+      .map(([a, c]) => [a, c])
+      .sort((p, q) => p[0] - q[0]);
+  if (!po.length) return { pb, pp: pb, stege: [], felder: [], oben: [], ns: [] };
+  const x0 = po[0][0],
+    x1 = po[po.length - 1][1],
+    stege = po.map(([a, c]) => [a, c, 0, h]).concat([[x0, x1, h - pb, h, kr]]),
+    felder = [];
+  for (let i = 0; i < po.length - 1; i++)
+    if (po[i + 1][0] - po[i][1] > 0.01)
+      felder.push({ x0: po[i][1], x1: po[i + 1][0], y0: 0, y1: h - pb, oa: 'f', an: 'l', fu: 'p', i });
   return { pb, pp: pb, stege, felder, oben: felder, ns: [] };
 }
 /**

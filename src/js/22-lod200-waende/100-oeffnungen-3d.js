@@ -261,6 +261,39 @@ function oeDeckenZonen(b) {
   );
   return R;
 }
+/** Oberkante der Attika-Wand eines Gebäudes mit Flachdach (Weltkoordinaten) oder null. */
+function oeDachOK(b) {
+  if (b.roof && b.roof.type && b.roof.type !== 'flat') return null;
+  return (b._y || 0) + b.levels.reduce((s, l) => s + l.h, 0);
+}
+/**
+ * Pfosten-Riegel-Abschnitte, die bis zur Dachkante (Flachdach) laufen: dort läuft die Fassade als Paneelband in
+ * Attikahöhe weiter (oeAttikaBand), die Attika-Wand springt um Bautiefe + OE_PR_DECKE dahinter zurück
+ * (l2AttikaRing). Ergebnis: [{ p0, p1, n, d }] im Grundriss.
+ */
+function oeAttikaPr(b) {
+  const y = oeDachOK(b);
+  if (y == null) return [];
+  return oeWelt(b)
+    .filter((o) => o.T && o.T.a === 'pr' && Math.abs(o.y1 - y) < 0.05)
+    .map((o) => ({ p0: o.p0, p1: o.p1, n: o.n, d: (o.T.pt || 0.16) + OE_PR_DECKE }));
+}
+/** Paneelbänder in Attikahöhe über den Pfosten-Riegel-Abschnitten einer Wand (Elemente für oeKoerper). */
+function oeAttikaBand(e) {
+  if (!e.atR) return [];
+  const b = oeBauteilGebaeude(e),
+    yOK = b ? oeDachOK(b) : null;
+  if (yOK == null) return [];
+  return oeWandOeffnungen(e)
+    .filter((o) => !o.r && o.T && o.T.a === 'pr' && Math.abs(e.y0 + o.y1 - yOK) < 0.05)
+    .map((o) =>
+      Object.assign({}, o, {
+        y0: o.y1,
+        y1: o.y1 + L2_ATTIKA,
+        T: Object.assign({}, o.T, { _att: L2_ATTIKA, _hU: o.T.h, h: L2_ATTIKA }),
+      }),
+    );
+}
 /** Deckenflächen (faces) auf Höhe der Geschossgrenze y ohne die Aussparungen hinter Pfosten-Riegel-Fassaden. */
 function oeDeckeAussparen(faces, y, Z) {
   const V = Z.filter((z) => Math.abs(z.y - y) < 0.05).map((z) => bpP(z.r));
