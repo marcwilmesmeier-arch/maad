@@ -567,7 +567,15 @@ function l2GeoStufe1(b) {
       const ex = exA.length ? exA : exn.get(k);
       if (ex && ex.length) {
         const g = ex[0].g,
-          q0 = [N[0] + g.n[0] * (g.d - (g.sh || 0)), N[1] + g.n[1] * (g.d - (g.sh || 0))],
+          // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: vor einer durchlaufenden Pfosten-Riegel-Fassade
+          // fehlt die Außenwand; die Innenwand endet an der zurückgesetzten Deckenkante (oeDeckenZonen)
+          pz = prZ.find(
+            (z) =>
+              (Math.abs(z.y - y) < 0.05 || Math.abs(z.y - y - lv.h) < 0.05) &&
+              inP([N[0] + g.n[0] * 0.05, N[1] + g.n[1] * 0.05], z.r),
+          ),
+          tw = pz ? pz.d : g.d - (g.sh || 0),
+          q0 = [N[0] + g.n[0] * tw, N[1] + g.n[1] * tw],
           w = [g.kx, g.kz],
           p = TL(r, r.c + r.h2, q0, w),
           m = TL(r, r.c - r.h2, q0, w);

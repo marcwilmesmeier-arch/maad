@@ -231,7 +231,8 @@ const OE_PR_DECKE = 0.02;
  * Aussparungen der Geschossdecken hinter durchgehenden Pfosten-Riegel-Fassaden: wo ein Pfosten-Riegel-Abschnitt im
  * Geschoss darüber weiterläuft (gleiche Fassadenebene, Unterkante = Oberkante des unteren), springt die Decke um
  * Bautiefe + OE_PR_DECKE hinter die Außenfläche zurück – die Fassaden beider Geschosse treffen sich vor der
- * Deckenstirn. Ergebnis: [{ y, r }] (y = Höhe der Geschossgrenze, r = Rechteck im Grundriss, nach außen verlängert).
+ * Deckenstirn. Ergebnis: [{ y, d, r }] (y = Höhe der Geschossgrenze, d = Rücksprung hinter der Außenfläche,
+ * r = Rechteck im Grundriss, nach außen verlängert).
  */
 function oeDeckenZonen(b) {
   const P = oeWelt(b).filter((o) => o.T && o.T.a === 'pr'),
@@ -255,7 +256,7 @@ function oeDeckenZonen(b) {
         aussen = (k) => !inP(X(k, -0.05), b.fp);
       if (aussen(a - D)) a -= D + 0.05;
       if (aussen(c + D)) c += D + 0.05;
-      R.push({ y: u.y1, r: [X(a, 0.5), X(c, 0.5), X(c, -D), X(a, -D)] });
+      R.push({ y: u.y1, d: D, r: [X(a, 0.5), X(c, 0.5), X(c, -D), X(a, -D)] });
     }),
   );
   return R;
