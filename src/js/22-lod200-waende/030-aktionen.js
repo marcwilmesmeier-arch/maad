@@ -259,7 +259,73 @@ function l2MeshOrig(e) {
     l2AtQuads(e).forEach((q) => add({ o: q, h: [] }, e.hAt));
     for (let i = n1; i < g.children.length; i++) g.children[i].position.y = e.h + e.hTop;
   }
+  l2Buendeln(g);
   return { g, mat };
+}
+/**
+ * Teilstücke eines Bauteils zusammenfassen: alle direkten Meshes mit demselben Material (und denselben Attributen) zu
+ * einem Mesh, alle Kantenlinien gleicher Farbe zu einem Linienzug – gleiche Geometrie, aber ein Zeichenaufruf statt
+ * vieler (bei großen Gebäuden Tausende). Gruppen und Teile mit eigener Kennung (userData) bleiben unverändert.
+ */
+function l2Buendeln(g) {
+  const B = new Map(),
+    ohne = (o) => !o.children.length && !Object.keys(o.userData).length;
+  g.children.forEach((o) => {
+    if (!ohne(o) || !o.geometry || Array.isArray(o.material)) return;
+    let k;
+    if (o.isMesh) {
+      const at = Object.keys(o.geometry.attributes).sort().join(',');
+      k = 'm|' + o.material.uuid + '|' + at + '|' + o.castShadow + o.receiveShadow + o.renderOrder;
+    } else if (o.isLineSegments) {
+      const m = o.material;
+      k =
+        'l|' +
+        (m.color ? m.color.getHexString() : '') +
+        '|' +
+        m.opacity +
+        '|' +
+        m.transparent +
+        '|' +
+        o.visible;
+    } else return;
+    let a = B.get(k);
+    if (!a) B.set(k, (a = []));
+    a.push(o);
+  });
+  B.forEach((L) => {
+    if (L.length < 2) return;
+    const o0 = L[0],
+      namen = Object.keys(o0.geometry.attributes),
+      daten = namen.map(() => []);
+    L.forEach((o) => {
+      o.updateMatrix();
+      const ge = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+      ge.applyMatrix4(o.matrix);
+      namen.forEach((n, i) => {
+        const at = ge.attributes[n];
+        for (let j = 0; j < at.array.length; j++) daten[i].push(at.array[j]);
+      });
+      ge.dispose();
+    });
+    const ge = new T.BufferGeometry();
+    namen.forEach((n, i) => {
+      const at = o0.geometry.attributes[n];
+      ge.setAttribute(n, new T.BufferAttribute(new Float32Array(daten[i]), at.itemSize, at.normalized));
+    });
+    const neu = o0.isMesh ? new T.Mesh(ge, o0.material) : new T.LineSegments(ge, o0.material);
+    neu.castShadow = o0.castShadow;
+    neu.receiveShadow = o0.receiveShadow;
+    neu.renderOrder = o0.renderOrder;
+    neu.visible = o0.visible;
+    // Treffertest: nur wenn eines der Teilstücke getroffen werden konnte
+    if (L.every((o) => Object.prototype.hasOwnProperty.call(o, 'raycast'))) neu.raycast = o0.raycast;
+    L.forEach((o) => {
+      g.remove(o);
+      o.geometry.dispose();
+      if (o0.isLineSegments && o.material !== o0.material) o.material.dispose();
+    });
+    g.add(neu);
+  });
 }
 /**
  * Ruhe nach Bewegung: Wird ein Gebäude verschoben, gedreht oder umgeformt, ruht seine LOD-200-Darstellung (Wände,
@@ -283,6 +349,8 @@ function l2Unruhig(b) {
 function l2Einfach(b) {
   return l2Unruhig(b);
 }
+/** Zeit je Takt für den Neuaufbau von LOD-200-Bauteilen (ms); was nicht fertig wird, folgt im nächsten Takt. */
+const L2ETAPPE = 24;
 function l2Sync() {
   // Gebäude in Bewegung oder in Bearbeitung (l2Einfach) bleiben außen vor: ihre Bauteile werden entfernt und danach neu
   // aufgebaut
@@ -294,10 +362,11 @@ function l2Sync() {
       ru.map((b) => '#ru:' + b.id).join('') +
       (l23() ? l2mSig() : '');
   if (sig !== L2SIG) {
-    L2SIG = sig;
     const seen = new Set(),
       now = performance.now();
-    let n = 0;
+    let n = 0,
+      // Aufbau in Etappen: höchstens L2ETAPPE ms je Takt, der Rest im nächsten (kein Hängen bei großen Projekten)
+      fertig = true;
     bs.forEach((b) =>
       l2Els(b).els.forEach((e) => {
         const h = JSON.stringify([
@@ -320,6 +389,10 @@ function l2Sync() {
           old = L2I.get(e.id);
         seen.add(e.id);
         if (old && old.h === h) return;
+        if (performance.now() - now > L2ETAPPE) {
+          fertig = false;
+          return;
+        }
         if (old) {
           G.l2.remove(old.g);
           l2Dispose(old.g);
@@ -342,6 +415,11 @@ function l2Sync() {
         m.mat.opacity = 0;
       }),
     );
+    if (!fertig) {
+      l2Run();
+      return;
+    }
+    L2SIG = sig;
     for (const [id, it] of L2I)
       if (!seen.has(id)) {
         G.l2.remove(it.g);

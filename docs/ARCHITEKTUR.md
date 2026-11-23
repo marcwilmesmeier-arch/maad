@@ -689,3 +689,13 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   großen Schriftzug zusammen (Verhältnisse wie `#hLogo`), dann verkleinert sich alles auf `#hLogo`/`#hLogoSvg` der
   Startseite. Wartet die Karte noch, steht `GEO.status` unter dem Schriftzug. Klick/Taste/Mausrad überspringen;
   „Bewegung reduzieren“: kein Vorspann. Spätere Animationen am selben Element füllen nur vorwärts.
+
+## LOD 200: Geschwindigkeit
+
+- `l2Buendeln` (am Ende von `l2MeshOrig`): direkte Teilstücke eines Bauteils mit gleichem Material bzw. gleicher
+  Linienfarbe werden zu einem Mesh/Linienzug zusammengefasst – gleiche Geometrie, weniger Zeichenaufrufe (Gütersloh:
+  2648 → 1182 Meshes, 3381 → 1915 Aufrufe je Bild). Gruppen und Teile mit `userData` (Öffnungen, Glas) bleiben.
+- Zwischenspeicher, solange `oeWelt(b)` dieselbe Liste liefert: `e._oeO` (`oeWandOeffnungen`), `b._oeDZ`
+  (`oeDeckenZonen`, zusätzlich `b.fp`), `b._oeAP` (`oeAttikaPr`, zusätzlich `skSig` und Dachform).
+- `l2Sync` baut höchstens `L2ETAPPE` ms je Takt neu; der Rest folgt im nächsten Takt (`L2SIG` wird erst gesetzt,
+  wenn alles gebaut ist, alte Bauteile werden erst dann entfernt).

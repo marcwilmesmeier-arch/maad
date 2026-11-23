@@ -235,8 +235,12 @@ const OE_PR_DECKE = 0.02;
  * r = Rechteck im Grundriss, nach außen verlängert).
  */
 function oeDeckenZonen(b) {
-  const P = oeWelt(b).filter((o) => o.T && o.T.a === 'pr'),
+  const L = oeWelt(b),
+    k = JSON.stringify(b.fp);
+  if (b._oeDZ && b._oeDZ.L === L && b._oeDZ.k === k) return b._oeDZ.R;
+  const P = L.filter((o) => o.T && o.T.a === 'pr'),
     R = [];
+  b._oeDZ = { L, k, R };
   P.forEach((u) =>
     P.forEach((o) => {
       if (u === o || Math.abs(u.y1 - o.y0) > 0.05 || u.n[0] * o.n[0] + u.n[1] * o.n[1] < 0.99) return;
@@ -319,6 +323,14 @@ function oeDachOK(b) {
  * Ergebnis: [{ p0, p1, n, d, y }] im Grundriss, y = Unterkante der Attika.
  */
 function oeAttikaPr(b) {
+  const W = oeWelt(b),
+    k = skSig(b) + '|' + ((b.roof && b.roof.type) || '');
+  if (b._oeAP && b._oeAP.W === W && b._oeAP.k === k) return b._oeAP.R;
+  const R = oeAttikaPrNeu(b, W);
+  b._oeAP = { W, k, R };
+  return R;
+}
+function oeAttikaPrNeu(b, W) {
   const yD = oeDachOK(b),
     G = [];
   let y = b._y || 0;
@@ -327,7 +339,7 @@ function oeAttikaPr(b) {
     if (b.levels[j + 1]) G.push({ y, f: lf(b, b.levels[j + 1]) });
   });
   const R = [];
-  oeWelt(b).forEach((o) => {
+  W.forEach((o) => {
     if (!o.T || o.T.a !== 'pr') return;
     const z = { n: o.n, d: (o.T.pt || 0.16) + OE_PR_DECKE, y: o.y1 };
     if (yD != null && Math.abs(o.y1 - yD) < 0.05) {
@@ -483,6 +495,13 @@ function oeWandOeffnungen(e) {
   if (!b || !b.fd) return [];
   const L = oeWelt(b);
   if (!L.length) return [];
+  // gemerkt am Bauteil, solange die Öffnungen des Gebäudes dieselben sind (oeWelt liefert dann dieselbe Liste)
+  if (e._oeO && e._oeO.L === L) return e._oeO.R;
+  const R = oeWandOeffnungenNeu(e, b, L);
+  e._oeO = { L, R };
+  return R;
+}
+function oeWandOeffnungenNeu(e, b, L) {
   const R = [],
     ax = e.sb[0] - e.sa[0],
     az = e.sb[1] - e.sa[1],
