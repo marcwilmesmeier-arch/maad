@@ -238,8 +238,9 @@ function l2AttikaRing(b) {
         // innen: an den Kantenenden die Gehrungspunkte, dazwischen senkrecht versetzt
         Ii = (t) =>
           t <= 0 ? I[i] : t >= 1 ? I[(i + 1) % n] : [A(t)[0] + k.nn[0] * d, A(t)[1] + k.nn[1] * d];
-      l2AttikaStuecke(k, k.l, A, Ii, st, prA, d).forEach(([Q, ft]) =>
-        R.push({ Q, y0, y1: y0 + L2_ATTIKA, ft }),
+      const nb = (e) => Object.assign({}, e, { L: e.l });
+      l2AttikaStuecke(k, k.l, A, Ii, st, prA, d, nb(K[(i + n - 1) % n]), nb(K[(i + 1) % n])).forEach(
+        ([Q, ft]) => R.push({ Q, y0, y1: y0 + L2_ATTIKA, ft }),
       );
     });
   });
@@ -249,21 +250,47 @@ function l2AttikaRing(b) {
  * Attika einer Kante k (Länge L, Außenpunkt A(t), Innenpunkt Ii(t)) in Abschnitte nach Fassadentyp (st) teilen; vor
  * Pfosten-Riegel-Bändern (Z aus oeAttikaPr) springt die Außenseite um deren Rücksprung zurück. [[Q, ft]]
  */
-function l2AttikaStuecke(k, L, A, Ii, st, Z, d) {
-  const R = [],
-    zr = Z.filter(
-      (z) =>
-        Math.abs(z.n[0] * k.nn[0] + z.n[1] * k.nn[1]) > 0.99 &&
-        Math.abs((z.p0[0] - k.p[0]) * k.nn[0] + (z.p0[1] - k.p[1]) * k.nn[1]) < 0.05,
-    )
-      .map((z) => {
-        const t = (p) => ((p[0] - k.p[0]) * k.u[0] + (p[1] - k.p[1]) * k.u[1]) / L,
-          a = Math.max(0, Math.min(t(z.p0), t(z.p1))),
-          c = Math.min(1, Math.max(t(z.p0), t(z.p1)));
-        return [a, c, z.d];
-      })
-      .filter(([a, c]) => c - a > 0.01 / L),
-    aussen = (t, o) => [A(t)[0] + k.nn[0] * o, A(t)[1] + k.nn[1] * o];
+function l2AttikaStuecke(k, L, A, Ii, st, Z, d, vor, nach) {
+  // Abschnitte mit Pfosten-Riegel-Band davor: [ta, tb, Rücksprung] je Kante; Rücksprung an der Stelle t
+  const zrOf = (e, Le) =>
+      Z.filter(
+        (z) =>
+          Math.abs(z.n[0] * e.nn[0] + z.n[1] * e.nn[1]) > 0.99 &&
+          Math.abs((z.p0[0] - e.p[0]) * e.nn[0] + (z.p0[1] - e.p[1]) * e.nn[1]) < 0.05,
+      )
+        .map((z) => {
+          // Grenzen bis 5 mm an den Kantenenden auf die Ecke legen (sonst entfiele dort die Gehrung)
+          const t = (p) => ((p[0] - e.p[0]) * e.u[0] + (p[1] - e.p[1]) * e.u[1]) / Le,
+            snap = (v) => (v < 0.005 / Le ? 0 : v > 1 - 0.005 / Le ? 1 : v),
+            a = snap(Math.max(0, Math.min(t(z.p0), t(z.p1)))),
+            c = snap(Math.min(1, Math.max(t(z.p0), t(z.p1))));
+          return [a, c, Math.min(z.d, d - 0.05)];
+        })
+        .filter(([a, c]) => c - a > 0.01 / Le),
+    offBei = (zr, t) => (zr.find(([a, c]) => a - 1e-3 <= t && c + 1e-3 >= t) || [0, 0, 0])[2],
+    R = [],
+    zr = zrOf(k, L),
+    // Schnitt zweier um o bzw. o2 nach innen versetzter Kanten (Gehrung an der Gebäudeecke)
+    schnitt = (o, e, o2) => {
+      const P = [k.p[0] + k.nn[0] * o, k.p[1] + k.nn[1] * o],
+        Q = [e.p[0] + e.nn[0] * o2, e.p[1] + e.nn[1] * o2],
+        det = k.u[0] * e.u[1] - k.u[1] * e.u[0];
+      if (Math.abs(det) < 1e-6) return null;
+      const t = ((Q[0] - P[0]) * e.u[1] - (Q[1] - P[1]) * e.u[0]) / det;
+      return [P[0] + k.u[0] * t, P[1] + k.u[1] * t];
+    },
+    aussen = (t, o) => {
+      // an der Ecke: auf Gehrung mit der Nachbarkante, deren Außenseite ebenfalls zurückspringen kann
+      const e = t <= 1e-6 ? vor : t >= 1 - 1e-6 ? nach : null;
+      if (e) {
+        const o2 = offBei(zrOf(e, e.L), t <= 1e-6 ? 1 : 0);
+        if (o > 0 || o2 > 0) {
+          const X = schnitt(o, e, o2);
+          if (X) return X;
+        }
+      }
+      return [A(t)[0] + k.nn[0] * o, A(t)[1] + k.nn[1] * o];
+    };
   st.forEach((x, j) => {
     const t0 = x.t0,
       t1 = j + 1 < st.length ? st[j + 1].t0 : 1,
@@ -273,7 +300,7 @@ function l2AttikaStuecke(k, L, A, Ii, st, Z, d) {
         c = gr[i + 1];
       if (c - a < 1e-6) continue;
       const z = zr.find(([p, q]) => p <= (a + c) / 2 && q >= (a + c) / 2),
-        o = z ? Math.min(z[2], d - 0.05) : 0;
+        o = z ? z[2] : 0;
       R.push([[aussen(a, o), aussen(c, o), Ii(c), Ii(a)], x.ft]);
     }
   });
@@ -429,6 +456,8 @@ function l2AttikaTerrassen(b) {
           st,
           prA.filter((z) => Math.abs(z.y - y) < 0.05),
           d,
+          K[(i + n - 1) % n].aussen ? K[(i + n - 1) % n] : null,
+          K[(i + 1) % n].aussen ? K[(i + 1) % n] : null,
         ).forEach(([Q, ft]) => R.push({ Q, y0: y, y1: y + L2_ATTIKA, ft, j }));
       });
     });
