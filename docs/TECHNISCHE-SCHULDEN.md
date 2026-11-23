@@ -267,3 +267,8 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   erreichbar – bei Gelegenheit entfernen. Ebenso das Werkzeug „Geschoss“ (`st`, 070-werkzeug.js).
 - Behoben: `fdSetCuts`/`fdAttr` löschten eine Ansicht samt Öffnungen und Gruppen, sobald keine Linien und Felder
   mehr da waren (jetzt `fdAnsichtLeer`).
+- Zurückgestellt: WebGPU (three.js `WebGPURenderer`, TSL, Meshlets). Vorteile: weniger CPU-Last bei vielen
+  Zeichenaufrufen, Compute-Shader (Windlöser, Emissionen, Verschattung). Aufwand: alle `onBeforeCompile`-Anpassungen
+  (Realistisch+, Glas, Wasser, Geländeabsenkung, Schraffuren) und der `EffectComposer` müssten nach TSL, WebGL-Rückfall
+  bleibt nötig. Reihenfolge, wenn es wieder ansteht: messen und bündeln (Instanzen) → Windlöser als WebGPU-Compute mit
+  Worker als Rückfall → Renderer umstellen, wenn der WebGPU-Renderer ausgereift ist.
