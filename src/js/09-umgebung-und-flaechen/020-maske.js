@@ -139,7 +139,7 @@ function mkRender(scn, cm) {
       const sh = sunL.shadow,
         c = sh.camera,
         tp = sunL.target.position,
-        f = S.m3 ? shFit(cm, sh) : null;
+        f = S.m3 ? shFitRuhig(cm, sh) : null;
       if (f) {
         st = {
           p: sunL.position.clone(),
@@ -173,7 +173,8 @@ function mkRender(scn, cm) {
         ren.shadowMap.autoUpdate = false;
         const now = performance.now(),
           g = shSig();
-        if (!sh.map || g !== SHC.sig || now - SHC.t > 1500) {
+        // Sicherheits-Auffrischung alle 1,5 s nur bei ruhender Kamera (beim Drehen sonst ein Hänger je Auffrischung)
+        if (!sh.map || g !== SHC.sig || (now - SHC.t > 1500 && now - SHR.t > SHR_RUHE)) {
           SHC.sig = g;
           SHC.t = now;
           ren.shadowMap.needsUpdate = true;

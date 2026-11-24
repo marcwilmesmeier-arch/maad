@@ -704,3 +704,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (`userData._l2b`). Sobald etwas die Bauteile einzeln braucht, löst `l2bLoesen` das Bündel. Ausgenommen:
   Schraffur-, Glas- und durchscheinende Materialien. Gütersloh: 1915 → 1021 Zeichenaufrufe je Bild (LOD 200 selbst:
   rund 1180 → 7 Meshes plus Glas/Schraffur). Fokus-Ansicht blendet Bündel anderer Gebäude mit aus.
+- Schatten beim Drehen (`shFitRuhig` in `24-erweiterungen-v344-v436/020-kamera.js`, aufgerufen in `mkRender`): bewegt
+  sich die Kamera, bleibt der Schattenausschnitt stehen, solange er den nötigen Bereich abdeckt (sonst mit 30 %
+  Reserve neu); erst `SHR_RUHE` ms nach der letzten Bewegung gilt wieder der genaue Ausschnitt. Die
+  Sicherheits-Auffrischung der Schattenkarte (1,5 s) läuft nur bei ruhender Kamera. Ergebnis: beim Drehen wird die
+  Schattenkarte nicht mehr in jedem Bild neu gezeichnet; im Stand gleiche Schärfe wie zuvor.

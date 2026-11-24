@@ -268,7 +268,21 @@ function shFit(cm, sh) {
         sm = (s0 + s1) / 2,
         F = new T.Vector3().addScaledVector(ax, cu).addScaledVector(ay, cv).addScaledVector(dir, sm),
         Dd = s1 - sm + 20;
-      return { F, dir, R: Math.max(Rx, Ry), Rx, Ry, near: 10, far: Dd + (sm - s0) + 20, Dd, q };
+      return {
+        F,
+        dir,
+        R: Math.max(Rx, Ry),
+        Rx,
+        Ry,
+        near: 10,
+        far: Dd + (sm - s0) + 20,
+        Dd,
+        q,
+        cu,
+        cv,
+        s0,
+        s1,
+      };
     }
   }
   let R = Math.max(35, Math.min(160, V.d * 1.5)),
@@ -299,7 +313,60 @@ function shFit(cm, sh) {
     sm = (s0 + s1) / 2,
     F = new T.Vector3().addScaledVector(ax, cu).addScaledVector(ay, cv).addScaledVector(dir, sm),
     Dd = s1 - sm + 10;
-  return { F, dir, R, near: 10, far: Dd + (sm - s0) + 10, Dd, q };
+  return { F, dir, R, near: 10, far: Dd + (sm - s0) + 10, Dd, q, cu, cv, s0, s1 };
+}
+/** Wartezeit nach der letzten Kamerabewegung, bis der Schattenausschnitt wieder genau angepasst wird (ms). */
+const SHR_RUHE = 250;
+const SHR = { f: null, cam: '', t: 0 };
+/**
+ * Schattenausschnitt mit Ruhe: Bewegt sich die Kamera, bleibt der letzte Ausschnitt (und damit die fertige
+ * Schattenkarte) stehen, solange er den nötigen Bereich abdeckt; reicht er nicht, wird er mit 30 % Reserve neu
+ * gesetzt. Steht die Kamera SHR_RUHE ms still, gilt wieder der genaue Ausschnitt (volle Schärfe wie bisher). So wird
+ * die Schattenkarte beim Drehen nicht in jedem Bild neu gezeichnet.
+ */
+function shFitRuhig(cm, sh) {
+  const f = shFit(cm, sh);
+  if (!f) {
+    SHR.f = null;
+    return f;
+  }
+  const now = performance.now(),
+    e = cm.matrixWorld.elements,
+    k = [e[12], e[13], e[14], e[8], e[9], e[10], cm.fov, cm.zoom].map((v) => v.toFixed(3)).join(',');
+  // in Bewegung: die Kamera hat sich in diesem Bild bewegt oder vor weniger als SHR_RUHE ms
+  const bewegt = k !== SHR.cam;
+  if (bewegt) {
+    SHR.cam = k;
+    SHR.t = now;
+  }
+  const ruhig = !bewegt && now - SHR.t > SHR_RUHE,
+    o = SHR.f;
+  if (ruhig || !o) {
+    SHR.f = f;
+    return f;
+  }
+  // gleiche Sonnenrichtung und neuer Ausschnitt im alten enthalten: alten behalten
+  const rx = (x) => x.Rx || x.R,
+    ry = (x) => x.Ry || x.R,
+    drin =
+      o.dir.dot(f.dir) > 0.99999 &&
+      f.cu - rx(f) >= o.cu - rx(o) - 1e-6 &&
+      f.cu + rx(f) <= o.cu + rx(o) + 1e-6 &&
+      f.cv - ry(f) >= o.cv - ry(o) - 1e-6 &&
+      f.cv + ry(f) <= o.cv + ry(o) + 1e-6 &&
+      f.s0 >= o.s0 - 1e-6 &&
+      f.s1 <= o.s1 + 1e-6;
+  if (drin) return o;
+  // mit Reserve erweitern (Mitte bleibt, Kanten 30 % weiter, auf Texel gerastert)
+  const w = Object.assign({}, f),
+    Rx = rx(f) * 1.3,
+    Ry = ry(f) * 1.3,
+    R = Math.max(Rx, Ry),
+    q = (2 * R) / (sh.mapSize.x || 4096),
+    dS = (f.s1 - f.s0) * 0.15;
+  Object.assign(w, { Rx, Ry, R, q, s0: f.s0 - dS, s1: f.s1 + dS, Dd: f.Dd + dS, far: f.far + 2 * dS });
+  SHR.f = w;
+  return w;
 }
 /**
  * Sichtbarer Teil des Geländes für den Schattenausschnitt: Bodenpunkte der Bildränder (Strahlen über dem Horizont
