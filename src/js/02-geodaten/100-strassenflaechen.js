@@ -6,7 +6,6 @@
 // Vektor (Marching Squares mit Interpolation, vereinfacht). Farbe: Layer-Farbe der Straßen (S.lc.roads).
 
 const STR = {
-  ufer: 3, // Brücken: Höhe so weit hinter der Uferkante abnehmen (Böschung, m)
   uG: { value: 1 }, // Kantenlänge des Geländes (m)
   T: 0,
   // Ebenen: Straßen (15 cm tief, Einmündungen 4 m ausgerundet) und Fuß-/Radwege (5 cm, 1,5 m); Maske je Ebene:
@@ -555,82 +554,6 @@ function strDomAbs(x, z) {
   return h > -400 && h < 4500 ? h - (GEO.e0 || 0) : null;
 }
 /**
- * Brücken: jede Straßenachse alle 1 m abtasten; Abschnitte über Wasser (Wasserebene des Kartenbilds) bekommen die
- * Höhe linear zwischen den Ufern statt der Geländehöhe (das Geländemodell enthält keine Brücken, die Straße fiele
- * sonst auf das Flussniveau). { proben: Raster 8 m → [{x, z, h}], linien: [{ l, w }], nass(x, z) }
- */
-function strBruecken(roads, G) {
-  const W = 1024,
-    cv = document.createElement('canvas');
-  cv.width = cv.height = W;
-  const x = cv.getContext('2d', { willReadFrequently: true });
-  if (PL.water) x.drawImage(PL.water, 0, 0, W, W);
-  const px = x.getImageData(0, 0, W, W).data,
-    nass = (a, b) => {
-      const i = Math.floor(((a + G / 2) / G) * W),
-        j = Math.floor(((b + G / 2) / G) * W);
-      return i >= 0 && j >= 0 && i < W && j < W && px[(j * W + i) * 4 + 3] > 100;
-    },
-    proben = new Map(),
-    linien = [],
-    zelle = (a, b) => Math.floor(a / 8) + ':' + Math.floor(b / 8);
-  for (const { l, w } of roads) {
-    if (!l || l.length < 2) continue;
-    const P = [];
-    for (let k = 0; k + 1 < l.length; k++) {
-      const A = l[k],
-        B = l[k + 1],
-        L = Math.hypot(B[0] - A[0], B[1] - A[1]),
-        n = Math.max(1, Math.ceil(L));
-      for (let q = 0; q < n; q++) {
-        const t = q / n,
-          a = A[0] + (B[0] - A[0]) * t,
-          b = A[1] + (B[1] - A[1]) * t;
-        P.push({ x: a, z: b, h: gh(a, b), n: nass(a, b) });
-      }
-    }
-    const E = l[l.length - 1];
-    P.push({ x: E[0], z: E[1], h: gh(E[0], E[1]), n: nass(E[0], E[1]) });
-    for (let k = 0; k < P.length; k++) {
-      if (!P[k].n) continue;
-      let e = k;
-      while (e + 1 < P.length && P[e + 1].n) e++;
-      // Höhe am Ufer STR.ufer m hinter der Uferkante abnehmen (an der Kante liegt meist eine Böschung, die Straße
-      // tiefer); bis dorthin läuft die Fahrbahn schon auf Brückenhöhe
-      const ia = k > 0 ? Math.max(0, k - 1 - STR.ufer) : -1,
-        ib = e + 1 < P.length ? Math.min(P.length - 1, e + 1 + STR.ufer) : -1,
-        a = ia >= 0 ? P[ia] : null,
-        b = ib >= 0 ? P[ib] : null;
-      // ganz im Wasser (Fähre, Kartenfehler) oder sehr lang: nicht überbrücken
-      if ((a || b) && e - k < 400) {
-        const ha = a ? a.h : b.h,
-          hb = b ? b.h : a.h,
-          q0 = a ? ia + 1 : k,
-          q1 = b ? ib - 1 : e;
-        // Brückenhöhe aus dem Oberflächenmodell (DOM, enthält die Brücke): Median einiger Punkte über dem Wasser,
-        // höchstens 2,5 m über dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern
-        const dh = [];
-        for (let q = k; q <= e; q += 2) {
-          const h = strDomAbs(P[q].x, P[q].z);
-          if (h != null) dh.push(h);
-        }
-        dh.sort((x1, x2) => x1 - x2);
-        const hd = dh.length ? Math.min(Math.max(ha, hb) + 2.5, dh[dh.length >> 1]) : -1e9;
-        for (let q = q0; q <= q1; q++) {
-          const t = (q - q0 + 1) / (q1 - q0 + 2);
-          P[q].h = Math.max(ha + (hb - ha) * t, hd);
-          const z = zelle(P[q].x, P[q].z);
-          if (!proben.has(z)) proben.set(z, []);
-          proben.get(z).push(P[q]);
-        }
-        linien.push({ l: P.slice(Math.max(0, q0 - 1), q1 + 2).map((p) => [p.x, p.z]), w });
-      }
-      k = e;
-    }
-  }
-  return { proben, linien, nass };
-}
-/**
  * Brückenachsen vorbereiten: am Ausschnitt (±H) abschneiden und aneinanderstoßende Stücke zu durchgehenden Ketten
  * verbinden (OSM teilt Brücken oft in mehrere Wege; jedes Stück für sich hätte seine Enden mitten auf der Brücke).
  */
@@ -857,12 +780,29 @@ function strBrueckenNachbarn(K) {
     // liegt (x, z) auf dem Deck von B (Abstand zur Achse kleiner als die halbe Breite + r)?
     auf = (B, x, z, r) => B.P.some((q) => Math.hypot(q[0] - x, q[1] - z) < B.h2 + r);
   K.forEach((A) => (A.dz = 0));
+  // zuerst: Brücken fast ganz auf einer anderen, breiteren (bei gleicher Breite der früheren) entfallen – sie zählen
+  // danach weder als Nachbar noch für die Geländerprüfung (sonst fehlte der breiteren dort das Geländer)
+  K.forEach((A, ia) => {
+    const drauf = A.P.filter((p) =>
+      K.some(
+        (B, ib) =>
+          ib !== ia &&
+          !B.weg &&
+          (A.k === 'rail') === (B.k === 'rail') &&
+          (B.w > A.w || (B.w === A.w && ib < ia)) &&
+          imBB(ib, p[0], p[1]) &&
+          auf(B, p[0], p[1], -0.3),
+      ),
+    ).length;
+    A.weg = drauf >= A.P.length * 0.8;
+  });
   K.forEach((A, ia) =>
     A.P.forEach((p, i) => {
+      if (A.weg) return;
       const u = [A.Nn[i][1], -A.Nn[i][0]];
       K.forEach((B, ib) => {
-        // Bahn- und Straßenbrücken sind getrennte Bauwerke
-        if (ib === ia || (A.k === 'rail') !== (B.k === 'rail') || !imBB(ib, p[0], p[1])) return;
+        // Bahn- und Straßenbrücken sind getrennte Bauwerke; entfallene zählen nicht
+        if (ib === ia || B.weg || (A.k === 'rail') !== (B.k === 'rail') || !imBB(ib, p[0], p[1])) return;
         let bj = -1,
           bd = 1e9;
         B.P.forEach((q, j) => {
@@ -891,24 +831,13 @@ function strBrueckenNachbarn(K) {
   K.forEach((A, ia) => (A.Z = Zn[ia].map((a) => a.reduce((s, z) => s + z, 0) / a.length)));
   K.forEach((A, ia) => {
     const n = A.P.length;
-    // fast ganz auf einer anderen (breiteren) Brücke: entfällt
-    const drauf = A.P.filter((p) =>
-      K.some(
-        (B, ib) =>
-          ib !== ia &&
-          (A.k === 'rail') === (B.k === 'rail') &&
-          B.w >= A.w &&
-          imBB(ib, p[0], p[1]) &&
-          auf(B, p[0], p[1], -0.3),
-      ),
-    ).length;
-    A.weg = drauf >= n * 0.8;
     // Enden auf einer anderen Brücke: keine Stirnplatte
     A.kappe = [0, n - 1].map(
       (i) =>
         !K.some(
           (B, ib) =>
             ib !== ia &&
+            !B.weg &&
             (A.k === 'rail') === (B.k === 'rail') &&
             imBB(ib, A.P[i][0], A.P[i][1]) &&
             auf(B, A.P[i][0], A.P[i][1], 0.5),
@@ -924,7 +853,11 @@ function strBrueckenNachbarn(K) {
           z = p[1] + A.Nn[i][1] * g;
         A.nb[sd][i] = K.some(
           (B, ib) =>
-            ib !== ia && (A.k === 'rail') === (B.k === 'rail') && imBB(ib, x, z) && auf(B, x, z, 0.3),
+            ib !== ia &&
+            !B.weg &&
+            (A.k === 'rail') === (B.k === 'rail') &&
+            imBB(ib, x, z) &&
+            auf(B, x, z, 0.3),
         );
       }),
     );
@@ -1248,23 +1181,6 @@ function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
     return z * a + G0[k] * (1 - a);
   });
 }
-/** Brückenhöhe an (x, z): nächste Probe über Wasser (bis 12 m), sonst null. */
-function strBrueckeH(B, a, b) {
-  const i0 = Math.floor(a / 8),
-    j0 = Math.floor(b / 8);
-  let best = null,
-    dm = 144;
-  for (let i = i0 - 1; i <= i0 + 1; i++)
-    for (let j = j0 - 1; j <= j0 + 1; j++)
-      for (const p of B.proben.get(i + ':' + j) || []) {
-        const d = (p.x - a) ** 2 + (p.z - b) ** 2;
-        if (d < dm) {
-          dm = d;
-          best = p;
-        }
-      }
-  return best ? best.h : null;
-}
 /** Ebene E (Straßen oder Wege) aus Achsen und Flächen bauen. */
 function strBauen(E, alle, fills) {
   strWeg(E);
@@ -1274,44 +1190,12 @@ function strBauen(E, alle, fills) {
   const G0 = GEO.size,
     R = strFlaechen(roads, G0, E.r, fills),
     t = E.tief,
-    B = strBruecken(roads, G0),
     N = R.N,
     c = R.c;
   E.ringe = R.ringe;
-  // Brückenbereich im Raster der Maske
-  const bc = document.createElement('canvas');
-  bc.width = bc.height = N;
-  const bx = bc.getContext('2d', { willReadFrequently: true });
-  bx.strokeStyle = '#fff';
-  bx.lineCap = bx.lineJoin = 'round';
-  for (const { l, w } of B.linien) {
-    bx.lineWidth = (w + 2 * E.r + 2) / c;
-    bx.beginPath();
-    l.forEach(([a, b], i) =>
-      i ? bx.lineTo((a + G0 / 2) / c, (b + G0 / 2) / c) : bx.moveTo((a + G0 / 2) / c, (b + G0 / 2) / c),
-    );
-    bx.stroke();
-  }
-  const bp = B.linien.length ? bx.getImageData(0, 0, N, N).data : null;
-  bc.width = bc.height = 1;
-  const brueckeBei = (a, b) => {
-    if (!bp) return false;
-    const i = Math.floor((a + G0 / 2) / c),
-      j = Math.floor((b + G0 / 2) / c);
-    return i >= 0 && j >= 0 && i < N && j < N && bp[(j * N + i) * 4 + 3] > 128;
-  };
-  // Maske fürs Gelände und die Straßenfläche: R = Abstand zum Rand, G = Brücke
+  // Maske fürs Gelände und die Straßenfläche: R = Abstand zum Rand (G bleibt 0: Brücken baut strBrueckenBau)
   const mk2 = new Uint8Array(N * N * 2);
-  for (let k = 0; k < N * N; k++) {
-    mk2[2 * k] = Math.max(0, Math.min(255, Math.round(128 + R.F[k] * 100)));
-    // Gelände bleibt nur unter der Brücke über dem Wasser; am Ufer wird es wie sonst ausgeschnitten
-    mk2[2 * k + 1] =
-      bp &&
-      bp[k * 4 + 3] > 128 &&
-      B.nass(-G0 / 2 + ((k % N) + 0.5) * c, -G0 / 2 + (Math.floor(k / N) + 0.5) * c)
-        ? 255
-        : 0;
-  }
+  for (let k = 0; k < N * N; k++) mk2[2 * k] = Math.max(0, Math.min(255, Math.round(128 + R.F[k] * 100)));
   if (E.uM.value) E.uM.value.dispose();
   const tx = new T.DataTexture(mk2, N, N, T.RGFormat);
   tx.magFilter = tx.minFilter = T.LinearFilter;
@@ -1363,21 +1247,18 @@ function strBauen(E, alle, fills) {
     G[E.grp].add(o);
     return o;
   };
-  // Fläche: 15 cm unter dem Gelände; über Wasser auf Brückenhöhe
+  // Fläche: 15 cm unter dem Gelände
   {
     const ge = new T.PlaneGeometry(G0, G0, GEO.N, GEO.N);
     ge.rotateX(-Math.PI / 2);
     const p = ge.attributes.position;
     for (let i = 0; i < p.count; i++) {
-      const a = p.getX(i),
-        b = p.getZ(i),
-        hb = brueckeBei(a, b) ? strBrueckeH(B, a, b) : null;
-      p.setY(i, (hb != null ? hb : gh(a, b)) - t);
+      p.setY(i, gh(p.getX(i), p.getZ(i)) - t);
     }
     ge.computeVertexNormals();
     mk(ge, E.mat);
   }
-  // Bordstein entlang des Umrisses (alle ≤ 1 m), an Brücken die Stirnseite der Fahrbahnplatte
+  // Bordstein entlang des Umrisses (alle ≤ 1 m)
   const kan = [];
   R.ringe.forEach((P) =>
     [P.o].concat(P.h).forEach((r) =>
@@ -1390,14 +1271,11 @@ function strBauen(E, alle, fills) {
             C = [p[0] + ((q[0] - p[0]) * (k + 1)) / n, p[1] + ((q[1] - p[1]) * (k + 1)) / n];
           // Weg an einer Straße: keine Kante (die Straße liegt tiefer und hat ihren eigenen Bordstein)
           if (aufStrasse((A[0] + C[0]) / 2, (A[1] + C[1]) / 2)) continue;
-          const hbA = brueckeBei(A[0], A[1]) ? strBrueckeH(B, A[0], A[1]) : null,
-            hbC = brueckeBei(C[0], C[1]) ? strBrueckeH(B, C[0], C[1]) : null,
-            br = hbA != null && hbC != null,
-            ya = hbA != null ? hbA : gh(A[0], A[1]),
-            yc = hbC != null ? hbC : gh(C[0], C[1]),
-            // Bordstein: Straße bis Gelände; Brücke: Plattenstirn 0,8 m unter der Fahrbahn
-            u0 = br ? -t - 0.8 : -t,
-            u1 = br ? -t : 0.02;
+          // Bordstein: Straße bis Gelände
+          const ya = gh(A[0], A[1]),
+            yc = gh(C[0], C[1]),
+            u0 = -t,
+            u1 = 0.02;
           kan.push(A[0], ya + u0, A[1], C[0], yc + u0, C[1], C[0], yc + u1, C[1]);
           kan.push(A[0], ya + u0, A[1], C[0], yc + u1, C[1], A[0], ya + u1, A[1]);
         }

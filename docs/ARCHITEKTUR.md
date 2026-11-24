@@ -649,11 +649,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   `E.uM`, R = Abstand zum Rand), Bordstein senkrecht entlang des Umrisses; das Gelände bekommt dort ein Loch
   (`strGelaendeShader`, verträgt sich mit `pitPatch`, beide verketten `onBeforeCompile`). Farbe = Layer-Farbe Straßen
   (`S.lc.roads`); im Kartenbild (`recomp`) entfällt die Straßenebene, solange die Fläche besteht (`E.aktiv`; ebenso Wege und Radwege).
-- Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den Ufern, abgenommen `STR.ufer` (3 m) hinter der Uferkante (Böschung) –
-  dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
-  Stirnseite.
-  Mit DOM (`GEO.dmFull`, `strDomAbs`): Brückenhöhe = Median einiger DOM-Punkte über dem Wasser, höchstens 2,5 m über
-  dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern.
+- Brücken: nur noch als Bauwerk aus OSM-gekennzeichneten Achsen (`strBrueckenBau`, siehe unten); der frühere Ansatz
+  für nicht gekennzeichnete Straßen über Wasser (`strBruecken`, einfache Platten) ist entfernt.
 
 ## Metriken LOD 200: BGF, Umrisse, Loggia-Wände
 
@@ -765,8 +762,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Wegachsen mit OSM `brunnel=bridge` (`br`, Ebene `ly`, in `010-kontextdaten.js`) werden nicht als Fläche im Gelände
   gebaut, sondern als Bauwerk: Höhe linear zwischen den Geländehöhen an den Enden (die Auffahrten liegen im
   Geländemodell), mindestens 0,5 m über Gelände; Fahrbahn (Straßenfarbe), Platte 1 m, Brüstung 1 m, Pfeiler etwa
-  alle 25 m über 3,5 m Höhe (`STR_BR`). Gelände, Wasser und kreuzende Straßen darunter bleiben unverändert. Nicht
-  gekennzeichnete Straßen über Wasser behalten die bisherige Lösung (DOM-Höhenpunkte).
+  alle 25 m über 3,5 m Höhe (`STR_BR`). Gelände, Wasser und kreuzende Straßen darunter bleiben unverändert.
 - Brücken, Feinschliff: `strBrueckenKetten` schneidet Brückenachsen am Ausschnitt ab und verbindet OSM-Teilstücke zu
   Ketten. Fahrbahnhöhe (`strBrueckeZ`): aus dem DOM am Bildpunkt (`strDomAbs`, DOM − e0 wie das Gelände), Median quer
   über die Fahrbahn und gleitend ±10 m längs, Lücken linear, geglättet – auch an den Enden (dort liegt das grobe
@@ -812,3 +808,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   auf einem Deck – als Brücke gekennzeichnete Wege immer, andere nur längs auf Verlängerung und Rampe (querende
   Straßen darunter bleiben unten). `carsNet` rechnet die Höhen je Straße alle 2 m vor (`hz`), `carsPos` gibt `yD`;
   `carsUp` baut neu, sobald die Brücken stehen. `fbmHoehe` nutzt dieselbe Regel.
+- Brücken, Reihenfolge in `strBrueckenNachbarn`: zuerst entfallen Brücken, die fast ganz auf einer breiteren liegen
+  (bei gleicher Breite die spätere); entfallene zählen weder als Nachbar noch für Geländer und Stirnplatten. Dann
+  verbinden, dann Geländer am freien Rand, kurze Reste, zuletzt kein Geländer auf dem Gelände.
