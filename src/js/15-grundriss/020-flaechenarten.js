@@ -133,11 +133,16 @@ function grLevels(b) {
   }
   return arr;
 }
-function grFill(lv) {
+/** Abstand zum Umriss, bis zu dem eine Wandlinie anschließt: Außenwandstärke + 5 cm (Innenseite der Außenwand). */
+function grAnschlussRand(b) {
+  const c = (b && b.l2 && b.l2.c && b.l2.c.AW) || (typeof L2DC !== 'undefined' ? L2DC.AW : 36);
+  return Math.round((c / 100 + GR_ANSCHLUSS) * 1000) / 1000;
+}
+function grFill(lv, rand) {
   const cuts = (lv.obj.cuts || []).map((c) => [c[0], c[1], c[2], c[3]]),
     us = lv.obj.units || [],
     df = grDefFa(lv.use);
-  lv.faces = grFaces(lv.bs, cuts);
+  lv.faces = grFaces(lv.bs, cuts, rand);
   lv.faces.forEach((f, i) => {
     const u = us.find((q) => q && q.p && grInFace(f, q.p[0], q.p[1]));
     f.u = u || null;
@@ -159,10 +164,12 @@ const grSig = (b) =>
     S.fa.map((f) => f.k + f.u + f.c),
   ]);
 function grData(b) {
-  const s = grSig(b);
+  // Wandlinien, die an der Innenseite der Außenwand enden (so gezeichnet in LOD 200), schließen an den Umriss an
+  const rand = grAnschlussRand(b),
+    s = grSig(b) + '|' + rand;
   if (b._gr && b._gr.s === s) return b._gr.L;
   const L = grLevels(b);
-  L.forEach(grFill);
+  L.forEach((lv) => grFill(lv, rand));
   b._gr = { s, L };
   return L;
 }

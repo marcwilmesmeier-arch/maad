@@ -210,9 +210,11 @@ const GR_ANSCHLUSS = 0.05;
  * oder einer anderen Wandlinie endet, wird in seiner Richtung bis dorthin verlängert; liegt ein anderes Wandende
  * näher, rastet es auf dieses ein. Ohne das teilt eine knapp zu kurze Linie die Fläche nicht – es entstünde keine Wand.
  */
-function grCutsVerbinden(bs, cuts) {
+function grCutsVerbinden(bs, cuts, rand) {
   const C = cuts.map((c) => c.slice()),
-    tol = GR_ANSCHLUSS;
+    tol = GR_ANSCHLUSS,
+    // zum Umriss: bis zur Innenseite der Außenwand (rand), zu anderen Wandlinien: tol
+    tolR = Math.max(tol, rand || 0);
   const ende = (ci, w) => {
     const c = C[ci],
       P = w ? [c[2], c[3]] : [c[0], c[1]],
@@ -237,11 +239,11 @@ function grCutsVerbinden(bs, cuts) {
       });
     });
     if (best) return best;
-    // 2) Verlängerung bis zur nächsten Linie (Umriss oder andere Wand), höchstens tol
-    bd = tol;
+    // 2) Verlängerung bis zur nächsten Linie: andere Wand höchstens tol, Umriss bis zur Innenseite der Außenwand
+    bd = tolR;
     const linien = bs
-      .map((s) => s.slice(0, 4))
-      .concat(C.filter((_, oi) => oi !== ci).map((o) => o.slice(0, 4)));
+      .map((s) => s.slice(0, 4).concat(tolR))
+      .concat(C.filter((_, oi) => oi !== ci).map((o) => o.slice(0, 4).concat(tol)));
     for (const s of linien) {
       const dx = s[2] - s[0],
         dz = s[3] - s[1],
@@ -251,7 +253,7 @@ function grCutsVerbinden(bs, cuts) {
         wz = s[1] - P[1],
         t = (wx * dz - wz * dx) / det,
         v = (wx * u[1] - wz * u[0]) / det;
-      if (t > 1e-6 && t < bd && v >= -1e-6 && v <= 1 + 1e-6) {
+      if (t > 1e-6 && t < bd && t <= s[4] && v >= -1e-6 && v <= 1 + 1e-6) {
         bd = t;
         best = [P[0] + u[0] * t, P[1] + u[1] * t];
       }
@@ -268,10 +270,10 @@ function grCutsVerbinden(bs, cuts) {
   }
   return C;
 }
-function grFaces(bs, cuts) {
+function grFaces(bs, cuts, rand) {
   const segs = bs.map((s) => [s[0], s[1], s[2], s[3], 1]),
     nb = segs.length;
-  grCutsVerbinden(bs, cuts).forEach((c) => {
+  grCutsVerbinden(bs, cuts, rand).forEach((c) => {
     const a = grSnapEnd(bs, c[0], c[1]),
       b = grSnapEnd(bs, c[2], c[3]);
     segs.push([a[0], a[1], b[0], b[1], 2]);
