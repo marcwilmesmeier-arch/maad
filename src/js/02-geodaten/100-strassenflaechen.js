@@ -703,7 +703,49 @@ function strBrueckeLinie(l, w, a0, b0) {
     o: [P.map(() => h2), P.map(() => h2)],
     nb: [P.map(() => false), P.map(() => false)],
   };
-  return a0 != null ? strBrueckeKuerzen(d, a0, b0) : d;
+  return strBrueckeGerade(a0 != null ? strBrueckeKuerzen(d, a0, b0) : d);
+}
+/**
+ * Fehlt an einem Ende die Verlängerung (keine anschließende Straße gefunden, kein DOM), läuft das Deck gerade 10 m
+ * weiter und senkt sich dabei auf das Gelände ab – so endet es nie über der Straße. Erkennt die schon verlängerten
+ * Enden daran, dass sie auf dem Gelände liegen.
+ */
+function strBrueckeGerade(d) {
+  if (!d) return d;
+  [0, 1].forEach((e) => {
+    const n = d.P.length,
+      i = e ? n - 1 : 0,
+      k = e ? n - 2 : 1;
+    if (Math.abs(d.Z[i] - d.G0[i]) < 0.05) return;
+    const u = [d.P[i][0] - d.P[k][0], d.P[i][1] - d.P[k][1]],
+      L = Math.hypot(u[0], u[1]) || 1,
+      z0 = d.Z[i],
+      neu = [2, 4, 6, 8, 10].map((m) => [d.P[i][0] + (u[0] / L) * m, d.P[i][1] + (u[1] / L) * m]),
+      g = neu.map((p) => gh(p[0], p[1])),
+      z = neu.map((p, q) => z0 + ((g[4] - z0) * (q + 1)) / 5);
+    const dazu = (a, v) => (e ? a.push(...v) : a.unshift(...v.slice().reverse()));
+    dazu(d.P, neu);
+    dazu(d.G0, g);
+    dazu(d.Z, z);
+    dazu(
+      d.Nn,
+      neu.map(() => d.Nn[i].slice()),
+    );
+    [0, 1].forEach((sd) => {
+      dazu(
+        d.o[sd],
+        neu.map(() => d.o[sd][i]),
+      );
+      dazu(
+        d.nb[sd],
+        neu.map(() => d.nb[sd][i]),
+      );
+    });
+  });
+  d.S0 = [0];
+  for (let i = 1; i < d.P.length; i++)
+    d.S0.push(d.S0[i - 1] + Math.hypot(d.P[i][0] - d.P[i - 1][0], d.P[i][1] - d.P[i - 1][1]));
+  return d;
 }
 /**
  * Verlängerte Brücke (siehe strBrueckeVerlaengern) zurückschneiden: Mit DOM läuft das Deck in die anschließende Straße
@@ -727,6 +769,18 @@ function strBrueckeKuerzen(d, a0, b0) {
   // wo die Verlängerung das Gelände erreicht hat, genau auf Geländehöhe enden
   if (i0 < j0) d.Z[i0] = d.G0[i0];
   if (i1 > j1) d.Z[i1] = d.G0[i1];
+  // immer noch 10 m weiter in die Straße, dabei auf deren Höhe (Gelände) absenken
+  const k0 = i0,
+    k1 = i1;
+  while (i0 > 0 && d.S0[k0] - d.S0[i0] < 10) i0--;
+  while (i1 < n - 1 && d.S0[i1] - d.S0[k1] < 10) i1++;
+  const senken = (k, i) => {
+    const L = Math.abs(d.S0[i] - d.S0[k]) || 1;
+    for (let m = Math.min(k, i); m <= Math.max(k, i); m++)
+      d.Z[m] = d.Z[k] + ((d.G0[i] - d.Z[k]) * Math.abs(d.S0[m] - d.S0[k])) / L;
+  };
+  if (i0 < k0) senken(k0, i0);
+  if (i1 > k1) senken(k1, i1);
   const sl = (a) => a.slice(i0, i1 + 1);
   ['P', 'G0', 'Nn', 'Z'].forEach((k) => (d[k] = sl(d[k])));
   d.S0 = sl(d.S0).map((s) => s - d.S0[i0]);
@@ -743,15 +797,14 @@ function strBrueckeVerlaengern(l, strassen) {
     for (const r of strassen) {
       const L = r.l;
       if (!L || L.length < 2) continue;
-      let w = null;
-      if (Math.hypot(L[0][0] - p[0], L[0][1] - p[1]) < 1.5) w = L;
-      else if (Math.hypot(L[L.length - 1][0] - p[0], L[L.length - 1][1] - p[1]) < 1.5)
-        w = L.slice().reverse();
-      if (!w) continue;
-      // nur in Fortsetzung der Brücke (nicht zurück über sie)
+      // Stützpunkt der Straße am Brückenende (Anfang, Ende oder durchlaufend)
+      const k0 = L.findIndex((v) => Math.hypot(v[0] - p[0], v[1] - p[1]) < 1.5);
+      if (k0 < 0) continue;
       const d1 = [p[0] - q[0], p[1] - q[1]],
-        d2 = [w[1][0] - w[0][0], w[1][1] - w[0][1]];
-      if (d1[0] * d2[0] + d1[1] * d2[1] <= 0) continue;
+        // in Fortsetzung der Brücke weiter (nicht zurück über sie): vorwärts oder rückwärts entlang der Straße
+        rw = [L.slice(k0), L.slice(0, k0 + 1).reverse()].filter((v) => v.length > 1),
+        w = rw.find((v) => d1[0] * (v[1][0] - v[0][0]) + d1[1] * (v[1][1] - v[0][1]) > 0);
+      if (!w) continue;
       const R = [];
       let s = 0;
       for (let k = 1; k < w.length && s < 60; k++) {
@@ -847,6 +900,12 @@ function strBrueckenNachbarn(K) {
           x = p[0] + A.Nn[i][0] * g,
           z = p[1] + A.Nn[i][1] * g;
         A.nb[sd][i] = K.some((B, ib) => ib !== ia && imBB(ib, x, z) && auf(B, x, z, 0.3));
+      }),
+    );
+    // keine Brüstung, wo das Deck auf dem Gelände liegt (Verlängerung in die Straße)
+    A.P.forEach((p, i) =>
+      [0, 1].forEach((sd) => {
+        if (A.Z[i] - A.G0[i] < 0.5) A.nb[sd][i] = true;
       }),
     );
     // keine kurzen Brüstungsreste (bis 10 m) neben verbundenen Abschnitten

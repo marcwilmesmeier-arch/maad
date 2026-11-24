@@ -777,7 +777,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   im Ausschnitt im Hintergrund und baut die Straßenflächen neu.
   Mit DOM wird jede Brücke entlang der anschließenden Straße verlängert (`strBrueckeVerlaengern`, bis 60 m): Das Deck
   läuft in die Straße hinein, bis es das Gelände erreicht (`strBrueckeKuerzen`, < 0,3 m), statt über der Rampe
-  abzubrechen.
+  abzubrechen, und dann immer noch 10 m weiter auf Straßenhöhe; als Anschluss zählt auch eine Straße, die am Ende nur
+  durchläuft. Ohne gefundene Straße oder ohne DOM läuft es gerade 10 m weiter und senkt sich auf das Gelände ab
+  (`strBrueckeGerade`). Wo das Deck auf dem Gelände liegt (< 0,5 m), keine Brüstung.
 - Fahrbahnmarkierungen (`02-geodaten/110-fahrbahnmarkierungen.js`, OSM-Schema `road_marking`): `fbmAktualisieren`
   (nach dem Bau der Straßenflächen in `strAktualisieren`) holt einmal je Ausschnitt über `overpassAbruf` Straßen mit
   Spurangaben, Überwege und `road_marking` (gesichert in `GEO.snap.fbm`); `fbmBauen` zeichnet nur einfache Striche
