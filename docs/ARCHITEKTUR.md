@@ -759,3 +759,5 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   von ihrer Zeichenlinie zur nächsten parallelen Zeichenlinie bzw. Außenwand-Innenseite (LOD 200) / Umriss (LOD 100)
   auf beiden Seiten (`grTbMasse`, gezeichnet in `grDraw`); Klick auf die Zahl öffnet ein Eingabefeld, Enter
   verschiebt die Wand auf den Abstand (`grTbSetzen` → `grEditGrp`).
+- Modellieren, Filter „Geschoss“: Doppelklick auf ein Geschoss öffnet dessen Grundriss (`skSelClick` in
+  `27-skizze/080-auswahl.js` → `grOpenLv`).

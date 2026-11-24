@@ -16,6 +16,18 @@ function skSelClick(e) {
   // Auswahlfilter und Klickstufen: 140-kontextleiste.js (skKlickListe)
   const list = skKlickListe(en, n, m);
   skSet(list, m === 'rep' ? 'rep' : m);
+  // Filter „Geschoss“: Doppelklick auf ein Geschoss öffnet dessen Grundriss
+  if (SK.flt === 's' && n === 2 && m === 'rep' && en.j != null && !szSp(en)) {
+    try {
+      const L = grData(en.b).find((l) => !l.dg && l.i === en.j);
+      if (L && grOpenLv(en.b.id, L.key) !== false) {
+        $('hud').textContent = 'Grundriss ' + (L.name || '') + ' geöffnet';
+        return;
+      }
+    } catch (er) {
+      logErr(er, 'skSelClick');
+    }
+  }
   $('hud').textContent =
     '' +
     skInfo() +
