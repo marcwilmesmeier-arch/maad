@@ -407,20 +407,88 @@ async function alkisLoad(lon, lat, size) {
       ' – evtl. blockiert der Browser den Zugriff (CORS) oder der Dienst ist nicht erreichbar. Lösung: CORS-Proxy bzw. Flurstücks-Dienst unter „Projekt“ eintragen.',
   };
 }
-function parLabel(txt) {
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 64;
-  const x = c.getContext('2d');
+/** Breite einer Flurstücksnummer im Verhältnis zur Schrifthöhe (Schrift wie in parLabelsBauen). */
+function parLabelBreite(txt) {
+  const x = (PLB.mess = PLB.mess || document.createElement('canvas').getContext('2d'));
   x.font = '600 40px Arial,Helvetica,sans-serif';
-  const w = Math.min(250, x.measureText(txt).width);
-  x.textAlign = 'center';
-  x.textBaseline = 'middle';
-  x.fillStyle = S.lc.parcels;
-  x.fillText(txt, 128, 34, 250);
-  const t = new T.CanvasTexture(c);
-  t.anisotropy = 8;
-  return { t, asp: w / 40 };
+  return Math.min(250, x.measureText(txt).width) / 40;
+}
+const PLB = { mess: null, Z: 64, S: 256, A: 2048 };
+/**
+ * Flurstücksnummern flach auf dem Gelände: je Nummer ein Feld von 256 × 64 Pixeln in Sammeltexturen
+ * von 2048 × 2048 (256 Nummern), je Sammeltextur ein Mesh. L: [{ txt, x, y, z, h }] (Mitte, Höhe der Schrift).
+ */
+function parLabelsBauen(L) {
+  const sp = PLB.A / PLB.S,
+    zei = PLB.A / PLB.Z,
+    je = sp * zei,
+    R = [];
+  for (let k = 0; k < L.length; k += je) {
+    const teil = L.slice(k, k + je),
+      cv = document.createElement('canvas');
+    cv.width = PLB.A;
+    cv.height = Math.min(PLB.A, Math.ceil(teil.length / sp) * PLB.Z);
+    const x = cv.getContext('2d'),
+      zeilen = cv.height / PLB.Z;
+    x.font = '600 40px Arial,Helvetica,sans-serif';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillStyle = S.lc.parcels;
+    const pos = [],
+      uv = [],
+      idx = [];
+    teil.forEach((l, i) => {
+      const cx = i % sp,
+        cy = Math.floor(i / sp);
+      x.fillText(l.txt, cx * PLB.S + 128, cy * PLB.Z + 34, 250);
+      // Fläche 4h × h, flach (wie PlaneGeometry um −90° um x gedreht)
+      const hw = l.h * 2,
+        hh = l.h / 2,
+        u0 = cx / sp,
+        u1 = (cx + 1) / sp,
+        v1 = 1 - cy / zeilen,
+        v0 = 1 - (cy + 1) / zeilen,
+        n = pos.length / 3;
+      pos.push(
+        l.x - hw,
+        l.y,
+        l.z - hh,
+        l.x + hw,
+        l.y,
+        l.z - hh,
+        l.x - hw,
+        l.y,
+        l.z + hh,
+        l.x + hw,
+        l.y,
+        l.z + hh,
+      );
+      uv.push(u0, v1, u1, v1, u0, v0, u1, v0);
+      idx.push(n, n + 2, n + 1, n + 2, n + 3, n + 1);
+    });
+    const ge = new T.BufferGeometry();
+    ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    ge.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    ge.setIndex(idx);
+    ge.computeBoundingSphere();
+    const t = new T.CanvasTexture(cv);
+    t.anisotropy = 8;
+    const m = new T.Mesh(
+      ge,
+      new T.MeshBasicMaterial({
+        map: t,
+        transparent: true,
+        depthWrite: false,
+        side: T.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      }),
+    );
+    m.renderOrder = 7;
+    R.push(m);
+  }
+  return R;
 }
 S.showSN = true;
 S.showFN = true;
@@ -777,6 +845,7 @@ function parLines() {
     PBR.polys = P.filter((q) => q.site).map((q) => q.poly);
     // Flurstücksnummern, flach auf dem Gelände
     let nl = 0;
+    const lab = [];
     const sorted = AL.map((a, i) => a).sort((a, b) => b.area - a.area);
     for (const a of sorted) {
       if (nl > 900 || a.area < 25 || a.cut) continue;
@@ -788,26 +857,13 @@ function parLines() {
       if (!inP(c, a.poly))
         c = [(Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...zs) + Math.min(...zs)) / 2];
       const hgt = Math.min(3, Math.max(1.4, Math.sqrt(a.area) / 8)),
-        lb = parLabel(a.id),
-        w = hgt * lb.asp;
+        w = hgt * parLabelBreite(a.id);
       if (w > bw * 1.05 && hgt * 2 > bh) continue;
-      const m = new T.Mesh(
-        new T.PlaneGeometry(hgt * 4, hgt),
-        new T.MeshBasicMaterial({
-          map: lb.t,
-          transparent: true,
-          depthWrite: false,
-          polygonOffset: true,
-          polygonOffsetFactor: -3,
-          polygonOffsetUnits: -3,
-        }),
-      );
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(c[0], gh(c[0], c[1]) + 0.6, c[1]);
-      m.renderOrder = 7;
-      G.flab.add(m);
+      lab.push({ txt: a.id, x: c[0], y: gh(c[0], c[1]) + 0.6, z: c[1], h: hgt });
       nl++;
     }
+    // alle Nummern in wenigen Sammeltexturen und Meshes statt je eine Textur und ein Mesh (parLabelsBauen)
+    parLabelsBauen(lab).forEach((m) => G.flab.add(m));
     const L = LY.find((l) => l[1] === 'parcels');
     if (L && L[3] < 1) op('parcels', L[3]);
     labVis();

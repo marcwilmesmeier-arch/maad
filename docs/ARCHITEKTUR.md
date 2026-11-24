@@ -709,3 +709,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Reserve neu); erst `SHR_RUHE` ms nach der letzten Bewegung gilt wieder der genaue Ausschnitt. Die
   Sicherheits-Auffrischung der Schattenkarte (1,5 s) läuft nur bei ruhender Kamera. Ergebnis: beim Drehen wird die
   Schattenkarte nicht mehr in jedem Bild neu gezeichnet; im Stand gleiche Schärfe wie zuvor.
+- Flurstücksnummern (`parLabelsBauen` in `02-geodaten/080-alkis.js`): alle Nummern in Sammeltexturen von
+  2048 × 2048 (256 Felder à 256 × 64) und je Sammeltextur ein Mesh statt einer Textur und einem Mesh je Nummer
+  (Gütersloh: 413 → 2 Meshes).
