@@ -353,8 +353,10 @@ function fdHlApply() {
   hlClear();
   const sp = ZI.sp && ZI.sp.fd;
   if (!sp) return;
-  const mt = new T.MeshBasicMaterial({
-      color: S.hlw ? 0xffffff : 0x5e7f92,
+  // Fläche eines Fassadentyps in dessen Farbton (wie „alle Fassadenflächen“, nur farbig); ein Feld wie bisher
+  const ft = sp.t != null && S.ft.find((t) => t.k === sp.t),
+    mt = new T.MeshBasicMaterial({
+      color: ft ? ft.c : S.hlw ? 0xffffff : 0x5e7f92,
       transparent: true,
       opacity: 0.82,
       side: T.DoubleSide,

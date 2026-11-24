@@ -712,3 +712,13 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Beschriftungen im Gelände (`labBuendeln` in `02-geodaten/080-alkis.js`): Flurstücksnummern (`parLabelsBauen`,
   Felder 256 × 64) und Straßennamen (`rnBuild`, Felder 1024 × 64) liegen in Sammeltexturen von 2048 × 2048 mit je
   einem Mesh statt einer Textur und einem Mesh je Text (Gütersloh: 413 + 53 → 2 + 1 Meshes).
+
+## Metriken: Fassade nach LOD
+
+- „Fassade“ (`hlApply` Schlüssel `fas`): LOD 100 die ebene Hülle; LOD 200 wie dargestellt – ohne die Loggia-Öffnungen
+  in der Fassadenebene, mit Rück- und Seitenwänden der Loggien (`l2FassadenBand`, `l2LoggiaWandFlaechen`); Zahl
+  `l2FassadeWert` (abgewickelt).
+- „Fassade ohne Öffnungen“ (`fasn`, nur LOD 200): zusätzlich ohne Fenster, Türen und Pfosten-Riegel
+  (`l2FassadenOeffnungen`); Zahl = Abwicklung − `l2FassadenOeffnungsFlaeche` (aus denselben Flächen gerechnet wie
+  die Hervorhebung).
+- Fassadentyp-Zeilen (`fdHlApply`): Flächen im Farbton des Typs.

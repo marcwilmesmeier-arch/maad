@@ -1,9 +1,7 @@
 // ---- Fassadenauswertung LOD 200: Wände der Loggien
 // Loggien sind in LOD 200 in den Grundriss eingeschnitten (oeLoggiaEinschnitte). Die Fassade läuft dort um die
 // Loggia herum: in der Fassadenebene fehlt die Öffnung, dafür kommen Rückwand und Seitenwände hinzu. Die Metriken
-// zeigen das unter „Fassadenfläche“ getrennt (nur LOD 200) und heben die Wände auf Klick hervor (Modus 'lgw').
-
-const ISOC_LGW = '#8fa9c4';
+// zählen und zeigen die Fassade in LOD 200 so (l2FassadeWert, l2FassadenBand), in LOD 100 als ebene Hülle.
 
 /**
  * Wandflächen der Loggien eines Gebäudes: [{ art: 'rueck'|'seite', Q: 4 Punkte [x, y, z], a (m²), li, nm }] und die
@@ -47,63 +45,118 @@ function l2LoggiaZahlen(b) {
   l2LoggiaWaende(b).forEach((w) => (z[w.art] += w.a));
   return z;
 }
-/** Zeilen unter „Fassadenfläche“ (Gebäudemetrik, nur LOD 200 mit Loggien). fas = Fassadenfläche der Hülle. */
-function l2LoggiaZeilen(b, fas) {
-  if (!l2on()) return '';
-  const z = l2LoggiaZahlen(b);
-  if (!z.oeff) return '';
-  const A = (v) => f1(v, 1) + ' m²',
-    ab = zoAb;
-  return (
-    l2R(
-      ab('Loggien: Öffnungen', 'Öffnungen der Loggien in der Fassadenebene (entfallen)'),
-      '− ' + A(z.oeff),
-      's',
-    ) +
-    l2R(ab('Loggien: Rückwände', 'Rückwände der Loggien'), A(z.rueck), 's', ['lgw', b.id, 'rueck']) +
-    l2R(ab('Loggien: Seitenwände', 'Seitenwände der Loggien'), A(z.seite), 's', ['lgw', b.id, 'seite']) +
-    l2R(
-      ab('Fassade abgewickelt', 'Fassadenfläche ohne Loggia-Öffnungen, mit Rück- und Seitenwänden'),
-      A(fas - z.oeff + z.rueck + z.seite),
-      's',
-    )
-  );
+/**
+ * Wandstreifen von a nach c (Grundriss) zwischen y0 und y1 als Dreiecke, ohne die Öffnungen O ({ p0, p1, y0, y1 }),
+ * die auf dieser Linie liegen (bis 5 cm daneben).
+ */
+function l2WandOhne(a, c, y0, y1, O) {
+  const pos = [],
+    L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  if (L < 1e-4 || y1 - y0 < 1e-4) return pos;
+  const d = [(c[0] - a[0]) / L, (c[1] - a[1]) / L],
+    t = (p) => (p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1],
+    q = (p) => Math.abs((p[0] - a[0]) * -d[1] + (p[1] - a[1]) * d[0]),
+    L2 = O.filter((o) => q(o.p0) < 0.05 && q(o.p1) < 0.05)
+      .map((o) => ({
+        t0: Math.max(0, Math.min(t(o.p0), t(o.p1))),
+        t1: Math.min(L, Math.max(t(o.p0), t(o.p1))),
+        y0: Math.max(y0, o.y0),
+        y1: Math.min(y1, o.y1),
+      }))
+      .filter((o) => o.t1 - o.t0 > 1e-3 && o.y1 - o.y0 > 1e-3),
+    P = (s, y) => [a[0] + d[0] * s, y, a[1] + d[1] * s];
+  (L2.length ? oeRechteckOhne(0, L, y0, y1, L2) : [[0, L, y0, y1]]).forEach(([s0, s1, ya, yb]) => {
+    const A = P(s0, ya),
+      B = P(s1, ya),
+      C = P(s1, yb),
+      D = P(s0, yb);
+    pos.push(...A, ...B, ...C, ...A, ...C, ...D);
+  });
+  return pos;
 }
-/** Hervorhebung der Loggia-Wände (Modus 'lgw', sel: 'rueck' | 'seite' | 'all'); jede Wand einzeln anwählbar. */
-function l2LgwShow(iso) {
-  const mat = new T.MeshLambertMaterial({ color: new T.Color(ISOC_LGW), side: T.DoubleSide });
-  S.bld.forEach((b) => {
-    if (b.ex || b._y == null || !(iso.bid === '*' || iso.bid === b.id)) return;
-    l2LoggiaWaende(b).forEach((w) => {
-      if (!w.Q || (iso.sel !== 'all' && iso.sel !== w.art)) return;
-      const Q = w.Q,
-        ge = new T.BufferGeometry();
-      ge.setAttribute(
-        'position',
-        new T.BufferAttribute(new Float32Array([...Q[0], ...Q[1], ...Q[2], ...Q[0], ...Q[2], ...Q[3]]), 3),
-      );
-      ge.computeVertexNormals();
-      const m = new T.Mesh(ge, mat);
-      // vor der Wand zeichnen (sonst deckungsgleich mit ihr)
-      m.material.polygonOffset = true;
-      m.material.polygonOffsetFactor = -2;
-      m.material.polygonOffsetUnits = -2;
-      m.userData = {
-        bid: b.id,
-        li: w.li,
-        y0: 0,
-        info:
-          'Loggia · ' +
-          w.nm +
-          ' · ' +
-          (w.art === 'rueck' ? 'Rückwand' : 'Seitenwand') +
-          ' · ' +
-          f1(w.a, 1) +
-          ' m²',
-      };
-      m.castShadow = false;
-      m.raycast = () => {};
-      G.l2n.add(m);
+/** Öffnungen der Fassade (Fenster, Türen, Pfosten-Riegel; ohne Rücksprünge/Loggien) im Grundriss mit Höhen. */
+function l2FassadenOeffnungen(b) {
+  try {
+    return oeWelt(b)
+      .filter((o) => o.T && !o.r)
+      .map((o) => ({ p0: o.p0, p1: o.p1, y0: o.y0, y1: o.y1 }));
+  } catch (e) {
+    logErr(e, 'l2FassadenOeffnungen');
+    return [];
+  }
+}
+/** Öffnungen der Loggien in der Fassadenebene. */
+function l2LoggiaOeffnungen(b) {
+  try {
+    return oeLoggiaEinschnitte(b).map((z) => ({ p0: z.lg.p0, p1: z.lg.p1, y0: z.lg.y0, y1: z.lg.y1 }));
+  } catch (e) {
+    logErr(e, 'l2LoggiaOeffnungen');
+    return [];
+  }
+}
+/**
+ * Fassadenband eines Geschosses für die Hervorhebung „Fassade“ (Metriken): Ring f von z0 bis z1 als Dreiecke
+ * [x, y, z, …]. In LOD 200 ohne die Öffnungen der Loggien in der Fassadenebene (die Rück- und Seitenwände kommen aus
+ * l2LoggiaWaende dazu), mit ohneOeff zusätzlich ohne Fenster, Türen und Pfosten-Riegel; in LOD 100 die ebene Fassade.
+ */
+function l2FassadenBand(b, f, z0, z1, ohneOeff) {
+  const O = l2on() ? l2LoggiaOeffnungen(b).concat(ohneOeff ? l2FassadenOeffnungen(b) : []) : [],
+    pos = [];
+  f.forEach((a, q) => pos.push(...l2WandOhne(a, f[(q + 1) % f.length], z0, z1, O)));
+  return pos;
+}
+/** Rück- und Seitenwände der Loggien als Dreiecke je Wand ({ li, pos }), mit ohneOeff ohne die Fenster darin. */
+function l2LoggiaWandFlaechen(b, ohneOeff) {
+  const O = ohneOeff ? l2FassadenOeffnungen(b) : [];
+  return l2LoggiaWaende(b)
+    .filter((w) => w.Q)
+    .map((w) => {
+      const [A, B, C] = w.Q;
+      return { li: w.li, pos: l2WandOhne([A[0], A[2]], [B[0], B[2]], A[1], C[1], O) };
+    });
+}
+/** Fläche einer Dreiecksliste [x, y, z, …] (m²). */
+function l2DreieckFlaeche(p) {
+  let s = 0;
+  for (let i = 0; i + 8 < p.length; i += 9) {
+    const ax = p[i + 3] - p[i],
+      ay = p[i + 4] - p[i + 1],
+      az = p[i + 5] - p[i + 2],
+      bx = p[i + 6] - p[i],
+      by = p[i + 7] - p[i + 1],
+      bz = p[i + 8] - p[i + 2];
+    s += Math.hypot(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx) / 2;
+  }
+  return s;
+}
+/**
+ * Fläche der Öffnungen (Fenster, Türen, Pfosten-Riegel) in der Fassade, so wie die Hervorhebung sie ausspart:
+ * Differenz der Bänder mit und ohne Öffnungen über alle oberirdischen Geschosse und die Loggia-Wände (LOD 200).
+ */
+function l2FassadenOeffnungsFlaeche(b) {
+  if (!l2on()) return 0;
+  let s = 0,
+    z = b._y || 0;
+  const u = ugN(b);
+  b.levels.forEach((l, i) => {
+    const z0 = z,
+      z1 = z + l.h;
+    z = z1;
+    if (i < u) return;
+    [lf(b, l)].concat(znVoidsAt(b, i).map((v) => v.poly)).forEach((f) => {
+      s +=
+        l2DreieckFlaeche(l2FassadenBand(b, f, z0, z1, false)) -
+        l2DreieckFlaeche(l2FassadenBand(b, f, z0, z1, true));
     });
   });
+  const mit = l2LoggiaWandFlaechen(b, false),
+    ohne = l2LoggiaWandFlaechen(b, true);
+  mit.forEach((w, i) => (s += l2DreieckFlaeche(w.pos) - l2DreieckFlaeche(ohne[i].pos)));
+  return s;
+}
+/** Fassade in den Metriken: in LOD 200 abgewickelt (ohne Loggia-Öffnungen, mit Rück- und Seitenwänden), sonst fas. */
+function l2FassadeWert(b, fas) {
+  if (!l2on()) return fas;
+  const z = l2LoggiaZahlen(b);
+  return z.oeff ? fas - z.oeff + z.rueck + z.seite : fas;
 }

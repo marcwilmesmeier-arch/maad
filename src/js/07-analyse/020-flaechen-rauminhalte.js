@@ -418,38 +418,25 @@ function hlApply() {
           m.renderOrder = ug ? 12 : 9;
           g.add(m);
         }
-        if (k === 'fas' && !ug)
+        if ((k === 'fas' || k === 'fasn') && !ug)
           [f].concat(hoefe).forEach((f) => {
-            const pos = [];
-            f.forEach((a, q) => {
-              const c = f[(q + 1) % f.length];
-              pos.push(
-                a[0],
-                z0,
-                a[1],
-                c[0],
-                z0,
-                c[1],
-                c[0],
-                z1,
-                c[1],
-                a[0],
-                z0,
-                a[1],
-                c[0],
-                z1,
-                c[1],
-                a[0],
-                z1,
-                a[1],
-              );
-            });
+            // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: in LOD 200 ohne die Loggia-Öffnungen,
+            // 'fasn' zusätzlich ohne Fenster, Türen und Pfosten-Riegel
+            const pos = l2FassadenBand(b, f, z0, z1, k === 'fasn');
             const fm = new T.Mesh(gm(pos), mt);
             fm.userData.k = i;
             fm.userData.ol = zoFasOl(f, z0, z1);
             g.add(fm);
           });
       });
+      // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Rück- und Seitenwände der Loggien (LOD 200)
+      if (k === 'fas' || k === 'fasn')
+        l2LoggiaWandFlaechen(b, k === 'fasn').forEach((w) => {
+          if (!w.pos.length) return;
+          const wm = new T.Mesh(gm(w.pos), mt);
+          wm.userData.k = w.li;
+          g.add(wm);
+        });
       if (k === 'terr')
         terrOf(b).lv.forEach((L) => {
           const o = zoTerrGeo(b, L);
@@ -469,11 +456,11 @@ function hlApply() {
             pos = [a, c, d, a, d, e].flatMap((p) => [p[0], y, p[1]]);
           g.add(new T.Mesh(gm(pos), mt));
         });
-      if (k === 'fas' || k === 'terr')
+      if (k === 'fas' || k === 'fasn' || k === 'terr')
         pxPolys(b).forEach((o) => {
           const d = +o.p.d || 0;
           if (Math.abs(d) < 0.01) return;
-          if (k === 'fas') {
+          if (k === 'fas' || k === 'fasn') {
             const out = [];
             pxPrism(o, out);
             if (out.length) g.add(new T.Mesh(gm(out), mt));
@@ -508,7 +495,7 @@ function hlApply() {
             g.add(m);
           }
         } else if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
-        if (k === 'fas' && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
+        if ((k === 'fas' || k === 'fasn') && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
         if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
       } else if (k === 'dach' && b.levels.length) {
         const L = b.levels.at(-1),

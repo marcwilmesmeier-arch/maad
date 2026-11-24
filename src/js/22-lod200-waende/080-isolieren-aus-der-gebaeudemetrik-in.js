@@ -602,8 +602,6 @@ function l2IsoApply(force) {
   l2NetShow(iso && ['ngf', 'ngfr', 'nri', 'nrir'].includes(iso.m) ? iso : null);
   // ── Erweiterung aus 22-lod200-waende/130-balkone.js: Sonderfall S (Balkone, Loggien) als eigener Körper
   if (iso && (iso.m === 's' || iso.m === 'nris')) l2SShow(iso);
-  // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Wände der Loggien
-  if (iso && iso.m === 'lgw') l2LgwShow(iso);
   // NRI: dieselben Körper wie die NGF, Angaben als Rauminhalt
   if (iso && (iso.m === 'ngf' || iso.m === 'nri') && iso.sel !== 'u')
     l2SShow({ ...iso, sel: 'all' }, null, iso.sel);

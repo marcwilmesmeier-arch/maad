@@ -273,16 +273,22 @@ function zoBldHtml(b, k, R, A, B, P) {
         .map((l) => l2R(l.n, A(l.w), 's', ['kf', id, 'n:' + l.n]))
         .join(''),
     );
-  // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: eingezogene Flächen der Loggien (nur LOD 200)
-  const fdr = fdRows(b) + l2LoggiaZeilen(b, k.fas),
+  // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Fassade in LOD 200 abgewickelt (l2FassadeWert)
+  // in LOD 200 zählt die Fassade abgewickelt wie dargestellt (Loggia-Öffnung aus, Rück- und Seitenwände dazu)
+  const fasW = l2FassadeWert(b, k.fas),
+    // nur LOD 200: Abwicklung ohne Öffnungen (Fenster, Türen, Pfosten-Riegel ausgespart)
+    fasN = on ? fasW - l2FassadenOeffnungsFlaeche(b) : 0,
+    fdr =
+      (on ? R('', 'Fassade ohne Öffnungen', A(fasN), 's', B('fasn', 'Fassade ohne Öffnungen')) : '') +
+      fdRows(b),
     fas = fdr
       ? zoD(
           'bfa' + id,
           'Fassade',
-          A(k.fas),
-          R('', 'alle Fassadenflächen', A(k.fas), 's', B('fas', 'Fassadenfläche')) + fdr,
+          A(fasW),
+          R('', 'alle Fassadenflächen', A(fasW), 's', B('fas', 'Fassadenfläche')) + fdr,
         )
-      : R('', 'Fassade', A(k.fas), 's', B('fas', 'Fassadenfläche'));
+      : R('', 'Fassade', A(fasW), 's', B('fas', 'Fassadenfläche'));
   h += zoD(
     'bf' + id,
     'Flächen',
@@ -291,7 +297,7 @@ function zoBldHtml(b, k, R, A, B, P) {
       R('', 'Dach', A(k.dach), 's', B('dach', 'Dachfläche')) +
       R('', 'Terrassen', A(k.terr), 's', B('terr', 'Terrassenfläche')),
     [
-      { n: 'Fassade', c: '#8fa9c4', v: k.fas },
+      { n: 'Fassade', c: '#8fa9c4', v: fasW },
       { n: 'Dach', c: '#c97b63', v: k.dach },
       { n: 'Terrassen', c: '#9bbf8a', v: k.terr },
     ],
