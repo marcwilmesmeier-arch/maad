@@ -652,7 +652,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Brücken (`strBruecken`): Achsabschnitte über Wasser (Wasserebene `PL.water`) bekommen die Höhe linear zwischen den Ufern, abgenommen `STR.ufer` (3 m) hinter der Uferkante (Böschung) –
   dort bleibt das Gelände (Kanal G der Maske = Brücke über Wasser) und die Fahrbahnplatte hat eine 0,8 m hohe
   Stirnseite.
-  Mit DOM (`GEO.dmFull`, `strDomH`): Brückenhöhe = Median einiger DOM-Punkte über dem Wasser, höchstens 2,5 m über
+  Mit DOM (`GEO.dmFull`, `strDomAbs`): Brückenhöhe = Median einiger DOM-Punkte über dem Wasser, höchstens 2,5 m über
   dem höheren Ufer (Bäume), nie unter der Linie zwischen den Ufern.
 
 ## Metriken LOD 200: BGF, Umrisse, Loggia-Wände
@@ -768,8 +768,11 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   alle 25 m über 3,5 m Höhe (`STR_BR`). Gelände, Wasser und kreuzende Straßen darunter bleiben unverändert. Nicht
   gekennzeichnete Straßen über Wasser behalten die bisherige Lösung (DOM-Höhenpunkte).
 - Brücken, Feinschliff: `strBrueckenKetten` schneidet Brückenachsen am Ausschnitt ab und verbindet OSM-Teilstücke zu
-  Ketten. Fahrbahnhöhe (`strBrueckeZ`): Grundlage linear zwischen den Geländehöhen der Kettenenden (Planimetric); wo
-  das DOM die Fahrbahn zeigt, Gelände + (DOM − DGM) am selben Bildpunkt (`strDomRel`, wie das Kronenmodell der Bäume
-  – Höhenbezug und Lage heben sich auf), Median quer über die Fahrbahn und gleitend ±10 m längs, geglättet, an den
-  Enden auf das Gelände übergeblendet. Das Gelände unter Brücken bleibt das DGM. Farben über `strFarbe`: Fahrbahn
-  (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.
+  Ketten. Fahrbahnhöhe (`strBrueckeZ`): aus dem DOM am Bildpunkt (`strDomAbs`, DOM − e0 wie das Gelände), Median quer
+  über die Fahrbahn und gleitend ±10 m längs, Lücken linear, geglättet – auch an den Enden (dort liegt das grobe
+  maad-Gelände an Grabenkanten zwischen oben und unten); auf das Gelände übergeblendet wird nur, wo es am Ende auf
+  1,5 m mit dem DOM übereinstimmt. Ohne DOM wie Planimetric: linear zwischen den Geländehöhen der Enden. Das
+  Gelände unter Brücken bleibt das DGM. `strBrueckenAlle` bereitet alle Brücken des Ausschnitts (Straßen und Wege
+  gemeinsam, `STR.brD` zwischengespeichert) mit `strBrueckeLinie` auf; `strBrueckenNachbarn` verbindet parallele
+  Brücken mit höchstens 4 m Lücke zu einer Fahrbahn (Deck bis zur Mitte der Lücke, dort keine Brüstung, Höhen
+  gemittelt), auch Geh- und Radwege neben der Straße. Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.
