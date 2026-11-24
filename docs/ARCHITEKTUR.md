@@ -755,3 +755,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (Außenwand-Innen-/Außenkante inkl. Loggiawände, Innenwandkante, Zeichenlinie, Umriss; `grAusLinien`), dann Kante
   oder Zeichenlinie einer Innenwand; die Wand wird parallel verschoben (`grEditGrp`, angeschlossene Wände folgen).
   Nur parallele Linien (bis 1°); Esc hebt den Bezug auf bzw. beendet.
+- Temporäre Bemaßung (`15-grundriss/160-temporaere-bemassung.js`): bei gewählter Wandlinie (Auswahl-Werkzeug) Maße
+  von ihrer Zeichenlinie zur nächsten parallelen Zeichenlinie bzw. Außenwand-Innenseite (LOD 200) / Umriss (LOD 100)
+  auf beiden Seiten (`grTbMasse`, gezeichnet in `grDraw`); Klick auf die Zahl öffnet ein Eingabefeld, Enter
+  verschiebt die Wand auf den Abstand (`grTbSetzen` → `grEditGrp`).

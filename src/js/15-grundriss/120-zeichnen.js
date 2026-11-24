@@ -559,7 +559,11 @@ function grDraw() {
   // ── Erweiterung aus 15-grundriss/150-ausrichten.js: Bezugslinie hervorheben
   try {
     const cv = gD('grCv');
-    if (cv) grAusZeichnen(cv.getContext('2d'));
+    if (cv) {
+      grAusZeichnen(cv.getContext('2d'));
+      // ── Erweiterung aus 15-grundriss/160-temporaere-bemassung.js: Maße der gewählten Wand
+      grTbZeichnen(cv.getContext('2d'));
+    }
   } catch (e) {
     logErr(e, 'grDraw');
   }

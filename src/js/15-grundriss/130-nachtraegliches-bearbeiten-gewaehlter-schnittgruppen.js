@@ -129,6 +129,8 @@ function grFinishRect(c) {
   grAddArea(R);
 }
 function grDown(e) {
+  // ── Erweiterung aus 15-grundriss/160-temporaere-bemassung.js: Klick auf eine Maßzahl der gewählten Wand
+  if (GRS.tool === 'sel' && e.button === 0 && grTbKlick(e)) return;
   // ── Erweiterung aus 15-grundriss/150-ausrichten.js: Werkzeug „Ausrichten“
   if (GRS.tool === 'ali' && e.button === 0 && !GRS.space) {
     grAusKlick(e);
