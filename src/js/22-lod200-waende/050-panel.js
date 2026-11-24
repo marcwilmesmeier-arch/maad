@@ -31,7 +31,7 @@ function l2PanelW(b) {
           )
           .join('')
       : `<h4>Standardstärken (cm)</h4>` +
-        ['AW', 'TW', 'TH', 'DE', 'BP', 'RD']
+        ['AW', 'TW', 'IN', 'TH', 'DE', 'BP', 'RD']
           .map((k) => {
             const c = (b.l2 && b.l2.c && b.l2.c[k]) || L2DC[k];
             return `<div class="row"><label><i class="l2dot" style="background:${L2K[k].c2}"></i>${L2K[k].n}</label><input type="number" step="0.5" min="5" max="80" value="${c}" style="width:80px" onchange="GR.l2.dc('${k}',this.value)"></div>`;

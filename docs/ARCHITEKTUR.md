@@ -744,3 +744,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   stumpf an deren Seitenfläche (T-Stoß).
 - Lage der Innenwand zur gezeichneten Linie (links, Mitte, rechts; `D.al[gid]`, Kontextleiste im Grundriss) gilt
   jetzt auch in LOD 200, nicht nur in LOD 300. Außenwände bauen sich weiter von der Gebäudekubatur nach innen auf.
+- Frei stehende Wände (`l2FreieKanten`): Abschnitte von Wandlinien, die keine Flächen trennen, werden zur Wand der Art
+  TW mit dem Typ „Innenwand“ (`IN`, Standard 11,5 cm; `TW` heißt jetzt „Wohnungstrennwand“). Sie zählen zur KF und
+  verringern die NGF; ein freies Ende endet genau am Linienende.

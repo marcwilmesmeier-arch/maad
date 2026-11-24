@@ -1,4 +1,35 @@
 // ---- Ableitung der Bauteile aus Flächen und Schnittlinien
+/**
+ * Frei stehende Wandabschnitte eines Geschosses: Teile der Wandlinien (nach grCutsVerbinden, an Schnittpunkten
+ * geteilt), die nicht auf einer Grenze zwischen zwei Flächen liegen (Kanten E) und nicht auf dem Umriss. Ergebnis wie
+ * die Kanten aus E: [{ p, q, f: [], ek, frei: 1 }].
+ */
+function l2FreieKanten(b, lv, E) {
+  const R = [];
+  try {
+    const cuts = (lv.obj.cuts || []).map((c) => c.slice(0, 4));
+    if (!cuts.length) return R;
+    const C = grCutsVerbinden(lv.bs, cuts, grAnschlussRand(b)),
+      segs = lv.bs.map((s) => [s[0], s[1], s[2], s[3], 1]).concat(C.map((c) => [c[0], c[1], c[2], c[3], 2])),
+      K = [...E.values()];
+    grSplit(segs).forEach((s) => {
+      if (s[4] !== 2) return;
+      const p = [s[0], s[1]],
+        q = [s[2], s[3]];
+      if (Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.02) return;
+      const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      // liegt auf einer Flächengrenze bzw. dem Umriss: daraus entsteht schon eine Wand
+      if (K.some((e) => l2Seg(m[0], m[1], [e.p[0], e.p[1], e.q[0], e.q[1]]) < 0.005)) return;
+      if (lv.bs.some((t) => l2Seg(m[0], m[1], t) < 0.005)) return;
+      const a = l2k(p),
+        c = l2k(q);
+      R.push({ p, q, f: [], ek: 'frei:' + (a < c ? a + '|' + c : c + '|' + a), frei: 1 });
+    });
+  } catch (e) {
+    logErr(e, 'l2FreieKanten');
+  }
+  return R;
+}
 function l2Geo(b) {
   // ── Erweiterung aus 23-bauteilkonfigurator/040-lod-200.js
   let r = l2GeoStufe1.apply(this, arguments);
@@ -117,10 +148,14 @@ function l2GeoStufe1(b) {
       }
       EL.push(e0);
     }
+    // ── Frei stehende Wände: Abschnitte der Wandlinien, die keine Flächen trennen (keine Raumgrenze), werden zur
+    // normalen Innenwand (nicht Wohnungstrennwand) – im Grundriss gezeichnet, KF, NGF ohne sie (l2FreieKanten)
+    if (!lv.dg) l2FreieKanten(b, lv, E).forEach((x) => EL.push(x));
     for (const e of EL) {
       let kind,
         gid = 0;
-      if (e.f.length === 1) kind = 'AW';
+      if (e.frei) kind = 'TW';
+      else if (e.f.length === 1) kind = 'AW';
       else {
         if (e.f[0] === e.f[1]) continue;
         const fa = e.f.map((i) => lv.faces[i].fa);
@@ -176,7 +211,18 @@ function l2GeoStufe1(b) {
         B,
         ta: Math.min(t0, t1),
         tb: Math.max(t0, t1),
-        key: kind + '|' + gid + '|' + ang + '|' + off + '|' + ftk + (e.pr ? '|pr' + e.pr.pt : ''),
+        key:
+          kind +
+          '|' +
+          gid +
+          '|' +
+          ang +
+          '|' +
+          off +
+          '|' +
+          ftk +
+          (e.pr ? '|pr' + e.pr.pt : '') +
+          (e.frei ? '|frei' : ''),
         L: Ln,
       });
     }
@@ -229,6 +275,14 @@ function l2GeoStufe1(b) {
         r.sb = [g.kx * r.tb - g.kz * o0, g.kz * r.tb + g.kx * o0];
       }
       r.T = r.kind === 'AW' && r.ftk ? l2FacT(tyOf(r.kind, pm), r.ftk) : tyOf(r.kind, pm);
+      // frei stehende Wand: Typ „Innenwand“ (nichttragend, dünner als die Wohnungstrennwand), außer gezielt gesetzt
+      if (g.e.frei) {
+        r.frei = 1;
+        const o = ((C ? D.tc : D.ty) || []).find(
+          (q) => q.k === 'TW' && Math.hypot(q.p[0] - pm[0], q.p[1] - pm[1]) < 0.4,
+        );
+        if (!o) r.T = l2T(DF.IN || DF.TW);
+      }
       // ── Erweiterung aus 22-lod200-waende/100-oeffnungen-3d.js: Pfosten-Riegel-Fassade als Außenwand in Pfostentiefe
       if (r.kind === 'AW' && g.e.pr) r.T = oePrWandTyp(r.T, g.e.pr);
       r.d = r.T.d;
@@ -611,6 +665,8 @@ function l2GeoStufe1(b) {
         }
       }
       const oth = (endsAt.get(k) || []).filter((z) => z.r !== r);
+      // freies Ende einer frei stehenden Wand: endet genau am Linienende (wie in Revit)
+      if (!oth.length && r.frei) return [PT(r, t, r.c + r.h2), PT(r, t, r.c - r.h2)];
       // Drei oder mehr Wandenden in einem Punkt (wie Revit aufräumen): zwei Wände in einer Flucht laufen durch,
       // jede andere stößt stumpf an deren Seitenfläche (T-Stoß); läuft diese Wand selbst in einer Flucht weiter,
       // endet sie gerade über den Punkt hinaus (Kreuz, durchgehende Wand)

@@ -349,12 +349,22 @@ L2T.forEach((t) => {
   t.full = t.path.join(' ▸ ');
 });
 const L2CO = new Map(),
-  L2DC = { AW: 36, TW: 24, TH: 20, DE: 22, BP: 30, RD: 36 },
-  L2CKG = { AW: '331', TW: '341', TH: '341', DE: '351', BP: '322', RD: '361' },
-  L2CPRE = { AW: 'STANDARD', TW: 'PARTITIONING', TH: 'SHEAR', DE: 'FLOOR', BP: 'BASESLAB', RD: 'ROOF' };
+  // IN: normale (nichttragende) Innenwand – frei stehende Wände innerhalb einer Fläche; TW: Wohnungstrennwand
+  L2DC = { AW: 36, TW: 24, IN: 11.5, TH: 20, DE: 22, BP: 30, RD: 36 },
+  L2CKG = { AW: '331', TW: '341', IN: '342', TH: '341', DE: '351', BP: '322', RD: '361' },
+  L2CPRE = {
+    AW: 'STANDARD',
+    TW: 'PARTITIONING',
+    IN: 'PARTITIONING',
+    TH: 'SHEAR',
+    DE: 'FLOOR',
+    BP: 'BASESLAB',
+    RD: 'ROOF',
+  };
 const L2CP = {
   AW: [24, 30, 36, 36.5, 42, 48],
   TW: [11.5, 17.5, 24, 30],
+  IN: [10, 11.5, 12.5, 17.5],
   TH: [20, 24, 25, 30],
   DE: [18, 20, 22, 25, 28],
   BP: [25, 30, 35, 40],
@@ -414,7 +424,8 @@ const l2DefC = (b) => {
 };
 const L2K = {
   AW: { n: 'Außenwand', c: '#ffffff', c2: '#8a7f66', p: '#46433c' },
-  TW: { n: 'Innenwand', c: '#ffffff', c2: '#5e7f92', p: '#5E7F92' },
+  TW: { n: 'Wohnungstrennwand', c: '#ffffff', c2: '#5e7f92', p: '#5E7F92' },
+  IN: { n: 'Innenwand', c: '#ffffff', c2: '#7d97a8', p: '#7d97a8' },
   TH: { n: 'Treppenhauswand', c: '#ffffff', c2: '#3f6277', p: '#2e4d5f' },
   // Dach und Decken hellgrau (die Oberseite liegt in der Sonne; reines Weiß wirkt dort überstrahlt)
   RD: { n: 'Dach', c: '#d8d7d2', c2: '#6f6f6f', p: '#6f6f6f' },
