@@ -699,3 +699,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (`oeDeckenZonen`, zusätzlich `b.fp`), `b._oeAP` (`oeAttikaPr`, zusätzlich `skSig` und Dachform).
 - `l2Sync` baut höchstens `L2ETAPPE` ms je Takt neu; der Rest folgt im nächsten Takt (`L2SIG` wird erst gesetzt,
   wenn alles gebaut ist, alte Bauteile werden erst dann entfernt).
+- Ruhebündel (`22-lod200-waende/170-ruhebuendel.js`, `l2Ruhe` in `drTick`): steht ein Gebäude still (Aufbau
+  fertig, nichts gewählt/überfahren, keine Isolierung, Explosion, Schnitt oder LOD 300), werden die Meshes seiner
+  Bauteile nach Material zu wenigen Meshes in `L2RB.g` zusammengefasst und die Einzel-Meshes ausgeblendet
+  (`userData._l2b`). Sobald etwas die Bauteile einzeln braucht, löst `l2bLoesen` das Bündel. Ausgenommen:
+  Schraffur-, Glas- und durchscheinende Materialien. Gütersloh: 1915 → 1021 Zeichenaufrufe je Bild (LOD 200 selbst:
+  rund 1180 → 7 Meshes plus Glas/Schraffur). Fokus-Ansicht blendet Bündel anderer Gebäude mit aus.

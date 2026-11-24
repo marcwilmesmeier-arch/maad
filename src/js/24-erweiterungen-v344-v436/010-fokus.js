@@ -204,6 +204,14 @@ function iso3Halten() {
     if (o.visible) o.visible = false;
   });
   if (ISO3.ids)
+    // ── Erweiterung aus 22-lod200-waende/170-ruhebuendel.js: Bündel anderer Gebäude ebenso
+    L2RB.g.children.forEach((m) => {
+      if (m.visible && !ISO3.ids.has(m.userData.bid)) {
+        if (!ISO3.saved.has(m)) ISO3.saved.set(m, true);
+        m.visible = false;
+      }
+    });
+  if (ISO3.ids)
     for (const it of L2I.values())
       if (it.g.visible && !ISO3.ids.has(it.el.bid)) {
         if (!ISO3.saved.has(it.g)) ISO3.saved.set(it.g, true);

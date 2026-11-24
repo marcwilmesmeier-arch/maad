@@ -365,8 +365,12 @@ function l2Sync() {
     const seen = new Set(),
       now = performance.now();
     let n = 0,
-      // Aufbau in Etappen: höchstens L2ETAPPE ms je Takt, der Rest im nächsten (kein Hängen bei großen Projekten)
-      fertig = true;
+      // Aufbau in Etappen: höchstens L2ETAPPE ms Bauzeit je Takt, der Rest im nächsten (kein Hängen bei großen
+      // Projekten). Die Zeit zählt ab dem ersten gebauten Bauteil, mindestens eines je Takt – sonst käme der Aufbau
+      // nie voran, wenn schon die Ableitung länger dauert
+      fertig = true,
+      gebaut = 0,
+      tBau = 0;
     bs.forEach((b) =>
       l2Els(b).els.forEach((e) => {
         const h = JSON.stringify([
@@ -389,10 +393,11 @@ function l2Sync() {
           old = L2I.get(e.id);
         seen.add(e.id);
         if (old && old.h === h) return;
-        if (performance.now() - now > L2ETAPPE) {
+        if (gebaut && performance.now() - tBau > L2ETAPPE) {
           fertig = false;
           return;
         }
+        if (!gebaut++) tBau = performance.now();
         if (old) {
           G.l2.remove(old.g);
           l2Dispose(old.g);
@@ -409,6 +414,7 @@ function l2Sync() {
           t0: now + (old ? 0 : e.li * 160 + (n++ % 40) * 18),
           pop: old ? 1 : 0,
           dur: old ? 380 : 620,
+          gen: L2GEN, // Kennung dieses Aufbaus (Ruhebündel, 170-ruhebuendel.js)
         });
         m.g.scale.y = 0.001;
         m.mat.transparent = true;

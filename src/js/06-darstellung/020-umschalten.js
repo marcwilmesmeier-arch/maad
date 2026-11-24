@@ -174,6 +174,12 @@ function drTick(cm) {
   }
   // ── Erweiterung aus 19-fassadendesigner/080-helligkeit-in-der-darstellung.js (danach)
   if (drReal() && ++brTickN % 20 === 0) brPatch();
+  // ── Erweiterung aus 22-lod200-waende/170-ruhebuendel.js: ruhende Gebäude mit wenigen Zeichenaufrufen
+  try {
+    l2Ruhe();
+  } catch (e) {
+    logErr(e, 'drTick');
+  }
   // ── Erweiterung aus 24-erweiterungen-v344-v436/010-fokus.js: Fokus-Ansicht hält ausgeblendete Elemente aus
   try {
     iso3Halten();
