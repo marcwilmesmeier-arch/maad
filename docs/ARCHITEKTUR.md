@@ -729,3 +729,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Modellieren, Versatzfeld (`skZiehFeld` in `26-modellier-modus/140-kontextleiste.js`, Stil `#skzf`): ist „Ziehen“
   gewählt (`SK.tool === 'p'`), steht unter der Kontextleiste ein Eingabefeld für den Versatz in m; Enter oder
   „Übernehmen“ wendet ihn wie Zahl + Enter auf die Auswahl an (`SK.keysP`), Esc setzt zurück.
+- Sonderfall S, Loggien ohne Feld (`l2LoggienOhneFeld` in `130-balkone.js`): eingeschnittene Loggien, die kein
+  Balkon-/Loggia-Feld abdeckt (z. B. EG ohne Geländer), zählen mit ihrer Grundfläche als Loggia in `l2SFlaechen`
+  (BGF/NGF/BRI/NRI S, Körper) und in `lbBoeden`. Balkone im EG ohne Geländer zählen nur als Terrassenfläche
+  (`lbBoeden`), nicht zum Sonderfall S.

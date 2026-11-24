@@ -57,10 +57,37 @@ function lbBoeden(b) {
       const pts = [P(A, -zur), P(B, -zur), P(B, vor), P(A, vor)];
       out.push({ pts, y: x.y0, area: Math.hypot(B[0] - A[0], B[1] - A[1]) * (vor + zur) });
     });
+    // Loggien ohne Balkon-/Loggia-Feld (z. B. im EG ohne Geländer): ihre Grundfläche
+    l2LoggienOhneFeld(b, out).forEach((z) => out.push({ pts: z.pts, y: z.y, area: z.a }));
   } catch (e) {
     logErr(e, 'lbBoeden');
   }
   return out;
+}
+/**
+ * Eingeschnittene Loggien (oeLoggiaEinschnitte), die kein Balkon-/Loggia-Feld der Gruppe abdeckt – etwa im EG ohne
+ * Geländer: ihre Grundfläche zählt wie jede Loggia zum Sonderfall S. L: bereits erfasste Flächen [{ pts, y }].
+ * Ergebnis [{ pts, y, li, a }].
+ */
+function l2LoggienOhneFeld(b, L) {
+  const R = [],
+    fl = (P) =>
+      Math.abs(
+        P.reduce((s, p, i) => s + p[0] * P[(i + 1) % P.length][1] - P[(i + 1) % P.length][0] * p[1], 0) / 2,
+      );
+  try {
+    oeLoggiaEinschnitte(b).forEach((z) => {
+      const o = z.lg,
+        y = o.y0,
+        m = [z.f.reduce((s, p) => s + p[0], 0) / 4, z.f.reduce((s, p) => s + p[1], 0) / 4];
+      if (L.some((x) => Math.abs(x.y - y) < 0.3 && inP(m, x.pts))) return;
+      const a = fl(z.f);
+      if (a > 0.05) R.push({ pts: z.f, y, li: lvOfY(b, y + 0.1), a });
+    });
+  } catch (e) {
+    logErr(e, 'l2LoggienOhneFeld');
+  }
+  return R;
 }
 /**
  * Flächen im Sonderfall S nach DIN 277 (nicht allseitig umschlossen): Balkone (vor der Fassade, Auskragung) und Loggien
@@ -77,10 +104,12 @@ function l2SFlaechen(b) {
         A = x.p0,
         B = x.p1,
         w = Math.hypot(B[0] - A[0], B[1] - A[1]),
-        vor = x.a === 'ba' || x.a === 'bl' ? x.tb : 0,
+        li = lvOfY(b, x.y0 + 0.1),
+        // Balkon im Erdgeschoss ohne Geländer liegt auf dem Gelände: Terrassenfläche (lbBoeden), kein Sonderfall S
+        terrasse = li === ugN(b) && !(x.gel && x.gel.ga !== 'ke'),
+        vor = (x.a === 'ba' || x.a === 'bl') && !terrasse ? x.tb : 0,
         zur = x.a === 'lo' || x.a === 'bl' ? x.d : 0,
         P = (p, s) => [p[0] + n[0] * s, p[1] + n[1] * s],
-        li = lvOfY(b, x.y0 + 0.1),
         // bis Unterkante der Platte darüber (Decke über der Loggia bzw. Balkonplatte darüber, 20 cm): die Platte gehört
         // nicht zum Raum im Sonderfall S
         dP = Math.max(0.2, (l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22),
@@ -101,6 +130,20 @@ function l2SFlaechen(b) {
           li,
         });
     });
+    // ── Loggien ohne Balkon-/Loggia-Feld (z. B. im EG ohne Geländer): Grundfläche als Loggia im Sonderfall S
+    const dP = Math.max(0.2, (l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22);
+    l2LoggienOhneFeld(b, out).forEach((z) =>
+      out.push({
+        art: 'lo',
+        pts: z.pts,
+        y: z.y,
+        h: (z.li === 'roof' ? 2.5 : b.levels[z.li].h) - dP,
+        dP,
+        a: z.a,
+        lo: z.a,
+        li: z.li,
+      }),
+    );
   } catch (e) {
     logErr(e, 'l2SFlaechen');
   }
