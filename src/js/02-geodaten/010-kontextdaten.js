@@ -543,7 +543,15 @@ function ctxCollect(tiles) {
               : 'roads';
         if (f.type === 2) {
           const w = k === 'cycle' ? 2.2 : c === 'path' ? (s === 'steps' ? 1.5 : 1.8) : WR[c] || 5;
-          for (const r of f.rings) acc.line[k].push({ l: cv(r, R.ext), w, c }); // c: Straßenart (z. B. für Emissionen)
+          // c: Straßenart (z. B. für Emissionen); br: Brücke (OSM brunnel=bridge), ly: Ebene (OSM layer)
+          for (const r of f.rings)
+            acc.line[k].push({
+              l: cv(r, R.ext),
+              w,
+              c,
+              br: p.brunnel === 'bridge' ? 1 : 0,
+              ly: +p.layer || 0,
+            });
         } else if (f.type === 3 && k === 'paths')
           for (const pg of polys(f.rings)) acc.fill.paths.push(pg.map((r) => cv(r, R.ext)));
       }

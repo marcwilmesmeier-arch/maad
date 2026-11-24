@@ -534,6 +534,7 @@ function strFarbe(E) {
   const f = S.lc[E.lc] || '#a8a8a8';
   E.mat.color.set(f);
   E.matK.color.set(shade(f, 0.82));
+  if (E.matB) E.matB.color.set(f);
 }
 /** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) an (x, z) in maad-Höhen, sonst null. */
 function strDomH(x, z) {
@@ -622,6 +623,101 @@ function strBruecken(roads, G) {
   }
   return { proben, linien, nass };
 }
+/** Stärke der Fahrbahnplatte einer Brücke (m), Höhe der Brüstung (m), Abstand der Pfeiler (m). */
+const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
+/**
+ * Brückenbauwerke aus gekennzeichneten Achsen (OSM brunnel=bridge), Vorbild Planimetric: Höhe linear zwischen den
+ * Geländehöhen an den Brückenenden (das Geländemodell enthält dort die Rampen der Auffahrt), mindestens 0,5 m über
+ * dem Gelände darunter; Fahrbahndeck in Straßenfarbe, Plattenstirn (1 m) und Unterseite, Brüstung 1 m hoch (Wände
+ * 0,25 m stark, außen an der Fahrbahn), Pfeiler etwa alle 25 m, wo die Brücke mehr als 3,5 m über dem Gelände liegt.
+ */
+function strBrueckenBau(E, bruecken, mk) {
+  if (!bruecken.length) return;
+  if (!E.matB) {
+    E.matB = new T.MeshLambertMaterial({ side: T.DoubleSide });
+    E.matBW = new T.MeshLambertMaterial({ color: new T.Color('#d4d2cc'), side: T.DoubleSide });
+  }
+  strFarbe(E);
+  const t = E.tief,
+    oben = [],
+    bau = [],
+    quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d);
+  bruecken.forEach(({ l, w }) => {
+    if (!l || l.length < 2) return;
+    // auf etwa 2 m verdichten, Bogenlänge s
+    const P = [];
+    for (let k = 0; k + 1 < l.length; k++) {
+      const A = l[k],
+        B = l[k + 1],
+        n = Math.max(1, Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 2));
+      for (let q = 0; q < n; q++) P.push([A[0] + ((B[0] - A[0]) * q) / n, A[1] + ((B[1] - A[1]) * q) / n]);
+    }
+    P.push(l[l.length - 1].slice());
+    const S0 = [0];
+    for (let i = 1; i < P.length; i++)
+      S0.push(S0[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    const Lg = S0[S0.length - 1] || 1,
+      ha = gh(P[0][0], P[0][1]),
+      hb = gh(P[P.length - 1][0], P[P.length - 1][1]),
+      Z = P.map((p, i) => Math.max(ha + ((hb - ha) * S0[i]) / Lg, gh(p[0], p[1]) + 0.5) - t),
+      // Querrichtung je Punkt (Mittel der angrenzenden Abschnitte)
+      Nn = P.map((p, i) => {
+        const a = P[Math.max(0, i - 1)],
+          c = P[Math.min(P.length - 1, i + 1)],
+          L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+        return [-(c[1] - a[1]) / L, (c[0] - a[0]) / L];
+      }),
+      h2 = w / 2,
+      at = (i, o, dy) => [P[i][0] + Nn[i][0] * o, Z[i] + dy, P[i][1] + Nn[i][1] * o],
+      pl = STR_BR.platte,
+      br = STR_BR.bruestung,
+      bw = 0.25;
+    let seit = 0;
+    for (let i = 0; i + 1 < P.length; i++) {
+      const j = i + 1;
+      // Fahrbahn
+      quad(oben, at(i, -h2, 0), at(j, -h2, 0), at(j, h2, 0), at(i, h2, 0));
+      // Unterseite der Platte
+      quad(bau, at(i, -h2 - bw, -pl), at(j, -h2 - bw, -pl), at(j, h2 + bw, -pl), at(i, h2 + bw, -pl));
+      // Brüstung beidseitig (außen bis Unterkante Platte, innen ab Fahrbahn) und Abdeckung
+      for (const sg of [-1, 1]) {
+        const ai = sg * h2,
+          ao = sg * (h2 + bw);
+        quad(bau, at(i, ao, -pl), at(j, ao, -pl), at(j, ao, br), at(i, ao, br));
+        quad(bau, at(i, ai, 0), at(j, ai, 0), at(j, ai, br), at(i, ai, br));
+        quad(bau, at(i, ai, br), at(j, ai, br), at(j, ao, br), at(i, ao, br));
+      }
+      // Pfeiler (achtkantig, Durchmesser nach Breite) unter der Achse
+      seit += S0[j] - S0[i];
+      const ug = gh(P[j][0], P[j][1]);
+      if (seit >= STR_BR.pfeiler && j < P.length - 3 && Z[j] - pl - ug > STR_BR.pfeilerAb) {
+        seit = 0;
+        const r = Math.max(0.6, w * 0.06),
+          y0 = ug - 0.5,
+          y1 = Z[j] - pl;
+        for (let k = 0; k < 8; k++) {
+          const a0 = (k / 8) * Math.PI * 2,
+            a1 = ((k + 1) / 8) * Math.PI * 2,
+            p0 = [P[j][0] + Math.cos(a0) * r, P[j][1] + Math.sin(a0) * r],
+            p1 = [P[j][0] + Math.cos(a1) * r, P[j][1] + Math.sin(a1) * r];
+          quad(bau, [p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]]);
+        }
+      }
+    }
+    // Stirnseiten an den Enden (Platte)
+    [0, P.length - 1].forEach((i) =>
+      quad(bau, at(i, -h2 - bw, -pl), at(i, h2 + bw, -pl), at(i, h2 + bw, 0), at(i, -h2 - bw, 0)),
+    );
+  });
+  const geo = (pos) => {
+    const ge = new T.BufferGeometry();
+    ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    ge.computeVertexNormals();
+    return ge;
+  };
+  if (oben.length) mk(geo(oben), E.matB).castShadow = true;
+  if (bau.length) mk(geo(bau), E.matBW).castShadow = true;
+}
 /** Brückenhöhe an (x, z): nächste Probe über Wasser (bis 12 m), sonst null. */
 function strBrueckeH(B, a, b) {
   const i0 = Math.floor(a / 8),
@@ -640,8 +736,12 @@ function strBrueckeH(B, a, b) {
   return best ? best.h : null;
 }
 /** Ebene E (Straßen oder Wege) aus Achsen und Flächen bauen. */
-function strBauen(E, roads, fills) {
+function strBauen(E, alle, fills) {
   strWeg(E);
+  // als Brücke gekennzeichnete Achsen (OSM brunnel=bridge) werden als eigenes Bauwerk gebaut (strBrueckenBau), nicht
+  // als Fläche im Gelände – darunter bleiben Gelände, Wasser und kreuzende Straßen unverändert
+  const roads = alle.filter((r) => !r.br),
+    bruecken = alle.filter((r) => r.br);
   const G0 = GEO.size,
     R = strFlaechen(roads, G0, E.r, fills),
     t = E.tief,
@@ -780,6 +880,12 @@ function strBauen(E, roads, fills) {
     ge.setAttribute('position', new T.BufferAttribute(new Float32Array(kan), 3));
     ge.computeVertexNormals();
     mk(ge, E.matK);
+  }
+  // ── Brückenbauwerke (Deck, Plattenstirn, Brüstung, Pfeiler) aus den gekennzeichneten Achsen
+  try {
+    strBrueckenBau(E, bruecken, mk);
+  } catch (er) {
+    logErr(er, 'strBauen');
   }
   E.aktiv = true;
 }

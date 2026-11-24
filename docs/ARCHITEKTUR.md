@@ -761,3 +761,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   verschiebt die Wand auf den Abstand (`grTbSetzen` → `grEditGrp`).
 - Modellieren, Filter „Geschoss“: Doppelklick auf ein Geschoss öffnet dessen Grundriss (`skSelClick` in
   `27-skizze/080-auswahl.js` → `grOpenLv`).
+- Brückenbauwerke (`strBrueckenBau` in `02-geodaten/100-strassenflaechen.js`, Vorbild Planimetric): Straßen- und
+  Wegachsen mit OSM `brunnel=bridge` (`br`, Ebene `ly`, in `010-kontextdaten.js`) werden nicht als Fläche im Gelände
+  gebaut, sondern als Bauwerk: Höhe linear zwischen den Geländehöhen an den Enden (die Auffahrten liegen im
+  Geländemodell), mindestens 0,5 m über Gelände; Fahrbahn (Straßenfarbe), Platte 1 m, Brüstung 1 m, Pfeiler etwa
+  alle 25 m über 3,5 m Höhe (`STR_BR`). Gelände, Wasser und kreuzende Straßen darunter bleiben unverändert. Nicht
+  gekennzeichnete Straßen über Wasser behalten die bisherige Lösung (DOM-Höhenpunkte).
