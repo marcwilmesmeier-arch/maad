@@ -805,3 +805,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   aufgehellten Layer-Farbe „Bahn“, Schwellen (60 cm) und Schienen (Spurweite 1,435 m) im Shader über das Attribut `aGl`
   (Bogenlänge, Abstand zur Achse), aus der Ferne ohne Schwellen. Straßenbahn: nur Schienen auf Straßenhöhe. Gleise auf
   Bahnbrücken (auch auf deren Verlängerung und Rampe) liegen auf dem Deck (`glsHoehe`, `GLS.decks`).
+- Fahrzeuge und Markierungen auf Brücken: `strDeckHoehe(x, z, u, br, art)` (100-strassenflaechen) gibt die Fahrbahnhöhe
+  auf einem Deck – als Brücke gekennzeichnete Wege immer, andere nur längs auf Verlängerung und Rampe (querende
+  Straßen darunter bleiben unten). `carsNet` rechnet die Höhen je Straße alle 2 m vor (`hz`), `carsPos` gibt `yD`;
+  `carsUp` baut neu, sobald die Brücken stehen. `fbmHoehe` nutzt dieselbe Regel.

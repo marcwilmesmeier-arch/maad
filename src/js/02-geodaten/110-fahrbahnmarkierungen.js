@@ -78,23 +78,14 @@ function fbmAufStrasse(x, z) {
     j = Math.floor(((z + G0 / 2) / G0) * n);
   return i >= 0 && j >= 0 && i < n && j < n && M.data[2 * (j * n + i)] > 128;
 }
-/** Höhe der Fahrbahn an (x, z): auf einer Brücke deren Deck, sonst Straßenfläche (15 cm unter dem Gelände); null = keine. */
-function fbmHoehe(x, z, bruecke) {
-  if (bruecke) {
-    let best = null,
-      bd = 1e9;
-    ((STR.brD && STR.brD.K) || []).forEach((B) => {
-      if (B.weg || B.k !== 'roads') return;
-      B.P.forEach((q, j) => {
-        const d = Math.hypot(q[0] - x, q[1] - z);
-        if (d < B.h2 + 0.5 && d < bd) {
-          bd = d;
-          best = B.Z[j] - STR.E.roads.tief + (B.dz || 0);
-        }
-      });
-    });
-    return best;
-  }
+/**
+ * Höhe der Fahrbahn an (x, z) in Richtung u: auf einem Brückendeck dessen Fahrbahn (strDeckHoehe – gekennzeichnete
+ * Brückenwege auf dem Deck, andere nur längs auf Verlängerung und Rampe), sonst Straßenfläche (15 cm unter dem
+ * Gelände); null = keine Fahrbahn.
+ */
+function fbmHoehe(x, z, bruecke, u) {
+  const d = strDeckHoehe(x, z, u, bruecke, 'roads');
+  if (d != null || bruecke) return d;
   return fbmAufStrasse(x, z) ? gh(x, z) - STR.E.roads.tief : null;
 }
 /** Zahl aus einem OSM-Wert („2“, „2;3“) oder null. */
@@ -200,8 +191,10 @@ function fbmBauen(D) {
     band = (a, c, b, br) => {
       if (!drin(a) || !drin(c)) return;
       if (FBM.frei && !FBM.frei([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2])) return;
-      const ya = fbmHoehe(a[0], a[1], br),
-        yc = fbmHoehe(c[0], c[1], br);
+      const L0 = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1,
+        u = [(c[0] - a[0]) / L0, (c[1] - a[1]) / L0],
+        ya = fbmHoehe(a[0], a[1], br, u),
+        yc = fbmHoehe(c[0], c[1], br, u);
       if (ya == null || yc == null) return;
       pos.push(a[0], ya + 0.06, a[1], c[0], yc + 0.06, c[1]);
     },

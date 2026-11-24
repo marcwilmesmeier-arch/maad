@@ -17,7 +17,15 @@ function carsNet() {
     const len = cum[cum.length - 1];
     if (len < 6) continue;
     const id = P.length;
-    P.push({ l, cum, len, w: Math.min(14, r.w || 6) });
+    // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Fahrbahnhöhe auf Brücken alle 2 m (null = Gelände)
+    const hz = [];
+    for (let s = 0; s <= len + 2; s += 2) {
+      const q = carsPos({ l, cum, w: 0 }, Math.min(s, len), 1);
+      hz.push(
+        typeof strDeckHoehe === 'function' ? strDeckHoehe(q.x, q.z, [q.dx, q.dz], !!r.br, 'roads') : null,
+      );
+    }
+    P.push({ l, cum, len, w: Math.min(14, r.w || 6), hz });
     tot += len * ((r.w || 6) >= 10 ? 1.5 : 1);
     [
       [key(l[0]), 0],
@@ -48,5 +56,15 @@ function carsPos(p, s, dir) {
     dz = -dz;
   }
   const off = Math.min(3, p.w * 0.22);
-  return { x: a[0] + (b[0] - a[0]) * t - dz * off, z: a[1] + (b[1] - a[1]) * t + dx * off, dx, dz };
+  // Fahrbahnhöhe auf einer Brücke (aus carsNet, linear zwischen den 2-m-Werten), sonst null
+  let yD = null;
+  if (p.hz) {
+    const k = Math.max(0, s) / 2,
+      i0 = Math.floor(k),
+      h0 = p.hz[i0],
+      h1 = p.hz[Math.min(p.hz.length - 1, i0 + 1)];
+    if (h0 != null && h1 != null) yD = h0 + (h1 - h0) * (k - i0);
+    else if (h0 != null || h1 != null) yD = h0 != null ? h0 : h1;
+  }
+  return { x: a[0] + (b[0] - a[0]) * t - dz * off, z: a[1] + (b[1] - a[1]) * t + dx * off, dx, dz, yD };
 }

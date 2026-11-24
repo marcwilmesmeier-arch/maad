@@ -1041,6 +1041,28 @@ function strBrueckenAlle() {
   STR.brD = { acc, sig, K };
   return K;
 }
+/**
+ * Fahrbahnhöhe auf einem Brückendeck an (x, z) in Fahrtrichtung u, sonst null. Wie bei den Markierungen entscheidet
+ * die Brückenkennung des Wegs: br = als Brücke gekennzeichnet → nächstes Deck der Art (roads, paths, rail) im Umkreis
+ * der halben Breite + 1 m; nicht gekennzeichnet → nur, wenn der Punkt auf dem Deck liegt (Verlängerung, Rampe) und
+ * längs dazu läuft (unter der Brücke querende Straßen bleiben unten).
+ */
+function strDeckHoehe(x, z, u, br, art) {
+  let best = null,
+    bd = 1e9;
+  ((STR.brD && STR.brD.K) || []).forEach((B) => {
+    if (B.weg || B.k !== art) return;
+    const r = B.h2 + (br ? 1 : 0.5);
+    B.P.forEach((q, j) => {
+      const d = Math.hypot(q[0] - x, q[1] - z);
+      if (d >= r || d >= bd) return;
+      if (!br && u && Math.abs(u[0] * B.Nn[j][1] - u[1] * B.Nn[j][0]) < 0.9) return;
+      bd = d;
+      best = B.Z[j] - (STR.E[art] ? STR.E[art].tief : STR.E.roads.tief) + (B.dz || 0);
+    });
+  });
+  return best;
+}
 /** Stärke der Fahrbahnplatte einer Brücke (m), Höhe der Brüstung (m), Abstand der Pfeiler (m). */
 const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
 /**

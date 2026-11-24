@@ -78,7 +78,10 @@ function carsUp(now) {
     CARS.last = 0;
     return;
   }
-  const sig = GEO.acc ? GEO.acc.line.roads.length + ':' + GEO.size : '';
+  // neu aufbauen auch, wenn die Brücken (Fahrbahnhöhen) fertig sind
+  const sig = GEO.acc
+    ? GEO.acc.line.roads.length + ':' + GEO.size + ':' + (STR.brD ? STR.brD.K.length : -1)
+    : '';
   if (sig !== CARS.sig || !CARS.m) {
     CARS.sig = sig;
     carsInit();
@@ -147,7 +150,9 @@ function carsUp(now) {
       while (d < -Math.PI) d += 2 * Math.PI;
       c.h += d * Math.min(1, dt * 6);
     }
-    const y = (typeof gh === 'function' ? gh(q.x, q.z) : 0) + (c.H * zf) / 2 + 0.15;
+    // auf Brücken die Fahrbahn des Decks (yD, 15 cm unter Gelände wie die Straßenfläche → +0,15), sonst Gelände
+    const y =
+      (q.yD != null ? q.yD + 0.15 : typeof gh === 'function' ? gh(q.x, q.z) : 0) + (c.H * zf) / 2 + 0.15;
     _q.setFromAxisAngle(_yA, -c.h);
     _p.set(q.x, y, q.z);
     _s.set(c.L * zf, c.H * zf, c.W * zf);
