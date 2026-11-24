@@ -715,6 +715,8 @@ async function geoRun(lon, lat, size, label, snap) {
       LOD3S.some((x) => lon >= x.bb[0] && lon <= x.bb[2] && lat >= x.bb[1] && lat <= x.bb[3]);
     gst(msg + (l3w ? ' LoD3 wird im Hintergrund nachgeladen …' : ''));
     if (l3w) setTimeout(() => lod3Bg(), 150);
+    // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Speicherstand ohne DOM – für Brücken nachladen
+    if (snap && !GEO.dmFull) setTimeout(() => strBrueckenDomNachladen(), 300);
     return { ok: true, msg };
   } catch (e) {
     const msg =

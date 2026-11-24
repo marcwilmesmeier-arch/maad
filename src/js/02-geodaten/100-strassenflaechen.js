@@ -658,7 +658,7 @@ function strBrueckenKetten(L, H) {
  * Brückenachse für den Bau aufbereiten: auf etwa 2 m verdichten (P), Bogenlänge S0, Gelände G0, Fahrbahnhöhe Z
  * (strBrueckeZ), Querrichtung Nn, halbe Breite h2; je Seite (0 = −Nn, 1 = +Nn) Randabstand o und Nachbar nb.
  */
-function strBrueckeLinie(l, w) {
+function strBrueckeLinie(l, w, a0, b0) {
   if (!l || l.length < 2) return null;
   const P = [];
   for (let k = 0; k + 1 < l.length; k++) {
@@ -678,18 +678,99 @@ function strBrueckeLinie(l, w) {
         L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
       return [-(c[1] - a[1]) / L, (c[0] - a[0]) / L];
     }),
-    h2 = w / 2;
-  return {
+    h2 = w / 2,
+    // Anschlusshöhe: Gelände 8 m außerhalb auf der anschließenden Straße – am Brückenende selbst liegt das grobe
+    // Gelände oft auf einer Böschung oder Grabenkante zwischen oben und unten
+    raus = (i, k) => {
+      const d = [P[i][0] - P[k][0], P[i][1] - P[k][1]],
+        L = Math.hypot(d[0], d[1]) || 1;
+      return gh(P[i][0] + (d[0] / L) * 8, P[i][1] + (d[1] / L) * 8);
+    },
+    ha = raus(0, 1),
+    hb = raus(P.length - 1, P.length - 2);
+  const d = {
     P,
     S0,
     G0,
     Nn,
     w,
     h2,
-    Z: strBrueckeZ(P, S0, G0, w),
+    ha,
+    hb,
+    Z: strBrueckeZ(P, S0, G0, w, ha, hb),
     o: [P.map(() => h2), P.map(() => h2)],
     nb: [P.map(() => false), P.map(() => false)],
   };
+  return a0 != null ? strBrueckeKuerzen(d, a0, b0) : d;
+}
+/**
+ * Verlängerte Brücke (siehe strBrueckeVerlaengern) zurückschneiden: Mit DOM läuft das Deck in die anschließende Straße
+ * hinein, bis es das Gelände erreicht (weniger als 0,3 m darüber) – dort endet es, auf Geländehöhe. Ohne DOM endet es
+ * am Brückenende aus OSM (a0 … b0: Bogenlänge des eigentlichen Brückenstücks).
+ */
+function strBrueckeKuerzen(d, a0, b0) {
+  const n = d.P.length,
+    mitDom = !!GEO.dmFull;
+  let i0 = 0,
+    i1 = n - 1;
+  while (i0 < n - 1 && d.S0[i0] < a0 - 0.01) i0++;
+  while (i1 > 0 && d.S0[i1] > b0 + 0.01) i1--;
+  const j0 = i0,
+    j1 = i1;
+  if (mitDom) {
+    while (i0 > 0 && d.Z[i0] - d.G0[i0] > 0.3) i0--;
+    while (i1 < n - 1 && d.Z[i1] - d.G0[i1] > 0.3) i1++;
+  }
+  if (i1 - i0 < 1) return null;
+  // wo die Verlängerung das Gelände erreicht hat, genau auf Geländehöhe enden
+  if (i0 < j0) d.Z[i0] = d.G0[i0];
+  if (i1 > j1) d.Z[i1] = d.G0[i1];
+  const sl = (a) => a.slice(i0, i1 + 1);
+  ['P', 'G0', 'Nn', 'Z'].forEach((k) => (d[k] = sl(d[k])));
+  d.S0 = sl(d.S0).map((s) => s - d.S0[i0]);
+  d.o = d.o.map(sl);
+  d.nb = d.nb.map(sl);
+  return d;
+}
+/**
+ * Brückenachse um die anschließenden Straßen verlängern (je Ende die erste Straße, deren Ende dort liegt, bis 60 m):
+ * Das Deck soll in die Straße hineinlaufen, bis es das Gelände erreicht (strBrueckeKuerzen). { l, a0, b0 }
+ */
+function strBrueckeVerlaengern(l, strassen) {
+  const weiter = (p, q) => {
+    for (const r of strassen) {
+      const L = r.l;
+      if (!L || L.length < 2) continue;
+      let w = null;
+      if (Math.hypot(L[0][0] - p[0], L[0][1] - p[1]) < 1.5) w = L;
+      else if (Math.hypot(L[L.length - 1][0] - p[0], L[L.length - 1][1] - p[1]) < 1.5)
+        w = L.slice().reverse();
+      if (!w) continue;
+      // nur in Fortsetzung der Brücke (nicht zurück über sie)
+      const d1 = [p[0] - q[0], p[1] - q[1]],
+        d2 = [w[1][0] - w[0][0], w[1][1] - w[0][1]];
+      if (d1[0] * d2[0] + d1[1] * d2[1] <= 0) continue;
+      const R = [];
+      let s = 0;
+      for (let k = 1; k < w.length && s < 60; k++) {
+        const g = Math.hypot(w[k][0] - w[k - 1][0], w[k][1] - w[k - 1][1]);
+        if (s + g > 60) {
+          const t = (60 - s) / g;
+          R.push([w[k - 1][0] + (w[k][0] - w[k - 1][0]) * t, w[k - 1][1] + (w[k][1] - w[k - 1][1]) * t]);
+          break;
+        }
+        R.push(w[k].slice());
+        s += g;
+      }
+      return R;
+    }
+    return [];
+  };
+  const vorn = weiter(l[0], l[1]).reverse(),
+    hinten = weiter(l[l.length - 1], l[l.length - 2]),
+    lang = (L) => L.reduce((s, p, i) => (i ? s + Math.hypot(p[0] - L[i - 1][0], p[1] - L[i - 1][1]) : 0), 0),
+    a0 = vorn.length ? lang(vorn.concat([l[0]])) : 0;
+  return { l: vorn.concat(l, hinten), a0, b0: a0 + lang(l) };
 }
 /**
  * Nebeneinanderliegende Brücken (Richtungsfahrbahnen, Geh- und Radwege neben der Straße, auch über Straßen und Wege
@@ -730,6 +811,56 @@ function strBrueckenNachbarn(K) {
   K.forEach((A, ia) => (A.Z = Zn[ia].map((a) => a.reduce((s, z) => s + z, 0) / a.length)));
 }
 /**
+ * Brückenenden, die auf einer anderen Brücke liegen (Rampen, Abzweige, Wege, die auf eine Brücke münden), übernehmen
+ * deren Fahrbahnhöhe als Anschluss statt des Geländes darunter.
+ */
+function strBrueckenAuflager(K) {
+  K.forEach((A) => {
+    let neu = false;
+    [0, A.P.length - 1].forEach((i) => {
+      const p = A.P[i];
+      let best = null,
+        bd = 1e9;
+      K.forEach((B) => {
+        if (B === A || B.S0[B.S0.length - 1] < A.S0[A.S0.length - 1] * 0.5) return;
+        B.P.forEach((q, j) => {
+          const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+          if (d < B.h2 + 1.5 && d < bd) {
+            bd = d;
+            best = B.Z[j];
+          }
+        });
+      });
+      if (best == null) return;
+      if (i) A.hb = best;
+      else A.ha = best;
+      neu = true;
+    });
+    if (neu) A.Z = strBrueckeZ(A.P, A.S0, A.G0, A.w, A.ha, A.hb);
+  });
+}
+/**
+ * DOM für Brücken nachladen: Ein aus dem Speicherstand geöffnetes Projekt hat kein DOM (GEO.dmFull), die Brücken
+ * fielen auf die Schätzung ohne Messung zurück. Gibt es Brücken im Ausschnitt, wird das DOM im Hintergrund geholt und
+ * die Straßen- und Brückenflächen neu gebaut.
+ */
+async function strBrueckenDomNachladen() {
+  const L = (GEO.acc && GEO.acc.line) || {},
+    hat = ['roads', 'paths', 'cycle'].some((k) => (L[k] || []).some((r) => r.br));
+  if (!hat || GEO.dmFull || !GEO.size) return;
+  const ort = [GEO.lon, GEO.lat, GEO.size].join(',');
+  try {
+    const DM = await dgmLoad(GEO.lon, GEO.lat, GEO.size, 'nw_dom', 'DOM1');
+    if (!DM || DM.fail || ort !== [GEO.lon, GEO.lat, GEO.size].join(',') || GEO.dmFull) return;
+    GEO.dmFull = DM;
+    STR.brD = null;
+    Object.values(STR.E).forEach((E) => (E.sig = ''));
+    strAktualisieren(GEO.acc);
+  } catch (e) {
+    logErr(e, 'strBrueckenDomNachladen');
+  }
+}
+/**
  * Alle Brücken des Ausschnitts (Straßen und Wege) mit Höhen und Nachbarn, zwischengespeichert, bis sich Daten oder
  * Gelände ändern. [{ k: 'roads' | 'paths', P, Z, … }]
  */
@@ -739,15 +870,19 @@ function strBrueckenAlle() {
     quellen = { roads: L.roads || [], paths: (L.paths || []).concat(L.cycle || []) },
     sig = [GEO.size, GEO.e0, !!GEO.dmFull, quellen.roads.length, quellen.paths.length].join('|');
   if (STR.brD && STR.brD.acc === acc && STR.brD.sig === sig) return STR.brD.K;
-  const K = [];
+  const K = [],
+    strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br);
   for (const k in quellen)
     strBrueckenKetten(
       quellen[k].filter((r) => r.br),
       GEO.size / 2,
     ).forEach((c) => {
-      const d = strBrueckeLinie(c.l, c.w);
+      // verlängert nur mit DOM (ohne Messung ist nicht bekannt, wo das Deck das Gelände erreicht)
+      const v = GEO.dmFull ? strBrueckeVerlaengern(c.l, strassen) : { l: c.l },
+        d = strBrueckeLinie(v.l, c.w, v.a0, v.b0);
       if (d) K.push(Object.assign(d, { k }));
     });
+  strBrueckenAuflager(K);
   strBrueckenNachbarn(K);
   STR.brD = { acc, sig, K };
   return K;
@@ -851,9 +986,10 @@ function strBrueckenBau(E, mk) {
  * OSM-Achse liegt oft neben dem Deck), längs der gleitende Median über ±10 m (Bäume, Fahrzeuge fallen heraus), Lücken
  * linear überbrückt, geglättet. Auch die Enden kommen aus dem DOM; nur wo es dort fast mit dem Gelände übereinstimmt
  * (< 1,5 m), wird auf den letzten 6 m auf das Gelände übergeblendet, damit die Straße nahtlos anschließt. Ohne DOM wie
- * bei Planimetric: linear zwischen den Geländehöhen an den Enden, mindestens 0,5 m über Gelände.
+ * bei Planimetric: linear zwischen den Höhen an den Enden (ha0, hb0: Anschlussstraße bzw. tragende Brücke, sonst
+ * Gelände am Ende), mindestens 0,5 m über Gelände.
  */
-function strBrueckeZ(P, S0, G0, w) {
+function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
   const n = P.length,
     Lg = S0[n - 1] || 1,
     Nn = P.map((p, i) => {
@@ -881,8 +1017,8 @@ function strBrueckeZ(P, S0, G0, w) {
     gut = dom.map((h, i) => (h != null ? i : -1)).filter((i) => i >= 0);
   let Z0;
   if (gut.length < Math.max(2, n * 0.3)) {
-    const ha = G0[0],
-      hb = G0[n - 1];
+    const ha = ha0 != null ? ha0 : G0[0],
+      hb = hb0 != null ? hb0 : G0[n - 1];
     Z0 = S0.map((s, i) => Math.max(ha + ((hb - ha) * s) / Lg, i && i < n - 1 ? G0[i] + 0.5 : -1e9));
   } else {
     // Lücken linear zwischen den nächsten DOM-Werten, vor dem ersten / nach dem letzten konstant

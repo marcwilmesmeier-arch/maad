@@ -771,7 +771,13 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Ketten. Fahrbahnhöhe (`strBrueckeZ`): aus dem DOM am Bildpunkt (`strDomAbs`, DOM − e0 wie das Gelände), Median quer
   über die Fahrbahn und gleitend ±10 m längs, Lücken linear, geglättet – auch an den Enden (dort liegt das grobe
   maad-Gelände an Grabenkanten zwischen oben und unten); auf das Gelände übergeblendet wird nur, wo es am Ende auf
-  1,5 m mit dem DOM übereinstimmt. Ohne DOM wie Planimetric: linear zwischen den Geländehöhen der Enden. Das
+  1,5 m mit dem DOM übereinstimmt. Ohne DOM wie Planimetric: linear zwischen den Anschlusshöhen – Gelände 8 m außerhalb des Endes auf der
+  anschließenden Straße, bzw. die Fahrbahn der Brücke, auf der das Ende liegt (`strBrueckenAuflager`). Ein aus dem
+  Speicherstand geöffnetes Projekt hat kein DOM: `strBrueckenDomNachladen` (am Ende von `geoRun`) holt es bei Brücken
+  im Ausschnitt im Hintergrund und baut die Straßenflächen neu.
+  Mit DOM wird jede Brücke entlang der anschließenden Straße verlängert (`strBrueckeVerlaengern`, bis 60 m): Das Deck
+  läuft in die Straße hinein, bis es das Gelände erreicht (`strBrueckeKuerzen`, < 0,3 m), statt über der Rampe
+  abzubrechen. Das
   Gelände unter Brücken bleibt das DGM. `strBrueckenAlle` bereitet alle Brücken des Ausschnitts (Straßen und Wege
   gemeinsam, `STR.brD` zwischengespeichert) mit `strBrueckeLinie` auf; `strBrueckenNachbarn` verbindet parallele
   Brücken mit höchstens 4 m Lücke zu einer Fahrbahn (Deck bis zur Mitte der Lücke, dort keine Brüstung, Höhen
