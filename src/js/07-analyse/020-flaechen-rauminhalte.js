@@ -495,7 +495,12 @@ function hlApply() {
             g.add(m);
           }
         } else if (oi) g.add(new T.Mesh(gm(rp.pw.concat(rp.pr)), mt));
-        if ((k === 'fas' || k === 'fasn') && rp.pw.length) g.add(new T.Mesh(gm(rp.pw), mt));
+        if ((k === 'fas' || k === 'fasn') && rp.pw.length) {
+          // Giebel und Drempel: Explosion mit den Wänden des Dachgeschosses (wie dessen BGF), nicht mit der Dachfläche
+          const pm = new T.Mesh(gm(rp.pw), mt);
+          pm.userData.k = b.levels.length;
+          g.add(pm);
+        }
         if (k === 'dach' && rp.pr.length) g.add(new T.Mesh(gm(rp.pr), mt));
       } else if (k === 'dach' && b.levels.length) {
         const L = b.levels.at(-1),

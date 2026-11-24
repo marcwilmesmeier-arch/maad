@@ -266,12 +266,14 @@ function zoBldHtml(b, k, R, A, B, P) {
       'kf' + id,
       ab('KF', 'Konstruktionsfläche'),
       A(n.wo + n.wu),
-      n.lv
-        .slice()
-        .reverse()
-        .filter((l) => l.w > 0)
-        .map((l) => l2R(l.n, A(l.w), 's', ['kf', id, 'n:' + l.n]))
-        .join(''),
+      // alle Geschosse zusammen, darunter je Geschoss
+      l2R('alle Geschosse', A(n.wo + n.wu), 's', ['kf', id, 'all']) +
+        n.lv
+          .slice()
+          .reverse()
+          .filter((l) => l.w > 0)
+          .map((l) => l2R(l.n, A(l.w), 's', ['kf', id, 'n:' + l.n]))
+          .join(''),
     );
   // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Fassade in LOD 200 abgewickelt (l2FassadeWert)
   // in LOD 200 zählt die Fassade abgewickelt wie dargestellt (Loggia-Öffnung aus, Rück- und Seitenwände dazu)
