@@ -780,5 +780,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   abzubrechen. Das
   Gelände unter Brücken bleibt das DGM. `strBrueckenAlle` bereitet alle Brücken des Ausschnitts (Straßen und Wege
   gemeinsam, `STR.brD` zwischengespeichert) mit `strBrueckeLinie` auf; `strBrueckenNachbarn` verbindet parallele
-  Brücken mit höchstens 4 m Lücke zu einer Fahrbahn (Deck bis zur Mitte der Lücke, dort keine Brüstung, Höhen
-  gemittelt), auch Geh- und Radwege neben der Straße. Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.
+  Brücken (bis ~40° Winkel) mit höchstens 6 m Lücke zu einer Fahrbahn (Deck bis zur Mitte der Lücke, dort keine Brüstung, Höhen
+  gemittelt), auch Geh- und Radwege neben der Straße. Die Brüstung entfällt außerdem überall, wo direkt außerhalb des
+  Rands eine andere Brücke liegt (abzweigende Rampen, querende Stücke). Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.

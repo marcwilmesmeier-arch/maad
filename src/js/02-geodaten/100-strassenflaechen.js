@@ -774,7 +774,7 @@ function strBrueckeVerlaengern(l, strassen) {
 }
 /**
  * Nebeneinanderliegende Brücken (Richtungsfahrbahnen, Geh- und Radwege neben der Straße, auch über Straßen und Wege
- * hinweg) zu einer Fahrbahn verbinden: liegt neben einem Punkt eine parallele Brücke mit höchstens 4 m Lücke, reicht
+ * hinweg) zu einer Fahrbahn verbinden: liegt neben einem Punkt eine Brücke (bis ~40° Winkel) mit höchstens 6 m Lücke, reicht
  * das Deck auf dieser Seite bis zur Mitte der Lücke (beide treffen sich genau), dort entfällt die Brüstung, und die
  * Fahrbahnhöhe wird mit der des Nachbarn gemittelt (keine Stufe).
  */
@@ -798,8 +798,8 @@ function strBrueckenNachbarn(K) {
           v = [q[0] - p[0], q[1] - p[1]],
           d = v[0] * A.Nn[i][0] + v[1] * A.Nn[i][1],
           laengs = v[0] * u[0] + v[1] * u[1];
-        if (Math.abs(laengs) > 2.5 || Math.abs(d) > A.h2 + B.h2 + 4) return;
-        if (Math.abs(A.Nn[i][0] * B.Nn[bj][0] + A.Nn[i][1] * B.Nn[bj][1]) < 0.9) return; // nicht parallel
+        if (Math.abs(laengs) > 2.5 + Math.abs(d) * 0.8 || Math.abs(d) > A.h2 + B.h2 + 6) return;
+        if (Math.abs(A.Nn[i][0] * B.Nn[bj][0] + A.Nn[i][1] * B.Nn[bj][1]) < 0.75) return; // über ~40° auseinander
         const sd = d > 0 ? 1 : 0,
           o = Math.max(0.3, (Math.abs(d) + A.h2 - B.h2) / 2);
         A.o[sd][i] = A.nb[sd][i] ? Math.min(A.o[sd][i], o) : o;
@@ -809,6 +809,33 @@ function strBrueckenNachbarn(K) {
     }),
   );
   K.forEach((A, ia) => (A.Z = Zn[ia].map((a) => a.reduce((s, z) => s + z, 0) / a.length)));
+  // Brüstung nur am freien Rand: liegt direkt außerhalb des Rands (0,5 m) eine andere Brücke – in beliebigem Winkel,
+  // etwa eine abzweigende Rampe oder ein querendes Stück –, entfällt sie dort
+  const bb = K.map((B) => {
+    const xs = B.P.map((p) => p[0]),
+      zs = B.P.map((p) => p[1]),
+      r = B.h2 + 1;
+    return [Math.min(...xs) - r, Math.min(...zs) - r, Math.max(...xs) + r, Math.max(...zs) + r];
+  });
+  K.forEach((A, ia) =>
+    A.P.forEach((p, i) =>
+      [0, 1].forEach((sd) => {
+        if (A.nb[sd][i]) return;
+        const g = (sd ? 1 : -1) * (A.o[sd][i] + 0.5),
+          x = p[0] + A.Nn[i][0] * g,
+          z = p[1] + A.Nn[i][1] * g;
+        A.nb[sd][i] = K.some(
+          (B, ib) =>
+            ib !== ia &&
+            x >= bb[ib][0] &&
+            x <= bb[ib][2] &&
+            z >= bb[ib][1] &&
+            z <= bb[ib][3] &&
+            B.P.some((q) => Math.hypot(q[0] - x, q[1] - z) < B.h2 + 0.3),
+        );
+      }),
+    ),
+  );
 }
 /**
  * Brückenenden, die auf einer anderen Brücke liegen (Rampen, Abzweige, Wege, die auf eine Brücke münden), übernehmen
