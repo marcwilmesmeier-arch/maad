@@ -733,3 +733,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Balkon-/Loggia-Feld abdeckt (z. B. EG ohne Geländer), zählen mit ihrer Grundfläche als Loggia in `l2SFlaechen`
   (BGF/NGF/BRI/NRI S, Körper) und in `lbBoeden`. Balkone im EG ohne Geländer zählen nur als Terrassenfläche
   (`lbBoeden`), nicht zum Sonderfall S.
+- Wandanschlüsse wie in Revit: `grCutsVerbinden` (`15-grundriss/010-grundriss-einheiten.js`) verlängert Wandlinien,
+  die bis `GR_ANSCHLUSS` (5 cm) vor dem Umriss oder einer anderen Wandlinie enden, bzw. rastet sie auf ein nahes
+  Wandende ein – sonst teilte die Linie die Fläche nicht und es entstünde keine Wand. In `endV` (LOD-200-Ableitung)
+  werden Knoten mit drei oder mehr Wandenden aufgeräumt: zwei Wände in einer Flucht laufen durch, die übrigen stoßen
+  stumpf an deren Seitenfläche (T-Stoß).

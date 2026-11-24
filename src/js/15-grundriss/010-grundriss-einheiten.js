@@ -203,10 +203,75 @@ function grSnapEnd(bs, x, z) {
   }
   return bp || [x, z];
 }
+/** Abstand, bis zu dem ein Wandende an eine andere Wand bzw. ein anderes Wandende anschließt (m), wie in Revit. */
+const GR_ANSCHLUSS = 0.05;
+/**
+ * Wandlinien verbinden (wie die automatischen Anschlüsse in Revit): ein Ende, das bis GR_ANSCHLUSS vor dem Umriss
+ * oder einer anderen Wandlinie endet, wird in seiner Richtung bis dorthin verlängert; liegt ein anderes Wandende
+ * näher, rastet es auf dieses ein. Ohne das teilt eine knapp zu kurze Linie die Fläche nicht – es entstünde keine Wand.
+ */
+function grCutsVerbinden(bs, cuts) {
+  const C = cuts.map((c) => c.slice()),
+    tol = GR_ANSCHLUSS;
+  const ende = (ci, w) => {
+    const c = C[ci],
+      P = w ? [c[2], c[3]] : [c[0], c[1]],
+      Q = w ? [c[0], c[1]] : [c[2], c[3]],
+      L = Math.hypot(P[0] - Q[0], P[1] - Q[1]);
+    if (L < 1e-6) return P;
+    const u = [(P[0] - Q[0]) / L, (P[1] - Q[1]) / L];
+    let best = null,
+      bd = tol;
+    // 1) andere Wandenden in der Nähe
+    C.forEach((o, oi) => {
+      if (oi === ci) return;
+      [
+        [o[0], o[1]],
+        [o[2], o[3]],
+      ].forEach((E) => {
+        const d = Math.hypot(E[0] - P[0], E[1] - P[1]);
+        if (d > 1e-6 && d < bd) {
+          bd = d;
+          best = E;
+        }
+      });
+    });
+    if (best) return best;
+    // 2) Verlängerung bis zur nächsten Linie (Umriss oder andere Wand), höchstens tol
+    bd = tol;
+    const linien = bs
+      .map((s) => s.slice(0, 4))
+      .concat(C.filter((_, oi) => oi !== ci).map((o) => o.slice(0, 4)));
+    for (const s of linien) {
+      const dx = s[2] - s[0],
+        dz = s[3] - s[1],
+        det = u[0] * dz - u[1] * dx;
+      if (Math.abs(det) < 1e-9) continue;
+      const wx = s[0] - P[0],
+        wz = s[1] - P[1],
+        t = (wx * dz - wz * dx) / det,
+        v = (wx * u[1] - wz * u[0]) / det;
+      if (t > 1e-6 && t < bd && v >= -1e-6 && v <= 1 + 1e-6) {
+        bd = t;
+        best = [P[0] + u[0] * t, P[1] + u[1] * t];
+      }
+    }
+    return best || P;
+  };
+  for (let ci = 0; ci < C.length; ci++) {
+    const a = ende(ci, 0),
+      b = ende(ci, 1);
+    C[ci][0] = a[0];
+    C[ci][1] = a[1];
+    C[ci][2] = b[0];
+    C[ci][3] = b[1];
+  }
+  return C;
+}
 function grFaces(bs, cuts) {
   const segs = bs.map((s) => [s[0], s[1], s[2], s[3], 1]),
     nb = segs.length;
-  cuts.forEach((c) => {
+  grCutsVerbinden(bs, cuts).forEach((c) => {
     const a = grSnapEnd(bs, c[0], c[1]),
       b = grSnapEnd(bs, c[2], c[3]);
     segs.push([a[0], a[1], b[0], b[1], 2]);

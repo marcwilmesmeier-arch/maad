@@ -610,6 +610,26 @@ function l2GeoStufe1(b) {
         }
       }
       const oth = (endsAt.get(k) || []).filter((z) => z.r !== r);
+      // Drei oder mehr Wandenden in einem Punkt (wie Revit aufräumen): zwei Wände in einer Flucht laufen durch,
+      // jede andere stößt stumpf an deren Seitenfläche (T-Stoß); läuft diese Wand selbst in einer Flucht weiter,
+      // endet sie gerade über den Punkt hinaus (Kreuz, durchgehende Wand)
+      if (oth.length >= 2) {
+        const weg = (z) => (z.e ? [-z.r.kx, -z.r.kz] : [z.r.kx, z.r.kz]),
+          ich = e ? [-r.kx, -r.kz] : [r.kx, r.kz],
+          gegen = (a, c) => a[0] * c[0] + a[1] * c[1] < -0.999;
+        if (oth.some((z) => gegen(weg(z), ich))) return def();
+        const paar = oth.find((z) => oth.some((w) => w !== z && gegen(weg(z), weg(w))));
+        if (paar) {
+          const r2 = paar.r,
+            sg = CO(r2, far) - r2.c >= 0 ? 1 : -1,
+            q0 = PT(r2, 0, r2.c + sg * r2.h2),
+            w = [r2.kx, r2.kz],
+            p = TL(r, r.c + r.h2, q0, w),
+            m = TL(r, r.c - r.h2, q0, w);
+          if (p && m) return [p, m];
+        }
+        return def();
+      }
       if (oth.length === 1) {
         const o = oth[0],
           ad = [sgn > 0 ? -r.kx : r.kx, 0],
