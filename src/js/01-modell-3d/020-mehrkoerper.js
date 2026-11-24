@@ -264,10 +264,39 @@ function roofField(type, fp, TT, SS, a, bb, tn, fest) {
   } else hf = (p) => tn * Math.max(0, TT(p) + a);
   return { hf, lines, vl };
 }
+/**
+ * Umriss für die Dachform bereinigt: doppelte Punkte (unter 1 cm) und fast gerade Knicke (Punkt weniger als 2 cm neben
+ * der Linie seiner Nachbarn) entfallen – sonst zerfällt die Dachfläche dort in Fächer aus Dreiecken mit Absatz.
+ */
+function roofUmriss(fp) {
+  let R = fp.filter((p, i) => {
+    const q = fp[(i + 1) % fp.length];
+    return Math.hypot(q[0] - p[0], q[1] - p[1]) > 0.01;
+  });
+  let ok = false;
+  while (!ok && R.length > 3) {
+    ok = true;
+    for (let i = 0; i < R.length; i++) {
+      const a = R[(i + R.length - 1) % R.length],
+        p = R[i],
+        c = R[(i + 1) % R.length],
+        L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (L < 1e-6) continue;
+      const d = Math.abs((p[0] - a[0]) * (c[1] - a[1]) - (p[1] - a[1]) * (c[0] - a[0])) / L,
+        t = ((p[0] - a[0]) * (c[0] - a[0]) + (p[1] - a[1]) * (c[1] - a[1])) / (L * L);
+      if (d < 0.02 && t > 0 && t < 1) {
+        R.splice(i, 1);
+        ok = false;
+        break;
+      }
+    }
+  }
+  return R.length >= 3 ? R : fp;
+}
 function roofGeo(b, yr, clip) {
   const r = b.roof;
   if (!r || !r.type || r.type === 'flat') return null;
-  const fp = lf(b, b.levels[b.levels.length - 1]);
+  const fp = roofUmriss(lf(b, b.levels[b.levels.length - 1]));
   if (fp.length < 3) return null;
   const d = Math.max(0, +r.dremp || 0),
     tn = Math.tan((Math.max(1, Math.min(75, +r.angle || 30)) * Math.PI) / 180),
