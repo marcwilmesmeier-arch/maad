@@ -928,12 +928,6 @@ function strBrueckenNachbarn(K) {
         );
       }),
     );
-    // keine Brüstung, wo das Deck auf dem Gelände liegt (Verlängerung in die Straße)
-    A.P.forEach((p, i) =>
-      [0, 1].forEach((sd) => {
-        if (A.Z[i] - A.G0[i] < 0.5) A.nb[sd][i] = true;
-      }),
-    );
     // keine kurzen Brüstungsreste (bis 10 m) neben verbundenen Abschnitten
     [0, 1].forEach((sd) => {
       const f = A.nb[sd];
@@ -948,6 +942,13 @@ function strBrueckenNachbarn(K) {
         i = j;
       }
     });
+    // danach: keine Brüstung, wo das Deck auf dem Gelände liegt (Verlängerung in die Straße) – erst nach den
+    // Resten, sonst verlöre eine kurze Brücke zwischen ihren Rampen ihr ganzes Geländer
+    A.P.forEach((p, i) =>
+      [0, 1].forEach((sd) => {
+        if (A.Z[i] - A.G0[i] < 0.5) A.nb[sd][i] = true;
+      }),
+    );
   });
 }
 /**

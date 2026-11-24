@@ -82,8 +82,9 @@ function carsUp(now) {
   const sig = GEO.acc
     ? GEO.acc.line.roads.length + ':' + GEO.size + ':' + (STR.brD ? STR.brD.K.length : -1)
     : '';
-  if (sig !== CARS.sig || !CARS.m) {
+  if (sig !== CARS.sig || !CARS.m || CARS.brD !== STR.brD) {
     CARS.sig = sig;
+    CARS.brD = STR.brD;
     carsInit();
   }
   if (!CARS.m) return;

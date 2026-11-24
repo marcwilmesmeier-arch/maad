@@ -83,7 +83,29 @@ function glsHoehe(x, z, br, tram) {
   });
   if (best != null) return best;
   if (tram && typeof fbmAufStrasse === 'function' && fbmAufStrasse(x, z)) return gh(x, z) - STR.E.roads.tief;
-  return gh(x, z);
+  return glsDom(x, z);
+}
+/**
+ * Gleishöhe am Boden aus dem DOM (Dämme, Rampen, Einschnitte – das grobe Geländeraster zeichnet Böschungen weich):
+ * der zweitkleinste von fünf Werten (Achse und je 1 m in den vier Himmelsrichtungen; Masten und Fahrleitung fallen
+ * heraus); liegt er mehr als 1,5 m vom Gelände entfernt (stehender Zug, Bahnsteigdach), gilt das Gelände.
+ */
+function glsDom(x, z) {
+  const g = gh(x, z);
+  if (!GEO.dmFull || typeof strDomAbs !== 'function') return g;
+  const v = [
+    [0, 0],
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]
+    .map(([a, b]) => strDomAbs(x + a, z + b))
+    .filter((h) => h != null)
+    .sort((a, b) => a - b);
+  if (v.length < 3) return g;
+  const h = v[1];
+  return Math.abs(h - g) <= 1.5 ? h : g;
 }
 /** Gleise bauen (bei neuen Daten) bzw. nur umfärben. */
 function glsAktualisieren(acc) {
@@ -91,10 +113,13 @@ function glsAktualisieren(acc) {
     farbe = S.lc.rail || '#9a9893';
   if (GLS.mat) GLS.mat.color.set(farbe);
   if (GLS.matT) GLS.matT.color.set(shade(farbe, 0.9));
-  const sig = [L.length, GEO.size, GEO.e0, STR.brD ? STR.brD.K.length : -1, !!STR.E.roads.aktiv].join('|');
-  if (sig === GLS.sig && GLS.acc === acc) return;
+  // neu bauen bei neuen Daten, neuen Brücken (auch nach dem Nachladen des DOM: gleiche Anzahl, neue Höhen) und DOM
+  const sig = [L.length, GEO.size, GEO.e0, !!STR.E.roads.aktiv].join('|');
+  if (sig === GLS.sig && GLS.acc === acc && GLS.brD === STR.brD && GLS.dm === GEO.dmFull) return;
   GLS.sig = sig;
   GLS.acc = acc;
+  GLS.brD = STR.brD;
+  GLS.dm = GEO.dmFull;
   glsBauen(L);
 }
 function glsBauen(L) {
@@ -143,7 +168,21 @@ function glsBauen(L) {
       }),
       // je Gleis ein paar Millimeter versetzt: an Weichen überlagern sich Bänder nicht flimmernd
       eps = (ri % 5) * 0.003,
-      Y = P.map((p) => glsHoehe(p[0], p[1], r.br, tram) + eps),
+      Y0 = P.map((p) => glsHoehe(p[0], p[1], r.br, tram)),
+      // längs glätten (gleitender Mittelwert ±2 Punkte): Gleise haben keine Sprünge
+      Y = Y0.map((_, i) => {
+        let a = 0,
+          c = 0;
+        for (let k = Math.max(0, i - 2); k <= Math.min(Y0.length - 1, i + 2); k++) {
+          a += Y0[k];
+          c++;
+        }
+        return a / c + eps;
+      }),
+      // Flankenfuß auf dem Gelände (liegt das Gleis per DOM höher als das weiche Raster, sitzt das Bett wie ein Damm)
+      Fu = P.map((p, i) =>
+        [-1.7, 1.7].map((o) => Math.min(Y[i] + 0.02, gh(p[0] + Nn[i][0] * o, p[1] + Nn[i][1] * o) - 0.05)),
+      ),
       // Querschnitt: [Abstand zur Achse, Höhe über Grund]; Straßenbahn nur ein flaches Band für die Schienen
       Q = tram
         ? [
@@ -156,7 +195,11 @@ function glsBauen(L) {
             [1.35, GLS.bett],
             [1.7, 0.02],
           ],
-      pt = (i, k) => [P[i][0] + Nn[i][0] * Q[k][0], Y[i] + Q[k][1], P[i][1] + Nn[i][1] * Q[k][0]];
+      pt = (i, k) => [
+        P[i][0] + Nn[i][0] * Q[k][0],
+        !tram && (k === 0 || k === Q.length - 1) ? Fu[i][k ? 1 : 0] : Y[i] + Q[k][1],
+        P[i][1] + Nn[i][1] * Q[k][0],
+      ];
     for (let i = 0; i + 1 < P.length; i++) {
       if (Math.abs(P[i][0]) > h || Math.abs(P[i][1]) > h) continue;
       const j = i + 1;

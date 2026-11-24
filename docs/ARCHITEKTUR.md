@@ -804,7 +804,10 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   als Bauteil in `G.rail` statt Strichlinie im Kartenbild – Schotterbett als Band mit Flanken (25 cm) in der
   aufgehellten Layer-Farbe „Bahn“, Schwellen (60 cm) und Schienen (Spurweite 1,435 m) im Shader über das Attribut `aGl`
   (Bogenlänge, Abstand zur Achse), aus der Ferne ohne Schwellen. Straßenbahn: nur Schienen auf Straßenhöhe. Gleise auf
-  Bahnbrücken (auch auf deren Verlängerung und Rampe) liegen auf dem Deck (`glsHoehe`, `GLS.decks`).
+  Bahnbrücken (auch auf deren Verlängerung und Rampe) liegen auf dem Deck (`glsHoehe`, `GLS.decks`). Am Boden kommt die
+  Gleishöhe aus dem DOM (`glsDom`: zweitkleinster von fünf Werten, nur bis 1,5 m vom Gelände – sonst Zug/Dach →
+  Gelände), längs geglättet; der Flankenfuß reicht bis auf das Gelände (Damm). Neu gebaut wird auch, wenn die Brücken
+  oder das DOM wechseln (`GLS.brD`, `GLS.dm`; Fahrzeuge ebenso über `CARS.brD`).
 - Fahrzeuge und Markierungen auf Brücken: `strDeckHoehe(x, z, u, br, art)` (100-strassenflaechen) gibt die Fahrbahnhöhe
   auf einem Deck – als Brücke gekennzeichnete Wege immer, andere nur längs auf Verlängerung und Rampe (querende
   Straßen darunter bleiben unten). `carsNet` rechnet die Höhen je Straße alle 2 m vor (`hz`), `carsPos` gibt `yD`;
