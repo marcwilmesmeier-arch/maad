@@ -10,6 +10,7 @@ const FBM = {
   breite: 0.12, // Strichbreite nach OSM-Regel (m) – gezeichnet wird eine einfache Linie
   spur: 3.25, // Spurbreite ohne Angabe (m)
   laed: '', // Ausschnitt, für den gerade geladen wird
+  frei: null, // beim Bau: Prüfung „nicht in einer Kreuzung“ für Längsstriche
   mat: null,
 };
 
@@ -137,6 +138,42 @@ function fbmStriche(t) {
     [-1, 1].forEach((sg) => R.push({ o: sg * (W / 2 - 0.25), str: 'voll', b: 0.15 }));
   return R;
 }
+/**
+ * Kreuzungen: Stützpunkte, an denen drei oder mehr Straßenäste zusammenkommen; Radius = halbe Breite der breitesten
+ * Straße dort + 2 m. Als Raster (20 m) zum schnellen Nachschlagen.
+ */
+function fbmKreuzungen(strassen) {
+  const M = new Map(),
+    k = (p) => Math.round(p[0] * 2) + ',' + Math.round(p[1] * 2);
+  strassen.forEach((w) => {
+    const n = fbmZahl(w.t.lanes) || (w.t.oneway === 'yes' ? 1 : 2),
+      W = parseFloat(w.t.width) > 2 ? parseFloat(w.t.width) : n * FBM.spur;
+    w.g.forEach((p, i) => {
+      const e = M.get(k(p)) || { p, aeste: 0, W: 0 };
+      e.aeste += i === 0 || i === w.g.length - 1 ? 1 : 2;
+      e.W = Math.max(e.W, W);
+      M.set(k(p), e);
+    });
+  });
+  const R = new Map();
+  M.forEach((e) => {
+    if (e.aeste < 3) return;
+    const r = e.W / 2 + 2,
+      gx = Math.floor(e.p[0] / 20),
+      gz = Math.floor(e.p[1] / 20);
+    for (let a = -1; a <= 1; a++)
+      for (let b = -1; b <= 1; b++) {
+        const kk = gx + a + ',' + (gz + b);
+        if (!R.has(kk)) R.set(kk, []);
+        R.get(kk).push({ p: e.p, r });
+      }
+  });
+  return R;
+}
+function fbmInKreuzung(R, p) {
+  const L = R.get(Math.floor(p[0] / 20) + ',' + Math.floor(p[1] / 20));
+  return !!L && L.some((e) => Math.hypot(e.p[0] - p[0], e.p[1] - p[1]) < e.r);
+}
 /** Linie l um o quer versetzen (rechts positiv in Zeichenrichtung – maad: x nach Osten, z nach Süden). */
 function fbmVersatz(l, o) {
   return l.map((p, i) => {
@@ -162,6 +199,7 @@ function fbmBauen(D) {
     // ein Strich a→c (einfache Linie, keine Fläche; b = Breite nach OSM, für Linien ohne Bedeutung), y aus fbmHoehe
     band = (a, c, b, br) => {
       if (!drin(a) || !drin(c)) return;
+      if (FBM.frei && !FBM.frei([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2])) return;
       const ya = fbmHoehe(a[0], a[1], br),
         yc = fbmHoehe(c[0], c[1], br);
       if (ya == null || yc == null) return;
@@ -247,16 +285,21 @@ function fbmBauen(D) {
         br: t.bridge && t.bridge !== 'no',
       };
     };
-  // 1) Striche entlang der Straßen
+  // 1) Striche entlang der Straßen – Leitlinien nach RMS: innerorts 3 m Strich / 6 m Lücke, Autobahn und
+  // Kraftfahrstraße 6 m / 12 m; in Kreuzungen keine Längsmarkierung
+  const knoten = fbmKreuzungen(strassen);
+  FBM.frei = (p) => !fbmInKreuzung(knoten, p);
   strassen.forEach((w) => {
-    const br = !!(w.t.bridge && w.t.bridge !== 'no');
+    const br = !!(w.t.bridge && w.t.bridge !== 'no'),
+      schnell = /^(motorway|trunk)/.test(w.t.highway) || w.t.motorroad === 'yes',
+      [an, aus] = schnell ? [6, 12] : [3, 6];
     fbmStriche(w.t).forEach((s) => {
       const l = fbmVersatz(w.g, s.o);
       if (s.str === 'voll') linie(l, s.b, 1, 0, br);
-      else if (s.mitte) linie(l, s.b, 3, 6, br);
-      else linie(l, s.b, 3, 6, br);
+      else linie(l, s.b, an, aus, br);
     });
   });
+  FBM.frei = null;
   // 2) Überwege als Knoten
   D.knoten.forEach((k) => {
     if (!istMarkiert(k.t)) return;

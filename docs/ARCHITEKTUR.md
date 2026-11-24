@@ -779,12 +779,16 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   läuft in die Straße hinein, bis es das Gelände erreicht (`strBrueckeKuerzen`, < 0,3 m), statt über der Rampe
   abzubrechen, und dann immer noch 10 m weiter auf Straßenhöhe; als Anschluss zählt auch eine Straße, die am Ende nur
   durchläuft. Ohne gefundene Straße oder ohne DOM läuft es gerade 10 m weiter und senkt sich auf das Gelände ab
-  (`strBrueckeGerade`). Wo das Deck auf dem Gelände liegt (< 0,5 m), keine Brüstung.
+  (`strBrueckeGerade`). Wo das Deck auf dem Gelände liegt (< 0,5 m), keine Brüstung. Mit DOM: Deckbreite je Seite aus
+  dem DOM (so weit die Oberfläche auf Fahrbahnhöhe bleibt, bis 15 m über die OSM-Breite, nur > 1,5 m über Gelände);
+  Brücken mit größerer Lücke als 6 m werden verbunden, wenn das DOM dazwischen durchgehend Fahrbahn zeigt; keine
+  Brüstung, wo das DOM neben dem Rand weiter Fahrbahn zeigt.
 - Fahrbahnmarkierungen (`02-geodaten/110-fahrbahnmarkierungen.js`, OSM-Schema `road_marking`): `fbmAktualisieren`
   (nach dem Bau der Straßenflächen in `strAktualisieren`) holt einmal je Ausschnitt über `overpassAbruf` Straßen mit
   Spurangaben, Überwege und `road_marking` (gesichert in `GEO.snap.fbm`); `fbmBauen` zeichnet nur einfache Striche
   (`LineSegments`, keine Flächen) 6 cm über der Straßenfläche bzw. auf dem Brückendeck: Spurtrennung nach `lanes`,
-  `lanes:forward/backward` (Mittellinie ab 4 Spuren durchgezogen, sonst gestrichelt 3/6 m), Randlinien an Autobahn und
+  `lanes:forward/backward` (Mittellinie ab 4 Spuren durchgezogen, sonst Leitlinie nach RMS: innerorts 3 m Strich /
+  6 m Lücke, Autobahn und Kraftfahrstraße 6/12 m; keine Längsstriche in Kreuzungen, `fbmKreuzungen`), Randlinien an Autobahn und
   Schnellstraße, keine bei `lane_markings=no`, ohne Spurangabe nur Haupt- und Bundesstraßen; Zebrastreifen und
   markierte Überwege (Knoten und `footway=crossing`); `road_marking`-Linien (`stroke=dashed` gestrichelt). Nur wo die
   Straßenmaske innen ist (nicht auf Grundstücken ohne Straßen). Symbole werden nicht gezeichnet. Das
