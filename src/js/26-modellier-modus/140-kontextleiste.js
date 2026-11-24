@@ -600,6 +600,50 @@ function skKlHoehe(v) {
   rr();
   SK.ver++;
 }
+/**
+ * Versatzfeld unter der Kontextleiste (Ziehen & Schieben gewählt): Wert in m eintippen, Enter oder „Übernehmen“
+ * wendet ihn auf die gewählten Flächen an (wie Zahl + Enter), Esc schließt. L = Lage { x, y } oder null = aus.
+ */
+function skZiehFeld(L) {
+  let f = document.getElementById('skzf');
+  if (!L) {
+    if (f) f.style.display = 'none';
+    return;
+  }
+  if (!f) {
+    f = document.createElement('div');
+    f.id = 'skzf';
+    f.innerHTML =
+      '<label for="skzfi">Versatz</label><input id="skzfi" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="0,00" aria-describedby="skzfm"><span id="skzfm">m</span><button type="button" title="Versatz auf die gewählten Flächen anwenden (Enter)">Übernehmen</button>';
+    mid.appendChild(f);
+    const i = f.querySelector('input'),
+      an = () => {
+        const v = parseFloat(i.value.replace(',', '.'));
+        if (!isFinite(v) || !v) {
+          i.select();
+          return;
+        }
+        SK.vcb = String(v);
+        SK.keysP({ key: 'Enter' });
+        SK.vcb = '';
+        i.value = '0,00';
+        i.blur();
+      };
+    i.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') an();
+      if (e.key === 'Escape') {
+        i.value = '0,00';
+        i.blur();
+      }
+    });
+    i.addEventListener('focus', () => i.select());
+    f.querySelector('button').addEventListener('click', an);
+  }
+  f.style.display = 'flex';
+  f.style.left = L.x + 'px';
+  f.style.top = L.y + 'px';
+}
 // Kontextleiste: Inhalt nur bei geänderter Auswahl neu, Lage jedes Bild (aus placeHc)
 function skKontext() {
   let d = document.getElementById('skkl');
@@ -622,6 +666,7 @@ function skKontext() {
   }
   if (!zeigen) {
     d.style.display = 'none';
+    skZiehFeld(null);
     return;
   }
   const t = skAuswTyp(),
@@ -698,6 +743,8 @@ function skKontext() {
   const lh = y0 - m.top - (ly + hh);
   d.style.setProperty('--lx', Math.max(14, Math.min(w - 14, cx - lx)) + 'px');
   d.style.setProperty('--lh', Math.max(0, lh) + 'px');
+  // ── Ziehen & Schieben gewählt: Versatz als Eingabefeld unter der Leiste
+  skZiehFeld(SK.tool === 'p' ? { x: lx, y: ly + hh + 6 } : null);
   d.classList.toggle('ohneleit', lh < 8);
   if (r.width === 0) d.style.display = 'none';
 }

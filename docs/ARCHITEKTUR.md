@@ -726,3 +726,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   als Grundstück gewählten Flurstücke (`P[].site`) ist das Abstandsfeld „außen“ – keine Fläche, keine Absenkung im
   Gelände; die Flächen enden gerade am Grundstücksrand. Die Kennung der Grundstücke steckt in der Signatur, ein
   Wechsel des Grundstücks baut die Flächen neu.
+- Modellieren, Versatzfeld (`skZiehFeld` in `26-modellier-modus/140-kontextleiste.js`, Stil `#skzf`): ist „Ziehen“
+  gewählt (`SK.tool === 'p'`), steht unter der Kontextleiste ein Eingabefeld für den Versatz in m; Enter oder
+  „Übernehmen“ wendet ihn wie Zahl + Enter auf die Auswahl an (`SK.keysP`), Esc setzt zurück.

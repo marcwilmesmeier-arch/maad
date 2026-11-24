@@ -3232,3 +3232,61 @@ summary:focus-visible {
     width: 78vw;
   }
 }
+
+/* Versatzfeld unter der Kontextleiste (Ziehen & Schieben): gleiches Glas wie die Leiste, Wert in Tabellenziffern */
+#skzf {
+  position: absolute;
+  z-index: 8;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 3px 3px 10px;
+  background: var(--gl);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gb);
+  border-radius: 12px;
+  box-shadow: var(--sh);
+  font-size: 12px;
+  color: var(--tx);
+  white-space: nowrap;
+}
+#skzf label {
+  color: var(--mu);
+}
+#skzf input {
+  width: 64px;
+  padding: 4px 6px;
+  border: 1px solid var(--ln);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--tx);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+#skzf input:focus-visible {
+  outline: 2px solid #f07a12;
+  outline-offset: 0;
+  border-color: transparent;
+}
+#skzf span {
+  color: var(--mu);
+  margin-right: 2px;
+}
+#skzf button {
+  border: 0;
+  border-radius: 9px;
+  padding: 5px 10px;
+  background: #5e7f92;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+#skzf button:hover {
+  background: #4f6d7e;
+}
+#skzf button:focus-visible {
+  outline: 2px solid #f07a12;
+  outline-offset: 1px;
+}
