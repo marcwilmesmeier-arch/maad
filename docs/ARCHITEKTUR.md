@@ -697,8 +697,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   2648 → 1182 Meshes, 3381 → 1915 Aufrufe je Bild). Gruppen und Teile mit `userData` (Öffnungen, Glas) bleiben.
 - Zwischenspeicher, solange `oeWelt(b)` dieselbe Liste liefert: `e._oeO` (`oeWandOeffnungen`), `b._oeDZ`
   (`oeDeckenZonen`, zusätzlich `b.fp`), `b._oeAP` (`oeAttikaPr`, zusätzlich `skSig` und Dachform).
-- `l2Sync` baut höchstens `L2ETAPPE` ms je Takt neu; der Rest folgt im nächsten Takt (`L2SIG` wird erst gesetzt,
-  wenn alles gebaut ist, alte Bauteile werden erst dann entfernt).
+- `l2Sync` baut alle geänderten Bauteile in einem Takt (ein Aufbau in Etappen war zu langsam und wurde verworfen).
 - Ruhebündel (`22-lod200-waende/170-ruhebuendel.js`, `l2Ruhe` in `drTick`): steht ein Gebäude still (Aufbau
   fertig, nichts gewählt/überfahren, keine Isolierung, Explosion, Schnitt oder LOD 300), werden die Meshes seiner
   Bauteile nach Material zu wenigen Meshes in `L2RB.g` zusammengefasst und die Einzel-Meshes ausgeblendet

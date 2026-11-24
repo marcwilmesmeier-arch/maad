@@ -349,8 +349,6 @@ function l2Unruhig(b) {
 function l2Einfach(b) {
   return l2Unruhig(b);
 }
-/** Zeit je Takt für den Neuaufbau von LOD-200-Bauteilen (ms); was nicht fertig wird, folgt im nächsten Takt. */
-const L2ETAPPE = 24;
 function l2Sync() {
   // Gebäude in Bewegung oder in Bearbeitung (l2Einfach) bleiben außen vor: ihre Bauteile werden entfernt und danach neu
   // aufgebaut
@@ -364,13 +362,7 @@ function l2Sync() {
   if (sig !== L2SIG) {
     const seen = new Set(),
       now = performance.now();
-    let n = 0,
-      // Aufbau in Etappen: höchstens L2ETAPPE ms Bauzeit je Takt, der Rest im nächsten (kein Hängen bei großen
-      // Projekten). Die Zeit zählt ab dem ersten gebauten Bauteil, mindestens eines je Takt – sonst käme der Aufbau
-      // nie voran, wenn schon die Ableitung länger dauert
-      fertig = true,
-      gebaut = 0,
-      tBau = 0;
+    let n = 0;
     bs.forEach((b) =>
       l2Els(b).els.forEach((e) => {
         const h = JSON.stringify([
@@ -393,11 +385,6 @@ function l2Sync() {
           old = L2I.get(e.id);
         seen.add(e.id);
         if (old && old.h === h) return;
-        if (gebaut && performance.now() - tBau > L2ETAPPE) {
-          fertig = false;
-          return;
-        }
-        if (!gebaut++) tBau = performance.now();
         if (old) {
           G.l2.remove(old.g);
           l2Dispose(old.g);
@@ -421,10 +408,6 @@ function l2Sync() {
         m.mat.opacity = 0;
       }),
     );
-    if (!fertig) {
-      l2Run();
-      return;
-    }
     L2SIG = sig;
     for (const [id, it] of L2I)
       if (!seen.has(id)) {
