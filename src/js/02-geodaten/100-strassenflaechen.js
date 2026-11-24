@@ -841,40 +841,13 @@ function strBrueckenNachbarn(K) {
     bb = K.map((B) => {
       const xs = B.P.map((p) => p[0]),
         zs = B.P.map((p) => p[1]),
-        r = B.h2 + 32;
+        r = B.h2 + 8;
       return [Math.min(...xs) - r, Math.min(...zs) - r, Math.max(...xs) + r, Math.max(...zs) + r];
     }),
     imBB = (ib, x, z) => x >= bb[ib][0] && x <= bb[ib][2] && z >= bb[ib][1] && z <= bb[ib][3],
-    // liegt (x, z) auf dem Deck von B (Abstand zur Achse kleiner als die Deckbreite dort + r)?
-    auf = (B, x, z, r) =>
-      B.P.some((q, j) => Math.hypot(q[0] - x, q[1] - z) < Math.max(B.o[0][j], B.o[1][j]) + r),
-    // zeigt das DOM an (x, z) Fahrbahn auf Höhe z (± 0,6 m)?
-    domDeck = (x, z, h) => {
-      const v = GEO.dmFull ? strDomAbs(x, z) : null;
-      return v != null && Math.abs(v - h) < 0.6;
-    },
-    med = (a) => a.slice().sort((x, y) => x - y)[a.length >> 1];
+    // liegt (x, z) auf dem Deck von B (Abstand zur Achse kleiner als die halbe Breite + r)?
+    auf = (B, x, z, r) => B.P.some((q) => Math.hypot(q[0] - x, q[1] - z) < B.h2 + r);
   K.forEach((A) => (A.dz = 0));
-  // Deckbreite aus dem DOM: je Seite so weit, wie die Oberfläche auf Fahrbahnhöhe bleibt (bis 15 m über die
-  // OSM-Breite hinaus; die Breite aus den Kartendaten ist oft zu klein geschätzt), längs geglättet; nur wo die Brücke
-  // mehr als 1,5 m über dem Gelände liegt
-  if (GEO.dmFull)
-    K.forEach((A) =>
-      [0, 1].forEach((sd) => {
-        const g = sd ? 1 : -1,
-          roh = A.P.map((p, i) => {
-            let k = 0;
-            // nur, wo das Deck deutlich über dem Gelände liegt (an den Enden wäre die Straße daneben gleich hoch)
-            while (k < 15 && A.Z[i] - A.G0[i] > 1.5) {
-              const o = A.h2 + k + 0.5;
-              if (!domDeck(p[0] + A.Nn[i][0] * g * o, p[1] + A.Nn[i][1] * g * o, A.Z[i])) break;
-              k++;
-            }
-            return A.h2 + k;
-          });
-        A.o[sd] = roh.map((_, i) => med(roh.slice(Math.max(0, i - 3), i + 4)));
-      }),
-    );
   K.forEach((A, ia) =>
     A.P.forEach((p, i) => {
       const u = [A.Nn[i][1], -A.Nn[i][0]];
@@ -894,22 +867,10 @@ function strBrueckenNachbarn(K) {
           d = v[0] * A.Nn[i][0] + v[1] * A.Nn[i][1],
           laengs = v[0] * u[0] + v[1] * u[1],
           cw = Math.abs(A.Nn[i][0] * B.Nn[bj][0] + A.Nn[i][1] * B.Nn[bj][1]);
-        if (Math.abs(laengs) > 2.5 + Math.abs(d) * 0.8 || Math.abs(d) > A.h2 + B.h2 + 30) return;
+        if (Math.abs(laengs) > 2.5 + Math.abs(d) * 0.8 || Math.abs(d) > A.h2 + B.h2 + 6) return;
         if (cw < 0.75) return; // über ~40° auseinander
-        // Lücke bis 6 m immer; größer nur, wenn das DOM dazwischen durchgehend Fahrbahn auf gleicher Höhe zeigt
-        if (Math.abs(d) > A.h2 + B.h2 + 6) {
-          const zm = (A.Z[i] + B.Z[bj]) / 2,
-            gs = d > 0 ? 1 : -1;
-          if (
-            ![0.25, 0.5, 0.75].every((f) => {
-              const o = gs * (A.h2 + (Math.abs(d) - A.h2 - B.h2) * f);
-              return domDeck(p[0] + A.Nn[i][0] * o, p[1] + A.Nn[i][1] * o, zm);
-            })
-          )
-            return;
-        }
         const sd = d > 0 ? 1 : 0,
-          o = Math.max(A.o[sd][i], Math.abs(d) - B.h2 / cw + 0.8);
+          o = Math.max(A.h2, Math.abs(d) - B.h2 / cw + 0.8);
         A.o[sd][i] = A.nb[sd][i] ? Math.max(A.o[sd][i], o) : o;
         A.nb[sd][i] = true;
         Zn[ia][i].push(B.Z[bj]);
@@ -938,11 +899,7 @@ function strBrueckenNachbarn(K) {
         const g = (sd ? 1 : -1) * (A.o[sd][i] + 0.5),
           x = p[0] + A.Nn[i][0] * g,
           z = p[1] + A.Nn[i][1] * g;
-        A.nb[sd][i] =
-          K.some((B, ib) => ib !== ia && imBB(ib, x, z) && auf(B, x, z, 0.3)) ||
-          // das DOM zeigt neben dem Rand weiter Fahrbahn: die Brücke endet hier nicht
-          (domDeck(x + A.Nn[i][0] * (sd ? 1 : -1), z + A.Nn[i][1] * (sd ? 1 : -1), A.Z[i]) &&
-            domDeck(x + A.Nn[i][0] * (sd ? 2.5 : -2.5), z + A.Nn[i][1] * (sd ? 2.5 : -2.5), A.Z[i]));
+        A.nb[sd][i] = K.some((B, ib) => ib !== ia && imBB(ib, x, z) && auf(B, x, z, 0.3));
       }),
     );
     // keine Brüstung, wo das Deck auf dem Gelände liegt (Verlängerung in die Straße)
