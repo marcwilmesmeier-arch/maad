@@ -768,7 +768,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   alle 25 m über 3,5 m Höhe (`STR_BR`). Gelände, Wasser und kreuzende Straßen darunter bleiben unverändert. Nicht
   gekennzeichnete Straßen über Wasser behalten die bisherige Lösung (DOM-Höhenpunkte).
 - Brücken, Feinschliff: `strBrueckenKetten` schneidet Brückenachsen am Ausschnitt ab und verbindet OSM-Teilstücke zu
-  Ketten; die Fahrbahnhöhe kommt aus dem DOM (gleitender Median, plausibel geprüft), sonst linear zwischen den
-  Kettenenden, geglättet. `strBrueckenGelaende` (beim Laden in `geoRun` nach `gridBuild`) senkt das Gelände unter
-  Brücken auf die Höhe seitlich der Brücke ab, wo das DGM den Damm durchinterpoliert (Unterschied > 2,5 m) – die
-  Straße darunter läuft frei durch.
+  Ketten. Fahrbahnhöhe (`strBrueckeZ`): Grundlage linear zwischen den Geländehöhen der Kettenenden (Planimetric); wo
+  das DOM die Fahrbahn zeigt, Gelände + (DOM − DGM) am selben Bildpunkt (`strDomRel`, wie das Kronenmodell der Bäume
+  – Höhenbezug und Lage heben sich auf), Median quer über die Fahrbahn und gleitend ±10 m längs, geglättet, an den
+  Enden auf das Gelände übergeblendet. Das Gelände unter Brücken bleibt das DGM. Farben über `strFarbe`: Fahrbahn
+  (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.

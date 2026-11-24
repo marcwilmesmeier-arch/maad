@@ -534,10 +534,33 @@ function strFarbe(E) {
   const f = S.lc[E.lc] || '#a8a8a8';
   E.mat.color.set(f);
   E.matK.color.set(shade(f, 0.82));
+  // Brückenfahrbahn wie die Straße, Brüstung und Tragwerk in Geländefarbe
   if (E.matB) E.matB.color.set(f);
+  if (E.matBW) E.matBW.color.set(S.lc.terrain || '#d4d2cc');
 }
-/** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) an (x, z) in maad-Höhen, sonst null. */
+/**
+ * Höhe der Oberfläche über dem Gelände an (x, z): DOM minus DGM am selben Bildpunkt – wie das Kronenmodell der
+ * Bäume (canopyBasis). Beide Raster kommen aus demselben Abruf, Höhenbezug und Lage heben sich auf. Sonst null.
+ */
+function strDomRel(x, z) {
+  const D = GEO.dmFull,
+    G = GEO.dgmFull;
+  if (!D || D.fail || !D.data || !D.res || !G || G.fail || !G.data || G.w !== D.w || G.h !== D.h) return null;
+  const [E, N] = ll2utm(GEO.lon + x / GEO.kx, GEO.lat - z / 110574, D.zone || 32),
+    i = Math.floor((E - D.minx) / D.res),
+    j = Math.floor((D.maxy - N) / (D.resY || D.res));
+  if (i < 0 || j < 0 || i >= D.w || j >= D.h) return null;
+  const a = D.data[j * D.w + i],
+    b = G.data[j * D.w + i];
+  return a > -400 && a < 4500 && b > -400 && b < 4500 ? a - b : null;
+}
+/**
+ * Höhe aus dem Oberflächenmodell (DOM, mit Brücken) an (x, z) in maad-Höhen, sonst null. Bevorzugt Gelände + (DOM −
+ * DGM), damit sie zum maad-Gelände passt; der absolute DOM-Wert nur ohne DGM aus demselben Abruf.
+ */
 function strDomH(x, z) {
+  const r = strDomRel(x, z);
+  if (r != null) return gh(x, z) + r;
   const D = GEO.dmFull;
   if (!D || D.fail || !D.data || !D.res) return null;
   const [E, N] = ll2utm(GEO.lon + x / GEO.kx, GEO.lat - z / 110574, D.zone || 32),
@@ -652,88 +675,6 @@ function strBrueckenKetten(L, H) {
   }
   return K;
 }
-/**
- * Gelände unter Brücken freimachen: Das DGM läuft unter Überführungen oft als Damm durch (die Straße darunter läge
- * sonst im Erdkörper). Je Brückenpunkt wird das Gelände seitlich der Brücke (quer zur Achse, 3–20 m neben der
- * Fahrbahn) abgetastet; liegt es mehr als 2,5 m tiefer als das DGM unter der Brücke, wird das Gelände unter der
- * Brückenfläche auf diese Höhe abgesenkt (am Rand über 3 m übergeblendet). Ändert GEO.grid; Ergebnis: Anzahl Punkte.
- */
-function strBrueckenGelaende(acc) {
-  const g = GEO.grid,
-    N = GEO.N;
-  if (!g || !N || !acc || !acc.line) return 0;
-  const H = GEO.size / 2,
-    c = GEO.size / N,
-    L = acc.line,
-    K = strBrueckenKetten(
-      (L.roads || []).concat(L.paths || [], L.cycle || []).filter((r) => r.br),
-      H,
-    ),
-    tief = new Map(); // Rasterindex → neue Höhe
-  let n = 0;
-  K.forEach(({ l, w }) => {
-    const P = [];
-    for (let k = 0; k + 1 < l.length; k++) {
-      const A = l[k],
-        B = l[k + 1],
-        m = Math.max(1, Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 2));
-      for (let q = 0; q < m; q++) P.push([A[0] + ((B[0] - A[0]) * q) / m, A[1] + ((B[1] - A[1]) * q) / m]);
-    }
-    P.push(l[l.length - 1].slice());
-    if (P.length < 5) return;
-    const Nn = P.map((p, i) => {
-        const a = P[Math.max(0, i - 1)],
-          e = P[Math.min(P.length - 1, i + 1)],
-          d = Math.hypot(e[0] - a[0], e[1] - a[1]) || 1;
-        return [-(e[1] - a[1]) / d, (e[0] - a[0]) / d];
-      }),
-      seite = P.map((p, i) => {
-        let m = Infinity;
-        for (const sg of [-1, 1])
-          for (let o = w / 2 + 3; o <= w / 2 + 20; o += 2) {
-            const q = [p[0] + Nn[i][0] * o * sg, p[1] + Nn[i][1] * o * sg];
-            if (Math.abs(q[0]) < H && Math.abs(q[1]) < H) m = Math.min(m, gridH(q[0], q[1]));
-          }
-        return m;
-      }),
-      r0 = w / 2 + 1,
-      r1 = r0 + 3;
-    for (let i = 2; i < P.length - 2; i++) {
-      // geglättet (±2 Punkte), damit die Absenkung nicht springt
-      let s = 0,
-        z = 0;
-      for (let k = i - 2; k <= i + 2; k++)
-        if (isFinite(seite[k])) {
-          s += seite[k];
-          z++;
-        }
-      if (!z) continue;
-      const u = s / z,
-        p = P[i];
-      if (gridH(p[0], p[1]) - u < 2.5) continue;
-      n++;
-      const i0 = Math.max(0, Math.floor((p[0] - r1 + H) / c)),
-        i1 = Math.min(N, Math.ceil((p[0] + r1 + H) / c)),
-        j0 = Math.max(0, Math.floor((p[1] - r1 + H) / c)),
-        j1 = Math.min(N, Math.ceil((p[1] + r1 + H) / c));
-      for (let jj = j0; jj <= j1; jj++)
-        for (let ii = i0; ii <= i1; ii++) {
-          const x = -H + ii * c,
-            zz = -H + jj * c,
-            d = Math.abs((x - p[0]) * Nn[i][0] + (zz - p[1]) * Nn[i][1]),
-            entlang = Math.abs((x - p[0]) * Nn[i][1] - (zz - p[1]) * Nn[i][0]);
-          if (d > r1 || entlang > 1.2) continue;
-          const k = jj * (N + 1) + ii,
-            alt = g[k],
-            f = d <= r0 ? 1 : 1 - (d - r0) / (r1 - r0),
-            h = alt + (Math.min(alt, u) - alt) * f;
-          if (h < (tief.has(k) ? tief.get(k) : alt)) tief.set(k, h);
-        }
-    }
-  });
-  tief.forEach((h, k) => (g[k] = h));
-  return n;
-}
 /** Stärke der Fahrbahnplatte einer Brücke (m), Höhe der Brüstung (m), Abstand der Pfeiler (m). */
 const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
 /**
@@ -746,7 +687,7 @@ function strBrueckenBau(E, bruecken, mk) {
   if (!bruecken.length) return;
   if (!E.matB) {
     E.matB = new T.MeshLambertMaterial({ side: T.DoubleSide });
-    E.matBW = new T.MeshLambertMaterial({ color: new T.Color('#d4d2cc'), side: T.DoubleSide });
+    E.matBW = new T.MeshLambertMaterial({ side: T.DoubleSide });
   }
   strFarbe(E);
   const t = E.tief,
@@ -767,34 +708,8 @@ function strBrueckenBau(E, bruecken, mk) {
     const S0 = [0];
     for (let i = 1; i < P.length; i++)
       S0.push(S0[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
-    const Lg = S0[S0.length - 1] || 1,
-      ha = gh(P[0][0], P[0][1]),
-      hb = gh(P[P.length - 1][0], P[P.length - 1][1]),
-      G0 = P.map((p) => gh(p[0], p[1])),
-      lin = S0.map((s) => ha + ((hb - ha) * s) / Lg),
-      // Höhe der Fahrbahn: aus dem Oberflächenmodell (enthält die Brücke) als gleitender Median über ±4 Punkte (±8 m),
-      // nur wo plausibel (über dem Gelände, nicht weit über der Linie zwischen den Enden – Bäume, Masten); sonst die
-      // Linie zwischen den Enden der Kette
-      dom = P.map((p) => strDomH(p[0], p[1])),
-      Z0 = P.map((p, i) => {
-        const v = [];
-        for (let k = Math.max(0, i - 4); k <= Math.min(P.length - 1, i + 4); k++)
-          if (dom[k] != null && dom[k] > G0[k] + 0.3 && dom[k] < lin[k] + 12) v.push(dom[k]);
-        if (v.length < 3) return Math.max(lin[i], G0[i] + 0.5);
-        v.sort((a, c) => a - c);
-        return v[v.length >> 1];
-      }),
-      // glätten (gleitender Mittelwert ±3 Punkte), Enden auf das Gelände (Anschluss an die Straße)
-      Z = Z0.map((z, i) => {
-        if (i === 0 || i === P.length - 1) return (i ? hb : ha) - t;
-        let s = 0,
-          n = 0;
-        for (let k = Math.max(0, i - 3); k <= Math.min(P.length - 1, i + 3); k++) {
-          s += Z0[k];
-          n++;
-        }
-        return Math.max(s / n, G0[i] + 0.3) - t;
-      }),
+    const G0 = P.map((p) => gh(p[0], p[1])),
+      Z = strBrueckeZ(P, S0, G0, w).map((z) => z - t),
       // Querrichtung je Punkt (Mittel der angrenzenden Abschnitte)
       Nn = P.map((p, i) => {
         const a = P[Math.max(0, i - 1)],
@@ -811,7 +726,7 @@ function strBrueckenBau(E, bruecken, mk) {
     for (let i = 0; i + 1 < P.length; i++) {
       const j = i + 1;
       // Fahrbahn
-      quad(oben, at(i, -h2, 0), at(j, -h2, 0), at(j, h2, 0), at(i, h2, 0));
+      quad(oben, at(i, h2, 0), at(j, h2, 0), at(j, -h2, 0), at(i, -h2, 0));
       // Unterseite der Platte
       quad(bau, at(i, -h2 - bw, -pl), at(j, -h2 - bw, -pl), at(j, h2 + bw, -pl), at(i, h2 + bw, -pl));
       // Brüstung beidseitig (außen bis Unterkante Platte, innen ab Fahrbahn) und Abdeckung
@@ -850,8 +765,65 @@ function strBrueckenBau(E, bruecken, mk) {
     ge.computeVertexNormals();
     return ge;
   };
-  if (oben.length) mk(geo(oben), E.matB).castShadow = true;
+  // Fahrbahn ohne Schatten (die Brüstungen würden sie dunkler färben als die Straße); den Schatten wirft die Platte
+  if (oben.length) mk(geo(oben), E.matB).receiveShadow = false;
   if (bau.length) mk(geo(bau), E.matBW).castShadow = true;
+}
+/**
+ * Fahrbahnhöhe einer Brücke je Punkt (P alle ~2 m, S0 Bogenlänge, G0 Gelände, w Breite). Grundlage wie bei Planimetric:
+ * linear zwischen den Geländehöhen an den Enden der ganzen Brücke (dort stößt sie an die Straße). Wo das DOM die
+ * Fahrbahn zeigt, gilt seine Höhe über Gelände (DOM − DGM, wie bei den Bäumen): je Punkt der Median quer über die
+ * Fahrbahn (die OSM-Achse liegt oft etwas neben dem Deck), längs der gleitende Median über ±10 m (Bäume, Fahrzeuge,
+ * Lücken fallen heraus), dann geglättet; zu den Enden hin auf die Geländehöhe übergeblendet. Ohne DOM: linear.
+ */
+function strBrueckeZ(P, S0, G0, w) {
+  const n = P.length,
+    Lg = S0[n - 1] || 1,
+    ha = G0[0],
+    hb = G0[n - 1],
+    lin = S0.map((s) => ha + ((hb - ha) * s) / Lg),
+    Nn = P.map((p, i) => {
+      const a = P[Math.max(0, i - 1)],
+        c = P[Math.min(n - 1, i + 1)],
+        L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+      return [-(c[1] - a[1]) / L, (c[0] - a[0]) / L];
+    }),
+    med = (a) => {
+      const b = a.slice().sort((u, v) => u - v);
+      return b[b.length >> 1];
+    },
+    q = Math.min(w / 3, 4),
+    roh = P.map((p, i) => {
+      const v = [-q, 0, q]
+        .map((o) => strDomRel(p[0] + Nn[i][0] * o, p[1] + Nn[i][1] * o))
+        .filter((r) => r != null && r > -2 && r < 40)
+        .map((r) => G0[i] + r);
+      return v.length >= 2 ? med(v) : null;
+    }),
+    dom = roh.map((_, i) => {
+      const v = [];
+      for (let k = Math.max(0, i - 5); k <= Math.min(n - 1, i + 5); k++) if (roh[k] != null) v.push(roh[k]);
+      const h = v.length >= 4 ? med(v) : null;
+      // nur Werte, die zur Brücke passen (nicht weit unter dem Gelände, nicht weit über der Verbindung der Enden)
+      return h != null && h > G0[i] - 0.5 && h < Math.max(lin[i], G0[i]) + 15 ? h : null;
+    }),
+    Z0 = dom.map((h, i) => (h != null ? h : Math.max(lin[i], G0[i] + 0.5))),
+    Z = Z0.map((_, i) => {
+      let s = 0,
+        c = 0;
+      for (let k = Math.max(0, i - 3); k <= Math.min(n - 1, i + 3); k++) {
+        s += Z0[k];
+        c++;
+      }
+      return s / c;
+    });
+  // Enden: über 10 m auf die Geländehöhe am Anschluss überblenden
+  return Z.map((z, i) => {
+    const e = Math.min(S0[i], Lg - S0[i]),
+      a = Math.min(1, e / 10),
+      h = i === 0 ? ha : i === n - 1 ? hb : z;
+    return h * a + (i < n / 2 ? ha : hb) * (1 - a);
+  });
 }
 /** Brückenhöhe an (x, z): nächste Probe über Wasser (bis 12 m), sonst null. */
 function strBrueckeH(B, a, b) {

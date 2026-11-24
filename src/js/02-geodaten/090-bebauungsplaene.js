@@ -598,13 +598,6 @@ async function geoRun(lon, lat, size, label, snap) {
       GEO.e0 = snap.e0;
       GHf = gridH;
     } else gridBuild(E);
-    // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Gelände unter Brücken frei (DGM interpoliert dort oft
-    // den Damm durch)
-    try {
-      strBrueckenGelaende(acc);
-    } catch (e) {
-      logErr(e, 'geoRun');
-    }
     rebuildTerrain();
     clipParcels(AK.list, size / 2).forEach((a) => AL.push(a));
     if ((!snap || GEO.partFl) && !AL.length && S.wmsVec === true && GEO.wmsMask)
