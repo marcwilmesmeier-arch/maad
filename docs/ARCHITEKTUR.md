@@ -738,3 +738,5 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Wandende ein – sonst teilte die Linie die Fläche nicht und es entstünde keine Wand. In `endV` (LOD-200-Ableitung)
   werden Knoten mit drei oder mehr Wandenden aufgeräumt: zwei Wände in einer Flucht laufen durch, die übrigen stoßen
   stumpf an deren Seitenfläche (T-Stoß).
+- Lage der Innenwand zur gezeichneten Linie (links, Mitte, rechts; `D.al[gid]`, Kontextleiste im Grundriss) gilt
+  jetzt auch in LOD 200, nicht nur in LOD 300. Außenwände bauen sich weiter von der Gebäudekubatur nach innen auf.

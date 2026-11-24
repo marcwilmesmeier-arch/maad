@@ -525,7 +525,8 @@ function l2GeoStufe1(b) {
     // Innenwände: Ausrichtung zur Zeichenlinie; Anschlüsse: Gehrung (Ecke), T-Anschluss an die nächste Außenkante der durchgehenden Wand, Außenwand an ihrer Innenseite
     const IW = runs.filter((r) => r.kind !== 'AW');
     IW.forEach((r) => {
-      const al = C ? 'm' : D.al[r.gid] || 'm',
+      // Lage zur gezeichneten Linie (links, Mitte, rechts) wie in Revit – in LOD 200 und LOD 300
+      const al = D.al[r.gid] || 'm',
         s_ = al === 'l' ? 1 : al === 'r' ? -1 : 0,
         nl = [r.uz, -r.ux];
       r.nx = -r.kz;

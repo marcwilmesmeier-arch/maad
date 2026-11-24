@@ -94,9 +94,7 @@ function l2Bar(force) {
               )
               .join('')}</span>`
           : `<span class="mu" title="Außenwände bauen sich immer von der Gebäudekubatur nach innen auf">⟵ von außen nach innen</span>`
-        : !l23()
-          ? `<span class="mu">⟷ mittig auf der Trennlinie</span>`
-          : `<span class="seg" title="Lage der Wand zur Zeichenlinie (Blickrichtung der Linie)">${['l', 'm', 'r'].map((a) => `<button class="${a === al ? 'on' : ''}" onclick="GR.l2.al('${a}')">${L2AL[a]}</button>`).join('')}</span>`
+        : `<span class="seg" title="Lage der Wand zur gezeichneten Linie (in Zeichenrichtung gesehen)">${['l', 'm', 'r'].map((a) => `<button class="${a === al ? 'on' : ''}" onclick="GR.l2.al('${a}')">${L2AL[a]}</button>`).join('')}</span>`
     }
 <span class="sp"></span><span class="mu">${l2f(el.len)} m${l23() ? ' · KG ' + el.T.kg : ''}</span>${S.l2.pt && S.l2.pt.g === el.gid ? `<span class="sp"></span><button title="Endpunkt bis zur nächsten Wand dehnen bzw. an der Kreuzung stutzen" onclick="GR.l2.ptExt()">⇥ Punkt dehnen/stutzen</button>` : ''}${!AW && el.gid ? `<button title="Wand löschen (Entf)" onclick="GR.delSel()">✕</button>` : ''}`;
   }
