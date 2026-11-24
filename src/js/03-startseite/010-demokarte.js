@@ -321,7 +321,7 @@ async function projVorschau() {
     if (back) drSet(back);
   }
 }
-/** bild: Vorschaubild neu (beim Öffnen der Projektübersicht, beim Verlassen); sonst nur, wenn noch keines da ist. */
+/** bild: Vorschaubild neu (beim Öffnen der Projektübersicht, beim Verlassen); sonst bleibt das vorhandene. */
 async function projSave(bild) {
   const p = S.project;
   if (!p || !p.id || !GEO.snap || !S.geo) return;
@@ -331,7 +331,9 @@ async function projSave(bild) {
     if (!server && !(await idbGet('snap:' + p.id))) await idbSet('snap:' + p.id, await snapPack());
     const old = server ? null : await idbGet('proj:' + p.id);
     let thumb = (old && old.thumb) || (server && p._thumb) || null;
-    if (bild || !thumb)
+    // Vorschaubild nur beim Verlassen bzw. Öffnen der Projektübersicht: es schaltet kurz auf „Schattiert“ um – beim
+    // automatischen Speichern während der Arbeit sähe man das als Farbblitz und Hänger
+    if (bild)
       try {
         thumb = await projVorschau();
         p._thumb = thumb;
