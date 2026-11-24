@@ -523,7 +523,13 @@ function ctxCollect(tiles) {
           !/^(funicular|monorail|magnetic_levitation)$/.test(s || '')
         ) {
           const rw = s === 'tram' || s === 'light_rail' || s === 'narrow_gauge' ? 2.6 : 3.4;
-          for (const r of f.rings) acc.line.rail.push({ l: cv(r, R.ext), w: rw });
+          for (const r of f.rings)
+            acc.line.rail.push({
+              l: cv(r, R.ext),
+              w: rw,
+              br: p.brunnel === 'bridge' ? 1 : 0,
+              ly: +p.layer || 0,
+            });
           continue;
         }
         if (

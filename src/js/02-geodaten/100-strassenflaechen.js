@@ -539,6 +539,7 @@ function strFarbe(E) {
   // Brückenfahrbahn wie die Straße, Brüstung und Tragwerk in Geländefarbe
   if (E.matB) E.matB.color.set(f);
   if (E.matBW) E.matBW.color.set(S.lc.terrain || '#d4d2cc');
+  if (E.matR) E.matR.color.set(S.lc.rail || '#9a9893');
 }
 /** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) am Bildpunkt (x, z) in maad-Höhen (wie das Gelände: − e0). */
 function strDomAbs(x, z) {
@@ -852,7 +853,8 @@ function strBrueckenNachbarn(K) {
     A.P.forEach((p, i) => {
       const u = [A.Nn[i][1], -A.Nn[i][0]];
       K.forEach((B, ib) => {
-        if (ib === ia || !imBB(ib, p[0], p[1])) return;
+        // Bahn- und Straßenbrücken sind getrennte Bauwerke
+        if (ib === ia || (A.k === 'rail') !== (B.k === 'rail') || !imBB(ib, p[0], p[1])) return;
         let bj = -1,
           bd = 1e9;
         B.P.forEach((q, j) => {
@@ -883,13 +885,26 @@ function strBrueckenNachbarn(K) {
     const n = A.P.length;
     // fast ganz auf einer anderen (breiteren) Brücke: entfällt
     const drauf = A.P.filter((p) =>
-      K.some((B, ib) => ib !== ia && B.w >= A.w && imBB(ib, p[0], p[1]) && auf(B, p[0], p[1], -0.3)),
+      K.some(
+        (B, ib) =>
+          ib !== ia &&
+          (A.k === 'rail') === (B.k === 'rail') &&
+          B.w >= A.w &&
+          imBB(ib, p[0], p[1]) &&
+          auf(B, p[0], p[1], -0.3),
+      ),
     ).length;
     A.weg = drauf >= n * 0.8;
     // Enden auf einer anderen Brücke: keine Stirnplatte
     A.kappe = [0, n - 1].map(
       (i) =>
-        !K.some((B, ib) => ib !== ia && imBB(ib, A.P[i][0], A.P[i][1]) && auf(B, A.P[i][0], A.P[i][1], 0.5)),
+        !K.some(
+          (B, ib) =>
+            ib !== ia &&
+            (A.k === 'rail') === (B.k === 'rail') &&
+            imBB(ib, A.P[i][0], A.P[i][1]) &&
+            auf(B, A.P[i][0], A.P[i][1], 0.5),
+        ),
     );
     // Brüstung nur am freien Rand: liegt direkt außerhalb des Rands (0,5 m) eine andere Brücke – in beliebigem
     // Winkel, etwa eine abzweigende Rampe oder ein querendes Stück –, entfällt sie dort
@@ -899,7 +914,10 @@ function strBrueckenNachbarn(K) {
         const g = (sd ? 1 : -1) * (A.o[sd][i] + 0.5),
           x = p[0] + A.Nn[i][0] * g,
           z = p[1] + A.Nn[i][1] * g;
-        A.nb[sd][i] = K.some((B, ib) => ib !== ia && imBB(ib, x, z) && auf(B, x, z, 0.3));
+        A.nb[sd][i] = K.some(
+          (B, ib) =>
+            ib !== ia && (A.k === 'rail') === (B.k === 'rail') && imBB(ib, x, z) && auf(B, x, z, 0.3),
+        );
       }),
     );
     // keine Brüstung, wo das Deck auf dem Gelände liegt (Verlängerung in die Straße)
@@ -936,7 +954,12 @@ function strBrueckenAuflager(K) {
       let best = null,
         bd = 1e9;
       K.forEach((B) => {
-        if (B === A || B.S0[B.S0.length - 1] < A.S0[A.S0.length - 1] * 0.5) return;
+        if (
+          B === A ||
+          (A.k === 'rail') !== (B.k === 'rail') ||
+          B.S0[B.S0.length - 1] < A.S0[A.S0.length - 1] * 0.5
+        )
+          return;
         B.P.forEach((q, j) => {
           const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
           if (d < B.h2 + 1.5 && d < bd) {
@@ -981,18 +1004,27 @@ async function strBrueckenDomNachladen() {
 function strBrueckenAlle() {
   const acc = GEO.acc,
     L = (acc && acc.line) || {},
-    quellen = { roads: L.roads || [], paths: (L.paths || []).concat(L.cycle || []) },
-    sig = [GEO.size, GEO.e0, !!GEO.dmFull, quellen.roads.length, quellen.paths.length].join('|');
+    quellen = { roads: L.roads || [], paths: (L.paths || []).concat(L.cycle || []), rail: L.rail || [] },
+    sig = [
+      GEO.size,
+      GEO.e0,
+      !!GEO.dmFull,
+      quellen.roads.length,
+      quellen.paths.length,
+      quellen.rail.length,
+    ].join('|');
   if (STR.brD && STR.brD.acc === acc && STR.brD.sig === sig) return STR.brD.K;
   const K = [],
-    strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br);
+    strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br),
+    gleise = quellen.rail.filter((r) => !r.br);
   for (const k in quellen)
     strBrueckenKetten(
       quellen[k].filter((r) => r.br),
       GEO.size / 2,
     ).forEach((c) => {
       // verlängert nur mit DOM (ohne Messung ist nicht bekannt, wo das Deck das Gelände erreicht)
-      const v = GEO.dmFull ? strBrueckeVerlaengern(c.l, strassen) : { l: c.l },
+      // (Bahnbrücken entlang der anschließenden Gleise)
+      const v = GEO.dmFull ? strBrueckeVerlaengern(c.l, k === 'rail' ? gleise : strassen) : { l: c.l },
         d = strBrueckeLinie(v.l, c.w, v.a0, v.b0);
       if (d) K.push(Object.assign(d, { k }));
     });
@@ -1011,22 +1043,26 @@ const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
  */
 function strBrueckenBau(E, mk) {
   const k = Object.keys(STR.E).find((q) => STR.E[q] === E),
-    bruecken = strBrueckenAlle().filter((d) => d.k === k);
+    // die Straßenebene baut auch die Bahnbrücken (Gleise haben keine eigene Flächenebene)
+    bruecken = strBrueckenAlle().filter((d) => d.k === k || (k === 'roads' && d.k === 'rail'));
   if (!bruecken.length) return;
   if (!E.matB) {
     E.matB = new T.MeshLambertMaterial({ side: T.DoubleSide });
     E.matBW = new T.MeshLambertMaterial({ side: T.DoubleSide });
+    E.matR = new T.MeshLambertMaterial({ side: T.DoubleSide });
   }
   strFarbe(E);
   const t = E.tief,
     oben = [],
+    obenR = [],
     bau = [],
     quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d),
     pl = STR_BR.platte,
     br = STR_BR.bruestung,
     bw = 0.25;
-  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe }) => {
+  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe, k: art }) => {
     if (weg) return;
+    const deck = art === 'rail' ? obenR : oben;
     const at = (i, x, dy) => [P[i][0] + Nn[i][0] * x, Z[i] - t + (dz || 0) + dy, P[i][1] + Nn[i][1] * x],
       // Randabstände je Seite: Fahrbahnrand und Außenkante (mit Brüstung)
       rand = (i, sd) => (sd ? 1 : -1) * o[sd][i],
@@ -1035,7 +1071,7 @@ function strBrueckenBau(E, mk) {
     for (let i = 0; i + 1 < P.length; i++) {
       const j = i + 1;
       // Fahrbahn
-      quad(oben, at(i, rand(i, 1), 0), at(j, rand(j, 1), 0), at(j, rand(j, 0), 0), at(i, rand(i, 0), 0));
+      quad(deck, at(i, rand(i, 1), 0), at(j, rand(j, 1), 0), at(j, rand(j, 0), 0), at(i, rand(i, 0), 0));
       // Unterseite der Platte
       quad(
         bau,
@@ -1092,8 +1128,9 @@ function strBrueckenBau(E, mk) {
     ge.computeVertexNormals();
     return ge;
   };
-  // Fahrbahn ohne Schatten (die Brüstungen würden sie dunkler färben als die Straße); den Schatten wirft die Platte
-  if (oben.length) mk(geo(oben), E.matB).receiveShadow = false;
+  // Fahrbahn (Straße) und Gleisbett (Bahn) empfangen Schatten wie die Straßenflächen; den Schatten wirft die Platte
+  if (oben.length) mk(geo(oben), E.matB);
+  if (obenR.length) mk(geo(obenR), E.matR);
   if (bau.length) mk(geo(bau), E.matBW).castShadow = true;
 }
 /**

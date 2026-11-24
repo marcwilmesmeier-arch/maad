@@ -620,7 +620,8 @@ function ctxPaint(acc) {
   line('cycle', acc.line.cycle, S.lc.cycle, 0);
   {
     const rc = S.lc.rail || '#9a9893',
-      rr = acc.line.rail || [];
+      // als Brücke gekennzeichnete Gleise baut strBrueckenBau als Bauwerk – nicht zusätzlich auf den Boden malen
+      rr = (acc.line.rail || []).filter((r) => !r.br);
     line('rail', rr, shade(rc, 0.75), 0.9);
     line('rail', rr, rc, 0);
     const c = PL.rail.getContext('2d');
