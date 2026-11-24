@@ -244,7 +244,47 @@ function strFlaechen(roads, G, r, fills) {
       t = Math.max(0, Math.min(1, (d - 0.12) / 0.25));
     F[i] = Fx[i] + d * t * t * (3 - 2 * t);
   }
+  strOhneGrundstueck(F, N, c, G);
   return { ringe: strUmriss(F, N, c, G), F, N, c };
+}
+/** Grundstücke (als Grundstück gewählte Flurstücke) im Grundriss: [Ring]. */
+function strGrundstuecke() {
+  return (typeof P !== 'undefined' ? P : [])
+    .filter((q) => q.site && q.poly && q.poly.length > 2)
+    .map((q) => q.poly);
+}
+/**
+ * Auf dem Grundstück keine Straßen und Wege: dort ist F „außen“ (Abstand ins Grundstück hinein, negativ) – keine
+ * Fläche, keine Absenkung im Gelände; am Grundstücksrand endet die Fläche gerade.
+ */
+function strOhneGrundstueck(F, N, c, G) {
+  const S2 = strGrundstuecke();
+  if (!S2.length) return;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const x = cv.getContext('2d', { willReadFrequently: true }),
+    X = (v) => (v + G / 2) / c;
+  x.fillStyle = '#fff';
+  S2.forEach((r) => {
+    x.beginPath();
+    r.forEach(([a, b], i) => (i ? x.lineTo(X(a), X(b)) : x.moveTo(X(a), X(b))));
+    x.closePath();
+    x.fill();
+  });
+  const px = x.getImageData(0, 0, N, N).data,
+    innen = new Uint8Array(N * N);
+  let n = 0;
+  for (let i = 0; i < N * N; i++) if ((innen[i] = px[i * 4] >= 128 ? 1 : 0)) n++;
+  cv.width = cv.height = 1;
+  if (!n) return;
+  const D = strEdt(innen, N);
+  for (let i = 0; i < N * N; i++) if (innen[i]) F[i] = Math.min(F[i], c * 0.5 - D[i] * c);
+}
+/** Kennung der Grundstücke (Neuaufbau der Flächen, wenn sich das Grundstück ändert). */
+function strGrundstueckSig() {
+  return strGrundstuecke()
+    .map((r) => r.length + ':' + r.reduce((s, p) => s + p[0] * 1.3 + p[1] * 0.7, 0).toFixed(1))
+    .join(',');
 }
 /** Umriss der Fläche F > 0 (Zellmitten) als Ringe mit Löchern: [{ o, h }]. */
 function strUmriss(F, N, c, G) {
@@ -441,7 +481,19 @@ function strAktualisieren(acc) {
       continue;
     }
     const sig =
-      q.lines.length + ':' + q.fills.length + ':' + GEO.size + ':' + (GEO.e0 || 0) + ':' + E.r + ':' + E.tief;
+      q.lines.length +
+      ':' +
+      q.fills.length +
+      ':' +
+      GEO.size +
+      ':' +
+      (GEO.e0 || 0) +
+      ':' +
+      E.r +
+      ':' +
+      E.tief +
+      '|' +
+      strGrundstueckSig();
     if (sig === E.sig) strFarbe(E);
     else {
       E.sig = sig;

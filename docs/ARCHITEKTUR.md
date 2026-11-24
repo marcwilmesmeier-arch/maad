@@ -722,3 +722,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (`l2FassadenOeffnungen`); Zahl = Abwicklung − `l2FassadenOeffnungsFlaeche` (aus denselben Flächen gerechnet wie
   die Hervorhebung).
 - Fassadentyp-Zeilen (`fdHlApply`): Flächen im Farbton des Typs.
+- Straßen und Wege auf dem Grundstück (`strOhneGrundstueck` in `02-geodaten/100-strassenflaechen.js`): innerhalb der
+  als Grundstück gewählten Flurstücke (`P[].site`) ist das Abstandsfeld „außen“ – keine Fläche, keine Absenkung im
+  Gelände; die Flächen enden gerade am Grundstücksrand. Die Kennung der Grundstücke steckt in der Signatur, ein
+  Wechsel des Grundstücks baut die Flächen neu.
