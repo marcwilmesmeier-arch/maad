@@ -785,8 +785,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Brüstung, wo das DOM neben dem Rand weiter Fahrbahn zeigt.
 - Fahrbahnmarkierungen (`02-geodaten/110-fahrbahnmarkierungen.js`, OSM-Schema `road_marking`): `fbmAktualisieren`
   (nach dem Bau der Straßenflächen in `strAktualisieren`) holt einmal je Ausschnitt über `overpassAbruf` Straßen mit
-  Spurangaben, Überwege und `road_marking` (gesichert in `GEO.snap.fbm`); `fbmBauen` zeichnet nur einfache Striche
-  (`LineSegments`, keine Flächen) 6 cm über der Straßenfläche bzw. auf dem Brückendeck: Spurtrennung nach `lanes`,
+  Spurangaben, Überwege und `road_marking` (gesichert in `GEO.snap.fbm`); `fbmBauen` zeichnet die Striche als flache
+  Bänder in echter Breite (Leitlinie 12 cm, Randlinie 15 cm, Zebrastreifen 50 cm, Haltelinie 40 cm; ein Mesh,
+  `polygonOffset`) 4 cm über der Straßenfläche bzw. auf dem Brückendeck: Spurtrennung nach `lanes`,
   `lanes:forward/backward` (Mittellinie ab 4 Spuren durchgezogen, sonst Leitlinie nach RMS: innerorts 3 m Strich /
   6 m Lücke, Autobahn und Kraftfahrstraße 6/12 m; keine Längsstriche in Kreuzungen, `fbmKreuzungen`), Randlinien an Autobahn und
   Schnellstraße, keine bei `lane_markings=no`, ohne Spurangabe nur Haupt- und Bundesstraßen; Zebrastreifen und

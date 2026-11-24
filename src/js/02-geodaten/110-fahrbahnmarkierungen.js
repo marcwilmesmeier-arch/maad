@@ -3,11 +3,11 @@
 // indirekt über Attribute der Straßenlinie (lanes, lanes:forward/backward, lane_markings, oneway) und direkt als eigene
 // Geometrie (road_marking=* als Linie, Überwege mit crossing:markings bzw. crossing=zebra). Die Kartendaten von
 // MapTiler enthalten diese Angaben nicht; sie kommen einmal je Ausschnitt über Overpass (overpassAbruf) und werden mit
-// dem Ausschnitt gesichert (GEO.snap.fbm). Gezeichnet werden nur einfache Striche (Linien, keine Flächen); Symbole
-// (Pfeile, Piktogramme, Schriftzüge) nicht.
+// dem Ausschnitt gesichert (GEO.snap.fbm). Gezeichnet werden Striche als flache Bänder in echter Breite (Leitlinie
+// 12 cm, Randlinie 15 cm, Zebrastreifen 50 cm, Haltelinie 40 cm); Symbole (Pfeile, Piktogramme, Schriftzüge) nicht.
 
 const FBM = {
-  breite: 0.12, // Strichbreite nach OSM-Regel (m) – gezeichnet wird eine einfache Linie
+  breite: 0.12, // Strichbreite (m), Randlinie 0.15
   spur: 3.25, // Spurbreite ohne Angabe (m)
   laed: '', // Ausschnitt, für den gerade geladen wird
   frei: null, // beim Bau: Prüfung „nicht in einer Kreuzung“ für Längsstriche
@@ -196,14 +196,24 @@ function fbmBauen(D) {
   const pos = [],
     h = GEO.size / 2,
     drin = (p) => Math.abs(p[0]) < h && Math.abs(p[1]) < h,
-    // ein Strich a→c (einfache Linie, keine Fläche; b = Breite nach OSM, für Linien ohne Bedeutung), y aus fbmHoehe
+    // Flächenband der Breite b (m) entlang a→c, y je Ende aus fbmHoehe
     band = (a, c, b, br) => {
       if (!drin(a) || !drin(c)) return;
       if (FBM.frei && !FBM.frei([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2])) return;
       const ya = fbmHoehe(a[0], a[1], br),
-        yc = fbmHoehe(c[0], c[1], br);
-      if (ya == null || yc == null) return;
-      pos.push(a[0], ya + 0.06, a[1], c[0], yc + 0.06, c[1]);
+        yc = fbmHoehe(c[0], c[1], br),
+        L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (ya == null || yc == null || L < 0.01) return;
+      const nx = (-(c[1] - a[1]) / L) * (b / 2),
+        nz = ((c[0] - a[0]) / L) * (b / 2),
+        y0 = ya + 0.04,
+        y1 = yc + 0.04,
+        A1 = [a[0] + nx, y0, a[1] + nz],
+        A2 = [a[0] - nx, y0, a[1] - nz],
+        C1 = [c[0] + nx, y1, c[1] + nz],
+        C2 = [c[0] - nx, y1, c[1] - nz];
+      // Dreiecke so, dass die Normale nach oben zeigt
+      pos.push(...A1, ...C1, ...C2, ...A1, ...C2, ...A2);
     },
     // Linie mit Strichmuster [an, aus] (aus = 0: durchgezogen), in Stücken von höchstens 2 m (folgt dem Gelände)
     linie = (l, b, an, aus, br) => {
@@ -328,10 +338,18 @@ function fbmBauen(D) {
     else linie(w.g, w.t.road_marking === 'stop_line' ? 0.4 : FBM.breite, 1, 0, false);
   });
   if (!pos.length) return;
-  if (!FBM.mat) FBM.mat = new T.LineBasicMaterial({ color: new T.Color('#f4f3ee') });
+  if (!FBM.mat)
+    FBM.mat = new T.MeshLambertMaterial({
+      color: new T.Color('#f4f3ee'),
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
   const ge = new T.BufferGeometry();
   ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
-  const o = new T.LineSegments(ge, FBM.mat);
+  ge.computeVertexNormals();
+  const o = new T.Mesh(ge, FBM.mat);
+  o.receiveShadow = true;
   o.raycast = () => {};
   o.userData.str = 1;
   o.userData.fbm = 1;
