@@ -413,56 +413,41 @@ function parLabelBreite(txt) {
   x.font = '600 40px Arial,Helvetica,sans-serif';
   return Math.min(250, x.measureText(txt).width) / 40;
 }
-const PLB = { mess: null, Z: 64, S: 256, A: 2048 };
+const PLB = { mess: null };
+/** Kantenlänge der Sammeltexturen für Beschriftungen (Pixel). */
+const LAB_ATLAS = 2048;
 /**
- * Flurstücksnummern flach auf dem Gelände: je Nummer ein Feld von 256 × 64 Pixeln in Sammeltexturen
- * von 2048 × 2048 (256 Nummern), je Sammeltextur ein Mesh. L: [{ txt, x, y, z, h }] (Mitte, Höhe der Schrift).
+ * Beschriftungen flach im Gelände gebündelt: je Beschriftung ein Feld (zw × zh Pixel) in Sammeltexturen von
+ * LAB_ATLAS × LAB_ATLAS, je Sammeltextur ein Mesh – ein Zeichenaufruf statt einer Textur und eines Meshes je Text.
+ * L: [{ txt, E }] mit E = Ecken [oben links, oben rechts, unten links, unten rechts] als [x, y, z];
+ * zeichnen(ctx, txt, x0, y0) schreibt den Text in sein Feld. Ergebnis: Meshes.
  */
-function parLabelsBauen(L) {
-  const sp = PLB.A / PLB.S,
-    zei = PLB.A / PLB.Z,
-    je = sp * zei,
+function labBuendeln(L, zw, zh, zeichnen, ro) {
+  const sp = Math.max(1, Math.floor(LAB_ATLAS / zw)),
+    je = sp * Math.floor(LAB_ATLAS / zh),
     R = [];
   for (let k = 0; k < L.length; k += je) {
     const teil = L.slice(k, k + je),
       cv = document.createElement('canvas');
-    cv.width = PLB.A;
-    cv.height = Math.min(PLB.A, Math.ceil(teil.length / sp) * PLB.Z);
+    cv.width = sp * zw;
+    cv.height = Math.ceil(teil.length / sp) * zh;
     const x = cv.getContext('2d'),
-      zeilen = cv.height / PLB.Z;
-    x.font = '600 40px Arial,Helvetica,sans-serif';
-    x.textAlign = 'center';
-    x.textBaseline = 'middle';
-    x.fillStyle = S.lc.parcels;
-    const pos = [],
+      zeilen = cv.height / zh,
+      pos = [],
       uv = [],
       idx = [];
     teil.forEach((l, i) => {
       const cx = i % sp,
-        cy = Math.floor(i / sp);
-      x.fillText(l.txt, cx * PLB.S + 128, cy * PLB.Z + 34, 250);
-      // Fläche 4h × h, flach (wie PlaneGeometry um −90° um x gedreht)
-      const hw = l.h * 2,
-        hh = l.h / 2,
-        u0 = cx / sp,
+        cy = Math.floor(i / sp),
+        n = pos.length / 3;
+      x.save();
+      zeichnen(x, l.txt, cx * zw, cy * zh);
+      x.restore();
+      l.E.forEach((p) => pos.push(p[0], p[1], p[2]));
+      const u0 = cx / sp,
         u1 = (cx + 1) / sp,
         v1 = 1 - cy / zeilen,
-        v0 = 1 - (cy + 1) / zeilen,
-        n = pos.length / 3;
-      pos.push(
-        l.x - hw,
-        l.y,
-        l.z - hh,
-        l.x + hw,
-        l.y,
-        l.z - hh,
-        l.x - hw,
-        l.y,
-        l.z + hh,
-        l.x + hw,
-        l.y,
-        l.z + hh,
-      );
+        v0 = 1 - (cy + 1) / zeilen;
       uv.push(u0, v1, u1, v1, u0, v0, u1, v0);
       idx.push(n, n + 2, n + 1, n + 2, n + 3, n + 1);
     });
@@ -479,16 +464,46 @@ function parLabelsBauen(L) {
         map: t,
         transparent: true,
         depthWrite: false,
-        side: T.DoubleSide,
         polygonOffset: true,
         polygonOffsetFactor: -3,
         polygonOffsetUnits: -3,
       }),
     );
-    m.renderOrder = 7;
+    m.renderOrder = ro;
     R.push(m);
   }
   return R;
+}
+/** Ecken einer Fläche w × h (wie PlaneGeometry) nach Drehung und Lage des Objekts o. */
+function labEcken(o, w, h) {
+  o.updateMatrix();
+  return [
+    [-w / 2, h / 2],
+    [w / 2, h / 2],
+    [-w / 2, -h / 2],
+    [w / 2, -h / 2],
+  ].map(([a, b]) => new T.Vector3(a, b, 0).applyMatrix4(o.matrix).toArray());
+}
+/** Flurstücksnummern: L: [{ txt, x, y, z, h }] (Mitte, Schrifthöhe); Felder 256 × 64 Pixel. */
+function parLabelsBauen(L) {
+  const o = new T.Object3D();
+  o.rotation.x = -Math.PI / 2;
+  return labBuendeln(
+    L.map((l) => {
+      o.position.set(l.x, l.y, l.z);
+      return { txt: l.txt, E: labEcken(o, l.h * 4, l.h) };
+    }),
+    256,
+    64,
+    (x, txt, x0, y0) => {
+      x.font = '600 40px Arial,Helvetica,sans-serif';
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillStyle = S.lc.parcels;
+      x.fillText(txt, x0 + 128, y0 + 34, 250);
+    },
+    7,
+  );
 }
 S.showSN = true;
 S.showFN = true;
@@ -507,22 +522,19 @@ function labVis() {
     logErr(e, 'labVis');
   }
 }
-function rnLabel(txt) {
-  const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 64;
-  const x = c.getContext('2d');
+/** Straßenname in Versalien: Schrift für Breite und Feld (1024 × 64 Pixel). */
+function rnSchrift(x) {
   x.font = '600 44px Arial,Helvetica,sans-serif';
   if ('letterSpacing' in x) x.letterSpacing = '4px';
-  const t = txt.toUpperCase(),
-    tw = Math.min(1000, x.measureText(t).width);
-  x.textAlign = 'center';
-  x.textBaseline = 'middle';
-  x.fillStyle = S.lc.rnames;
-  x.fillText(t, 512, 34, 1000);
-  const tx = new T.CanvasTexture(c);
-  tx.anisotropy = 8;
-  return { tx, asp: tw / 64 };
+}
+/** Breite eines Straßennamens im Verhältnis zur Feldhöhe (64 Pixel). */
+function rnBreite(txt) {
+  const x = (PLB.mess = PLB.mess || document.createElement('canvas').getContext('2d'));
+  x.save();
+  rnSchrift(x);
+  const w = Math.min(1000, x.measureText(txt.toUpperCase()).width);
+  x.restore();
+  return w / 64;
 }
 function clipLine(l, H) {
   const out = [];
@@ -625,7 +637,11 @@ function rnBuild() {
     for (const q of ps) items.push({ n, l: q.l, w: q.w, L: plen(q.l) });
   }
   items.sort((a, b) => b.w - a.w || b.L - a.L);
-  const done = [];
+  const done = [],
+    lab = [],
+    lo = new T.Object3D();
+  lo.rotation.order = 'YXZ';
+  lo.rotation.x = -Math.PI / 2;
   let cnt = 0;
   for (const a of items) {
     if (cnt > 450) break;
@@ -653,35 +669,32 @@ function rnBuild() {
       dz = -dz;
     }
     // Schriftgröße folgt der Straßenbreite (Versalhöhe ≈ 0,5·Texthöhe -> bleibt innerhalb der Ränder)
-    const lb = rnLabel(a.n);
+    const asp = rnBreite(a.n);
     let hgt = Math.min(14, Math.max(2, a.w * 1.15));
-    if (hgt * lb.asp > a.L * 0.95) {
-      hgt = (a.L * 0.95) / lb.asp;
-      if (hgt < Math.max(1.6, a.w * 0.6)) {
-        lb.tx.dispose();
-        continue;
-      }
+    if (hgt * asp > a.L * 0.95) {
+      hgt = (a.L * 0.95) / asp;
+      if (hgt < Math.max(1.6, a.w * 0.6)) continue;
     }
-    const m = new T.Mesh(
-      new T.PlaneGeometry(hgt * 8, hgt * 0.5),
-      new T.MeshBasicMaterial({
-        map: lb.tx,
-        transparent: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -3,
-        polygonOffsetUnits: -3,
-      }),
-    );
-    m.rotation.order = 'YXZ';
-    m.rotation.x = -Math.PI / 2;
-    m.rotation.y = -Math.atan2(dz, dx);
-    m.position.set(px, gh(px, pz) + 0.55, pz);
-    m.renderOrder = 8;
-    G.rnam.add(m);
+    lo.rotation.y = -Math.atan2(dz, dx);
+    lo.position.set(px, gh(px, pz) + 0.55, pz);
+    lab.push({ txt: a.n, E: labEcken(lo, hgt * 8, hgt * 0.5) });
     done.push({ n: a.n, x: px, z: pz });
     cnt++;
   }
+  // alle Namen in wenigen Sammeltexturen und Meshes (labBuendeln)
+  labBuendeln(
+    lab,
+    1024,
+    64,
+    (x, txt, x0, y0) => {
+      rnSchrift(x);
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillStyle = S.lc.rnames;
+      x.fillText(txt.toUpperCase(), x0 + 512, y0 + 34, 1000);
+    },
+    8,
+  ).forEach((m) => G.rnam.add(m));
   labVis();
 }
 function clipRing(r, H) {
