@@ -774,17 +774,30 @@ function strBrueckeVerlaengern(l, strassen) {
 }
 /**
  * Nebeneinanderliegende Brücken (Richtungsfahrbahnen, Geh- und Radwege neben der Straße, auch über Straßen und Wege
- * hinweg) zu einer Fahrbahn verbinden: liegt neben einem Punkt eine Brücke (bis ~40° Winkel) mit höchstens 6 m Lücke, reicht
- * das Deck auf dieser Seite bis zur Mitte der Lücke (beide treffen sich genau), dort entfällt die Brüstung, und die
- * Fahrbahnhöhe wird mit der des Nachbarn gemittelt (keine Stufe).
+ * hinweg) zu einer Fahrbahn verbinden: liegt neben einem Punkt eine Brücke (bis ~40° Winkel) mit höchstens 6 m Lücke,
+ * reicht das Deck auf dieser Seite bis 0,8 m in den Nachbarn hinein (nie schmaler als die eigene Fahrbahn – so bleiben
+ * auch bei schrägem Verlauf keine Löcher), dort entfällt die Brüstung, und die Fahrbahnhöhe wird mit der des Nachbarn
+ * gemittelt. In der Überlappung liegt das schmalere Deck 3 cm tiefer (dz), damit nichts flimmert. Danach: Brüstung nur
+ * am freien Rand, keine kurzen Brüstungsreste, keine Stirnplatte an Enden auf einer anderen Brücke (kappe), Brücken
+ * fast ganz auf einer anderen entfallen (weg).
  */
 function strBrueckenNachbarn(K) {
-  const Zn = K.map((A) => A.Z.map((z) => [z]));
+  const Zn = K.map((A) => A.Z.map((z) => [z])),
+    bb = K.map((B) => {
+      const xs = B.P.map((p) => p[0]),
+        zs = B.P.map((p) => p[1]),
+        r = B.h2 + 8;
+      return [Math.min(...xs) - r, Math.min(...zs) - r, Math.max(...xs) + r, Math.max(...zs) + r];
+    }),
+    imBB = (ib, x, z) => x >= bb[ib][0] && x <= bb[ib][2] && z >= bb[ib][1] && z <= bb[ib][3],
+    // liegt (x, z) auf dem Deck von B (Abstand zur Achse kleiner als die halbe Breite + r)?
+    auf = (B, x, z, r) => B.P.some((q) => Math.hypot(q[0] - x, q[1] - z) < B.h2 + r);
+  K.forEach((A) => (A.dz = 0));
   K.forEach((A, ia) =>
     A.P.forEach((p, i) => {
       const u = [A.Nn[i][1], -A.Nn[i][0]];
       K.forEach((B, ib) => {
-        if (ib === ia) return;
+        if (ib === ia || !imBB(ib, p[0], p[1])) return;
         let bj = -1,
           bd = 1e9;
         B.P.forEach((q, j) => {
@@ -797,45 +810,58 @@ function strBrueckenNachbarn(K) {
         const q = B.P[bj],
           v = [q[0] - p[0], q[1] - p[1]],
           d = v[0] * A.Nn[i][0] + v[1] * A.Nn[i][1],
-          laengs = v[0] * u[0] + v[1] * u[1];
+          laengs = v[0] * u[0] + v[1] * u[1],
+          cw = Math.abs(A.Nn[i][0] * B.Nn[bj][0] + A.Nn[i][1] * B.Nn[bj][1]);
         if (Math.abs(laengs) > 2.5 + Math.abs(d) * 0.8 || Math.abs(d) > A.h2 + B.h2 + 6) return;
-        if (Math.abs(A.Nn[i][0] * B.Nn[bj][0] + A.Nn[i][1] * B.Nn[bj][1]) < 0.75) return; // über ~40° auseinander
+        if (cw < 0.75) return; // über ~40° auseinander
         const sd = d > 0 ? 1 : 0,
-          o = Math.max(0.3, (Math.abs(d) + A.h2 - B.h2) / 2);
-        A.o[sd][i] = A.nb[sd][i] ? Math.min(A.o[sd][i], o) : o;
+          o = Math.max(A.h2, Math.abs(d) - B.h2 / cw + 0.8);
+        A.o[sd][i] = A.nb[sd][i] ? Math.max(A.o[sd][i], o) : o;
         A.nb[sd][i] = true;
         Zn[ia][i].push(B.Z[bj]);
+        if (A.w < B.w || (A.w === B.w && ia > ib)) A.dz = -0.03;
       });
     }),
   );
   K.forEach((A, ia) => (A.Z = Zn[ia].map((a) => a.reduce((s, z) => s + z, 0) / a.length)));
-  // Brüstung nur am freien Rand: liegt direkt außerhalb des Rands (0,5 m) eine andere Brücke – in beliebigem Winkel,
-  // etwa eine abzweigende Rampe oder ein querendes Stück –, entfällt sie dort
-  const bb = K.map((B) => {
-    const xs = B.P.map((p) => p[0]),
-      zs = B.P.map((p) => p[1]),
-      r = B.h2 + 1;
-    return [Math.min(...xs) - r, Math.min(...zs) - r, Math.max(...xs) + r, Math.max(...zs) + r];
-  });
-  K.forEach((A, ia) =>
+  K.forEach((A, ia) => {
+    const n = A.P.length;
+    // fast ganz auf einer anderen (breiteren) Brücke: entfällt
+    const drauf = A.P.filter((p) =>
+      K.some((B, ib) => ib !== ia && B.w >= A.w && imBB(ib, p[0], p[1]) && auf(B, p[0], p[1], -0.3)),
+    ).length;
+    A.weg = drauf >= n * 0.8;
+    // Enden auf einer anderen Brücke: keine Stirnplatte
+    A.kappe = [0, n - 1].map(
+      (i) =>
+        !K.some((B, ib) => ib !== ia && imBB(ib, A.P[i][0], A.P[i][1]) && auf(B, A.P[i][0], A.P[i][1], 0.5)),
+    );
+    // Brüstung nur am freien Rand: liegt direkt außerhalb des Rands (0,5 m) eine andere Brücke – in beliebigem
+    // Winkel, etwa eine abzweigende Rampe oder ein querendes Stück –, entfällt sie dort
     A.P.forEach((p, i) =>
       [0, 1].forEach((sd) => {
         if (A.nb[sd][i]) return;
         const g = (sd ? 1 : -1) * (A.o[sd][i] + 0.5),
           x = p[0] + A.Nn[i][0] * g,
           z = p[1] + A.Nn[i][1] * g;
-        A.nb[sd][i] = K.some(
-          (B, ib) =>
-            ib !== ia &&
-            x >= bb[ib][0] &&
-            x <= bb[ib][2] &&
-            z >= bb[ib][1] &&
-            z <= bb[ib][3] &&
-            B.P.some((q) => Math.hypot(q[0] - x, q[1] - z) < B.h2 + 0.3),
-        );
+        A.nb[sd][i] = K.some((B, ib) => ib !== ia && imBB(ib, x, z) && auf(B, x, z, 0.3));
       }),
-    ),
-  );
+    );
+    // keine kurzen Brüstungsreste (bis 10 m) neben verbundenen Abschnitten
+    [0, 1].forEach((sd) => {
+      const f = A.nb[sd];
+      for (let i = 0; i < n;) {
+        if (f[i]) {
+          i++;
+          continue;
+        }
+        let j = i;
+        while (j < n && !f[j]) j++;
+        if ((i > 0 || j < n) && A.S0[j - 1] - A.S0[i] <= 10) for (let k = i; k < j; k++) f[k] = true;
+        i = j;
+      }
+    });
+  });
 }
 /**
  * Brückenenden, die auf einer anderen Brücke liegen (Rampen, Abzweige, Wege, die auf eine Brücke münden), übernehmen
@@ -938,8 +964,9 @@ function strBrueckenBau(E, mk) {
     pl = STR_BR.platte,
     br = STR_BR.bruestung,
     bw = 0.25;
-  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w }) => {
-    const at = (i, x, dy) => [P[i][0] + Nn[i][0] * x, Z[i] - t + dy, P[i][1] + Nn[i][1] * x],
+  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe }) => {
+    if (weg) return;
+    const at = (i, x, dy) => [P[i][0] + Nn[i][0] * x, Z[i] - t + (dz || 0) + dy, P[i][1] + Nn[i][1] * x],
       // Randabstände je Seite: Fahrbahnrand und Außenkante (mit Brüstung)
       rand = (i, sd) => (sd ? 1 : -1) * o[sd][i],
       aussen = (i, sd) => (sd ? 1 : -1) * (o[sd][i] + (nb[sd][i] ? 0 : bw));
@@ -985,15 +1012,17 @@ function strBrueckenBau(E, mk) {
         }
       }
     }
-    // Stirnseiten an den Enden (Platte)
-    [0, P.length - 1].forEach((i) =>
-      quad(
-        bau,
-        at(i, aussen(i, 0), -pl),
-        at(i, aussen(i, 1), -pl),
-        at(i, aussen(i, 1), 0),
-        at(i, aussen(i, 0), 0),
-      ),
+    // Stirnseiten an den Enden (Platte) – nicht, wo das Ende auf einer anderen Brücke liegt
+    [0, P.length - 1].forEach(
+      (i, e) =>
+        (!kappe || kappe[e]) &&
+        quad(
+          bau,
+          at(i, aussen(i, 0), -pl),
+          at(i, aussen(i, 1), -pl),
+          at(i, aussen(i, 1), 0),
+          at(i, aussen(i, 0), 0),
+        ),
     );
   });
   const geo = (pos) => {
