@@ -1,4 +1,4 @@
-// ---- Nachträgliches Bearbeiten gewählter Schnittgruppen (Griffe: Ecke, Kante, Mitte)
+// ---- Nachträgliches Bearbeiten gewählter Schnittgruppen (Griffe wie in Revit: Endpunkt ziehen, Kante parallel verschieben)
 function grEdHit(lv, g, p) {
   // ── Erweiterung aus 22-lod200-waende/060-stutzen-dehnen.js
   const r = (() => {
@@ -6,7 +6,6 @@ function grEdHit(lv, g, p) {
     if (!grp.sg.length) return null;
     const tol = 9 / GRS.view.s;
     for (const v of grp.vs) if (Math.hypot(v.p[0] - p.x, v.p[1] - p.z) < tol) return { m: 'v', k: v.k, grp };
-    if (Math.hypot(grp.cen[0] - p.x, grp.cen[1] - p.z) < tol * 1.1) return { m: 'a', grp };
     for (let i = 0; i < grp.sg.length; i++) {
       const c = grp.sg[i];
       if (grDSeg(p.x, p.z, c[0], c[1], c[2], c[3]) < tol * 0.8) return { m: 'e', i, grp };
@@ -38,8 +37,7 @@ function grEdStart(lv, hd, e) {
       const c = grp.sg.find((c) => gk(c[0], c[1]) === hd.k || gk(c[2], c[3]) === hd.k);
       org = gk(c[0], c[1]) === hd.k ? [c[2], c[3]] : [c[0], c[1]];
     }
-  } else if (hd.m === 'a') org = grp.cen;
-  else {
+  } else {
     const c = grp.sg[hd.i];
     org = [(c[0] + c[2]) / 2, (c[1] + c[3]) / 2];
   }
@@ -67,7 +65,6 @@ function grEdUpdate(q) {
     grp = hd.grp;
   let a;
   if (hd.m === 'v') a = { k: hd.k, x: q.x, z: q.z };
-  else if (hd.m === 'a') a = { dx: q.x - grp.cen[0], dz: q.z - grp.cen[1] };
   else {
     const c = grp.sg[hd.i],
       L = Math.hypot(c[2] - c[0], c[3] - c[1]) || 1,

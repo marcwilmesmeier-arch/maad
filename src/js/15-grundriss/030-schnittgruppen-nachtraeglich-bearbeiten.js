@@ -102,8 +102,6 @@ function grMapV(grp, mode, a) {
       [c[0], c[1]],
       [c[2], c[3]],
     ].forEach((p) => m.set(gk(p[0], p[1]), [p[0] + nx * a.d, p[1] + nz * a.d]));
-  } else if (mode === 'a') {
-    grp.vs.forEach((v) => m.set(v.k, [v.p[0] + a.dx, v.p[1] + a.dz]));
   }
   return m;
 }

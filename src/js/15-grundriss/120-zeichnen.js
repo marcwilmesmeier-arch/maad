@@ -231,24 +231,6 @@ function grDraw() {
         x.fill();
         x.stroke();
       });
-      if (gp.sg.length) {
-        const [X, Y] = mv(gp.cen[0], gp.cen[1]);
-        x.fillStyle = eh && eh.m === 'a' ? '#1f6fd1' : '#fff';
-        x.strokeStyle = '#1f6fd1';
-        x.lineWidth = 1.8;
-        x.beginPath();
-        x.arc(X, Y, 7, 0, 7);
-        x.fill();
-        x.stroke();
-        x.strokeStyle = eh && eh.m === 'a' ? '#fff' : '#1f6fd1';
-        x.lineWidth = 1.4;
-        x.beginPath();
-        x.moveTo(X - 4, Y);
-        x.lineTo(X + 4, Y);
-        x.moveTo(X, Y - 4);
-        x.lineTo(X, Y + 4);
-        x.stroke();
-      }
     }
     if (GRS.ed && GRS.ed.map) {
       const ed = GRS.ed,
