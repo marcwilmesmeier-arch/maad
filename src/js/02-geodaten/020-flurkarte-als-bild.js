@@ -618,26 +618,8 @@ function ctxPaint(acc) {
   line('paths', acc.line.paths, S.lc.paths, 0);
   line('cycle', acc.line.cycle, shade(S.lc.cycle, 0.8), 0.6);
   line('cycle', acc.line.cycle, S.lc.cycle, 0);
-  {
-    const rc = S.lc.rail || '#9a9893',
-      // als Brücke gekennzeichnete Gleise baut strBrueckenBau als Bauwerk – nicht zusätzlich auf den Boden malen
-      rr = (acc.line.rail || []).filter((r) => !r.br);
-    line('rail', rr, shade(rc, 0.75), 0.9);
-    line('rail', rr, rc, 0);
-    const c = PL.rail.getContext('2d');
-    c.save();
-    c.strokeStyle = shade(rc, 0.55);
-    c.lineCap = 'butt';
-    c.lineJoin = 'round';
-    c.setLineDash([Math.max(1, 0.5 * K), Math.max(1, 0.9 * K)]);
-    for (const { l, w } of rr) {
-      c.lineWidth = Math.max(1, w * 0.9 * K);
-      c.beginPath();
-      path(c, l);
-      c.stroke();
-    }
-    c.restore();
-  }
+  // Gleise zeichnet 02-geodaten/120-gleise.js als Bauteil (Schotterbett, Schwellen, Schienen), nicht ins Kartenbild
+  if (PL.rail) PL.rail.getContext('2d').clearRect(0, 0, PL.rail.width, PL.rail.height);
   areaPaint();
   parPaint();
   bpPaint();
@@ -666,6 +648,12 @@ function ctxPaint(acc) {
     strAktualisieren(acc);
   } catch (e) {
     logErr(e, 'ctxPaint>Straßenflächen');
+  }
+  // ── Erweiterung aus 02-geodaten/120-gleise.js: Gleise als Bauteil (Schotterbett, Schwellen, Schienen)
+  try {
+    glsAktualisieren(acc);
+  } catch (e) {
+    logErr(e, 'ctxPaint>Gleise');
   }
 }
 /** Kartenbild-Neuaufbau aufschieben (aus > 0: recomp merkt sich den Wunsch, recompFrei baut einmal neu). */

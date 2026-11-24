@@ -527,6 +527,7 @@ function ctxCollect(tiles) {
             acc.line.rail.push({
               l: cv(r, R.ext),
               w: rw,
+              s: s || '',
               br: p.brunnel === 'bridge' ? 1 : 0,
               ly: +p.layer || 0,
             });

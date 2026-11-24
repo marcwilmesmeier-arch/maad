@@ -777,9 +777,10 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   im Ausschnitt im Hintergrund und baut die Straßenflächen neu.
   Mit DOM wird jede Brücke entlang der anschließenden Straße verlängert (`strBrueckeVerlaengern`, bis 60 m): Das Deck
   läuft in die Straße hinein, bis es das Gelände erreicht (`strBrueckeKuerzen`, < 0,3 m), statt über der Rampe
-  abzubrechen, und dann immer noch 10 m weiter auf Straßenhöhe; als Anschluss zählt auch eine Straße, die am Ende nur
-  durchläuft. Ohne gefundene Straße oder ohne DOM läuft es gerade 10 m weiter und senkt sich auf das Gelände ab
-  (`strBrueckeGerade`). Wo das Deck auf dem Gelände liegt (< 0,5 m), keine Brüstung.
+  abzubrechen, und dann immer noch 20 m weiter auf Straßenhöhe; als Anschluss zählt auch eine Straße, die am Ende nur
+  durchläuft. Erreicht es das Gelände nicht (oder ohne Straße, ohne DOM), läuft es gerade als Rampe weiter (höchstens
+  10 % Gefälle, 20 bis 60 m, `strBrueckeGerade`). Schmale Senken im DOM-Verlauf bis ~30 m (Blick durch einen Spalt
+  auf den Grund) schließt `strBrueckeZ` (morphologisches Schließen). Wo das Deck auf dem Gelände liegt (< 0,5 m), keine Brüstung.
 - Bahnbrücken: Gleise mit `brunnel=bridge` (`acc.line.rail`, `br`/`ly`) baut dieselbe Brückenlogik (`strBrueckenAlle`,
   Quelle `rail`; Verlängerung entlang der anschließenden Gleise); gebaut von der Straßenebene, Deck in Bahnfarbe
   (`E.matR`). Bahn- und Straßenbrücken werden nicht verbunden. Gleise auf Brücken malt das Kartenbild nicht auf den
@@ -799,3 +800,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   gemittelt), auch Geh- und Radwege neben der Straße. Die Brüstung entfällt außerdem überall, wo direkt außerhalb des
   Rands eine andere Brücke liegt (abzweigende Rampen, querende Stücke); Brüstungsreste bis 10 m, Stirnplatten an Enden auf
   einer anderen Brücke und Brücken, die fast ganz auf einer breiteren liegen, entfallen. Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.
+- Gleise (`02-geodaten/120-gleise.js`, `glsAktualisieren` aus `ctxPaint` und nach dem Bau der Straßenflächen): Bahnlinien
+  als Bauteil in `G.rail` statt Strichlinie im Kartenbild – Schotterbett als Band mit Flanken (25 cm) in der
+  aufgehellten Layer-Farbe „Bahn“, Schwellen (60 cm) und Schienen (Spurweite 1,435 m) im Shader über das Attribut `aGl`
+  (Bogenlänge, Abstand zur Achse), aus der Ferne ohne Schwellen. Straßenbahn: nur Schienen auf Straßenhöhe. Gleise auf
+  Bahnbrücken (auch auf deren Verlängerung und Rampe) liegen auf dem Deck (`glsHoehe`, `GLS.decks`).

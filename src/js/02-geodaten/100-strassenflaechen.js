@@ -509,6 +509,8 @@ function strAktualisieren(acc) {
       gst('Straßen- und Wegflächen angelegt.');
       // ── Erweiterung aus 02-geodaten/110-fahrbahnmarkierungen.js: Markierungen auf den neuen Flächen
       fbmAktualisieren();
+      // ── Erweiterung aus 02-geodaten/120-gleise.js: Gleise auf Bahnbrücken brauchen die Brückenhöhen
+      glsAktualisieren(GEO.acc);
       recomp();
     } catch (e) {
       logErr(e, 'strAktualisieren');
@@ -707,8 +709,9 @@ function strBrueckeLinie(l, w, a0, b0) {
   return strBrueckeGerade(a0 != null ? strBrueckeKuerzen(d, a0, b0) : d);
 }
 /**
- * Fehlt an einem Ende die Verlängerung (keine anschließende Straße gefunden, kein DOM), läuft das Deck gerade 10 m
- * weiter und senkt sich dabei auf das Gelände ab – so endet es nie über der Straße. Erkennt die schon verlängerten
+ * Fehlt an einem Ende die Verlängerung (keine anschließende Straße gefunden, kein DOM, Gelände nicht erreicht), läuft
+ * das Deck gerade als Rampe weiter (höchstens 10 % Gefälle, 20 bis 60 m) und senkt sich auf das Gelände ab – so
+ * endet es nie über der Straße. Erkennt die schon verlängerten
  * Enden daran, dass sie auf dem Gelände liegen.
  */
 function strBrueckeGerade(d) {
@@ -721,9 +724,12 @@ function strBrueckeGerade(d) {
     const u = [d.P[i][0] - d.P[k][0], d.P[i][1] - d.P[k][1]],
       L = Math.hypot(u[0], u[1]) || 1,
       z0 = d.Z[i],
-      neu = [2, 4, 6, 8, 10].map((m) => [d.P[i][0] + (u[0] / L) * m, d.P[i][1] + (u[1] / L) * m]),
-      g = neu.map((p) => gh(p[0], p[1])),
-      z = neu.map((p, q) => z0 + ((g[4] - z0) * (q + 1)) / 5);
+      // Rampenlänge: höchstens 10 % Gefälle, 20 bis 60 m
+      lg = Math.min(60, Math.max(20, Math.ceil(Math.abs(z0 - d.G0[i]) / 0.1 / 2) * 2)),
+      neu = [];
+    for (let m = 2; m <= lg; m += 2) neu.push([d.P[i][0] + (u[0] / L) * m, d.P[i][1] + (u[1] / L) * m]);
+    const g = neu.map((p) => gh(p[0], p[1])),
+      z = neu.map((p, q) => z0 + ((g[neu.length - 1] - z0) * (q + 1)) / neu.length);
     const dazu = (a, v) => (e ? a.push(...v) : a.unshift(...v.slice().reverse()));
     dazu(d.P, neu);
     dazu(d.G0, g);
@@ -767,14 +773,16 @@ function strBrueckeKuerzen(d, a0, b0) {
     while (i1 < n - 1 && d.Z[i1] - d.G0[i1] > 0.3) i1++;
   }
   if (i1 - i0 < 1) return null;
-  // wo die Verlängerung das Gelände erreicht hat, genau auf Geländehöhe enden
-  if (i0 < j0) d.Z[i0] = d.G0[i0];
-  if (i1 > j1) d.Z[i1] = d.G0[i1];
-  // immer noch 10 m weiter in die Straße, dabei auf deren Höhe (Gelände) absenken
+  // Gelände erreicht? Dann genau auf Geländehöhe und noch 20 m weiter in die Straße (sonst baut strBrueckeGerade
+  // eine Rampe)
+  const da = d.Z[i0] - d.G0[i0] <= 0.3,
+    db = d.Z[i1] - d.G0[i1] <= 0.3;
+  if (da && i0 < j0) d.Z[i0] = d.G0[i0];
+  if (db && i1 > j1) d.Z[i1] = d.G0[i1];
   const k0 = i0,
     k1 = i1;
-  while (i0 > 0 && d.S0[k0] - d.S0[i0] < 10) i0--;
-  while (i1 < n - 1 && d.S0[i1] - d.S0[k1] < 10) i1++;
+  while (da && i0 > 0 && d.S0[k0] - d.S0[i0] < 20) i0--;
+  while (db && i1 < n - 1 && d.S0[i1] - d.S0[k1] < 20) i1++;
   const senken = (k, i) => {
     const L = Math.abs(d.S0[i] - d.S0[k]) || 1;
     for (let m = Math.min(k, i); m <= Math.max(k, i); m++)
@@ -1188,6 +1196,14 @@ function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
       if (b < 0) return dom[a];
       return dom[a] + ((dom[b] - dom[a]) * (S0[i] - S0[a])) / (S0[b] - S0[a] || 1);
     });
+  }
+  // schmale Senken bis ~30 m schließen (das DOM sieht dort durch einen Spalt auf den Grund): Schließen = Erosion der
+  // Dilatation; Rampen und der Gesamtverlauf bleiben erhalten
+  if (gut.length >= Math.max(2, n * 0.3)) {
+    const r = 7,
+      dil = Z0.map((_, i) => Math.max(...Z0.slice(Math.max(0, i - r), i + r + 1))),
+      ero = dil.map((_, i) => Math.min(...dil.slice(Math.max(0, i - r), i + r + 1)));
+    for (let i = 0; i < n; i++) Z0[i] = Math.max(Z0[i], ero[i]);
   }
   const Z = Z0.map((_, i) => {
     let s = 0,
