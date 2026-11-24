@@ -507,6 +507,8 @@ function strAktualisieren(acc) {
       gst('Straßen- und Wegflächen werden angelegt …');
       neu.forEach(([E, q]) => strBauen(E, q.lines, q.fills));
       gst('Straßen- und Wegflächen angelegt.');
+      // ── Erweiterung aus 02-geodaten/110-fahrbahnmarkierungen.js: Markierungen auf den neuen Flächen
+      fbmAktualisieren();
       recomp();
     } catch (e) {
       logErr(e, 'strAktualisieren');

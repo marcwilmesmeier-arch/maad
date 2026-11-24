@@ -777,7 +777,15 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   im Ausschnitt im Hintergrund und baut die Straßenflächen neu.
   Mit DOM wird jede Brücke entlang der anschließenden Straße verlängert (`strBrueckeVerlaengern`, bis 60 m): Das Deck
   läuft in die Straße hinein, bis es das Gelände erreicht (`strBrueckeKuerzen`, < 0,3 m), statt über der Rampe
-  abzubrechen. Das
+  abzubrechen.
+- Fahrbahnmarkierungen (`02-geodaten/110-fahrbahnmarkierungen.js`, OSM-Schema `road_marking`): `fbmAktualisieren`
+  (nach dem Bau der Straßenflächen in `strAktualisieren`) holt einmal je Ausschnitt über `overpassAbruf` Straßen mit
+  Spurangaben, Überwege und `road_marking` (gesichert in `GEO.snap.fbm`); `fbmBauen` zeichnet nur einfache Striche
+  (`LineSegments`, keine Flächen) 6 cm über der Straßenfläche bzw. auf dem Brückendeck: Spurtrennung nach `lanes`,
+  `lanes:forward/backward` (Mittellinie ab 4 Spuren durchgezogen, sonst gestrichelt 3/6 m), Randlinien an Autobahn und
+  Schnellstraße, keine bei `lane_markings=no`, ohne Spurangabe nur Haupt- und Bundesstraßen; Zebrastreifen und
+  markierte Überwege (Knoten und `footway=crossing`); `road_marking`-Linien (`stroke=dashed` gestrichelt). Nur wo die
+  Straßenmaske innen ist (nicht auf Grundstücken ohne Straßen). Symbole werden nicht gezeichnet. Das
   Gelände unter Brücken bleibt das DGM. `strBrueckenAlle` bereitet alle Brücken des Ausschnitts (Straßen und Wege
   gemeinsam, `STR.brD` zwischengespeichert) mit `strBrueckeLinie` auf; `strBrueckenNachbarn` verbindet parallele
   Brücken (bis ~40° Winkel) mit höchstens 6 m Lücke zu einer Fahrbahn (Deck bis 0,8 m in den Nachbarn, das schmalere 3 cm tiefer, dort keine Brüstung, Höhen
