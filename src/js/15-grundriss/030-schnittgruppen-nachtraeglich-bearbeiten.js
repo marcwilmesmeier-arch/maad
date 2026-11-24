@@ -118,7 +118,18 @@ function grEditGrp(g, m) {
     if (!grp.sg.length) return;
     const segs = grMapSegs(grp, m).filter((s) => Math.hypot(s[2] - s[0], s[3] - s[1]) > 0.01);
     if (!segs.length) return;
-    const others = (lv.obj.cuts || []).filter((c) => c[4] !== g).map((c) => c.slice());
+    // angeschlossene Wände folgen (wie in Revit): Endpunkte anderer Wände an verschobenen Punkten mitnehmen
+    const others = (lv.obj.cuts || [])
+      .filter((c) => c[4] !== g)
+      .map((c) => {
+        const A = m.get(gk(c[0], c[1])),
+          B = m.get(gk(c[2], c[3])),
+          o = c.slice();
+        if (A) [o[0], o[1]] = [gr2(A[0]), gr2(A[1])];
+        if (B) [o[2], o[3]] = [gr2(B[0]), gr2(B[1])];
+        return o;
+      })
+      .filter((c) => Math.hypot(c[2] - c[0], c[3] - c[1]) > 0.01);
     let ring = null,
       at = null,
       cuts = others;

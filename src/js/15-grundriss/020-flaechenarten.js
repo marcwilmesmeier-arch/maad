@@ -135,8 +135,14 @@ function grLevels(b) {
 }
 /** Abstand zum Umriss, bis zu dem eine Wandlinie anschließt: Außenwandstärke + 5 cm (Innenseite der Außenwand). */
 function grAnschlussRand(b) {
-  const c = (b && b.l2 && b.l2.c && b.l2.c.AW) || (typeof L2DC !== 'undefined' ? L2DC.AW : 36);
-  return Math.round((c / 100 + GR_ANSCHLUSS) * 1000) / 1000;
+  // Außenwand dicker oder dünner: Stärke aus LOD 200 (b.l2.c.AW) bzw. dem Außenwandtyp (LOD 300), die größere zählt
+  let d = ((b && b.l2 && b.l2.c && b.l2.c.AW) || (typeof L2DC !== 'undefined' ? L2DC.AW : 36)) / 100;
+  try {
+    if (typeof l2T === 'function' && S.l2 && S.l2.defs) d = Math.max(d, l2T(S.l2.defs.AW).d || 0);
+  } catch (e) {
+    logErr(e, 'grAnschlussRand');
+  }
+  return Math.round((d + GR_ANSCHLUSS) * 1000) / 1000;
 }
 function grFill(lv, rand) {
   const cuts = (lv.obj.cuts || []).map((c) => [c[0], c[1], c[2], c[3]]),
@@ -169,6 +175,8 @@ function grData(b) {
     s = grSig(b) + '|' + rand;
   if (b._gr && b._gr.s === s) return b._gr.L;
   const L = grLevels(b);
+  // ältere Projekte: Wandgruppen in einzelne Wände trennen
+  L.forEach((lv) => grCutsEinzeln(lv.obj));
   L.forEach((lv) => grFill(lv, rand));
   b._gr = { s, L };
   return L;
@@ -187,10 +195,12 @@ function grSetCuts(b, lv, cuts, nw) {
   const old = lv.faces.map((f) => ({ o: f.o, h: f.h, fa: f.fa, n: f.n })),
     df = grDefFa(lv.use).k;
   lv.obj.cuts = cuts.length ? cuts : undefined;
+  grCutsEinzeln(lv.obj);
   b._gr = null;
   const nf = grFaces(
       lv.bs,
       cuts.map((c) => c.slice(0, 4)),
+      grAnschlussRand(b),
     ),
     par = nf.map((f) => old.findIndex((o) => grInFace(o, f.c[0], f.c[1]))),
     big = new Map();
@@ -262,12 +272,38 @@ function grAddCuts(segs) {
 function grAddCutsBasis(segs) {
   grEdit((b) => {
     const lv = grLv(b),
-      cuts = (lv.obj.cuts || []).map((c) => c.slice()),
-      g = grGid(cuts);
-    segs.forEach((s) => cuts.push([gr2(s[0]), gr2(s[1]), gr2(s[2]), gr2(s[3]), g]));
+      cuts = (lv.obj.cuts || []).map((c) => c.slice());
+    // jede Linie eine eigene Wand (eigene Kennung, eigene Ausrichtung) – keine Wandgruppen
+    let g = grGid(cuts);
+    const g0 = g;
+    segs.forEach((s) => cuts.push([gr2(s[0]), gr2(s[1]), gr2(s[2]), gr2(s[3]), g++]));
     grSetCuts(b, lv, cuts);
-    GRS.sel = { k: 'c', g };
+    GRS.sel = { k: 'c', g: g0 };
   });
+}
+/**
+ * Keine Wandgruppen: jede Wandlinie bekommt eine eigene Kennung (c[4]); Linien, die sich eine Kennung teilen (ältere
+ * Projekte, Polylinien, Rechtecke), werden getrennt, die Ausrichtung der Gruppe (obj.l2.al) gilt für jede.
+ * Ändert obj.cuts nur, wenn nötig; Ergebnis: true, wenn getrennt wurde.
+ */
+function grCutsEinzeln(obj) {
+  const cuts = obj && obj.cuts;
+  if (!cuts || cuts.length < 2) return false;
+  const da = new Set();
+  if (!cuts.some((c) => (da.has(c[4]) ? true : (da.add(c[4]), false)))) return false;
+  const al = obj.l2 && obj.l2.al,
+    gesehen = new Set();
+  let g = grGid(cuts);
+  cuts.forEach((c) => {
+    if (!gesehen.has(c[4])) {
+      gesehen.add(c[4]);
+      return;
+    }
+    const alt = c[4];
+    c[4] = g++;
+    if (al && al[alt]) al[c[4]] = al[alt];
+  });
+  return true;
 }
 // Schnittpunktparameter zweier Strecken a (t) und b (u): a1+t*(a2-a1)=b1+u*(b2-b1)
 function grSegT(a, b) {

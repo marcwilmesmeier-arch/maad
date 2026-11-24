@@ -747,3 +747,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Frei stehende Wände (`l2FreieKanten`): Abschnitte von Wandlinien, die keine Flächen trennen, werden zur Wand der Art
   TW mit dem Typ „Innenwand“ (`IN`, Standard 11,5 cm; `TW` heißt jetzt „Wohnungstrennwand“). Sie zählen zur KF und
   verringern die NGF; ein freies Ende endet genau am Linienende.
+- Keine Wandgruppen (`grCutsEinzeln`): jede Wandlinie hat eine eigene Kennung und Ausrichtung; ältere Gruppen werden
+  beim Laden und bei jeder Änderung getrennt (Ausrichtung übernommen). Beim Verschieben einer Wand (`grEditGrp`)
+  folgen die Endpunkte angeschlossener Wände wie in Revit. Der Anschlussabstand an den Umriss richtet sich nach der
+  größeren Außenwandstärke (LOD 200 bzw. Außenwandtyp).
