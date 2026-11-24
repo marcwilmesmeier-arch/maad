@@ -129,6 +129,11 @@ function grFinishRect(c) {
   grAddArea(R);
 }
 function grDown(e) {
+  // ── Erweiterung aus 15-grundriss/150-ausrichten.js: Werkzeug „Ausrichten“
+  if (GRS.tool === 'ali' && e.button === 0 && !GRS.space) {
+    grAusKlick(e);
+    return;
+  }
   // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js
   if (MXS.pick && e.button === 0) {
     const p = grPt(e),
@@ -497,6 +502,7 @@ function grStep(d) {
 }
 function grTool(t) {
   GRS.tool = t;
+  AUS.ref = null;
   GRS.pts = [];
   GRS.rect = null;
   GRS.hover = null;
@@ -504,7 +510,7 @@ function grTool(t) {
   GRS.dirty = 1;
   GRS.ps = '';
   try {
-    ['sel', 'line', 'rect'].forEach((k) => {
+    ['sel', 'line', 'rect', 'ali'].forEach((k) => {
       const e = gD('grT_' + k);
       e && e.classList.toggle('on', k === t);
     });
@@ -525,6 +531,13 @@ function grTool(t) {
   }
 }
 function grKey(e) {
+  // ── Erweiterung aus 15-grundriss/150-ausrichten.js
+  if (GRS.tool === 'ali' && e.key === 'Escape') {
+    if (AUS.ref) AUS.ref = null;
+    else grTool('sel');
+    GRS.dirty = 1;
+    return;
+  }
   // ── Erweiterung aus 22-lod200-waende/060-stutzen-dehnen.js
   if (l2on() && GRS.tool === 'trim' && e.key === 'Escape') {
     grTool('sel');

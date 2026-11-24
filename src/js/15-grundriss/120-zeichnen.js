@@ -556,6 +556,13 @@ function grDraw() {
       console.warn('LOD200 Plan', e);
     }
   else l2BarHide();
+  // ── Erweiterung aus 15-grundriss/150-ausrichten.js: Bezugslinie hervorheben
+  try {
+    const cv = gD('grCv');
+    if (cv) grAusZeichnen(cv.getContext('2d'));
+  } catch (e) {
+    logErr(e, 'grDraw');
+  }
   // ── Erweiterung aus 24-erweiterungen-v344-v436/110-gebaeudemetriken.js (danach)
   try {
     if (!S.mx.ras.draw) return r;

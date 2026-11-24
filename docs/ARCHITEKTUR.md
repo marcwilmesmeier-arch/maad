@@ -751,3 +751,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   beim Laden und bei jeder Änderung getrennt (Ausrichtung übernommen). Beim Verschieben einer Wand (`grEditGrp`)
   folgen die Endpunkte angeschlossener Wände wie in Revit. Der Anschlussabstand an den Umriss richtet sich nach der
   größeren Außenwandstärke (LOD 200 bzw. Außenwandtyp).
+- Ausrichten (`15-grundriss/150-ausrichten.js`, Werkzeug `ali`, Knopf „Ausrichten“): wie in Revit erst Bezugslinie
+  (Außenwand-Innen-/Außenkante inkl. Loggiawände, Innenwandkante, Zeichenlinie, Umriss; `grAusLinien`), dann Kante
+  oder Zeichenlinie einer Innenwand; die Wand wird parallel verschoben (`grEditGrp`, angeschlossene Wände folgen).
+  Nur parallele Linien (bis 1°); Esc hebt den Bezug auf bzw. beendet.

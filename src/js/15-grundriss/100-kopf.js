@@ -76,6 +76,20 @@ function grChrome(b) {
         const tb2 = gD('grT_trim');
         if (tb2) tb2.style.display = on ? '' : 'none';
       }
+      // ── Erweiterung aus 15-grundriss/150-ausrichten.js: Werkzeug „Ausrichten“ (LOD 100 und 200)
+      if (rc && !gD('grT_ali')) {
+        const ab = d.createElement('button');
+        ab.id = 'grT_ali';
+        ab.textContent = 'Ausrichten';
+        ab.title =
+          'Ausrichten wie in Revit: Bezugslinie anklicken, dann Kante oder Zeichenlinie der Innenwand';
+        ab.onclick = () => {
+          GR.tool('ali');
+          grAusHinweis('Ausrichten: zuerst die Bezugslinie anklicken (Wandkante, Zeichenlinie oder Umriss)');
+        };
+        const nach = gD('grT_trim') || rc;
+        nach.parentNode.insertBefore(ab, nach.nextSibling);
+      }
       let sw = d.getElementById('grL2');
       const tb = ln && ln.parentNode;
       if (!sw && tb) {
