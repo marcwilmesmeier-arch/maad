@@ -278,8 +278,3 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Darstellung.
 - Fokus-Ansicht: Ausgeblendetes wird vor jedem Bild gehalten (`iso3Halten` in `drTick`); die Suche nach Gebäuden und
   Grundstück (`iso3Apply`) läuft weiter alle 400 ms.
-
-- Brücken, verworfen: Deckbreite und Verbinden der Fahrbahnen aus dem DOM (Oberfläche neben dem Deck auf
-  Fahrbahnhöhe = Brücke breiter) machte die Brücken am Ostwestfalendamm deutlich ungenauer (zurückgenommen). Offen:
-  Geländer zwischen zusammenlaufenden Fahrbahnen, wenn die OSM-Breite zu klein ist und die Achsen mehr als 6 m Lücke
-  lassen.
