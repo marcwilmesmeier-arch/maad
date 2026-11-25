@@ -815,3 +815,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   oder einen Wasserlauf am Boden kreuzen noch über Wasser liegen noch ein Tal (Gelände ≥ 3 m unter den Enden)
   überspannen und an keine solche Brücke anschließen, bekommen `r.flach` und werden normale Flächen am Boden (sonst
   hoben Baumkronen im DOM Stege in die Luft). Innenwege (`indoor`) sind nie Brücken.
+- Rand des Ausschnitts: `strBrueckeAusschnitt` kappt jede Brückenachse genau an der Kante (|x|, |z| ≤ Größe/2; gekappte
+  Enden `schnitt` mit Stirnfläche für Platte und Geländer, kein Auflager); `strKappen` beschneidet zusätzlich alle
+  Dreiecke von Brücken und Gleisen (mit Attributen, Sutherland-Hodgman) – nichts ragt über das gewählte Raster.

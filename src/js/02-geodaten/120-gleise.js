@@ -201,7 +201,9 @@ function glsBauen(L) {
         P[i][1] + Nn[i][1] * Q[k][0],
       ];
     for (let i = 0; i + 1 < P.length; i++) {
-      if (Math.abs(P[i][0]) > h || Math.abs(P[i][1]) > h) continue;
+      // ganz draußen: weglassen; über die Kante: strKappen schneidet genau ab
+      if (Math.abs(P[i][0]) > h + 3 && Math.abs(P[i + 1][0]) > h + 3) continue;
+      if (Math.abs(P[i][1]) > h + 3 && Math.abs(P[i + 1][1]) > h + 3) continue;
       const j = i + 1;
       for (let k = 0; k + 1 < Q.length; k++) {
         const a = pt(i, k),
@@ -228,10 +230,12 @@ function glsBauen(L) {
   });
   const farbe = S.lc.rail || '#9a9893',
     mk = (D, mitSchwellen) => {
-      if (!D.pos.length) return;
+      // nichts über den Rand des Ausschnitts hinaus (Schwellen und Schienen laufen über aGl mit)
+      const C = strKappen(D.pos, GEO.size / 2, D.gl, 2);
+      if (!C.pos.length) return;
       const ge = new T.BufferGeometry();
-      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(D.pos), 3));
-      ge.setAttribute('aGl', new T.BufferAttribute(new Float32Array(D.gl), 2));
+      ge.setAttribute('position', new T.BufferAttribute(new Float32Array(C.pos), 3));
+      ge.setAttribute('aGl', new T.BufferAttribute(new Float32Array(C.attr), 2));
       ge.computeVertexNormals();
       if (mitSchwellen && !GLS.mat) GLS.mat = glsMaterial(true);
       if (!mitSchwellen && !GLS.matT) GLS.matT = glsMaterial(false);

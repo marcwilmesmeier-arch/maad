@@ -891,7 +891,9 @@ function strBrueckenNachbarn(K) {
 function strBrueckenAuflager(K) {
   K.forEach((A) => {
     let neu = false;
-    [0, A.P.length - 1].forEach((i) => {
+    [0, A.P.length - 1].forEach((i, e) => {
+      // am Ausschnitt gekappte Enden sind keine Brückenenden
+      if (A.schnitt && A.schnitt[e]) return;
       const p = A.P[i];
       let best = null,
         bd = 1e9;
@@ -1053,7 +1055,8 @@ function strBrueckenAlle() {
       // (Bahnbrücken entlang der anschließenden Gleise)
       const v = GEO.dmFull ? strBrueckeVerlaengern(c.l, k === 'rail' ? gleise : strassen) : { l: c.l },
         d = strBrueckeLinie(v.l, c.w, v.a0, v.b0);
-      if (d) K.push(Object.assign(d, { k }));
+      // am Rand des Ausschnitts kappen (Verlängerung und Rampe können hinausreichen)
+      if (d) strBrueckeAusschnitt(d, GEO.size / 2).forEach((x) => K.push(Object.assign(x, { k })));
     });
   strBrueckenAuflager(K);
   strBrueckenNachbarn(K);
@@ -1082,6 +1085,135 @@ function strDeckHoehe(x, z, u, br, art) {
   });
   return best;
 }
+/**
+ * Brücke am Rand des Ausschnitts (|x|, |z| ≤ H) abschneiden: Achse genau an der Kante kappen (Punkt auf der Kante,
+ * alle Werte dorthin interpoliert); ein Stück je zusammenhängendem Abschnitt im Ausschnitt. schnitt[e] markiert die
+ * gekappten Enden (dort Stirnfläche, keine Rampe, kein Auflager).
+ */
+function strBrueckeAusschnitt(d, H) {
+  const n = d.P.length,
+    drin = (p) => Math.abs(p[0]) <= H && Math.abs(p[1]) <= H;
+  if (d.P.every(drin)) return [Object.assign(d, { schnitt: [false, false] })];
+  // Anteil t auf a→b, an dem die Kante erreicht wird (a drin, b draußen oder umgekehrt)
+  const kante = (a, b) => {
+      let t0 = 0,
+        t1 = 1;
+      for (const [p, q] of [
+        [a[0], b[0]],
+        [a[1], b[1]],
+      ])
+        for (const g of [-H, H]) {
+          const dq = q - p;
+          if (Math.abs(dq) < 1e-9) continue;
+          const t = (g - p) / dq;
+          if (t > 0 && t < 1) {
+            const pa = drin(a);
+            if (pa) t1 = Math.min(t1, t);
+            else t0 = Math.max(t0, t);
+          }
+        }
+      return drin(a) ? t1 : t0;
+    },
+    mix = (i, j, t) => {
+      const l = (a, b) => a + (b - a) * t;
+      return {
+        P: [l(d.P[i][0], d.P[j][0]), l(d.P[i][1], d.P[j][1])],
+        S0: l(d.S0[i], d.S0[j]),
+        G0: l(d.G0[i], d.G0[j]),
+        Nn: d.Nn[i].slice(),
+        Z: l(d.Z[i], d.Z[j]),
+        o: [l(d.o[0][i], d.o[0][j]), l(d.o[1][i], d.o[1][j])],
+        nb: [d.nb[0][i] && d.nb[0][j], d.nb[1][i] && d.nb[1][j]],
+      };
+    },
+    wert = (i) => ({
+      P: d.P[i],
+      S0: d.S0[i],
+      G0: d.G0[i],
+      Nn: d.Nn[i],
+      Z: d.Z[i],
+      o: [d.o[0][i], d.o[1][i]],
+      nb: [d.nb[0][i], d.nb[1][i]],
+    }),
+    stuecke = [];
+  let akt = null;
+  for (let i = 0; i < n; i++) {
+    const rein = drin(d.P[i]);
+    if (rein && !akt) {
+      akt = { v: [], s0: i > 0 };
+      if (i > 0) akt.v.push(mix(i - 1, i, kante(d.P[i - 1], d.P[i])));
+    }
+    if (rein) akt.v.push(wert(i));
+    if (akt && (!rein || i === n - 1)) {
+      if (!rein) {
+        akt.v.push(mix(i - 1, i, kante(d.P[i - 1], d.P[i])));
+        akt.s1 = true;
+      }
+      stuecke.push(akt);
+      akt = null;
+    }
+  }
+  return stuecke
+    .filter((q) => q.v.length > 1)
+    .map((q) => {
+      const v = q.v,
+        s0 = v[0].S0;
+      return Object.assign(Object.create(Object.getPrototypeOf(d)), d, {
+        P: v.map((x) => x.P),
+        S0: v.map((x) => x.S0 - s0),
+        G0: v.map((x) => x.G0),
+        Nn: v.map((x) => x.Nn),
+        Z: v.map((x) => x.Z),
+        o: [v.map((x) => x.o[0]), v.map((x) => x.o[1])],
+        nb: [v.map((x) => x.nb[0]), v.map((x) => x.nb[1])],
+        schnitt: [!!q.s0, !!q.s1],
+      });
+    });
+}
+/**
+ * Dreiecke (pos: x, y, z je Ecke; zusätzlich je Ecke k Werte aus attr) am Rand des Ausschnitts (|x|, |z| ≤ H)
+ * beschneiden (Sutherland-Hodgman je Kante) – nichts ragt über das gewählte Raster hinaus. { pos, attr }
+ */
+function strKappen(pos, H, attr, k) {
+  const P = [],
+    A = [],
+    ebenen = [
+      [0, 1],
+      [0, -1],
+      [2, 1],
+      [2, -1],
+    ];
+  for (let t = 0; t + 9 <= pos.length; t += 9) {
+    let poly = [0, 1, 2].map((e) => ({
+      p: pos.slice(t + e * 3, t + e * 3 + 3),
+      a: attr ? attr.slice(((t / 3 + e) * k) | 0, ((t / 3 + e) * k + k) | 0) : null,
+    }));
+    for (const [ax, sg] of ebenen) {
+      const out = [],
+        inn = (v) => sg * v.p[ax] <= H;
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i],
+          b = poly[(i + 1) % poly.length];
+        if (inn(a)) out.push(a);
+        if (inn(a) !== inn(b)) {
+          const u = (sg * H - a.p[ax]) / (b.p[ax] - a.p[ax]);
+          out.push({
+            p: a.p.map((x, j) => x + (b.p[j] - x) * u),
+            a: a.a ? a.a.map((x, j) => x + (b.a[j] - x) * u) : null,
+          });
+        }
+      }
+      poly = out;
+      if (poly.length < 3) break;
+    }
+    for (let i = 1; i + 1 < poly.length; i++)
+      for (const v of [poly[0], poly[i], poly[i + 1]]) {
+        P.push(...v.p);
+        if (attr) A.push(...v.a);
+      }
+  }
+  return { pos: P, attr: A };
+}
 /** Stärke der Fahrbahnplatte einer Brücke (m), Höhe der Brüstung (m), Abstand der Pfeiler (m). */
 const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
 /**
@@ -1109,7 +1241,7 @@ function strBrueckenBau(E, mk) {
     pl = STR_BR.platte,
     br = STR_BR.bruestung,
     bw = 0.25;
-  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe, k: art }) => {
+  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe, schnitt, k: art }) => {
     if (weg) return;
     const deck = art === 'rail' ? obenR : oben;
     const at = (i, x, dy) => [P[i][0] + Nn[i][0] * x, Z[i] - t + (dz || 0) + dy, P[i][1] + Nn[i][1] * x],
@@ -1161,7 +1293,7 @@ function strBrueckenBau(E, mk) {
     // Stirnseiten an den Enden (Platte) – nicht, wo das Ende auf einer anderen Brücke liegt
     [0, P.length - 1].forEach(
       (i, e) =>
-        (!kappe || kappe[e]) &&
+        (!kappe || kappe[e] || (schnitt && schnitt[e])) &&
         quad(
           bau,
           at(i, aussen(i, 0), -pl),
@@ -1170,9 +1302,24 @@ function strBrueckenBau(E, mk) {
           at(i, aussen(i, 0), 0),
         ),
     );
+    // am Ausschnitt gekappt: auch die Geländer mit einer Stirnfläche schließen
+    [0, P.length - 1].forEach((i, e) => {
+      if (!(schnitt && schnitt[e])) return;
+      for (const sd of [0, 1])
+        if (!nb[sd][i])
+          quad(
+            bau,
+            at(i, rand(i, sd), 0),
+            at(i, aussen(i, sd), 0),
+            at(i, aussen(i, sd), br),
+            at(i, rand(i, sd), br),
+          );
+    });
   });
-  const geo = (pos) => {
-    const ge = new T.BufferGeometry();
+  const geo = (pos0) => {
+    // nichts über den Rand des Ausschnitts hinaus
+    const pos = strKappen(pos0, GEO.size / 2).pos,
+      ge = new T.BufferGeometry();
     ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
     ge.computeVertexNormals();
     return ge;
