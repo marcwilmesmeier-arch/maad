@@ -835,3 +835,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - LOD 200, frei stehende Innenwände (`l2FreieKanten`): nur Stücke innerhalb des Umrisses und weiter als die
   Außenwandstärke von ihm entfernt; Enden in der Außenwand werden bis an deren Innenseite zurückgenommen – keine
   Innenwand außerhalb der Außenwände (auch wenn die Linie im Grundriss über den Umriss hinaus gezeichnet ist).
+- Bahnüberführungen (`strBahnUeberfuehrungen`, in `strBrueckenAlle`): kreuzt ein Gleis ohne Brückenkennung eine Straße
+  oder einen Weg darunter (Tunnel/Unterführung, OSM-Ebene < 0 oder Gelände an der Kreuzung ≥ 2 m unter dem 15 m davor
+  und dahinter), entsteht ein Brückenstück (Straßenbreite im Winkel + je 3 m) – danach wie jede Bahnbrücke (DOM-Höhe,
+  Deck, Geländer, Gleise darauf). Ebenerdige Bahnübergänge bleiben ohne Brücke.

@@ -1039,6 +1039,80 @@ function strBrueckenFlach(acc) {
   br.forEach((r, i) => (r.flach = ok[i] ? 0 : 1));
 }
 /**
+ * Bahnüberführungen ergänzen: kreuzt ein Gleis (ohne Brückenkennung) eine Straße oder einen Weg, der darunter liegt –
+ * als Tunnel/Unterführung eingetragen, OSM-Ebene unter 0, oder das Gelände an der Kreuzung mindestens 2 m tiefer als
+ * 15 m davor und dahinter am Gleis –, entsteht dort ein Brückenstück des Gleises (Straßenbreite im Kreuzungswinkel
+ * plus je 3 m). Ebenerdige Bahnübergänge bleiben ohne Brücke; wo schon eine Bahnbrücke liegt, entsteht keine.
+ * [{ l, w, br: 1, ly, syn: 1 }]
+ */
+function strBahnUeberfuehrungen(acc) {
+  const L = (acc && acc.line) || {},
+    gleise = (L.rail || []).filter((r) => !r.br),
+    echte = (L.rail || []).filter((r) => r.br && !r.flach),
+    unten = []
+      .concat(
+        (L.tunnel || []).filter((t) => t.art !== 'rail').map((t) => ({ l: t.l, w: t.w, tu: 1 })),
+        L.roads || [],
+        L.paths || [],
+        L.cycle || [],
+      )
+      .filter((r) => !r.br),
+    R = [],
+    schnitt = (a, b, c, d) => {
+      const r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+      if (Math.abs(r) < 1e-9) return null;
+      const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r,
+        u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
+      return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? t : null;
+    };
+  gleise.forEach((g) => {
+    const l = g.l;
+    for (let i = 0; i + 1 < l.length; i++) {
+      const a = l[i],
+        b = l[i + 1],
+        Lg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (Lg < 0.01) continue;
+      const u = [(b[0] - a[0]) / Lg, (b[1] - a[1]) / Lg];
+      unten.forEach((r) => {
+        const m = r.l;
+        for (let j = 0; j + 1 < m.length; j++) {
+          const t = schnitt(a, b, m[j], m[j + 1]);
+          if (t == null) continue;
+          const x = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
+            hier = (s) => gh(x[0] + u[0] * s, x[1] + u[1] * s),
+            tief = Math.min(hier(-15), hier(15)) - gh(x[0], x[1]) >= 2,
+            darunter = r.tu || (r.ly || 0) < 0 || tief;
+          if (!darunter) continue;
+          // schon eine Bahnbrücke hier?
+          if (echte.some((e) => e.l.some((p, k) => k && strSegAbst(x, e.l[k - 1], p) < 3))) continue;
+          const lm = Math.hypot(m[j + 1][0] - m[j][0], m[j + 1][1] - m[j][1]) || 1,
+            v = [(m[j + 1][0] - m[j][0]) / lm, (m[j + 1][1] - m[j][1]) / lm],
+            sin = Math.max(0.35, Math.abs(u[0] * v[1] - u[1] * v[0])),
+            halb = (r.w || 6) / 2 / sin + 3;
+          R.push({
+            l: [
+              [x[0] - u[0] * halb, x[1] - u[1] * halb],
+              [x[0] + u[0] * halb, x[1] + u[1] * halb],
+            ],
+            w: g.w || 3.4,
+            br: 1,
+            ly: (g.ly || 0) + 1,
+            syn: 1,
+          });
+        }
+      });
+    }
+  });
+  return R;
+}
+/** Abstand des Punkts p zur Strecke a–b. */
+function strSegAbst(p, a, b) {
+  const dx = b[0] - a[0],
+    dz = b[1] - a[1],
+    t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dz);
+}
+/**
  * Alle Brücken des Ausschnitts (Straßen und Wege) mit Höhen und Nachbarn, zwischengespeichert, bis sich Daten oder
  * Gelände ändern. [{ k: 'roads' | 'paths', P, Z, … }]
  */
@@ -1046,6 +1120,7 @@ function strBrueckenAlle() {
   const acc = GEO.acc,
     L = (acc && acc.line) || {},
     quellen = { roads: L.roads || [], paths: (L.paths || []).concat(L.cycle || []), rail: L.rail || [] },
+    // (Bahnüberführungen über Straßen und Unterführungen ergänzt, strBahnUeberfuehrungen)
     sig = [
       GEO.size,
       GEO.e0,
@@ -1056,6 +1131,7 @@ function strBrueckenAlle() {
     ].join('|');
   if (STR.brD && STR.brD.acc === acc && STR.brD.sig === sig) return STR.brD.K;
   strBrueckenFlach(acc);
+  quellen.rail = quellen.rail.concat(strBahnUeberfuehrungen(acc));
   const K = [],
     strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br || r.flach),
     gleise = quellen.rail.filter((r) => !r.br || r.flach);
