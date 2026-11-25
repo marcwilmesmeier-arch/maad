@@ -540,7 +540,11 @@ function ctxCollect(tiles) {
           let lang = 0;
           for (const r of f.rings) {
             const l = cv(r, R.ext);
-            acc.line.tunnel.push({ l, w: /^(rail|transit)/.test(c) ? 3.4 : WR[c] || 3 });
+            acc.line.tunnel.push({
+              l,
+              w: /^(rail|transit)/.test(c) ? 3.4 : WR[c] || 3,
+              art: /^(rail|transit)/.test(c) ? 'rail' : 'roads',
+            });
             for (let i = 1; i < l.length; i++)
               lang += Math.hypot(l[i][0] - l[i - 1][0], l[i][1] - l[i - 1][1]);
           }

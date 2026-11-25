@@ -826,3 +826,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   gezeichnet (offen im Einschnitt unter der Brücke). Gleise ohne erkannte Brücke: unplausible DOM-Werte (`glsDom` →
   null) werden gerade zwischen den gesicherten Höhen davor und dahinter (bis 60 m) überbrückt – kein Absacken in
   Einschnitte, stehende Züge fallen heraus.
+- Tunnelportale (`strTunnelPortale`, mit der Straßenebene gebaut): Tunnelstücke je Art zu Tunneln verbunden; ab 80 m
+  an jedem Ende im Ausschnitt eine Stirnwand in Geländefarbe mit dunkler Öffnung (Straße 4,5 m, Bahn 6 m) und Sturz;
+  der Verlauf unter der Erde wird nicht gezeichnet.

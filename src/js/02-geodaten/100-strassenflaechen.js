@@ -1216,6 +1216,73 @@ function strKappen(pos, H, attr, k) {
   }
   return { pos: P, attr: A };
 }
+/**
+ * Tunnelportale: Tunnelstücke je Art (Straße/Weg, Bahn) zu Tunneln verbinden (strBrueckenKetten); ab 80 m Länge
+ * bekommt jedes Ende im Ausschnitt ein Portal – Stirnwand quer zur Fahrbahn (je Seite 1,5 m breiter, 0,6 m stark) in
+ * Geländefarbe mit dunkler Öffnung (Fahrbahnbreite × 4,5 m, Bahn 6 m) und Sturz darüber, auf Fahrbahnhöhe am
+ * Tunnelende, zur offenen Strecke gewandt. Der Verlauf unter der Erde wird nicht gezeichnet.
+ */
+function strTunnelPortale(E, mk) {
+  const L = (GEO.acc && GEO.acc.line && GEO.acc.line.tunnel) || [],
+    H = GEO.size / 2;
+  if (!L.length) return;
+  const wand = [],
+    loch = [],
+    quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d);
+  ['roads', 'rail'].forEach((art) => {
+    strBrueckenKetten(
+      L.filter((t) => t.art === art),
+      H,
+    ).forEach(({ l, w }) => {
+      let lang = 0;
+      for (let i = 1; i < l.length; i++) lang += Math.hypot(l[i][0] - l[i - 1][0], l[i][1] - l[i - 1][1]);
+      if (lang < 80) return;
+      [
+        [0, 1],
+        [l.length - 1, l.length - 2],
+      ].forEach(([i, k]) => {
+        const p = l[i],
+          q = l[k];
+        // am Rand gekappt: kein Portal
+        if (Math.abs(p[0]) > H - 0.5 || Math.abs(p[1]) > H - 0.5) return;
+        const d = Math.hypot(p[0] - q[0], p[1] - q[1]) || 1,
+          u = [(p[0] - q[0]) / d, (p[1] - q[1]) / d], // nach außen (zur offenen Strecke)
+          n = [-u[1], u[0]],
+          y0 = gh(p[0], p[1]) - E.tief,
+          hO = art === 'rail' ? 6 : 4.5,
+          hW = hO + 1.5,
+          b = w / 2 + 0.3,
+          B = w / 2 + 1.5,
+          dk = 0.6,
+          pt = (o, h, t) => [p[0] + n[0] * o + u[0] * t, y0 + h, p[1] + n[1] * o + u[1] * t];
+        // Stirnwand: Vorderseite um die Öffnung (links, rechts, Sturz), Rückseite, Oberseite, Seiten
+        quad(wand, pt(-B, 0, 0), pt(-b, 0, 0), pt(-b, hW, 0), pt(-B, hW, 0));
+        quad(wand, pt(b, 0, 0), pt(B, 0, 0), pt(B, hW, 0), pt(b, hW, 0));
+        quad(wand, pt(-b, hO, 0), pt(b, hO, 0), pt(b, hW, 0), pt(-b, hW, 0));
+        quad(wand, pt(-B, hW, 0), pt(B, hW, 0), pt(B, hW, -dk), pt(-B, hW, -dk));
+        quad(wand, pt(-B, 0, -dk), pt(-B, 0, 0), pt(-B, hW, 0), pt(-B, hW, -dk));
+        quad(wand, pt(B, 0, 0), pt(B, 0, -dk), pt(B, hW, -dk), pt(B, hW, 0));
+        // Laibung der Öffnung (Innenseiten und Decke) und dunkle Öffnung etwas zurückgesetzt
+        quad(wand, pt(-b, 0, 0), pt(-b, 0, -dk), pt(-b, hO, -dk), pt(-b, hO, 0));
+        quad(wand, pt(b, 0, -dk), pt(b, 0, 0), pt(b, hO, 0), pt(b, hO, -dk));
+        quad(wand, pt(-b, hO, 0), pt(-b, hO, -dk), pt(b, hO, -dk), pt(b, hO, 0));
+        quad(loch, pt(-b, 0, -dk), pt(b, 0, -dk), pt(b, hO, -dk), pt(-b, hO, -dk));
+      });
+    });
+  });
+  const geo = (pos0) => {
+    const pos = strKappen(pos0, H).pos,
+      ge = new T.BufferGeometry();
+    ge.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    ge.computeVertexNormals();
+    return ge;
+  };
+  if (!E.matBW) E.matBW = new T.MeshLambertMaterial({ side: T.DoubleSide });
+  if (!STR.matTL) STR.matTL = new T.MeshBasicMaterial({ color: new T.Color('#2b3034'), side: T.DoubleSide });
+  strFarbe(E);
+  if (wand.length) mk(geo(wand), E.matBW).castShadow = true;
+  if (loch.length) mk(geo(loch), STR.matTL);
+}
 /** Stärke der Fahrbahnplatte einer Brücke (m), Höhe der Brüstung (m), Abstand der Pfeiler (m). */
 const STR_BR = { platte: 1, bruestung: 1, pfeiler: 25, pfeilerAb: 3.5 };
 /**
@@ -1530,5 +1597,12 @@ function strBauen(E, alle, fills) {
   } catch (er) {
     logErr(er, 'strBauen');
   }
+  // ── Tunnelportale (einmal, mit der Straßenebene)
+  if (E === STR.E.roads)
+    try {
+      strTunnelPortale(E, mk);
+    } catch (er) {
+      logErr(er, 'strBauen>Tunnel');
+    }
   E.aktiv = true;
 }
