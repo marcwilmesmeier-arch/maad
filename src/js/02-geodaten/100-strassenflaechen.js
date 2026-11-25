@@ -631,8 +631,17 @@ function strBrueckeLinie(l, w, a0, b0, opt) {
     o: [P.map(() => h2), P.map(() => h2)],
     nb: [P.map(() => false), P.map(() => false)],
   };
-  // Unterführungsdeckel: ohne DOM auf Gleishöhe daneben, keine Rampen
-  if (opt && opt.z != null && !GEO.dmFull) d.Z = d.Z.map(() => opt.z);
+  // Unterführungsdeckel: Höhe aus den Gleishöhen an den Kreuzungen (dazwischen gerade, außen gleich), keine Rampen
+  if (opt && opt.zs && opt.zs.length) {
+    const Z = opt.zs;
+    d.Z = d.S0.map((s) => {
+      if (s <= Z[0].s) return Z[0].z;
+      if (s >= Z[Z.length - 1].s) return Z[Z.length - 1].z;
+      let k = 1;
+      while (Z[k].s < s) k++;
+      return Z[k - 1].z + ((Z[k].z - Z[k - 1].z) * (s - Z[k - 1].s)) / (Z[k].s - Z[k - 1].s || 1);
+    });
+  }
   if (opt && opt.ohneRampe) return d;
   return strBrueckeGerade(a0 != null ? strBrueckeKuerzen(d, a0, b0) : d);
 }
@@ -895,6 +904,8 @@ function strBrueckenNachbarn(K) {
  */
 function strBrueckenAuflager(K) {
   K.forEach((A) => {
+    // Unterführungsdeckel behalten ihre Gleishöhen
+    if (A.deckel) return;
     let neu = false;
     [0, A.P.length - 1].forEach((i, e) => {
       // am Ausschnitt gekappte Enden sind keine Brückenenden
@@ -1045,8 +1056,8 @@ function strBrueckenFlach(acc) {
  * Unterführungen unter Gleisen: liegt eine Straße oder ein Weg unter Gleisen (als Tunnel/Unterführung eingetragen,
  * OSM-Ebene unter 0, oder Gelände an der Kreuzung mindestens 2 m tiefer als 15 m davor und dahinter am Gleis) und
  * kreuzt Gleise ohne Brückenkennung, entsteht ein durchgehender Deckel entlang der Straße – über alle Gleise und
- * Bahnsteige: Tunnel bis 150 m ganz, sonst vom ersten bis zum letzten Gleis plus je 3,7 m; Breite Straße + 2 m; z =
- * Gleishöhe neben der Unterführung (Ersatz ohne DOM). Ebenerdige Bahnübergänge bleiben offen. [{ l, w, z }]
+ * Bahnsteige: vom ersten bis zum letzten Gleis plus je 3,2 m; Breite Straße + 2 m; Höhe = Gleishöhe an den
+ * Kreuzungen (zs: [{ s, z }], dazwischen gerade, außen gleich). Ebenerdige Bahnübergänge bleiben offen. [{ l, w, zs }]
  */
 function strBahnUeberfuehrungen(acc) {
   const L = (acc && acc.line) || {},
@@ -1102,18 +1113,27 @@ function strBahnUeberfuehrungen(acc) {
           if (!tu) continue;
           const x = [a[0] + (b[0] - a[0]) * tu[0], a[1] + (b[1] - a[1]) * tu[0]],
             hier = (q) => gh(x[0] + u[0] * q, x[1] + u[1] * q),
-            z = Math.max(hier(-15), hier(15));
-          if (z - gh(x[0], x[1]) >= 2) drunter = true;
+            neben = Math.max(hier(-15), hier(15)),
+            // Gleishöhe an der Kreuzung: aus dem DOM wie bei den Gleisen (glsDom), sonst Gelände daneben
+            dom = typeof glsDom === 'function' && GEO.dmFull ? glsDom(x[0], x[1]) : null,
+            z = dom != null && Math.abs(dom - neben) < 3 ? dom : neben;
+          if (neben - gh(x[0], x[1]) >= 2) drunter = true;
           X.push({ s: cum[j] + (cum[j + 1] - cum[j]) * tu[1], z });
         }
       }
     });
     if (!X.length || !drunter) return;
+    // vom ersten bis zum letzten Gleis (+ je 3,2 m: Schotterbett und Rand), nicht darüber hinaus
     const s0 = Math.min(...X.map((x) => x.s)),
       s1 = Math.max(...X.map((x) => x.s)),
-      [a, b] = r.tu && lang <= 150 ? [0, lang] : [Math.max(0, s0 - 3.7), Math.min(lang, s1 + 3.7)];
+      a = Math.max(0, s0 - 3.2),
+      b = Math.min(lang, s1 + 3.2);
     if (b - a < 2) return;
-    R.push({ l: teil(m, cum, a, b), w: (r.w || 6) + 2, z: Math.max(...X.map((x) => x.z)) });
+    R.push({
+      l: teil(m, cum, a, b),
+      w: (r.w || 6) + 2,
+      zs: X.map((x) => ({ s: x.s - a, z: x.z })).sort((p, q) => p.s - q.s),
+    });
   });
   return R;
 }
@@ -1160,7 +1180,7 @@ function strBrueckenAlle() {
     });
   // Unterführungen unter Gleisen: durchgehender Deckel (Art Bahn, ohne Rampen, Geländer nur an den Stirnseiten)
   strBahnUeberfuehrungen(acc).forEach((u) => {
-    const d = strBrueckeLinie(u.l, u.w, null, null, { ohneRampe: true, z: u.z });
+    const d = strBrueckeLinie(u.l, u.w, null, null, { ohneRampe: true, zs: u.zs });
     if (d)
       strBrueckeAusschnitt(d, GEO.size / 2).forEach((x) =>
         K.push(Object.assign(x, { k: 'rail', deckel: 1 })),
@@ -1386,7 +1406,7 @@ function strBrueckenBau(E, mk) {
       seit += S0[j] - S0[i];
       const ug = gh(P[j][0], P[j][1]),
         zj = Z[j] - t;
-      if (seit >= STR_BR.pfeiler && j < P.length - 3 && zj - pl - ug > STR_BR.pfeilerAb) {
+      if (!deckel && seit >= STR_BR.pfeiler && j < P.length - 3 && zj - pl - ug > STR_BR.pfeilerAb) {
         seit = 0;
         const r = Math.max(0.6, w * 0.06),
           y0 = ug - 0.5,
