@@ -832,3 +832,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Gleise, Höhenverlauf (`glsGlatt`): Median über ±10 m, Neigung höchstens 3 % (Straßenbahn 8 %), Mittel über ±8 m – keine
   Sprünge. Der Flankenfuß des Schotterbetts reicht nur auf flachem Damm (bis 1 m) bis aufs Gelände; höher bleibt das Bett
   ein dünnes Band (kein massiver Körper, Blick darunter frei).
+- LOD 200, frei stehende Innenwände (`l2FreieKanten`): nur Stücke innerhalb des Umrisses und weiter als die
+  Außenwandstärke von ihm entfernt; Enden in der Außenwand werden bis an deren Innenseite zurückgenommen – keine
+  Innenwand außerhalb der Außenwände (auch wenn die Linie im Grundriss über den Umriss hinaus gezeichnet ist).

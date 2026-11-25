@@ -2,14 +2,24 @@
 /**
  * Frei stehende Wandabschnitte eines Geschosses: Teile der Wandlinien (nach grCutsVerbinden, an Schnittpunkten
  * geteilt), die nicht auf einer Grenze zwischen zwei Flächen liegen (Kanten E) und nicht auf dem Umriss. Ergebnis wie
- * die Kanten aus E: [{ p, q, f: [], ek, frei: 1 }].
+ * die Kanten aus E: [{ p, q, f: [], ek, frei: 1 }]. Nur innerhalb der Außenwände: Stücke außerhalb des Umrisses oder
+ * in der Außenwand (näher am Umriss als deren Stärke) entfallen – keine Innenwand außerhalb der Außenwände.
  */
 function l2FreieKanten(b, lv, E) {
   const R = [];
   try {
     const cuts = (lv.obj.cuts || []).map((c) => c.slice(0, 4));
     if (!cuts.length) return R;
-    const C = grCutsVerbinden(lv.bs, cuts, grAnschlussRand(b)),
+    const rand = grAnschlussRand(b),
+      C = grCutsVerbinden(lv.bs, cuts, rand),
+      // innerhalb des Umrisses (gerade/ungerade über die Umrisskanten)?
+      innen = (x, z) => {
+        let c = false;
+        lv.bs.forEach((t) => {
+          if (t[1] > z !== t[3] > z && x < ((t[2] - t[0]) * (z - t[1])) / (t[3] - t[1]) + t[0]) c = !c;
+        });
+        return c;
+      },
       segs = lv.bs.map((s) => [s[0], s[1], s[2], s[3], 1]).concat(C.map((c) => [c[0], c[1], c[2], c[3], 2])),
       K = [...E.values()];
     grSplit(segs).forEach((s) => {
@@ -21,6 +31,32 @@ function l2FreieKanten(b, lv, E) {
       // liegt auf einer Flächengrenze bzw. dem Umriss: daraus entsteht schon eine Wand
       if (K.some((e) => l2Seg(m[0], m[1], [e.p[0], e.p[1], e.q[0], e.q[1]]) < 0.005)) return;
       if (lv.bs.some((t) => l2Seg(m[0], m[1], t) < 0.005)) return;
+      // außerhalb des Umrisses oder in der Außenwand: keine Innenwand
+      if (!innen(m[0], m[1])) return;
+      const dicke = Math.max(0.05, (rand || 0) - GR_ANSCHLUSS),
+        abstand = (x, z) => Math.min(...lv.bs.map((t) => l2Seg(x, z, t)));
+      if (abstand(m[0], m[1]) < dicke) return;
+      // Enden in der Außenwand bis an deren Innenseite zurücknehmen (1-cm-Schritte)
+      const kuerzen = (A, B) => {
+        const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+        for (let t = 0; t < L; t += 0.01) {
+          const x = A[0] + ((B[0] - A[0]) * t) / L,
+            z = A[1] + ((B[1] - A[1]) * t) / L;
+          if (abstand(x, z) >= dicke - 0.001) return [x, z];
+        }
+        return A;
+      };
+      if (abstand(p[0], p[1]) < dicke - 0.001) {
+        const k = kuerzen(p, q);
+        p[0] = k[0];
+        p[1] = k[1];
+      }
+      if (abstand(q[0], q[1]) < dicke - 0.001) {
+        const k = kuerzen(q, p);
+        q[0] = k[0];
+        q[1] = k[1];
+      }
+      if (Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.02) return;
       const a = l2k(p),
         c = l2k(q);
       R.push({ p, q, f: [], ek: 'frei:' + (a < c ? a + '|' + c : c + '|' + a), frei: 1 });
