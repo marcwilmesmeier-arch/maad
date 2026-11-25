@@ -839,3 +839,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   sonst Gelände daneben; dazwischen gerade, außen gleich – nicht das DOM entlang der Straße), keine Rampen, keine
   Pfeiler, kein Auflager, Geländer nur quer an den Stirnseiten, Gleise liegen darauf. Ebenerdige
   Bahnübergänge bleiben offen; die übrigen Brücken sind davon unberührt.
+- Site & Context (`07-analyse/170-site-context.js`): Landmark-Gebäude (`scGebaeude`) – Fläche: Mittelpunkt in der
+  Fläche, ≥ ⅓ der Ecken darin oder Flächenmittelpunkt im Gebäude (OSM- und Gebäudeumriss weichen ab); Punkt: Gebäude
+  darunter, sonst das nächste bis 8 m. Plätze (`scPlaetzeBauen`, Gruppe `G.scp`): eigene Fläche 8 cm über dem Gelände
+  (über Straßen- und Wegeflächen; im Kartenbild waren sie verdeckt), auf ≤ 3 m geteilt, am Ausschnitt gekappt.

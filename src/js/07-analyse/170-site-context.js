@@ -14,6 +14,11 @@ const SC_G = new T.Group();
 SC_G.name = 'landmarks';
 sc.add(SC_G);
 G.scl = SC_G;
+// Plätze als eigene Fläche knapp über Gelände, Straßen- und Wegeflächen (im Kartenbild lagen sie darunter verdeckt)
+const SCP_G = new T.Group();
+SCP_G.name = 'plaetze';
+sc.add(SCP_G);
+G.scp = SCP_G;
 
 /** Gewicht eines OSM-Objekts als Landmark (0 = kein Landmark). */
 function scGewicht(t) {
@@ -260,21 +265,115 @@ function scAuswerten(els, lon0, lat0) {
 function scAuswahl() {
   return SC.lm.filter((l) => !S.sc.aus[l.id]).slice(0, S.sc.anzahl);
 }
-/** Umgebungsgebäude (Index in GEO.ranges) eines Landmarks: Grundriss enthält den Punkt oder liegt in der Fläche. */
+/**
+ * Umgebungsgebäude (Index in GEO.ranges) eines Landmarks. Fläche: das Gebäude gehört dazu, wenn sein Mittelpunkt in
+ * der Fläche liegt, mindestens ein Drittel seiner Ecken darin liegen oder der Mittelpunkt der Fläche im Gebäude liegt
+ * (OSM- und Gebäudeumriss weichen oft etwas ab; verwinkelte Gebäude, Gebäudeteile). Punkt: das Gebäude, in dem er
+ * liegt, sonst das nächste im Umkreis von 8 m.
+ */
 function scGebaeude(l) {
   const R = GEO.ranges || [],
     out = [];
+  if (l.r.length) {
+    const lc = cen(l.r[0]);
+    R.forEach((r, i) => {
+      const o = r.b && r.b.o;
+      if (!o || o.length < 3) return;
+      const c = cen(o),
+        drin = o.filter((q) => bclIn(l.r, q[0], q[1])).length;
+      if (bclIn(l.r, c[0], c[1]) || drin >= o.length / 3 || bclIn([o], lc[0], lc[1])) out.push(i);
+    });
+    return out;
+  }
+  let best = -1,
+    bd = 8;
   R.forEach((r, i) => {
     const o = r.b && r.b.o;
     if (!o || o.length < 3) return;
-    if (l.r.length) {
-      const c = cen(o);
-      if (bclIn(l.r, c[0], c[1])) out.push(i);
-    } else if (bclIn([o], l.pt[0], l.pt[1])) out.push(i);
+    if (bclIn([o], l.pt[0], l.pt[1])) {
+      out.push(i);
+      return;
+    }
+    for (let k = 0; k < o.length; k++) {
+      const a = o[k],
+        b = o[(k + 1) % o.length],
+        dx = b[0] - a[0],
+        dz = b[1] - a[1],
+        t = Math.max(
+          0,
+          Math.min(1, ((l.pt[0] - a[0]) * dx + (l.pt[1] - a[1]) * dz) / (dx * dx + dz * dz || 1)),
+        ),
+        d = Math.hypot(l.pt[0] - a[0] - t * dx, l.pt[1] - a[1] - t * dz);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
   });
+  if (!out.length && best >= 0) out.push(best);
   return out;
 }
-
+/**
+ * Plätze als Fläche bauen: Umriss in Dreiecke zerlegen (ShapeUtils), auf höchstens 3 m Kantenlänge teilen und 8 cm über
+ * das Gelände legen – über Straßen- (−15 cm) und Wegeflächen (−5 cm); am Rand des Ausschnitts gekappt.
+ */
+function scPlaetzeBauen() {
+  while (SCP_G.children.length) {
+    const o = SCP_G.children.pop();
+    o.geometry.dispose();
+  }
+  if (!SC.pl.length || !S.geo) return;
+  const pos = [],
+    y = (x, z) => gh(x, z) + 0.08,
+    teile = (a, b, c) => {
+      const L = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]),
+        m = Math.max(L(a, b), L(b, c), L(c, a));
+      if (m <= 3) {
+        for (const p of [a, b, c]) pos.push(p[0], y(p[0], p[1]), p[1]);
+        return;
+      }
+      const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
+        bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2],
+        ca = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2];
+      teile(a, ab, ca);
+      teile(ab, b, bc);
+      teile(ca, bc, c);
+      teile(ab, bc, ca);
+    };
+  SC.pl.forEach((p) =>
+    (p.r || []).forEach((ring) => {
+      const r =
+        ring.length > 2 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]
+          ? ring.slice(0, -1)
+          : ring;
+      if (r.length < 3) return;
+      const v = r.map((q) => new T.Vector2(q[0], q[1]));
+      // Dreiecke nach oben orientiert (Normale +y)
+      const ccw = T.ShapeUtils.isClockWise(v);
+      T.ShapeUtils.triangulateShape(v, []).forEach(([i, j, k]) =>
+        ccw ? teile(r[i], r[j], r[k]) : teile(r[i], r[k], r[j]),
+      );
+    }),
+  );
+  if (!pos.length) return;
+  const K = typeof strKappen === 'function' ? strKappen(pos, GEO.size / 2).pos : pos,
+    ge = new T.BufferGeometry();
+  ge.setAttribute('position', new T.BufferAttribute(new Float32Array(K), 3));
+  ge.computeVertexNormals();
+  const m = new T.Mesh(
+    ge,
+    new T.MeshLambertMaterial({
+      color: new T.Color(S.lc.scp || '#e8a17c'),
+      side: T.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
+  );
+  m.receiveShadow = true;
+  m.raycast = () => {};
+  SCP_G.add(m);
+}
 /** Marker und Führungslinien neu aufbauen; Gebäudefarben und Platzflächen auffrischen. */
 function scZeichnen() {
   while (SC_G.children.length) {
@@ -334,11 +433,14 @@ function scZeichnen() {
     sp.raycast = () => {};
     SC_G.add(sp);
   });
-  // Plätze ins Geländebild (wie die Karten-Ebenen)
+  // Plätze als eigene Fläche über Straßen und Wegen (nicht mehr im Geländebild, dort waren sie verdeckt)
   OVL.scp.col = S.lc.scp;
-  const it = SC.pl.map((p) => ({ t: 'a', r: p.r, c: S.lc.scp }));
-  it._v = Math.random();
-  OVI.scp = it;
+  OVI.scp = [];
+  try {
+    scPlaetzeBauen();
+  } catch (e) {
+    logErr(e, 'scPlaetzeBauen');
+  }
   try {
     if (S.geo) recomp();
   } catch (e) {
