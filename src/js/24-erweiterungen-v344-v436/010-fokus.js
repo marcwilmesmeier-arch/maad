@@ -19,6 +19,9 @@ const iso3Ctx = () => {
     'trees',
     'paths',
     'cycle',
+    'rail', // Gleise (02-geodaten/120-gleise.js)
+    'scl', // Landmark-Marker und Plätze (07-analyse/170-site-context.js)
+    'scp',
     'water',
     'abst',
     'wms',
