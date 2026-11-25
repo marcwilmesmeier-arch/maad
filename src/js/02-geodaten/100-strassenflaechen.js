@@ -588,7 +588,7 @@ function strBrueckenKetten(L, H) {
  * Brückenachse für den Bau aufbereiten: auf etwa 2 m verdichten (P), Bogenlänge S0, Gelände G0, Fahrbahnhöhe Z
  * (strBrueckeZ), Querrichtung Nn, halbe Breite h2; je Seite (0 = −Nn, 1 = +Nn) Randabstand o und Nachbar nb.
  */
-function strBrueckeLinie(l, w, a0, b0) {
+function strBrueckeLinie(l, w, a0, b0, opt) {
   if (!l || l.length < 2) return null;
   const P = [];
   for (let k = 0; k + 1 < l.length; k++) {
@@ -631,6 +631,9 @@ function strBrueckeLinie(l, w, a0, b0) {
     o: [P.map(() => h2), P.map(() => h2)],
     nb: [P.map(() => false), P.map(() => false)],
   };
+  // Unterführungsdeckel: ohne DOM auf Gleishöhe daneben, keine Rampen
+  if (opt && opt.z != null && !GEO.dmFull) d.Z = d.Z.map(() => opt.z);
+  if (opt && opt.ohneRampe) return d;
   return strBrueckeGerade(a0 != null ? strBrueckeKuerzen(d, a0, b0) : d);
 }
 /**
@@ -1039,16 +1042,15 @@ function strBrueckenFlach(acc) {
   br.forEach((r, i) => (r.flach = ok[i] ? 0 : 1));
 }
 /**
- * Bahnüberführungen ergänzen: kreuzt ein Gleis (ohne Brückenkennung) eine Straße oder einen Weg, der darunter liegt –
- * als Tunnel/Unterführung eingetragen, OSM-Ebene unter 0, oder das Gelände an der Kreuzung mindestens 2 m tiefer als
- * 15 m davor und dahinter am Gleis –, entsteht dort ein Brückenstück des Gleises (Straßenbreite im Kreuzungswinkel
- * plus je 3 m). Ebenerdige Bahnübergänge bleiben ohne Brücke; wo schon eine Bahnbrücke liegt, entsteht keine.
- * [{ l, w, br: 1, ly, syn: 1 }]
+ * Unterführungen unter Gleisen: liegt eine Straße oder ein Weg unter Gleisen (als Tunnel/Unterführung eingetragen,
+ * OSM-Ebene unter 0, oder Gelände an der Kreuzung mindestens 2 m tiefer als 15 m davor und dahinter am Gleis) und
+ * kreuzt Gleise ohne Brückenkennung, entsteht ein durchgehender Deckel entlang der Straße – über alle Gleise und
+ * Bahnsteige: Tunnel bis 150 m ganz, sonst vom ersten bis zum letzten Gleis plus je 3,7 m; Breite Straße + 2 m; z =
+ * Gleishöhe neben der Unterführung (Ersatz ohne DOM). Ebenerdige Bahnübergänge bleiben offen. [{ l, w, z }]
  */
 function strBahnUeberfuehrungen(acc) {
   const L = (acc && acc.line) || {},
     gleise = (L.rail || []).filter((r) => !r.br),
-    echte = (L.rail || []).filter((r) => r.br && !r.flach),
     unten = []
       .concat(
         (L.tunnel || []).filter((t) => t.art !== 'rail').map((t) => ({ l: t.l, w: t.w, tu: 1 })),
@@ -1063,45 +1065,55 @@ function strBahnUeberfuehrungen(acc) {
       if (Math.abs(r) < 1e-9) return null;
       const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r,
         u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
-      return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? t : null;
+      return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? [t, u] : null;
+    },
+    // Teil der Linie m zwischen den Bogenlängen s0 und s1
+    teil = (m, cum, s0, s1) => {
+      const at = (s) => {
+        let k = 1;
+        while (k < m.length - 1 && cum[k] < s) k++;
+        const t = (s - cum[k - 1]) / (cum[k] - cum[k - 1] || 1);
+        return [m[k - 1][0] + (m[k][0] - m[k - 1][0]) * t, m[k - 1][1] + (m[k][1] - m[k - 1][1]) * t];
+      };
+      return [at(s0)].concat(
+        m.filter((_, k) => cum[k] > s0 && cum[k] < s1),
+        [at(s1)],
+      );
     };
-  gleise.forEach((g) => {
-    const l = g.l;
-    for (let i = 0; i + 1 < l.length; i++) {
-      const a = l[i],
-        b = l[i + 1],
-        Lg = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      if (Lg < 0.01) continue;
-      const u = [(b[0] - a[0]) / Lg, (b[1] - a[1]) / Lg];
-      unten.forEach((r) => {
-        const m = r.l;
+  unten.forEach((r) => {
+    const m = r.l;
+    if (!m || m.length < 2) return;
+    const cum = [0];
+    for (let k = 1; k < m.length; k++)
+      cum.push(cum[k - 1] + Math.hypot(m[k][0] - m[k - 1][0], m[k][1] - m[k - 1][1]));
+    const lang = cum[cum.length - 1],
+      X = []; // Kreuzungen: { s (auf der Straße), z (Gleishöhe daneben) }
+    let drunter = !!r.tu || (r.ly || 0) < 0;
+    gleise.forEach((g) => {
+      const l = g.l;
+      for (let i = 0; i + 1 < l.length; i++) {
+        const a = l[i],
+          b = l[i + 1],
+          Lg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (Lg < 0.01) continue;
+        const u = [(b[0] - a[0]) / Lg, (b[1] - a[1]) / Lg];
         for (let j = 0; j + 1 < m.length; j++) {
-          const t = schnitt(a, b, m[j], m[j + 1]);
-          if (t == null) continue;
-          const x = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
-            hier = (s) => gh(x[0] + u[0] * s, x[1] + u[1] * s),
-            tief = Math.min(hier(-15), hier(15)) - gh(x[0], x[1]) >= 2,
-            darunter = r.tu || (r.ly || 0) < 0 || tief;
-          if (!darunter) continue;
-          // schon eine Bahnbrücke hier?
-          if (echte.some((e) => e.l.some((p, k) => k && strSegAbst(x, e.l[k - 1], p) < 3))) continue;
-          const lm = Math.hypot(m[j + 1][0] - m[j][0], m[j + 1][1] - m[j][1]) || 1,
-            v = [(m[j + 1][0] - m[j][0]) / lm, (m[j + 1][1] - m[j][1]) / lm],
-            sin = Math.max(0.35, Math.abs(u[0] * v[1] - u[1] * v[0])),
-            halb = (r.w || 6) / 2 / sin + 3;
-          R.push({
-            l: [
-              [x[0] - u[0] * halb, x[1] - u[1] * halb],
-              [x[0] + u[0] * halb, x[1] + u[1] * halb],
-            ],
-            w: g.w || 3.4,
-            br: 1,
-            ly: (g.ly || 0) + 1,
-            syn: 1,
-          });
+          const tu = schnitt(a, b, m[j], m[j + 1]);
+          if (!tu) continue;
+          const x = [a[0] + (b[0] - a[0]) * tu[0], a[1] + (b[1] - a[1]) * tu[0]],
+            hier = (q) => gh(x[0] + u[0] * q, x[1] + u[1] * q),
+            z = Math.max(hier(-15), hier(15));
+          if (z - gh(x[0], x[1]) >= 2) drunter = true;
+          X.push({ s: cum[j] + (cum[j + 1] - cum[j]) * tu[1], z });
         }
-      });
-    }
+      }
+    });
+    if (!X.length || !drunter) return;
+    const s0 = Math.min(...X.map((x) => x.s)),
+      s1 = Math.max(...X.map((x) => x.s)),
+      [a, b] = r.tu && lang <= 150 ? [0, lang] : [Math.max(0, s0 - 3.7), Math.min(lang, s1 + 3.7)];
+    if (b - a < 2) return;
+    R.push({ l: teil(m, cum, a, b), w: (r.w || 6) + 2, z: Math.max(...X.map((x) => x.z)) });
   });
   return R;
 }
@@ -1131,7 +1143,6 @@ function strBrueckenAlle() {
     ].join('|');
   if (STR.brD && STR.brD.acc === acc && STR.brD.sig === sig) return STR.brD.K;
   strBrueckenFlach(acc);
-  quellen.rail = quellen.rail.concat(strBahnUeberfuehrungen(acc));
   const K = [],
     strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br || r.flach),
     gleise = quellen.rail.filter((r) => !r.br || r.flach);
@@ -1147,8 +1158,18 @@ function strBrueckenAlle() {
       // am Rand des Ausschnitts kappen (Verlängerung und Rampe können hinausreichen)
       if (d) strBrueckeAusschnitt(d, GEO.size / 2).forEach((x) => K.push(Object.assign(x, { k })));
     });
+  // Unterführungen unter Gleisen: durchgehender Deckel (Art Bahn, ohne Rampen, Geländer nur an den Stirnseiten)
+  strBahnUeberfuehrungen(acc).forEach((u) => {
+    const d = strBrueckeLinie(u.l, u.w, null, null, { ohneRampe: true, z: u.z });
+    if (d)
+      strBrueckeAusschnitt(d, GEO.size / 2).forEach((x) =>
+        K.push(Object.assign(x, { k: 'rail', deckel: 1 })),
+      );
+  });
   strBrueckenAuflager(K);
   strBrueckenNachbarn(K);
+  // Deckel: keine Geländer längs (dort laufen die Gleise darüber)
+  K.forEach((A) => A.deckel && A.nb.forEach((f) => f.fill(true)));
   STR.brD = { acc, sig, K };
   return K;
 }
@@ -1330,7 +1351,7 @@ function strBrueckenBau(E, mk) {
     pl = STR_BR.platte,
     br = STR_BR.bruestung,
     bw = 0.25;
-  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe, schnitt, k: art }) => {
+  bruecken.forEach(({ P, S0, Nn, Z, o, nb, w, dz, weg, kappe, schnitt, deckel, k: art }) => {
     if (weg) return;
     const deck = art === 'rail' ? obenR : oben;
     const at = (i, x, dy) => [P[i][0] + Nn[i][0] * x, Z[i] - t + (dz || 0) + dy, P[i][1] + Nn[i][1] * x],
@@ -1391,6 +1412,19 @@ function strBrueckenBau(E, mk) {
           at(i, aussen(i, 0), 0),
         ),
     );
+    // Unterführungsdeckel: Geländer quer über die Stirnseiten (über den Portalen)
+    if (deckel)
+      [0, P.length - 1].forEach((i, e) => {
+        if (schnitt && schnitt[e]) return;
+        const g = e ? -1 : 1, // nach innen
+          A = (sd, dy, t) => {
+            const p = at(i, aussen(i, sd), dy);
+            return [p[0] + Nn[i][1] * g * t, p[1], p[2] - Nn[i][0] * g * t];
+          };
+        quad(bau, A(0, 0, 0), A(1, 0, 0), A(1, br, 0), A(0, br, 0));
+        quad(bau, A(0, 0, bw), A(1, 0, bw), A(1, br, bw), A(0, br, bw));
+        quad(bau, A(0, br, 0), A(1, br, 0), A(1, br, bw), A(0, br, bw));
+      });
     // am Ausschnitt gekappt: auch die Geländer mit einer Stirnfläche schließen
     [0, P.length - 1].forEach((i, e) => {
       if (!(schnitt && schnitt[e])) return;
