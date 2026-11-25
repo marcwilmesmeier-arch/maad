@@ -849,5 +849,5 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Triangulationsdiagonalen.
 - Fassadenfläche (Hervorhebung `fas`/`fasn`) in LOD 200 zusätzlich mit Attika (Flachdach, 0,30 m), Brüstung an
   Terrassen (wo das Geschoss darüber zurückspringt, 0,30 m) und Schürze unter Überhängen (Deckenstärke + 10 cm):
-  `l2FassadenZusatz` (160-loggia-fassade), Kanten in 25-cm-Stücken wie die Außenkontur geprüft. Nur Darstellung – die
-  Kennzahl Fassadenfläche bleibt unverändert.
+  `l2FassadenZusatz` (160-loggia-fassade), Kanten in 25-cm-Stücken wie die Außenkontur geprüft. In LOD 200 zählen sie auch
+  zur Kennzahl (`l2FassadeWert` + `l2FassadenZusatzFlaeche`; „ohne Öffnungen“ baut darauf auf), in LOD 100 nicht.

@@ -209,9 +209,37 @@ function l2FassadenOeffnungsFlaeche(b) {
   mit.forEach((w, i) => (s += l2DreieckFlaeche(w.pos) - l2DreieckFlaeche(ohne[i].pos)));
   return s;
 }
-/** Fassade in den Metriken: in LOD 200 abgewickelt (ohne Loggia-Öffnungen, mit Rück- und Seitenwänden), sonst fas. */
+/**
+ * Fassade in den Metriken: in LOD 200 abgewickelt (ohne Loggia-Öffnungen, mit Rück- und Seitenwänden, dazu Attika,
+ * Terrassenbrüstung und Schürze), sonst fas.
+ */
 function l2FassadeWert(b, fas) {
   if (!l2on()) return fas;
   const z = l2LoggiaZahlen(b);
-  return z.oeff ? fas - z.oeff + z.rueck + z.seite : fas;
+  return (z.oeff ? fas - z.oeff + z.rueck + z.seite : fas) + l2FassadenZusatzFlaeche(b);
+}
+/** Fläche von Attika, Terrassenbrüstung und Schürze aller oberirdischen Geschosse (LOD 200, l2FassadenZusatz). */
+function l2FassadenZusatzFlaeche(b) {
+  if (!l2on() || !b.levels || !b.levels.length) return 0;
+  const u = typeof ugN === 'function' ? ugN(b) : 0;
+  let s = 0,
+    z = b._y || 0;
+  b.levels.forEach((l, i) => {
+    const z0 = z,
+      z1 = z + l.h;
+    z = z1;
+    if (i < u) return;
+    s += l2DreieckFlaeche(
+      l2FassadenZusatz(
+        b,
+        lf(b, l),
+        i > 0 ? lf(b, b.levels[i - 1]) : null,
+        i + 1 < b.levels.length ? lf(b, b.levels[i + 1]) : null,
+        z0,
+        z1,
+        i === b.levels.length - 1,
+      ),
+    );
+  });
+  return s;
 }
