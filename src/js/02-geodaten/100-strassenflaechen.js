@@ -510,6 +510,8 @@ function strAktualisieren(acc) {
       fbmAktualisieren();
       // ── Erweiterung aus 02-geodaten/120-gleise.js: Gleise auf Bahnbrücken brauchen die Brückenhöhen
       glsAktualisieren(GEO.acc);
+      // ── Erweiterung aus 02-geodaten/080-alkis.js: Straßennamen auf Brücken auf die Fahrbahn heben
+      if (GEO.acc && GEO.acc.names && GEO.acc.names.length) rnBuild();
       recomp();
     } catch (e) {
       logErr(e, 'strAktualisieren');

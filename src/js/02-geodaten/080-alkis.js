@@ -676,7 +676,11 @@ function rnBuild() {
       if (hgt < Math.max(1.6, a.w * 0.6)) continue;
     }
     lo.rotation.y = -Math.atan2(dz, dx);
-    lo.position.set(px, gh(px, pz) + 0.55, pz);
+    // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Name auf einer Brücke auf deren Fahrbahn
+    const Ld = Math.hypot(dx, dz) || 1,
+      deck =
+        typeof strDeckHoehe === 'function' ? strDeckHoehe(px, pz, [dx / Ld, dz / Ld], false, 'roads') : null;
+    lo.position.set(px, (deck != null ? deck + 0.15 : gh(px, pz)) + 0.55, pz);
     lab.push({ txt: a.n, E: labEcken(lo, hgt * 8, hgt * 0.5) });
     done.push({ n: a.n, x: px, z: pz });
     cnt++;

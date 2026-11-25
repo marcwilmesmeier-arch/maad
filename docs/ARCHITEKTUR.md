@@ -818,3 +818,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Rand des Ausschnitts: `strBrueckeAusschnitt` kappt jede Brückenachse genau an der Kante (|x|, |z| ≤ Größe/2; gekappte
   Enden `schnitt` mit Stirnfläche für Platte und Geländer, kein Auflager); `strKappen` beschneidet zusätzlich alle
   Dreiecke von Brücken und Gleisen (mit Attributen, Sutherland-Hodgman) – nichts ragt über das gewählte Raster.
+- Kartenbild und Brücken: `ctxPaint` malt Brückenachsen (nicht flach) nicht mehr in die Ebenen Straßen/Wege/Radwege
+  (in „Realistisch“ lagen sie sonst auf dem Wasser unter der Brücke). Straßennamen auf Brücken stehen auf der Fahrbahn
+  (`rnBuild` mit `strDeckHoehe`, nach dem Brückenbau neu gebaut).

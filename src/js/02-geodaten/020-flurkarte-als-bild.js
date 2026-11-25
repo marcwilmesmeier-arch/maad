@@ -609,15 +609,23 @@ function ctxPaint(acc) {
   fill('water', acc.fill.water, S.lc.water);
   line('water', acc.line.water, shade(S.lc.water, 0.78), 0.7);
   line('water', acc.line.water, S.lc.water, 0);
-  const rl = acc.line.roads.sort((a, b) => b.w - a.w);
+  // Brücken (nicht flach) stehen als Bauwerk darüber – nicht ins Kartenbild malen, sonst liegen sie in „Realistisch“
+  // auf dem Wasser darunter (── Erweiterung aus 02-geodaten/100-strassenflaechen.js: strBrueckenFlach)
+  try {
+    strBrueckenFlach(acc);
+  } catch (e) {
+    logErr(e, 'ctxPaint>Brücken');
+  }
+  const amBoden = (L) => (L || []).filter((r) => !r.br || r.flach),
+    rl = amBoden(acc.line.roads).sort((a, b) => b.w - a.w);
   line('roads', rl, shade(S.lc.roads, 0.78), 0.9);
   line('roads', rl, S.lc.roads, 0);
   edge('paths', acc.fill.paths, shade(S.lc.paths, 0.8));
   fill('paths', acc.fill.paths, S.lc.paths);
-  line('paths', acc.line.paths, shade(S.lc.paths, 0.8), 0.6);
-  line('paths', acc.line.paths, S.lc.paths, 0);
-  line('cycle', acc.line.cycle, shade(S.lc.cycle, 0.8), 0.6);
-  line('cycle', acc.line.cycle, S.lc.cycle, 0);
+  line('paths', amBoden(acc.line.paths), shade(S.lc.paths, 0.8), 0.6);
+  line('paths', amBoden(acc.line.paths), S.lc.paths, 0);
+  line('cycle', amBoden(acc.line.cycle), shade(S.lc.cycle, 0.8), 0.6);
+  line('cycle', amBoden(acc.line.cycle), S.lc.cycle, 0);
   // Gleise zeichnet 02-geodaten/120-gleise.js als Bauteil (Schotterbett, Schwellen, Schienen), nicht ins Kartenbild
   if (PL.rail) PL.rail.getContext('2d').clearRect(0, 0, PL.rail.width, PL.rail.height);
   areaPaint();
