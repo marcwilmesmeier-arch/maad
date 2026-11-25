@@ -449,7 +449,7 @@ function ctxCollect(tiles) {
       names: [],
       bridges: [],
       fill: { green: [], water: [], paths: [] },
-      line: { roads: [], paths: [], cycle: [], rail: [], water: [] },
+      line: { roads: [], paths: [], cycle: [], rail: [], water: [], tunnel: [] },
     },
     seen = new Set();
   const WR = {
@@ -533,8 +533,21 @@ function ctxCollect(tiles) {
             });
           continue;
         }
+        // Tunnel: alle Achsen merken (Hindernis unter Brücken, strBrueckenFlach); kurze Unterführungen (< 80 m) werden
+        // wie normale Straßen gezeichnet – sie liegen offen im Einschnitt unter einer Brücke
+        let unterf = false;
+        if (p.brunnel === 'tunnel' && f.type === 2 && c && !/^(ferry|aerialway)/.test(c)) {
+          let lang = 0;
+          for (const r of f.rings) {
+            const l = cv(r, R.ext);
+            acc.line.tunnel.push({ l, w: /^(rail|transit)/.test(c) ? 3.4 : WR[c] || 3 });
+            for (let i = 1; i < l.length; i++)
+              lang += Math.hypot(l[i][0] - l[i - 1][0], l[i][1] - l[i - 1][1]);
+          }
+          unterf = lang < 80;
+        }
         if (
-          p.brunnel === 'tunnel' ||
+          (p.brunnel === 'tunnel' && !unterf) ||
           f.type === 1 ||
           !c ||
           /^(rail|transit|ferry|aerialway|bus_guideway)/.test(c)

@@ -821,3 +821,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Kartenbild und Brücken: `ctxPaint` malt Brückenachsen (nicht flach) nicht mehr in die Ebenen Straßen/Wege/Radwege
   (in „Realistisch“ lagen sie sonst auf dem Wasser unter der Brücke). Straßennamen auf Brücken stehen auf der Fahrbahn
   (`rnBuild` mit `strDeckHoehe`, nach dem Brückenbau neu gebaut).
+- Unterführungen: Tunnelachsen (Straßen, Wege, Gleise) stehen in `acc.line.tunnel` und zählen in `strBrueckenFlach` als
+  Hindernis (Bahnbrücke über eine als Tunnel eingetragene Straße); Tunnel unter 80 m werden als normale Straße/Weg
+  gezeichnet (offen im Einschnitt unter der Brücke). Gleise ohne erkannte Brücke: unplausible DOM-Werte (`glsDom` →
+  null) werden gerade zwischen den gesicherten Höhen davor und dahinter (bis 60 m) überbrückt – kein Absacken in
+  Einschnitte, stehende Züge fallen heraus.

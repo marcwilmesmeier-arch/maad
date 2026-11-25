@@ -88,7 +88,8 @@ function glsHoehe(x, z, br, tram) {
 /**
  * Gleishöhe am Boden aus dem DOM (Dämme, Rampen, Einschnitte – das grobe Geländeraster zeichnet Böschungen weich):
  * der zweitkleinste von fünf Werten (Achse und je 1 m in den vier Himmelsrichtungen; Masten und Fahrleitung fallen
- * heraus); liegt er mehr als 1,5 m vom Gelände entfernt (stehender Zug, Bahnsteigdach), gilt das Gelände.
+ * heraus); liegt er mehr als 1,5 m vom Gelände entfernt (stehender Zug, Bahnsteigdach, Brücke über einen Einschnitt),
+ * null – glsBauen verbindet dann die gesicherten Höhen davor und dahinter gerade (Gleise laufen eben).
  */
 function glsDom(x, z) {
   const g = gh(x, z);
@@ -105,7 +106,7 @@ function glsDom(x, z) {
     .sort((a, b) => a - b);
   if (v.length < 3) return g;
   const h = v[1];
-  return Math.abs(h - g) <= 1.5 ? h : g;
+  return Math.abs(h - g) <= 1.5 ? h : null;
 }
 /** Gleise bauen (bei neuen Daten) bzw. nur umfärben. */
 function glsAktualisieren(acc) {
@@ -168,7 +169,18 @@ function glsBauen(L) {
       }),
       // je Gleis ein paar Millimeter versetzt: an Weichen überlagern sich Bänder nicht flimmernd
       eps = (ri % 5) * 0.003,
-      Y0 = P.map((p) => glsHoehe(p[0], p[1], r.br, tram)),
+      Yr = P.map((p) => glsHoehe(p[0], p[1], r.br, tram)),
+      // unsichere Punkte (null): gerade zwischen den gesicherten Höhen davor und dahinter (bis 60 m), sonst Gelände
+      Y0 = Yr.map((y, i) => {
+        if (y != null) return y;
+        let a = i,
+          b = i;
+        while (a >= 0 && Yr[a] == null) a--;
+        while (b < Yr.length && Yr[b] == null) b++;
+        if (a >= 0 && b < Yr.length && S0[b] - S0[a] <= 60)
+          return Yr[a] + ((Yr[b] - Yr[a]) * (S0[i] - S0[a])) / (S0[b] - S0[a] || 1);
+        return gh(P[i][0], P[i][1]);
+      }),
       // längs glätten (gleitender Mittelwert ±2 Punkte): Gleise haben keine Sprünge
       Y = Y0.map((_, i) => {
         let a = 0,

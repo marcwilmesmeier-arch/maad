@@ -945,8 +945,8 @@ async function strBrueckenDomNachladen() {
 }
 /**
  * Brücken ohne Hindernis als flach kennzeichnen (r.flach): OSM führt auch Stege und Gänge über nichts als Brücke
- * (unter Bäumen gäbe das DOM dort die Kronenhöhe). Nötig ist eine Brücke, wenn sie eine Straße, ein Gleis oder einen
- * Wasserlauf am Boden kreuzt, über einer Wasserfläche liegt, das Gelände unter ihr mindestens 3 m tiefer liegt als an
+ * (unter Bäumen gäbe das DOM dort die Kronenhöhe). Nötig ist eine Brücke, wenn sie eine Straße, ein Gleis, einen
+ * Tunnel (Unterführung) oder einen Wasserlauf am Boden kreuzt, über einer Wasserfläche liegt, das Gelände unter ihr mindestens 3 m tiefer liegt als an
  * den Enden (Tal; Geländemodell, nicht DOM) – oder an eine nötige Brücke anschließt (Teilstücke). Flache Brücken
  * werden wie normale Wege und Straßen als Fläche am Boden gebaut.
  */
@@ -959,7 +959,7 @@ function strBrueckenFlach(acc) {
   if (acc._brFlach === sig) return;
   acc._brFlach = sig;
   if (!br.length) return;
-  const boden = alle.filter((r) => !r.br).concat(L.water || []),
+  const boden = alle.filter((r) => !r.br).concat(L.water || [], L.tunnel || []),
     seg = (a, b, c, d) => {
       const r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
       if (Math.abs(r) < 1e-9) return false;
