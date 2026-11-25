@@ -795,7 +795,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Brücken (bis ~40° Winkel) mit höchstens 6 m Lücke zu einer Fahrbahn (Deck bis 0,8 m in den Nachbarn, das schmalere 3 cm tiefer, dort keine Brüstung, Höhen
   gemittelt), auch Geh- und Radwege neben der Straße. Die Brüstung entfällt außerdem überall, wo direkt außerhalb des
   Rands eine andere Brücke liegt (abzweigende Rampen, querende Stücke); Brüstungsreste bis 10 m, Stirnplatten an Enden auf
-  einer anderen Brücke und Brücken, die fast ganz auf einer breiteren liegen, entfallen. Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße, ohne Schatten; Brüstung, Platte, Pfeiler (`E.matBW`) in Geländefarbe.
+  einer anderen Brücke und Brücken, die fast ganz auf einer breiteren liegen, entfallen. Farben über `strFarbe`: Fahrbahn (`E.matB`) wie die Straße; Brüstung und Platte (`E.matBW`) in Geländefarbe, Stützen (`E.matBP`) in Geländefarbe mit leichtem Eigenleuchten (im Schatten unter dem Deck sonst dunkel).
 - Gleise (`02-geodaten/120-gleise.js`, `glsAktualisieren` aus `ctxPaint` und nach dem Bau der Straßenflächen): Bahnlinien
   als Bauteil in `G.rail` statt Strichlinie im Kartenbild – Schotterbett als Band mit Flanken (25 cm) in der
   aufgehellten Layer-Farbe „Bahn“, Schwellen (60 cm) und Schienen (Spurweite 1,435 m) im Shader über das Attribut `aGl`

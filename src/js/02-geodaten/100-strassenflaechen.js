@@ -542,6 +542,10 @@ function strFarbe(E) {
   // Brückenfahrbahn wie die Straße, Brüstung und Tragwerk in Geländefarbe
   if (E.matB) E.matB.color.set(f);
   if (E.matBW) E.matBW.color.set(S.lc.terrain || '#d4d2cc');
+  if (E.matBP) {
+    E.matBP.color.set(S.lc.terrain || '#d4d2cc');
+    E.matBP.emissive.set(S.lc.terrain || '#d4d2cc').multiplyScalar(0.35);
+  }
   if (E.matR) E.matR.color.set(S.lc.rail || '#9a9893');
 }
 /** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) am Bildpunkt (x, z) in maad-Höhen (wie das Gelände: − e0). */
@@ -1360,6 +1364,7 @@ function strBrueckenBau(E, mk) {
   if (!E.matB) {
     E.matB = new T.MeshLambertMaterial({ side: T.DoubleSide });
     E.matBW = new T.MeshLambertMaterial({ side: T.DoubleSide });
+    E.matBP = new T.MeshLambertMaterial({ side: T.DoubleSide });
     E.matR = new T.MeshLambertMaterial({ side: T.DoubleSide });
   }
   strFarbe(E);
@@ -1367,6 +1372,7 @@ function strBrueckenBau(E, mk) {
     oben = [],
     obenR = [],
     bau = [],
+    stuetzen = [],
     quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d),
     pl = STR_BR.platte,
     br = STR_BR.bruestung,
@@ -1416,7 +1422,7 @@ function strBrueckenBau(E, mk) {
             a1 = ((q + 1) / 8) * Math.PI * 2,
             p0 = [P[j][0] + Math.cos(a0) * r, P[j][1] + Math.sin(a0) * r],
             p1 = [P[j][0] + Math.cos(a1) * r, P[j][1] + Math.sin(a1) * r];
-          quad(bau, [p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]]);
+          quad(stuetzen, [p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]]);
         }
       }
     }
@@ -1471,6 +1477,8 @@ function strBrueckenBau(E, mk) {
   if (oben.length) mk(geo(oben), E.matB);
   if (obenR.length) mk(geo(obenR), E.matR);
   if (bau.length) mk(geo(bau), E.matBW).castShadow = true;
+  // Stützen: Geländefarbe mit leichtem Eigenleuchten – unter dem Deck im Schatten lesen sie sich sonst dunkel
+  if (stuetzen.length) mk(geo(stuetzen), E.matBP).castShadow = true;
 }
 /**
  * Fahrbahnhöhe einer Brücke je Punkt (P alle ~2 m, S0 Bogenlänge, G0 Gelände, w Breite). Wo das DOM die Fahrbahn
