@@ -843,3 +843,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Fläche, ≥ ⅓ der Ecken darin oder Flächenmittelpunkt im Gebäude (OSM- und Gebäudeumriss weichen ab); Punkt: Gebäude
   darunter, sonst das nächste bis 8 m. Plätze (`scPlaetzeBauen`, Gruppe `G.scp`): eigene Fläche 8 cm über dem Gelände
   (über Straßen- und Wegeflächen; im Kartenbild waren sie verdeckt), auf ≤ 3 m geteilt, am Ausschnitt gekappt.
+- LOD-200-Auswertungskörper (BRI, NRI, BGF …): Umrisslinien aus `umrissKanten` (080-isolieren…) statt
+  `EdgesGeometry` – innen aneinanderliegende Trennflächen entfallen, Kanten auf derselben Geraden werden in Teilstücke
+  zerlegt (T-Stöße), gezeichnet wird nur bei Knick ≥ 30° oder offenem Rand: nur Außenkonturen, keine Teilungen oder
+  Triangulationsdiagonalen.

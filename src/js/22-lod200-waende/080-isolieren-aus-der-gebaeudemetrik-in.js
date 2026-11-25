@@ -484,7 +484,121 @@ function l2BgfShow(iso) {
     logErr(e, 'l2BgfShow');
   }
 }
-/** Umrisslinien (Kanten über 30°) an den Körpern und Flächen der LOD-200-Auswertung, als Kind (folgt der Explosion). */
+/**
+ * Außenkonturen eines zusammengesetzten Körpers (statt EdgesGeometry, das Teilungen und Triangulationsdiagonalen zeigt,
+ * wo Teile mit T-Stößen aneinandergrenzen): (1) innen deckungsgleich aneinanderliegende, entgegengesetzt orientierte
+ * Flächen (Trennflächen zweier Teilkörper) entfallen; (2) alle Dreieckskanten auf derselben Geraden werden in
+ * Teilstücke zerlegt; (3) ein Teilstück ist Kontur, wenn dort Flächen mit mindestens `winkel` Grad Knick
+ * zusammentreffen oder nur eine Fläche anliegt (offener Rand). Ergebnis: BufferGeometry aus Liniensegmenten.
+ */
+function umrissKanten(geo, winkel = 30) {
+  const g = geo.index ? geo.toNonIndexed() : geo,
+    p = g.attributes.position.array,
+    n = p.length / 9,
+    T3 = [];
+  for (let t = 0; t < n; t++) {
+    const a = [p[t * 9], p[t * 9 + 1], p[t * 9 + 2]],
+      b = [p[t * 9 + 3], p[t * 9 + 4], p[t * 9 + 5]],
+      c = [p[t * 9 + 6], p[t * 9 + 7], p[t * 9 + 8]],
+      u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+      v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]],
+      nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]],
+      L = Math.hypot(...nn);
+    if (L < 1e-9) continue;
+    const N = nn.map((x) => x / L);
+    T3.push({ a, b, c, N, d: N[0] * a[0] + N[1] * a[1] + N[2] * a[2] });
+  }
+  // (1) Trennflächen: Dreieck, dessen Mitte in einem entgegengesetzt orientierten Dreieck derselben Ebene liegt
+  const ek = (N, d) => N.map((x) => Math.round(x * 200)).join(',') + '|' + Math.round(d * 200),
+    ebenen = new Map();
+  T3.forEach((t) => {
+    const k = ek(t.N, t.d);
+    if (!ebenen.has(k)) ebenen.set(k, []);
+    ebenen.get(k).push(t);
+  });
+  const inDr = (q, t) => {
+    const s = (a, b) => {
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+        w = [q[0] - a[0], q[1] - a[1], q[2] - a[2]],
+        x = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      return x[0] * t.N[0] + x[1] * t.N[1] + x[2] * t.N[2];
+    };
+    return s(t.a, t.b) >= -1e-6 && s(t.b, t.c) >= -1e-6 && s(t.c, t.a) >= -1e-6;
+  };
+  const sichtbar = T3.filter((t) => {
+    const geg = ebenen.get(
+        ek(
+          t.N.map((x) => -x),
+          -t.d,
+        ),
+      ),
+      m = [(t.a[0] + t.b[0] + t.c[0]) / 3, (t.a[1] + t.b[1] + t.c[1]) / 3, (t.a[2] + t.b[2] + t.c[2]) / 3];
+    return !(geg && geg.some((o) => inDr(m, o)));
+  });
+  // (2) Kanten nach Geraden gruppieren (Richtung mit festem Vorzeichen, Fußpunkt zum Ursprung)
+  const linien = new Map();
+  sichtbar.forEach((t, ti) =>
+    [
+      [t.a, t.b],
+      [t.b, t.c],
+      [t.c, t.a],
+    ].forEach(([A, B]) => {
+      let d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+      const L = Math.hypot(...d);
+      if (L < 1e-6) return;
+      d = d.map((x) => x / L);
+      const sg =
+        Math.abs(d[0]) > 1e-6 ? Math.sign(d[0]) : Math.abs(d[1]) > 1e-6 ? Math.sign(d[1]) : Math.sign(d[2]);
+      d = d.map((x) => x * sg);
+      const ta = A[0] * d[0] + A[1] * d[1] + A[2] * d[2],
+        tb = B[0] * d[0] + B[1] * d[1] + B[2] * d[2],
+        f = [A[0] - d[0] * ta, A[1] - d[1] * ta, A[2] - d[2] * ta],
+        k = d.map((x) => Math.round(x * 1000)).join(',') + '|' + f.map((x) => Math.round(x * 200)).join(',');
+      if (!linien.has(k)) linien.set(k, { d, f, s: [] });
+      linien.get(k).s.push({ t0: Math.min(ta, tb), t1: Math.max(ta, tb), ti });
+    }),
+  );
+  // (3) Teilstücke: Kontur bei Knick ≥ winkel oder offenem Rand
+  const cosG = Math.cos((winkel * Math.PI) / 180),
+    out = [];
+  linien.forEach(({ d, f, s }) => {
+    const ts = [...new Set(s.flatMap((x) => [x.t0, x.t1]).map((x) => Math.round(x * 1000) / 1000))].sort(
+      (a, b) => a - b,
+    );
+    let offen = null;
+    const schliessen = (t) => {
+      if (offen == null) return;
+      out.push(
+        f[0] + d[0] * offen,
+        f[1] + d[1] * offen,
+        f[2] + d[2] * offen,
+        f[0] + d[0] * t,
+        f[1] + d[1] * t,
+        f[2] + d[2] * t,
+      );
+      offen = null;
+    };
+    for (let i = 0; i + 1 < ts.length; i++) {
+      const m = (ts[i] + ts[i + 1]) / 2,
+        an = s.filter((x) => x.t0 <= m + 1e-6 && x.t1 >= m - 1e-6).map((x) => sichtbar[x.ti].N);
+      let kontur = an.length === 1;
+      for (let a = 0; a < an.length && !kontur; a++)
+        for (let b = a + 1; b < an.length; b++)
+          if (an[a][0] * an[b][0] + an[a][1] * an[b][1] + an[a][2] * an[b][2] < cosG) {
+            kontur = true;
+            break;
+          }
+      if (kontur && offen == null) offen = ts[i];
+      if (!kontur) schliessen(ts[i]);
+    }
+    schliessen(ts[ts.length - 1]);
+  });
+  if (g !== geo) g.dispose();
+  const R = new T.BufferGeometry();
+  R.setAttribute('position', new T.BufferAttribute(new Float32Array(out), 3));
+  return R;
+}
+/** Umrisslinien (Außenkonturen, umrissKanten) an den Körpern und Flächen der LOD-200-Auswertung, als Kind (folgt der Explosion). */
 function l2Umrisse() {
   G.l2n.children.forEach((m) => {
     if (!m.isMesh || m.userData.umriss) return;
@@ -493,7 +607,7 @@ function l2Umrisse() {
         m.material && m.material.color
           ? m.material.color.clone().multiplyScalar(0.55)
           : new T.Color(0x333333),
-      ln = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), new T.LineBasicMaterial({ color: c }));
+      ln = new T.LineSegments(umrissKanten(m.geometry, 30), new T.LineBasicMaterial({ color: c }));
     ln.raycast = () => {};
     ln.userData.nurFarbe = 1;
     m.add(ln);
