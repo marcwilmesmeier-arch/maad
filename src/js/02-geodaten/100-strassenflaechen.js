@@ -940,6 +940,90 @@ async function strBrueckenDomNachladen() {
   }
 }
 /**
+ * Brücken ohne Hindernis als flach kennzeichnen (r.flach): OSM führt auch Stege und Gänge über nichts als Brücke
+ * (unter Bäumen gäbe das DOM dort die Kronenhöhe). Nötig ist eine Brücke, wenn sie eine Straße, ein Gleis oder einen
+ * Wasserlauf am Boden kreuzt, über einer Wasserfläche liegt, das Gelände unter ihr mindestens 3 m tiefer liegt als an
+ * den Enden (Tal; Geländemodell, nicht DOM) – oder an eine nötige Brücke anschließt (Teilstücke). Flache Brücken
+ * werden wie normale Wege und Straßen als Fläche am Boden gebaut.
+ */
+function strBrueckenFlach(acc) {
+  if (!acc || !acc.line) return;
+  const L = acc.line,
+    alle = [].concat(L.roads || [], L.paths || [], L.cycle || [], L.rail || []),
+    br = alle.filter((r) => r.br),
+    sig = [alle.length, br.length, GEO.size, GEO.e0].join('|');
+  if (acc._brFlach === sig) return;
+  acc._brFlach = sig;
+  if (!br.length) return;
+  const boden = alle.filter((r) => !r.br).concat(L.water || []),
+    seg = (a, b, c, d) => {
+      const r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+      if (Math.abs(r) < 1e-9) return false;
+      const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r,
+        u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
+      return t > 0.02 && t < 0.98 && u >= 0 && u <= 1;
+    },
+    bbox = (l) => {
+      const xs = l.map((p) => p[0]),
+        zs = l.map((p) => p[1]);
+      return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+    },
+    bbB = boden.map((r) => bbox(r.l)),
+    imWasser = (p) =>
+      ((acc.fill && acc.fill.water) || []).some((pg) =>
+        pg.some((ring, ri) => {
+          let c = false;
+          for (let a = 0, b = ring.length - 1; a < ring.length; b = a++)
+            if (
+              ring[a][1] > p[1] !== ring[b][1] > p[1] &&
+              p[0] <
+                ((ring[b][0] - ring[a][0]) * (p[1] - ring[a][1])) / (ring[b][1] - ring[a][1]) + ring[a][0]
+            )
+              c = !c;
+          return ri === 0 ? c : false;
+        }),
+      ),
+    noetig = (r) => {
+      const l = r.l,
+        bb = bbox(l);
+      // kreuzt eine Achse am Boden?
+      for (let k = 0; k < boden.length; k++) {
+        const q = bbB[k];
+        if (q[0] > bb[2] || q[2] < bb[0] || q[1] > bb[3] || q[3] < bb[1]) continue;
+        const m = boden[k].l;
+        for (let i = 0; i + 1 < l.length; i++)
+          for (let j = 0; j + 1 < m.length; j++) if (seg(l[i], l[i + 1], m[j], m[j + 1])) return true;
+      }
+      // über Wasser oder Tal?
+      const P = [];
+      for (let i = 0; i + 1 < l.length; i++) {
+        const n = Math.max(1, Math.ceil(Math.hypot(l[i + 1][0] - l[i][0], l[i + 1][1] - l[i][1]) / 2));
+        for (let q = 0; q < n; q++)
+          P.push([l[i][0] + ((l[i + 1][0] - l[i][0]) * q) / n, l[i][1] + ((l[i + 1][1] - l[i][1]) * q) / n]);
+      }
+      P.push(l[l.length - 1]);
+      if (P.length > 2 && P.slice(1, -1).some(imWasser)) return true;
+      const ende = Math.min(gh(l[0][0], l[0][1]), gh(l[l.length - 1][0], l[l.length - 1][1])),
+        mitte = Math.min(...P.slice(1, -1).map((p) => gh(p[0], p[1])), ende);
+      return ende - mitte >= 3;
+    },
+    ok = br.map(noetig),
+    nah = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 1.5,
+    enden = (r) => [r.l[0], r.l[r.l.length - 1]];
+  // Anschluss an nötige Brücken weitergeben (Teilstücke einer Brücke)
+  for (let neu = true; neu;) {
+    neu = false;
+    br.forEach((r, i) => {
+      if (ok[i]) return;
+      if (br.some((q, j) => ok[j] && enden(r).some((a) => enden(q).some((b) => nah(a, b))))) {
+        ok[i] = true;
+        neu = true;
+      }
+    });
+  }
+  br.forEach((r, i) => (r.flach = ok[i] ? 0 : 1));
+}
+/**
  * Alle Brücken des Ausschnitts (Straßen und Wege) mit Höhen und Nachbarn, zwischengespeichert, bis sich Daten oder
  * Gelände ändern. [{ k: 'roads' | 'paths', P, Z, … }]
  */
@@ -956,12 +1040,13 @@ function strBrueckenAlle() {
       quellen.rail.length,
     ].join('|');
   if (STR.brD && STR.brD.acc === acc && STR.brD.sig === sig) return STR.brD.K;
+  strBrueckenFlach(acc);
   const K = [],
-    strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br),
-    gleise = quellen.rail.filter((r) => !r.br);
+    strassen = quellen.roads.concat(quellen.paths).filter((r) => !r.br || r.flach),
+    gleise = quellen.rail.filter((r) => !r.br || r.flach);
   for (const k in quellen)
     strBrueckenKetten(
-      quellen[k].filter((r) => r.br),
+      quellen[k].filter((r) => r.br && !r.flach),
       GEO.size / 2,
     ).forEach((c) => {
       // verlängert nur mit DOM (ohne Messung ist nicht bekannt, wo das Deck das Gelände erreicht)
@@ -1186,7 +1271,9 @@ function strBauen(E, alle, fills) {
   strWeg(E);
   // als Brücke gekennzeichnete Achsen (OSM brunnel=bridge) werden als eigenes Bauwerk gebaut (strBrueckenBau), nicht
   // als Fläche im Gelände – darunter bleiben Gelände, Wasser und kreuzende Straßen unverändert
-  const roads = alle.filter((r) => !r.br);
+  // (Brücken ohne Hindernis – r.flach – bleiben normale Flächen am Boden)
+  strBrueckenFlach(GEO.acc);
+  const roads = alle.filter((r) => !r.br || r.flach);
   const G0 = GEO.size,
     R = strFlaechen(roads, G0, E.r, fills),
     t = E.tief,

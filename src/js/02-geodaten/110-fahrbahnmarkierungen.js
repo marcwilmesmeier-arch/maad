@@ -85,7 +85,8 @@ function fbmAufStrasse(x, z) {
  */
 function fbmHoehe(x, z, bruecke, u) {
   const d = strDeckHoehe(x, z, u, bruecke, 'roads');
-  if (d != null || bruecke) return d;
+  // (Brücke ohne Deck – flach, kein Hindernis – oder kein Deck gefunden: Straßenfläche am Boden)
+  if (d != null) return d;
   return fbmAufStrasse(x, z) ? gh(x, z) - STR.E.roads.tief : null;
 }
 /** Zahl aus einem OSM-Wert („2“, „2;3“) oder null. */

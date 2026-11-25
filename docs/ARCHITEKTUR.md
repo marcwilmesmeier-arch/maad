@@ -811,3 +811,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Brücken, Reihenfolge in `strBrueckenNachbarn`: zuerst entfallen Brücken, die fast ganz auf einer breiteren liegen
   (bei gleicher Breite die spätere); entfallene zählen weder als Nachbar noch für Geländer und Stirnplatten. Dann
   verbinden, dann Geländer am freien Rand, kurze Reste, zuletzt kein Geländer auf dem Gelände.
+- Brücken nur mit Hindernis (`strBrueckenFlach`, vor dem Bau der Flächen): OSM-Brücken, die weder eine Straße, ein Gleis
+  oder einen Wasserlauf am Boden kreuzen noch über Wasser liegen noch ein Tal (Gelände ≥ 3 m unter den Enden)
+  überspannen und an keine solche Brücke anschließen, bekommen `r.flach` und werden normale Flächen am Boden (sonst
+  hoben Baumkronen im DOM Stege in die Luft). Innenwege (`indoor`) sind nie Brücken.

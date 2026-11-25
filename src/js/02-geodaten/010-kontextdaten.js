@@ -528,7 +528,7 @@ function ctxCollect(tiles) {
               l: cv(r, R.ext),
               w: rw,
               s: s || '',
-              br: p.brunnel === 'bridge' ? 1 : 0,
+              br: p.brunnel === 'bridge' && !+p.indoor ? 1 : 0,
               ly: +p.layer || 0,
             });
           continue;
@@ -556,7 +556,7 @@ function ctxCollect(tiles) {
               l: cv(r, R.ext),
               w,
               c,
-              br: p.brunnel === 'bridge' ? 1 : 0,
+              br: p.brunnel === 'bridge' && !+p.indoor ? 1 : 0,
               ly: +p.layer || 0,
             });
         } else if (f.type === 3 && k === 'paths')
