@@ -812,7 +812,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (bei gleicher Breite die spätere); entfallene zählen weder als Nachbar noch für Geländer und Stirnplatten. Dann
   verbinden, dann Geländer am freien Rand, kurze Reste, zuletzt kein Geländer auf dem Gelände.
 - Brücken nur mit Hindernis (`strBrueckenFlach`, vor dem Bau der Flächen): OSM-Brücken, die weder eine Straße, ein Gleis
-  oder einen Wasserlauf am Boden kreuzen noch über Wasser liegen noch ein Tal (Gelände ≥ 3 m unter den Enden)
+  oder einen Wasserlauf am Boden kreuzen noch über Wasser liegen noch ein Tal (Gelände ≥ 2 m unter der Höhe 8 m außerhalb der Enden, DGM voll aufgelöst)
   überspannen und an keine solche Brücke anschließen, bekommen `r.flach` und werden normale Flächen am Boden (sonst
   hoben Baumkronen im DOM Stege in die Luft). Innenwege (`indoor`) sind nie Brücken.
 - Rand des Ausschnitts: `strBrueckeAusschnitt` kappt jede Brückenachse genau an der Kante (|x|, |z| ≤ Größe/2; gekappte
@@ -829,3 +829,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Tunnelportale (`strTunnelPortale`, mit der Straßenebene gebaut): Tunnelstücke je Art zu Tunneln verbunden; ab 80 m
   an jedem Ende im Ausschnitt eine Stirnwand in Geländefarbe mit dunkler Öffnung (Straße 4,5 m, Bahn 6 m) und Sturz;
   der Verlauf unter der Erde wird nicht gezeichnet.
+- Gleise, Höhenverlauf (`glsGlatt`): Median über ±10 m, Neigung höchstens 3 % (Straßenbahn 8 %), Mittel über ±8 m – keine
+  Sprünge. Der Flankenfuß des Schotterbetts reicht nur auf flachem Damm (bis 1 m) bis aufs Gelände; höher bleibt das Bett
+  ein dünnes Band (kein massiver Körper, Blick darunter frei).

@@ -108,6 +108,37 @@ function glsDom(x, z) {
   const h = v[1];
   return Math.abs(h - g) <= 1.5 ? h : null;
 }
+/**
+ * Höhenverlauf eines Gleises beruhigen (Y je Punkt, S0 Bogenlänge, g höchste Neigung): gleitender Median über ±5
+ * Punkte (~±10 m), Neigung vorwärts und rückwärts auf g begrenzt (Mittel beider Richtungen), Mittelwert über ±4 Punkte.
+ */
+function glsGlatt(Y, S0, g) {
+  const n = Y.length,
+    med = Y.map((_, i) => {
+      const v = Y.slice(Math.max(0, i - 5), i + 6).sort((a, b) => a - b);
+      return v[v.length >> 1];
+    }),
+    vor = med.slice(),
+    rueck = med.slice();
+  for (let i = 1; i < n; i++) {
+    const d = (S0[i] - S0[i - 1]) * g;
+    vor[i] = Math.max(vor[i - 1] - d, Math.min(vor[i - 1] + d, vor[i]));
+  }
+  for (let i = n - 2; i >= 0; i--) {
+    const d = (S0[i + 1] - S0[i]) * g;
+    rueck[i] = Math.max(rueck[i + 1] - d, Math.min(rueck[i + 1] + d, rueck[i]));
+  }
+  const b = med.map((_, i) => (vor[i] + rueck[i]) / 2);
+  return b.map((_, i) => {
+    let a = 0,
+      c = 0;
+    for (let k = Math.max(0, i - 4); k <= Math.min(n - 1, i + 4); k++) {
+      a += b[k];
+      c++;
+    }
+    return a / c;
+  });
+}
 /** Gleise bauen (bei neuen Daten) bzw. nur umfärben. */
 function glsAktualisieren(acc) {
   const L = (acc && acc.line && acc.line.rail) || [],
@@ -181,19 +212,16 @@ function glsBauen(L) {
           return Yr[a] + ((Yr[b] - Yr[a]) * (S0[i] - S0[a])) / (S0[b] - S0[a] || 1);
         return gh(P[i][0], P[i][1]);
       }),
-      // längs glätten (gleitender Mittelwert ±2 Punkte): Gleise haben keine Sprünge
-      Y = Y0.map((_, i) => {
-        let a = 0,
-          c = 0;
-        for (let k = Math.max(0, i - 2); k <= Math.min(Y0.length - 1, i + 2); k++) {
-          a += Y0[k];
-          c++;
-        }
-        return a / c + eps;
-      }),
-      // Flankenfuß auf dem Gelände (liegt das Gleis per DOM höher als das weiche Raster, sitzt das Bett wie ein Damm)
+      // Gleise laufen ruhig: Median über ±10 m (Züge, Dächer, Masten fallen heraus), Neigung höchstens 3 %
+      // (Straßenbahn 8 %), dann Mittelwert über ±8 m (glsGlatt)
+      Y = glsGlatt(Y0, S0, tram ? 0.08 : 0.03).map((y) => y + eps),
+      // Flankenfuß bis aufs Gelände nur auf flachem Damm (bis 1 m); höher (über Einschnitt, Unterführung) bleibt das
+      // Bett ein dünnes Band – darunter bleibt der Blick frei
       Fu = P.map((p, i) =>
-        [-1.7, 1.7].map((o) => Math.min(Y[i] + 0.02, gh(p[0] + Nn[i][0] * o, p[1] + Nn[i][1] * o) - 0.05)),
+        [-1.7, 1.7].map((o) => {
+          const g = gh(p[0] + Nn[i][0] * o, p[1] + Nn[i][1] * o) - 0.05;
+          return Y[i] - g <= 1 ? Math.min(Y[i] + 0.02, g) : Y[i] - 0.1;
+        }),
       ),
       // Querschnitt: [Abstand zur Achse, Höhe über Grund]; Straßenbahn nur ein flaches Band für die Schienen
       Q = tram

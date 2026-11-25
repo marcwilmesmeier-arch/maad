@@ -946,7 +946,7 @@ async function strBrueckenDomNachladen() {
 /**
  * Brücken ohne Hindernis als flach kennzeichnen (r.flach): OSM führt auch Stege und Gänge über nichts als Brücke
  * (unter Bäumen gäbe das DOM dort die Kronenhöhe). Nötig ist eine Brücke, wenn sie eine Straße, ein Gleis, einen
- * Tunnel (Unterführung) oder einen Wasserlauf am Boden kreuzt, über einer Wasserfläche liegt, das Gelände unter ihr mindestens 3 m tiefer liegt als an
+ * Tunnel (Unterführung) oder einen Wasserlauf am Boden kreuzt, über einer Wasserfläche liegt, das Gelände unter ihr mindestens 2 m tiefer liegt als 8 m außerhalb der
  * den Enden (Tal; Geländemodell, nicht DOM) – oder an eine nötige Brücke anschließt (Teilstücke). Flache Brücken
  * werden wie normale Wege und Straßen als Fläche am Boden gebaut.
  */
@@ -1007,9 +1007,20 @@ function strBrueckenFlach(acc) {
       }
       P.push(l[l.length - 1]);
       if (P.length > 2 && P.slice(1, -1).some(imWasser)) return true;
-      const ende = Math.min(gh(l[0][0], l[0][1]), gh(l[l.length - 1][0], l[l.length - 1][1])),
-        mitte = Math.min(...P.slice(1, -1).map((p) => gh(p[0], p[1])), ende);
-      return ende - mitte >= 3;
+      // Tal: Gelände unter der Brücke mindestens 2 m tiefer als 8 m außerhalb der Enden (an den Enden selbst liegen
+      // die Widerlager an der Kante des Einschnitts); DGM in voller Auflösung, sonst das Geländeraster
+      const D = GEO.dgmFull && !GEO.dgmFull.fail && GEO.dgmFull.data ? GEO.dgmFull : null,
+        hg = (x, z) => {
+          const v = D && typeof dgmAt === 'function' ? dgmAt(D, x, z) : NaN;
+          return v === v ? v - (GEO.e0 || 0) : gh(x, z);
+        },
+        raus = (i, k) => {
+          const d = Math.hypot(l[i][0] - l[k][0], l[i][1] - l[k][1]) || 1;
+          return hg(l[i][0] + ((l[i][0] - l[k][0]) / d) * 8, l[i][1] + ((l[i][1] - l[k][1]) / d) * 8);
+        },
+        ende = Math.min(raus(0, 1), raus(l.length - 1, l.length - 2)),
+        mitte = Math.min(...P.slice(1, -1).map((p) => hg(p[0], p[1])), ende);
+      return ende - mitte >= 2;
     },
     ok = br.map(noetig),
     nah = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 1.5,
