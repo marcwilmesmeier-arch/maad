@@ -847,3 +847,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   `EdgesGeometry` – innen aneinanderliegende Trennflächen entfallen, Kanten auf derselben Geraden werden in Teilstücke
   zerlegt (T-Stöße), gezeichnet wird nur bei Knick ≥ 30° oder offenem Rand: nur Außenkonturen, keine Teilungen oder
   Triangulationsdiagonalen.
+- Fassadenfläche (Hervorhebung `fas`/`fasn`) in LOD 200 zusätzlich mit Attika (Flachdach, 0,30 m), Brüstung an
+  Terrassen (wo das Geschoss darüber zurückspringt, 0,30 m) und Schürze unter Überhängen (Deckenstärke + 10 cm):
+  `l2FassadenZusatz` (160-loggia-fassade), Kanten in 25-cm-Stücken wie die Außenkontur geprüft. Nur Darstellung – die
+  Kennzahl Fassadenfläche bleibt unverändert.

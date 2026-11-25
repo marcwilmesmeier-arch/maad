@@ -428,6 +428,24 @@ function hlApply() {
             fm.userData.ol = zoFasOl(f, z0, z1);
             g.add(fm);
           });
+        // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: in LOD 200 auch Attika, Terrassenbrüstung und
+        // Schürze unter dem Überhang
+        if ((k === 'fas' || k === 'fasn') && !ug && l2on()) {
+          const zus = l2FassadenZusatz(
+            b,
+            f,
+            i > 0 ? lf(b, b.levels[i - 1]) : null,
+            i + 1 < b.levels.length ? lf(b, b.levels[i + 1]) : null,
+            z0,
+            z1,
+            i === b.levels.length - 1,
+          );
+          if (zus.length) {
+            const zm = new T.Mesh(gm(zus), mt);
+            zm.userData.k = i;
+            g.add(zm);
+          }
+        }
       });
       // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: Rück- und Seitenwände der Loggien (LOD 200)
       if (k === 'fas' || k === 'fasn')

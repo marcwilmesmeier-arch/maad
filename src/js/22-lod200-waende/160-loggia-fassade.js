@@ -105,6 +105,61 @@ function l2FassadenBand(b, f, z0, z1, ohneOeff) {
   f.forEach((a, q) => pos.push(...l2WandOhne(a, f[(q + 1) % f.length], z0, z1, O)));
   return pos;
 }
+/**
+ * Zusätzliche Fassadenflächen eines Geschosses in LOD 200 (wie die Außenkontur, 110-aussenkontur): Attika über dem
+ * obersten Geschoss bei Flachdach (0,30 m), Brüstung an Terrassen, wo das Geschoss darüber zurückspringt (0,30 m), und
+ * Schürze unter Überhängen, wo das Geschoss über das darunter hinausragt (Deckenstärke + L2_SCHUERZE). f Umriss des
+ * Geschosses, fu/fo Umriss darunter/darüber (oder null), z0/z1 Unter-/Oberkante. Dreiecke [x, y, z, …].
+ */
+function l2FassadenZusatz(b, f, fu, fo, z0, z1, oberstes) {
+  if (!l2on() || !f || f.length < 3) return [];
+  const flach = !b.roof || !b.roof.type || b.roof.type === 'flat',
+    schuerze = ((l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22) + L2_SCHUERZE,
+    pos = [],
+    band = (A, B, ya, yb) =>
+      pos.push(
+        A[0],
+        ya,
+        A[1],
+        B[0],
+        ya,
+        B[1],
+        B[0],
+        yb,
+        B[1],
+        A[0],
+        ya,
+        A[1],
+        B[0],
+        yb,
+        B[1],
+        A[0],
+        yb,
+        A[1],
+      );
+  f.forEach((a, i) => {
+    const c = f[(i + 1) % f.length],
+      L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (L < 0.01) return;
+    const n = Math.max(1, Math.ceil(L / 0.25)),
+      nx = -(c[1] - a[1]) / L,
+      nz = (c[0] - a[0]) / L;
+    for (let k = 0; k < n; k++) {
+      const A = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n],
+        B = [a[0] + ((c[0] - a[0]) * (k + 1)) / n, a[1] + ((c[1] - a[1]) * (k + 1)) / n],
+        m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2],
+        // Punkt knapp innen (auf der Seite, die im Umriss liegt)
+        q1 = [m[0] + nx * 0.05, m[1] + nz * 0.05],
+        q2 = [m[0] - nx * 0.05, m[1] - nz * 0.05],
+        innen = l2PIn(f, q1[0], q1[1]) ? q1 : q2;
+      // oben: Attika (oberstes Geschoss, Flachdach) bzw. Terrassenbrüstung (nicht unter dem Geschoss darüber)
+      if ((oberstes && flach) || (fo && !l2PIn(fo, innen[0], innen[1]))) band(A, B, z1, z1 + 0.3);
+      // unten: Schürze unter dem Überhang (nicht über dem Geschoss darunter)
+      if (fu && !l2PIn(fu, innen[0], innen[1])) band(A, B, z0 - schuerze, z0);
+    }
+  });
+  return pos;
+}
 /** Rück- und Seitenwände der Loggien als Dreiecke je Wand ({ li, pos }), mit ohneOeff ohne die Fenster darin. */
 function l2LoggiaWandFlaechen(b, ohneOeff) {
   const O = ohneOeff ? l2FassadenOeffnungen(b) : [];
