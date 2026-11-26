@@ -215,7 +215,11 @@ function glsBauen(L) {
       }),
       // Gleise laufen ruhig: Median über ±10 m (Züge, Dächer, Masten fallen heraus), Neigung höchstens 3 %
       // (Straßenbahn 8 %), dann Mittelwert über ±8 m (glsGlatt)
-      Y = glsGlatt(Y0, S0, tram ? 0.08 : 0.03).map((y) => y + eps),
+      // nie unter den Vektorflächen (Straße, Grün, Wege liegen bis 7 cm über dem Geländenetz): Gleise und Schienen
+      // liegen immer obenauf – auch an Bahnübergängen und als Straßenbahn
+      Y = glsGlatt(Y0, S0, tram ? 0.08 : 0.03).map(
+        (y, i) => Math.max(y, strNetzHoehe(P[i][0], P[i][1]) + 0.08) + eps,
+      ),
       // Flankenfuß bis aufs Gelände nur auf flachem Damm (bis 1 m); höher (über Einschnitt, Unterführung) bleibt das
       // Bett ein dünnes Band – darunter bleibt der Blick frei
       Fu = P.map((p, i) =>
