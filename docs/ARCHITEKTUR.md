@@ -868,4 +868,4 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Außenwände) und den Raumflächen der Metriken (`l2NetKoerper`, zerlegt in Rechtecke R1.1 …), Hinweis BGF/NGF/KF;
   Loggien (`xlLoggiaBild`, Rück- und Seitenwände, Öffnung als Abzug); „Fassade abzüglich Öffnungen“ (`xlPng` mit
   `netto`, Öffnungen je Seite aus `xlOeSeite`, Rest als Sammelzeile) – Summe = „Fassade ohne Öffnungen“. In der
-  Abwicklung brutto Attika/Brüstung/Schürze als Streifen über der Seite.
+  Abwicklung Attika/Brüstung (oben) und Schürze (unten) an ihrer Stelle in der Farbe der Seite darunter (`zst`).

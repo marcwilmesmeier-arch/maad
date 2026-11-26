@@ -127,10 +127,9 @@ function xlWalls(b) {
       if (len < 0.05) return;
       // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: LOD 200 – Attika, Terrassenbrüstung und Schürze
       // dieser Seite (wie die Fassadenfläche in den Metriken)
-      const zus =
-        l2 && !l.ug
-          ? l2DreieckFlaeche(
-              l2FassadenZusatz(
+      const zp =
+          l2 && !l.ug
+            ? l2FassadenZusatz(
                 b,
                 f,
                 i > 0 ? lf(b, b.levels[i - 1]) : null,
@@ -139,9 +138,25 @@ function xlWalls(b) {
                 z1,
                 i === b.levels.length - 1,
                 j,
-              ),
-            )
-          : 0;
+              )
+            : [],
+        zus = zp.length ? l2DreieckFlaeche(zp) : 0,
+        // Stücke für die Ansicht: je Band (2 Dreiecke) Lage entlang der Seite (t0, t1) und Höhe über Unterkante
+        zst = [];
+      for (let k = 0; k + 17 < zp.length; k += 18) {
+        const ts = [0, 1, 2, 3, 4, 5].map(
+            (v) => ((zp[k + v * 3] - a[0]) * dx + (zp[k + v * 3 + 2] - a[1]) * dz) / len,
+          ),
+          ys = [0, 1, 2, 3, 4, 5].map((v) => zp[k + v * 3 + 1] - z0);
+        const z = { t0: Math.min(...ts), t1: Math.max(...ts), y0: Math.min(...ys), y1: Math.max(...ys) },
+          // anschließendes Stück gleicher Höhe: zu einer Fläche zusammenfassen
+          v = zst.find(
+            (q) =>
+              Math.abs(q.y0 - z.y0) < 1e-3 && Math.abs(q.y1 - z.y1) < 1e-3 && Math.abs(q.t1 - z.t0) < 1e-3,
+          );
+        if (v) v.t1 = z.t1;
+        else zst.push(z);
+      }
       o.push({
         lv: L[i].n,
         lvi: i,
@@ -151,6 +166,7 @@ function xlWalls(b) {
         len,
         h: l.h,
         zus: l2 ? zus : null,
+        zst,
         area: len * l.h + zus,
         oe: l2 && !l.ug ? xlOeSeite(OE, a, c, len, z0, z1) : null,
       });
@@ -387,6 +403,8 @@ function xlPng(b, W0, opt) {
     y += gap;
     const hh = L.h * sc;
     let x = mL;
+    // Höhe über der Geschossreihe, die Attika und Brüstungen einnehmen (Maßkette darüber)
+    const ob = Math.max(0, ...L.e.flatMap((e) => (e.zst || []).map((z) => (z.y1 - L.h) * sc)));
     L.e.forEach((e) => {
       const w = e.len * sc;
       g.fillStyle = L.ug ? '#ddd' : XLFC[Math.max(0, XLD.indexOf(e.dir))];
@@ -394,11 +412,17 @@ function xlPng(b, W0, opt) {
       g.strokeStyle = '#333';
       g.lineWidth = 1;
       g.strokeRect(x, y, w, hh);
-      // LOD 200: Attika / Terrassenbrüstung / Schürze dieser Seite als Streifen über der Fläche
-      if (e.zus > 0.01) {
-        g.fillStyle = '#b9a77a';
-        g.fillRect(x, y - 4, w, 4);
-      }
+      // LOD 200: Attika / Terrassenbrüstung (oben) und Schürze (unten) in der Farbe der Seite, an ihrer Stelle
+      (e.zst || []).forEach((z) => {
+        const zx = x + z.t0 * sc,
+          zw = (z.t1 - z.t0) * sc,
+          zy = y + hh - z.y1 * sc,
+          zh = (z.y1 - z.y0) * sc;
+        g.fillStyle = XLFC[Math.max(0, XLD.indexOf(e.dir))];
+        g.fillRect(zx, zy, zw, zh);
+        g.strokeStyle = '#333';
+        g.strokeRect(zx, zy, zw, zh);
+      });
       // Fassade abzüglich Öffnungen: Aussparungen, nummeriert
       if (netto && e.oe)
         e.oe.forEach((oo, k) => {
@@ -438,20 +462,20 @@ function xlPng(b, W0, opt) {
       }
       g.strokeStyle = '#666';
       g.beginPath();
-      g.moveTo(x, y - 9);
-      g.lineTo(x + w, y - 9);
-      g.moveTo(x, y - 13);
-      g.lineTo(x, y - 5);
-      g.moveTo(x + w, y - 13);
-      g.lineTo(x + w, y - 5);
+      g.moveTo(x, y - 9 - ob);
+      g.lineTo(x + w, y - 9 - ob);
+      g.moveTo(x, y - 13 - ob);
+      g.lineTo(x, y - 5 - ob);
+      g.moveTo(x + w, y - 13 - ob);
+      g.lineTo(x + w, y - 5 - ob);
       g.stroke();
       g.font = '11px Arial';
       g.fillStyle = '#111';
       if (w >= 40) {
-        g.fillText(fz(e.len, 2), x + w / 2, y - 18);
+        g.fillText(fz(e.len, 2), x + w / 2, y - 18 - ob);
       } else {
         g.save();
-        g.translate(x + w / 2, y - 14);
+        g.translate(x + w / 2, y - 14 - ob);
         g.rotate(-Math.PI / 2);
         g.textAlign = 'left';
         g.fillText(fz(e.len, 2), 0, 0);
