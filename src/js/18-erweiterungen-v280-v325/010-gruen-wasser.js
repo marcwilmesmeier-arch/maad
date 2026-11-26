@@ -346,17 +346,56 @@ function fxWater() {
     mc = document.createElement('canvas');
   mc.width = mc.height = W;
   const x = mc.getContext('2d');
-  x.drawImage(PL.water, 0, 0, W, W);
-  x.globalCompositeOperation = 'destination-out';
-  for (const k of ['roads', 'paths', 'cycle']) if (PL[k]) x.drawImage(PL[k], 0, 0, W, W);
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Umriss aus den Vektorflächen (gerade, scharfe Ufer);
+  // die Maske ist um einige Bildpunkte aufgeweitet, damit nur Straßen und Wege sie begrenzen, der Rand kommt aus der
+  // Geometrie. Ohne Vektorflächen wie bisher aus dem Kartenbild.
+  const vek = !!(STR.E.water.aktiv && STR.E.water.ringe.length),
+    ring = (R) => {
+      x.beginPath();
+      [R.o].concat(R.h || []).forEach((r) => {
+        r.forEach((q, i) => {
+          const u = ((q[0] + hs) / GEO.size) * W,
+            v = ((q[1] + hs) / GEO.size) * W;
+          i ? x.lineTo(u, v) : x.moveTo(u, v);
+        });
+        x.closePath();
+      });
+    };
+  if (vek) {
+    x.fillStyle = x.strokeStyle = '#fff';
+    x.lineWidth = 6;
+    x.lineJoin = 'round';
+    STR.E.water.ringe.forEach((R) => {
+      ring(R);
+      x.fill('evenodd');
+      x.stroke();
+    });
+    x.globalCompositeOperation = 'destination-out';
+    for (const k of ['roads', 'paths'])
+      if (STR.E[k].aktiv)
+        STR.E[k].ringe.forEach((R) => {
+          ring(R);
+          x.fill('evenodd');
+        });
+  } else {
+    x.drawImage(PL.water, 0, 0, W, W);
+    x.globalCompositeOperation = 'destination-out';
+    for (const k of ['roads', 'paths', 'cycle']) if (PL[k]) x.drawImage(PL[k], 0, 0, W, W);
+  }
   const tex = new T.CanvasTexture(mc);
   tex.flipY = false;
   tex.generateMipmaps = false;
   tex.minFilter = T.LinearFilter;
-  const geo = new T.PlaneGeometry(GEO.size, GEO.size, 300, 300);
-  geo.rotateX(-Math.PI / 2);
-  const p = geo.attributes.position;
-  for (let i = 0; i < p.count; i++) p.setY(i, gh(p.getX(i), p.getZ(i)) + 0.14);
+  let geo;
+  if (vek) {
+    geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(strDrapieren(STR.E.water.ringe, 0.14), 3));
+  } else {
+    geo = new T.PlaneGeometry(GEO.size, GEO.size, 300, 300);
+    geo.rotateX(-Math.PI / 2);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setY(i, gh(p.getX(i), p.getZ(i)) + 0.14);
+  }
   const deep = new T.Color('#05080b'),
     shore = new T.Color('#0e1419'),
     zen = new T.Color('#7fa8d2'),
@@ -380,14 +419,15 @@ function fxWater() {
       tR: { value: null },
       uTM: { value: new T.Matrix4() },
       uRO: { value: 0 },
+      uVek: { value: vek ? 1 : 0 },
     },
     vertexShader:
       'varying vec3 vW;void main(){vW=position;vec3 pp=position;pp.y+=clamp(length(cameraPosition-position)*.0012,0.,1.2);gl_Position=projectionMatrix*viewMatrix*vec4(pp,1.);}',
-    fragmentShader: `varying vec3 vW;uniform sampler2D tM;uniform vec3 uD,uSh,uZ,uH,uSun;uniform float uS,uHs,uTm,uRO;uniform sampler2D tR;uniform mat4 uTM;
+    fragmentShader: `varying vec3 vW;uniform sampler2D tM;uniform vec3 uD,uSh,uZ,uH,uSun;uniform float uS,uHs,uTm,uRO,uVek;uniform sampler2D tR;uniform mat4 uTM;
  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
  float cov(vec2 w,float r){float a=0.;for(int i=0;i<8;i++){float t=float(i)*.785398;a+=texture2D(tM,(w+vec2(cos(t),sin(t))*r+uHs)/uS).a;}return a/8.;}
- void main(){vec2 w=vW.xz;float a0=texture2D(tM,(w+uHs)/uS).a;if(a0<.04)discard;
+ void main(){vec2 w=vW.xz;float a0=texture2D(tM,(w+uHs)/uS).a;if(a0<(uVek>.5?.5:.04))discard;
   float c=(cov(w,.45)+cov(w,1.1))*.5;float depth=smoothstep(.25,.85,c);
   float t=uTm;vec2 g=vec2(0.);
   vec2 d1=normalize(vec2(1.,.4)),d2=normalize(vec2(-.5,1.)),d3=normalize(vec2(.8,-.9)),d4=normalize(vec2(-1.,-.3));
@@ -401,7 +441,7 @@ function fxWater() {
   vec3 col=mix(base,sky,f);
   float gl=pow(max(dot(R,normalize(uSun)),0.),90.);col+=gl*.35;
   
-  gl_FragColor=vec4(col,smoothstep(.04,.5,a0));}`,
+  gl_FragColor=vec4(col,uVek>.5?1.:smoothstep(.04,.5,a0));}`,
   });
 
   {

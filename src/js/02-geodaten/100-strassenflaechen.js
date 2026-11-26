@@ -497,6 +497,8 @@ function strAktualisieren(acc) {
       gst('Straßen-, Weg- und Grünflächen werden angelegt …');
       neu.forEach(([E, q]) => strBauen(E, q.lines, q.fills));
       strSichtbar();
+      // ── Erweiterung aus 18-erweiterungen-v280-v325/010-gruen-wasser.js: Wassereffekt nutzt die neuen Umrisse
+      if (FX.water) fxWater();
       gst('Straßen-, Weg- und Grünflächen angelegt.');
       // ── Erweiterung aus 02-geodaten/110-fahrbahnmarkierungen.js: Markierungen auf den neuen Flächen
       fbmAktualisieren();
@@ -1556,44 +1558,88 @@ function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
   });
 }
 /**
- * Flächen [{ o, h }] als Dreiecke (Positionen x, y, z), dem Gelände nachgeführt: trianguliert, Dreiecke bis zur
- * Kantenlänge s geteilt, jede Ecke auf Geländehöhe + h.
+ * Höhe des gezeichneten Geländenetzes (S.terr, PlaneGeometry G0 × G0 mit N × N Zellen, je Zelle zwei Dreiecke mit
+ * der Diagonale u + v = 1) an (x, z) – zwischen den Netzpunkten eben wie das Netz selbst, nicht das feinere
+ * Höhenmodell (sonst schaut das Gelände durch). Ohne passendes Netz: gh().
  */
-function strDrapieren(ringe, h, s) {
+function strNetzHoehe(x, z) {
+  const N = GEO.N,
+    G0 = GEO.size,
+    P = S.terr && S.terr.geometry && S.terr.geometry.attributes.position;
+  if (!P || !N || P.count !== (N + 1) * (N + 1)) return gh(x, z);
+  const cw = G0 / N,
+    fx = (x + G0 / 2) / cw,
+    fz = (z + G0 / 2) / cw,
+    ix = Math.max(0, Math.min(N - 1, Math.floor(fx))),
+    iz = Math.max(0, Math.min(N - 1, Math.floor(fz))),
+    u = fx - ix,
+    v = fz - iz,
+    H = (a, b) => P.getY(a + (N + 1) * b);
+  if (u + v <= 1) {
+    const a = H(ix, iz);
+    return a + u * (H(ix + 1, iz) - a) + v * (H(ix, iz + 1) - a);
+  }
+  const c = H(ix + 1, iz + 1);
+  return c + (1 - u) * (H(ix, iz + 1) - c) + (1 - v) * (H(ix + 1, iz) - c);
+}
+/**
+ * Flächen [{ o, h }] als Dreiecke (Positionen x, y, z) auf dem Geländenetz: trianguliert, jedes Dreieck an den
+ * Netzlinien (x, z und Zelldiagonale) geteilt – jedes Stück liegt in einem Netzdreieck und damit genau parallel zum
+ * Gelände –, jede Ecke auf Netzhöhe + h.
+ */
+function strDrapieren(ringe, h) {
   const out = [],
-    s2 = s * s,
-    teile = (a, b, c, tiefe) => {
-      const ab = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2,
-        bc = (b[0] - c[0]) ** 2 + (b[1] - c[1]) ** 2,
-        ca = (c[0] - a[0]) ** 2 + (c[1] - a[1]) ** 2,
-        m = Math.max(ab, bc, ca);
-      if (m <= s2 || tiefe > 12) {
-        // gegen den Uhrzeigersinn von oben gesehen (Vorderseite nach oben)
-        const kr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-        for (const p of kr < 0 ? [a, b, c] : [a, c, b]) out.push(p[0], gh(p[0], p[1]) + h, p[1]);
-        return;
-      }
-      // längste Kante halbieren
-      if (m === ab) {
-        const q = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-        teile(a, q, c, tiefe + 1);
-        teile(q, b, c, tiefe + 1);
-      } else if (m === bc) {
-        const q = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
-        teile(a, b, q, tiefe + 1);
-        teile(a, q, c, tiefe + 1);
-      } else {
-        const q = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2];
-        teile(a, b, q, tiefe + 1);
-        teile(q, b, c, tiefe + 1);
-      }
+    N = GEO.N || 256,
+    G0 = GEO.size,
+    cw = G0 / N,
+    // Netzlinien: x = −G0/2 + i·cw, z = −G0/2 + i·cw, x + z = −G0 + i·cw
+    fam = [(p) => p[0] + G0 / 2, (p) => p[1] + G0 / 2, (p) => p[0] + p[1] + G0],
+    // konvexes Vieleck an der Linie f(p) = c teilen
+    teile = (P, f, c) => {
+      const A = [],
+        B = [];
+      P.forEach((p, k) => {
+        const q = P[(k + 1) % P.length],
+          fp = f(p) - c,
+          fq = f(q) - c;
+        if (fp <= 0) A.push(p);
+        if (fp >= 0) B.push(p);
+        if ((fp < 0 && fq > 0) || (fp > 0 && fq < 0)) {
+          const t = fp / (fp - fq),
+            m = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+          A.push(m);
+          B.push(m);
+        }
+      });
+      return [A, B].filter((X) => X.length >= 3);
+    },
+    dreieck = (a, b, c) => {
+      let st = [[a, b, c]];
+      fam.forEach((f) => {
+        const w = [a, b, c].map(f),
+          k0 = Math.floor(Math.min(...w) / cw) + 1,
+          k1 = Math.ceil(Math.max(...w) / cw) - 1;
+        for (let k = k0; k <= k1; k++) st = st.flatMap((P) => teile(P, f, k * cw));
+      });
+      st.forEach((P) => {
+        const Y = P.map((p) => strNetzHoehe(p[0], p[1]) + h);
+        for (let k = 1; k + 1 < P.length; k++) {
+          const A = P[0],
+            B = P[k],
+            C = P[k + 1],
+            // Vorderseite nach oben
+            kr = (B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]),
+            ii = kr < 0 ? [0, k, k + 1] : [0, k + 1, k];
+          ii.forEach((m) => out.push(P[m][0], Y[m], P[m][1]));
+        }
+      });
     };
-  (ringe || []).forEach((P) => {
+  (ringe || []).forEach((R) => {
     try {
-      const o = P.o.map((p) => new T.Vector2(p[0], p[1])),
-        H = (P.h || []).map((r) => r.map((p) => new T.Vector2(p[0], p[1]))),
-        alle = [P.o].concat(P.h || []).flat();
-      T.ShapeUtils.triangulateShape(o, H).forEach(([i, j, k]) => teile(alle[i], alle[j], alle[k], 0));
+      const o = R.o.map((p) => new T.Vector2(p[0], p[1])),
+        H = (R.h || []).map((r) => r.map((p) => new T.Vector2(p[0], p[1]))),
+        alle = [R.o].concat(R.h || []).flat();
+      T.ShapeUtils.triangulateShape(o, H).forEach(([i, j, k]) => dreieck(alle[i], alle[j], alle[k]));
     } catch (e) {
       logErr(e, 'strDrapieren');
     }
@@ -1655,7 +1701,7 @@ function strBauen(E, alle, fills) {
     });
   }
   strFarbe(E);
-  const pos = strDrapieren(E.ringe, E.h, Math.max(0.5, Math.min(2, G0 / (GEO.N || 256))));
+  const pos = strDrapieren(E.ringe, E.h);
   if (pos.length) {
     const ge = new T.BufferGeometry();
     ge.setAttribute('position', new T.BufferAttribute(pos, 3));

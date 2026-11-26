@@ -897,3 +897,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Geländemaschenweite geteilt und jeder Punkt auf `gh() + h` – die Fläche folgt der Geländeform. Das Gelände wird nicht
   mehr ausgeschnitten oder abgesenkt (kein Geländeshader, kein Bordstein). `strSichtbar` richtet sich nach den Ebenen
   und blendet Grün/Wasser unter den Effekten Gras/Wasser aus. Brückendecks: `E.deck` (Fahrbahn unter Deckkante).
+  Die Flächen werden an den Linien des Geländenetzes (x, z, Zelldiagonale) geteilt und mit `strNetzHoehe` auf das
+  gezeichnete Netz gelegt (nicht auf das feinere Höhenmodell) – so liegen sie überall eben auf dem Netz und es schaut
+  auch an steilen oder welligen Stellen kein Gelände durch. Der Wassereffekt in „Realistisch“ (`fxWater`) nutzt
+  dieselben Wasserumrisse als Geometrie (gerade Ufer); Straßen und Wege schneiden ihn über eine Maske aus.
