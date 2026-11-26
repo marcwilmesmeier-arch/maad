@@ -1018,7 +1018,8 @@ function treesBuild(list) {
   NEAR.dir = null;
   // ── Erweiterung aus 28-erweiterungen-v486-v519/030-baeume-setzen.js
   // Aufbau: eigene Bäume immer ergänzen, Krone nach oben schieben, Stamm einsetzen
-  const all = (list || []).filter((t) => !t.u).concat(UT);
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: beim runden Ausschnitt nur Bäume ganz im Kreis
+  const all = geoRundBaeume((list || []).filter((t) => !t.u)).concat(UT);
   const r = treesBuildStufe2.call(this, all);
   try {
     if (UT.length && GEO.tmesh) {

@@ -9,15 +9,16 @@
 const STR = {
   uG: { value: 1 }, // Kantenlänge des Geländes (m)
   T: 0,
-  // Ebenen: Straßen (6 cm über dem Gelände, Einmündungen 4 m ausgerundet), Fuß-/Radwege und Plätze (4 cm, 1,5 m),
-  // Grünflächen (2 cm) und Wasser (1 cm), beide 1 m ausgerundet; h: Höhe über dem Gelände, die obere Ebene deckt
-  // die untere.
+  // Ebenen von unten nach oben: Wasser (1 cm über dem Gelände), Straßen (3 cm, Einmündungen 4 m ausgerundet),
+  // Grünflächen (5 cm), Fuß-/Radwege und Plätze (7 cm, 1,5 m – Wege durch Parks bleiben sichtbar); Grün und Wasser
+  // 1 m ausgerundet. h: Höhe über dem Gelände, po: Polygonversatz (größer = weiter oben); die obere Ebene deckt.
   // Maske je Ebene: R = 128 + 100 · Abstand zum Rand (m), > 128 = innen
   E: {
     roads: {
       lc: 'roads',
       grp: 'roads',
-      h: 0.06,
+      h: 0.03,
+      po: 2,
       deck: 0.15, // Brückendeck: Fahrbahn so weit unter der Deckkante (Bauwerk, strBrueckenBau)
       r: 4,
       uM: { value: null },
@@ -28,7 +29,8 @@ const STR = {
     paths: {
       lc: 'paths',
       grp: 'paths',
-      h: 0.04,
+      h: 0.07,
+      po: 4,
       deck: 0.05,
       r: 1.5,
       uM: { value: null },
@@ -39,7 +41,8 @@ const STR = {
     green: {
       lc: 'green',
       grp: 'green',
-      h: 0.02,
+      h: 0.05,
+      po: 3,
       deck: 0,
       r: 1, // Ecken leicht ausgerundet
       uM: { value: null },
@@ -51,6 +54,7 @@ const STR = {
       lc: 'water',
       grp: 'water',
       h: 0.01,
+      po: 1,
       deck: 0,
       r: 1,
 
@@ -222,7 +226,7 @@ function strVereinfachen(r, e) {
  * Straßenfläche aus den Achsen: { ringe: [{ o, h }], F: Abstand zum Rand (m, > 0 innen) je Zelle, N, c }. Raster c ≥ 0,25 m.
  * Schließen: Band um r verbreitert zeichnen, Abstand zum Außenraum messen, Rand bei Abstand = r.
  */
-function strFlaechen(roads, G, r, fills) {
+function strFlaechen(roads, G, r, fills, ohne) {
   const N = Math.min(4096, Math.ceil(G / 0.25)),
     c = G / N,
     cv = document.createElement('canvas');
@@ -272,6 +276,18 @@ function strFlaechen(roads, G, r, fills) {
     F[i] = Fx[i] + d * t * t * (3 - 2 * t);
   }
   strOhneGrundstueck(F, N, c, G);
+  // Vorrang einer anderen Ebene (Maske gleicher Größe, R = 128 + 100 · Abstand): dort keine Fläche
+  if (ohne && ohne.width === N)
+    for (let k = 0; k < N * N; k++) F[k] = Math.min(F[k], -(ohne.data[2 * k] - 128) / 100);
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runder Ausschnitt – Flächen enden am Kreis
+  const rr = geoRundR();
+  if (rr)
+    for (let j = 0; j < N; j++)
+      for (let i = 0; i < N; i++) {
+        const x = -G / 2 + (i + 0.5) * c,
+          z = -G / 2 + (j + 0.5) * c;
+        F[j * N + i] = Math.min(F[j * N + i], rr - Math.hypot(x, z));
+      }
   return { ringe: strUmriss(F, N, c, G), F, N, c };
 }
 /** Grundstücke (als Grundstück gewählte Flurstücke) im Grundriss: [Ring]. */
@@ -535,10 +551,6 @@ function strFarbe(E) {
   // Brückenfahrbahn wie die Straße, Brüstung und Tragwerk in Geländefarbe
   if (E.matB) E.matB.color.set(f);
   if (E.matBW) E.matBW.color.set(S.lc.terrain || '#d4d2cc');
-  if (E.matBP) {
-    E.matBP.color.set(S.lc.terrain || '#d4d2cc');
-    E.matBP.emissive.set(S.lc.terrain || '#d4d2cc').multiplyScalar(0.35);
-  }
   if (E.matR) E.matR.color.set(S.lc.rail || '#9a9893');
 }
 /** Höhe aus dem Oberflächenmodell (DOM, mit Brücken) am Bildpunkt (x, z) in maad-Höhen (wie das Gelände: − e0). */
@@ -1357,7 +1369,6 @@ function strBrueckenBau(E, mk) {
   if (!E.matB) {
     E.matB = new T.MeshLambertMaterial({ side: T.DoubleSide });
     E.matBW = new T.MeshLambertMaterial({ side: T.DoubleSide });
-    E.matBP = new T.MeshLambertMaterial({ side: T.DoubleSide });
     E.matR = new T.MeshLambertMaterial({ side: T.DoubleSide });
   }
   strFarbe(E);
@@ -1471,7 +1482,8 @@ function strBrueckenBau(E, mk) {
   if (obenR.length) mk(geo(obenR), E.matR);
   if (bau.length) mk(geo(bau), E.matBW).castShadow = true;
   // Stützen: Geländefarbe mit leichtem Eigenleuchten – unter dem Deck im Schatten lesen sie sich sonst dunkel
-  if (stuetzen.length) mk(geo(stuetzen), E.matBP).castShadow = true;
+  // Stützen im selben Material wie Brüstung und Tragwerk (gleiche Farbe und Schattierung)
+  if (stuetzen.length) mk(geo(stuetzen), E.matBW).castShadow = true;
 }
 /**
  * Fahrbahnhöhe einer Brücke je Punkt (P alle ~2 m, S0 Bogenlänge, G0 Gelände, w Breite). Wo das DOM die Fahrbahn
@@ -1564,9 +1576,10 @@ function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
  */
 function strNetzHoehe(x, z) {
   const N = GEO.N,
-    G0 = GEO.size,
-    P = S.terr && S.terr.geometry && S.terr.geometry.attributes.position;
-  if (!P || !N || P.count !== (N + 1) * (N + 1)) return gh(x, z);
+    G0 = GEO.size;
+  if (!N || !G0) return gh(x, z);
+  // Netzpunkte: Geländehöhe an den Rasterpunkten (wie rebuildTerrain/plmGeom; verfeinerte Zellen um Gebäude und
+  // Planum folgen dem Gelände genauer, dort reicht der Abstand h)
   const cw = G0 / N,
     fx = (x + G0 / 2) / cw,
     fz = (z + G0 / 2) / cw,
@@ -1574,7 +1587,7 @@ function strNetzHoehe(x, z) {
     iz = Math.max(0, Math.min(N - 1, Math.floor(fz))),
     u = fx - ix,
     v = fz - iz,
-    H = (a, b) => P.getY(a + (N + 1) * b);
+    H = (a, b) => gh(-G0 / 2 + a * cw, -G0 / 2 + b * cw);
   if (u + v <= 1) {
     const a = H(ix, iz);
     return a + u * (H(ix + 1, iz) - a) + v * (H(ix, iz + 1) - a);
@@ -1676,7 +1689,14 @@ function strBauen(E, alle, fills) {
   strBrueckenFlach(GEO.acc);
   const roads = alle.filter((r) => !r.br || r.flach);
   const G0 = GEO.size,
-    R = strFlaechen(roads, G0, E.r, fills),
+    // Wege nicht auf der Fahrbahn (die Straße hat Vorrang, auch an Übergängen)
+    R = strFlaechen(
+      roads,
+      G0,
+      E.r,
+      fills,
+      E === STR.E.paths && STR.E.roads.aktiv && STR.E.roads.uM.value ? STR.E.roads.uM.value.image : null,
+    ),
     N = R.N,
     c = R.c;
   E.ringe = R.ringe;
@@ -1692,12 +1712,10 @@ function strBauen(E, alle, fills) {
   if (!E.mat) {
     // einfarbig: Normalen senkrecht (keine Schattierung durch die Geländeneigung), Schatten werden empfangen;
     // Polygonversatz je Ebene, damit die obere Ebene ohne Flimmern deckt
-    const ix =
-      Object.keys(STR.E).length - Object.keys(STR.E).indexOf(Object.keys(STR.E).find((k) => STR.E[k] === E));
     E.mat = new T.MeshLambertMaterial({
       polygonOffset: true,
       polygonOffsetFactor: -1,
-      polygonOffsetUnits: -2 * ix,
+      polygonOffsetUnits: -2 * E.po,
     });
   }
   strFarbe(E);

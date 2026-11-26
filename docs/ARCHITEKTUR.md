@@ -901,3 +901,12 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   gezeichnete Netz gelegt (nicht auf das feinere Höhenmodell) – so liegen sie überall eben auf dem Netz und es schaut
   auch an steilen oder welligen Stellen kein Gelände durch. Der Wassereffekt in „Realistisch“ (`fxWater`) nutzt
   dieselben Wasserumrisse als Geometrie (gerade Ufer); Straßen und Wege schneiden ihn über eine Maske aus.
+- Runder Ausschnitt (`02-geodaten/130-runder-ausschnitt.js`): im Assistenten Quadrat oder Kreis (`WZ.sq.rund`,
+  Durchmesser = Seitenlänge), gespeichert als `GEO.rund` im Kartenausschnitt (`GEO.snap.rund`). Geladen wird das
+  Quadrat; `geoRundAcc` teilt Linien und schneidet Flächen am Kreis, Bebauungspläne werden zugeschnitten, Bäume mit
+  Stamm außerhalb entfallen (`treesBuild`). Gebäudegrundrisse und Flurstücke schneidet `clipRing` wie am Quadrat,
+  beim runden Ausschnitt zusätzlich am Kreis; Fahrbahnmarkierungen nur im Kreis. `geoRundNetz` legt Geländepunkte außerhalb radial auf den Kreis (rebuildTerrain, plmGeom),
+  `skirtBuild` baut eine runde Kante, `strFlaechen` beendet die Vektorflächen am Kreis.
+- Ebenenreihenfolge der Vektorflächen: Wasser < Straßen < Grün < Wege (`h`, `po`); Wege sparen die Fahrbahn aus
+  (`strFlaechen(…, ohne)`), Fahrbahnmarkierungen 8 cm über der Fahrbahn auf `strNetzHoehe`. Brückenstützen im
+  Material der Brüstung (`matBW`).

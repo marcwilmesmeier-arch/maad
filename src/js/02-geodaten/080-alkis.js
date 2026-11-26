@@ -724,6 +724,10 @@ function clipRing(r, H) {
       }
     }
   }
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: beim runden Ausschnitt zusätzlich am Kreis (Gebäude,
+  // Flurstücke usw. werden dort wie am Quadrat abgeschnitten)
+  const rr = geoRundR();
+  if (rr && out.length && Math.abs(H - rr) < 1) out = geoRundRingSchnitt(out, rr);
   return out;
 }
 function clipParcels(list, H) {

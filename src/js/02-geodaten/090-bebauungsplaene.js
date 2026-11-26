@@ -526,6 +526,8 @@ async function geoRun(lon, lat, size, label, snap) {
     GEO.lat = lat;
     GEO.kx = 111320 * Math.cos((lat * Math.PI) / 180);
     GEO.size = size;
+    // runder Ausschnitt: aus dem gespeicherten Kartenausschnitt, sonst wie vom Aufrufer gesetzt (Assistent)
+    if (snap) GEO.rund = !!snap.rund;
     GEO.N = Math.max(100, Math.min(300, Math.round(size / 10) * 2));
     if (!snap) {
       try {
@@ -563,6 +565,8 @@ async function geoRun(lon, lat, size, label, snap) {
     await wmsRun(lon, lat, size, snap, AK && AK.list ? AK.list.length : 0);
     const acc = ctxCollect(tiles);
     if (LD.list.length) acc.b = LD.list;
+    // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: Kartendaten und Gebäude am Kreis zuschneiden
+    geoRundAcc(acc);
     GEO.lodMsg = LD.msg;
     if (GEO.dlMsg) GEO.lodMsg = GEO.dlMsg + ' ' + (GEO.lodMsg || '');
     if (snap) {
@@ -614,7 +618,7 @@ async function geoRun(lon, lat, size, label, snap) {
     GEO.tdel = [];
     rnBuild();
     BPL.length = 0;
-    BK.list.forEach((b) => BPL.push(b));
+    geoRundPlaene(BK.list).forEach((b) => BPL.push(b));
     GEO.bpMsg = BK.msg;
     bpLines();
     LY[0][0] = AL.length ? 'Flurstücke (ALKIS)' : 'Flurstücke';
@@ -667,6 +671,7 @@ async function geoRun(lon, lat, size, label, snap) {
       lon,
       lat,
       size,
+      rund: !!GEO.rund,
       label,
       N: GEO.N,
       grid: GEO.grid,

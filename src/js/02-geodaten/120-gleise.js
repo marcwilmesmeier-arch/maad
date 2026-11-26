@@ -82,7 +82,8 @@ function glsHoehe(x, z, br, tram) {
     });
   });
   if (best != null) return best;
-  if (tram && typeof fbmAufStrasse === 'function' && fbmAufStrasse(x, z)) return gh(x, z) + STR.E.roads.h;
+  if (tram && typeof fbmAufStrasse === 'function' && fbmAufStrasse(x, z))
+    return strNetzHoehe(x, z) + STR.E.roads.h;
   return glsDom(x, z);
 }
 /**

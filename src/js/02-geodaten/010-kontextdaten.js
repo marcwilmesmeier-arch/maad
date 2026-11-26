@@ -360,13 +360,29 @@ function skirtBuild() {
       idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
   };
-  edge((i) => [-h + i * st, -h]);
-  edge((i) => [-h + i * st, h]);
-  edge((i) => [-h, -h + i * st]);
-  edge((i) => [h, -h + i * st]);
-  const b = pos.length / 3;
-  pos.push(-h, yb, -h, h, yb, -h, -h, yb, h, h, yb, h);
-  idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runder Ausschnitt – Kante und Boden als Kreis
+  const rr = geoRundR();
+  if (rr) {
+    const n = 4 * N,
+      ki = (i) => [rr * Math.cos((2 * Math.PI * i) / n), rr * Math.sin((2 * Math.PI * i) / n)];
+    edge(ki);
+    // Boden als Fächer um die Mitte (ki(n) schließt den Kreis)
+    const b = pos.length / 3;
+    pos.push(0, yb, 0);
+    for (let i = 0; i <= n; i++) {
+      const [x, z] = ki(i);
+      pos.push(x, yb, z);
+      if (i) idx.push(b, b + i, b + i + 1);
+    }
+  } else {
+    edge((i) => [-h + i * st, -h]);
+    edge((i) => [-h + i * st, h]);
+    edge((i) => [-h, -h + i * st]);
+    edge((i) => [h, -h + i * st]);
+    const b = pos.length / 3;
+    pos.push(-h, yb, -h, h, yb, -h, -h, yb, h, h, yb, h);
+    idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+  }
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
   g.setIndex(idx);
@@ -384,6 +400,8 @@ function rebuildTerrain() {
   g.rotateX(-Math.PI / 2);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) p.setY(i, gh(p.getX(i), p.getZ(i)));
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runde Geländekante
+  geoRundNetz(g);
   g.computeVertexNormals();
   S.terr.geometry.dispose();
   S.terr.geometry = g;

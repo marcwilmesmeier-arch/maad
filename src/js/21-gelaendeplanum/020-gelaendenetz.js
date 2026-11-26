@@ -27,6 +27,8 @@ function plmGeom() {
         g.rotateX(-Math.PI / 2);
         const p = g.attributes.position;
         for (let i = 0; i < p.count; i++) p.setY(i, gh(p.getX(i), p.getZ(i)));
+        // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runde Geländekante
+        geoRundNetz(g);
         g.computeVertexNormals();
         S.terr.geometry.dispose();
         S.terr.geometry = g;
@@ -111,6 +113,8 @@ function plmGeom() {
       g.setAttribute('position', new T.BufferAttribute(new Float32Array(P), 3));
       g.setAttribute('uv', new T.BufferAttribute(new Float32Array(U), 2));
       g.setIndex(new T.BufferAttribute(P.length / 3 > 65000 ? new Uint32Array(I) : new Uint16Array(I), 1));
+      // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runde Geländekante
+      geoRundNetz(g);
       g.computeVertexNormals();
       S.terr.geometry.dispose();
       S.terr.geometry = g;

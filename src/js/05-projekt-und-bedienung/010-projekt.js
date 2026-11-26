@@ -14,6 +14,11 @@ const kmx = (lat) => 111320 * Math.cos((lat * Math.PI) / 180);
 function sqPoly(s) {
   const dx = s.size / 2 / kmx(s.lat),
     dy = s.size / 2 / 110574;
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runder Ausschnitt als Kreis (Durchmesser = size)
+  if (s.rund)
+    return geoRundRing(1, 96)
+      .concat([[1, 0]])
+      .map(([c, n]) => [s.lon + c * dx, s.lat + n * dy]);
   return [
     [s.lon - dx, s.lat - dy],
     [s.lon + dx, s.lat - dy],
@@ -266,7 +271,7 @@ function wzSqUpd(final) {
   const s = WZ.sq,
     i = $('wzinf');
   if (i && s)
-    i.innerHTML = `<div class="card">${kv('Seitenlänge', f1(s.size) + ' m')}${kv('Fläche', f1((s.size * s.size) / 10000, 1) + ' ha')}${s.size > 1200 ? '<div class="wa" style="margin-top:4px">Große Fläche: Laden dauert länger.</div>' : ''}</div>`;
+    i.innerHTML = `<div class="card">${kv(s.rund ? 'Durchmesser' : 'Seitenlänge', f1(s.size) + ' m')}${kv('Fläche', f1(((s.rund ? Math.PI / 4 : 1) * s.size * s.size) / 10000, 1) + ' ha')}${s.size > 1200 ? '<div class="wa" style="margin-top:4px">Große Fläche: Laden dauert länger.</div>' : ''}</div>`;
   const z = $('wzsz');
   if (z && final) z.value = Math.round(s.size);
 }
@@ -284,6 +289,13 @@ function wzSize(v) {
       { padding: 80, duration: 500, maxZoom: 18 },
     );
 }
+/** Form des Ausschnitts wählen: Quadrat oder Kreis (Durchmesser = Seitenlänge). */
+function wzForm(rund) {
+  if (!WZ.sq) return;
+  WZ.sq.rund = !!rund;
+  wzRender();
+  wzSqUpd(true);
+}
 function wzDrawOn() {
   if (!WZ.map) {
     wzMsg('Karte nicht verfügbar – bitte die Seitenlänge eingeben.');
@@ -292,7 +304,11 @@ function wzDrawOn() {
   WZ.draw = true;
   WZ.map.dragPan.disable();
   WZ.map.getCanvas().style.cursor = 'crosshair';
-  wzMsg('Mit gedrückter Maustaste ein Quadrat aufziehen.');
+  wzMsg(
+    WZ.sq && WZ.sq.rund
+      ? 'Mit gedrückter Maustaste den Kreis aufziehen.'
+      : 'Mit gedrückter Maustaste ein Quadrat aufziehen.',
+  );
 }
 function wzStyle() {
   const k = GEO.key,
@@ -684,7 +700,12 @@ function wzMap() {
         side = Math.min(2000, Math.max(10, Math.abs(dx), Math.abs(dz))),
         sx = dx < 0 ? -1 : 1,
         sz = dz < 0 ? -1 : 1;
-      WZ.sq = { lon: a.lng + (sx * side) / 2 / k, lat: a.lat + (sz * side) / 2 / 110574, size: side };
+      WZ.sq = {
+        lon: a.lng + (sx * side) / 2 / k,
+        lat: a.lat + (sz * side) / 2 / 110574,
+        size: side,
+        rund: !!(WZ.sq && WZ.sq.rund),
+      };
       wzSqUpd(false);
     },
     true,
@@ -712,7 +733,12 @@ function wzNext() {
     wzRender();
   } else if (WZ.step === 2) {
     if (!WZ.loc) return;
-    WZ.sq = { lon: WZ.loc.lon, lat: WZ.loc.lat, size: WZ.sq ? WZ.sq.size : 600 };
+    WZ.sq = {
+      lon: WZ.loc.lon,
+      lat: WZ.loc.lat,
+      size: WZ.sq ? WZ.sq.size : 600,
+      rund: !!(WZ.sq && WZ.sq.rund),
+    };
     WZ.step = 3;
     wzRender();
     wzSize(WZ.sq.size);
@@ -752,6 +778,7 @@ async function wzGo() {
   GEO.lod3Pick = await lod3Ask(s.lon, s.lat);
   WZ.step = 4;
   wzRender();
+  GEO.rund = !!s.rund;
   const r = await geoRun(s.lon, s.lat, s.size, WZ.label);
   if (r.ok) {
     newProjectReset();
@@ -760,6 +787,7 @@ async function wzGo() {
       name: WZ.name || 'Projekt',
       label: WZ.label,
       size: s.size,
+      rund: !!s.rund,
       lon: s.lon,
       lat: s.lat,
     };
@@ -802,7 +830,17 @@ function wzRender() {
     r.innerHTML = `<h2>Standort wählen</h2><div style="color:var(--mu)">Per Hand: Weltkugel drehen, zoomen und auf den Ort klicken. Oder genau eingeben:</div>Adresse<input id="wza" type="text" placeholder="Straße, Ort" onkeydown="if(event.key=='Enter')wzSearch()"><button class="sm" onclick="wzSearch()">Adresse suchen</button>Koordinaten (Breite / Länge)<div style="display:flex;gap:4px"><input id="wzla" type="number" step="any" placeholder="52.0302"><input id="wzlo" type="number" step="any" placeholder="8.5325"></div><button class="sm" onclick="wzCoord()">Koordinaten setzen</button><div id="wzi"></div><button class="pri" id="wzok" onclick="wzNext()">Weiter</button><button class="sm" onclick="WZ.step=1;wzRender()">Zurück</button>`;
     wzInfo();
   } else if (st === 3) {
-    r.innerHTML = `<h2>Umgebung festlegen</h2><div style="color:var(--mu)">Nur dieser quadratische Bereich wird geladen (100–2000 m). Danach unter dem Bereich auf „Position bestätigen“ klicken.</div><button class="sm" onclick="wzDrawOn()">▢ Quadrat frei zeichnen</button>Seitenlänge (m)<input id="wzsz" type="number" min="100" max="2000" step="50" value="${Math.round(WZ.sq.size)}" onchange="wzSize(this.value)"><div id="wzinf"></div>${WZ.map ? '' : '<button class="pri" onclick="wzGo()">Position bestätigen</button>'}<button class="sm" onclick="WZ.step=2;wzRender()">Zurück</button>`;
+    r.innerHTML = `<h2>Umgebung festlegen</h2><div style="color:var(--mu)">Nur dieser Bereich wird geladen (100–2000 m). Danach unter dem Bereich auf „Position bestätigen“ klicken.</div><div class="wzf" role="group" aria-label="Form des Ausschnitts">${[
+      [0, 'Quadrat', '<rect x="2.5" y="2.5" width="11" height="11" rx="1"/>'],
+      [1, 'Kreis', '<circle cx="8" cy="8" r="5.8"/>'],
+    ]
+      .map(
+        ([v, n, ic]) =>
+          `<button type="button" aria-pressed="${!!WZ.sq.rund === !!v}" onclick="wzForm(${v})"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">${ic}</svg>${n}</button>`,
+      )
+      .join(
+        '',
+      )}</div><button class="sm" onclick="wzDrawOn()">${WZ.sq.rund ? 'Kreis frei zeichnen' : 'Quadrat frei zeichnen'}</button>${WZ.sq.rund ? 'Durchmesser (m)' : 'Seitenlänge (m)'}<input id="wzsz" type="number" min="100" max="2000" step="50" value="${Math.round(WZ.sq.size)}" onchange="wzSize(this.value)"><div id="wzinf"></div>${WZ.map ? '' : '<button class="pri" onclick="wzGo()">Position bestätigen</button>'}<button class="sm" onclick="WZ.step=2;wzRender()">Zurück</button>`;
     wzSqUpd(true);
   } else if (st === 4) {
     r.innerHTML = `<h2>Umgebung wird geladen</h2><div id="wzld" style="color:var(--mu)">${esc(GEO.status || 'Bitte warten …')}</div>`;

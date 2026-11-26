@@ -80,14 +80,15 @@ function fbmAufStrasse(x, z) {
 }
 /**
  * Höhe der Fahrbahn an (x, z) in Richtung u: auf einem Brückendeck dessen Fahrbahn (strDeckHoehe – gekennzeichnete
- * Brückenwege auf dem Deck, andere nur längs auf Verlängerung und Rampe), sonst Straßenfläche (15 cm unter dem
+ * Brückenwege auf dem Deck, andere nur längs auf Verlängerung und Rampe), sonst Straßenfläche (knapp über dem
  * Gelände); null = keine Fahrbahn.
  */
 function fbmHoehe(x, z, bruecke, u) {
   const d = strDeckHoehe(x, z, u, bruecke, 'roads');
   // (Brücke ohne Deck – flach, kein Hindernis – oder kein Deck gefunden: Straßenfläche am Boden)
   if (d != null) return d;
-  return fbmAufStrasse(x, z) ? gh(x, z) + STR.E.roads.h : null;
+  // auf der Fahrbahnfläche (liegt auf dem Geländenetz, strNetzHoehe)
+  return fbmAufStrasse(x, z) ? strNetzHoehe(x, z) + STR.E.roads.h : null;
 }
 /** Zahl aus einem OSM-Wert („2“, „2;3“) oder null. */
 function fbmZahl(v) {
@@ -187,7 +188,9 @@ function fbmBauen(D) {
   if (!D || !STR.E.roads.aktiv) return;
   const pos = [],
     h = GEO.size / 2,
-    drin = (p) => Math.abs(p[0]) < h && Math.abs(p[1]) < h,
+    // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: beim runden Ausschnitt nur im Kreis
+    rr = geoRundR(),
+    drin = (p) => (rr ? p[0] * p[0] + p[1] * p[1] < rr * rr : Math.abs(p[0]) < h && Math.abs(p[1]) < h),
     // ein Strich a→c (einfache Linie, keine Fläche; b = Breite nach OSM, für Linien ohne Bedeutung), y aus fbmHoehe
     band = (a, c, b, br) => {
       if (!drin(a) || !drin(c)) return;
@@ -197,7 +200,8 @@ function fbmBauen(D) {
         ya = fbmHoehe(a[0], a[1], br, u),
         yc = fbmHoehe(c[0], c[1], br, u);
       if (ya == null || yc == null) return;
-      pos.push(a[0], ya + 0.06, a[1], c[0], yc + 0.06, c[1]);
+      // 8 cm über der Fahrbahn: sicher über Straßen-, Grün- und Wegfläche (Polygonversatz)
+      pos.push(a[0], ya + 0.08, a[1], c[0], yc + 0.08, c[1]);
     },
     // Linie mit Strichmuster [an, aus] (aus = 0: durchgezogen), in Stücken von höchstens 2 m (folgt dem Gelände)
     linie = (l, b, an, aus, br) => {

@@ -2019,6 +2019,42 @@ textarea {
   display: flex;
   min-height: 0;
 }
+/* Form des Ausschnitts (Quadrat / Kreis) */
+#wz .wzf {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin: 10px 0 8px;
+  border-radius: 10px;
+  background: #0000000d;
+}
+#wz .wzf button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mu);
+  cursor: pointer;
+}
+#wz .wzf button:hover {
+  color: var(--tx);
+}
+#wz .wzf button[aria-pressed='true'] {
+  background: var(--pn);
+  color: #5e7f92;
+  font-weight: 600;
+  box-shadow: 0 1px 3px #0002;
+}
+#wz .wzf button:focus-visible {
+  outline: 2px solid #5e7f92;
+  outline-offset: 1px;
+}
 #wzl {
   flex: 1;
   position: relative;
