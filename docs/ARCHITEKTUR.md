@@ -863,3 +863,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Attika/Brüstung/Schürze (`l2FassadenZusatz` mit Kantenindex, Formel Länge × Höhe + Zusatz) und eine Zeile Loggien
   (Rück-/Seitenwände − Öffnung) – Summe oberirdisch = Kennwert Fassadenfläche. LOD 100 bleibt unverändert
   (vereinfachte Flächen und Volumen). Untertitel, Hinweis und Dateiname nennen die Stufe.
+- Excel LOD 200, Zeichnungen (nachvollziehbar für die Kalkulation: jede Fläche nummeriert, Länge × Breite als Formel,
+  Summe mit Abgleich zum Kennwert, `xlPlace`, `it.note`): Grundriss je Geschoss mit Wänden (LOD-200-Bauteile, dunkel
+  Außenwände) und den Raumflächen der Metriken (`l2NetKoerper`, zerlegt in Rechtecke R1.1 …), Hinweis BGF/NGF/KF;
+  Loggien (`xlLoggiaBild`, Rück- und Seitenwände, Öffnung als Abzug); „Fassade abzüglich Öffnungen“ (`xlPng` mit
+  `netto`, Öffnungen je Seite aus `xlOeSeite`, Rest als Sammelzeile) – Summe = „Fassade ohne Öffnungen“. In der
+  Abwicklung brutto Attika/Brüstung/Schürze als Streifen über der Seite.

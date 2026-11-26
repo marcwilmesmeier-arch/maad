@@ -71,11 +71,41 @@ function xlVal(b) {
   o.fasb = o.bgf > 0 ? o.fas / o.bgf : 0;
   return o;
 }
+/**
+ * Öffnungen (LOD 200) auf der Seite a→c eines Geschosses (z0…z1): Lage entlang der Seite (t0, t1 ab a) und Höhe über
+ * der Geschossunterkante (y0, y1), auf das Geschoss zugeschnitten (Pfosten-Riegel über mehrere Geschosse). Zugeordnete
+ * Flächen werden von x.rest abgezogen. [{ t0, t1, y0, y1, a }]
+ */
+function xlOeSeite(OE, a, c, len, z0, z1) {
+  const u = [(c[0] - a[0]) / len, (c[1] - a[1]) / len],
+    ab = (p) => Math.abs((p[0] - a[0]) * -u[1] + (p[1] - a[1]) * u[0]),
+    t = (p) => (p[0] - a[0]) * u[0] + (p[1] - a[1]) * u[1],
+    R = [];
+  OE.forEach((x) => {
+    if (ab(x.p0) > 0.4 || ab(x.p1) > 0.4) return;
+    const t0 = Math.max(0, Math.min(t(x.p0), t(x.p1))),
+      t1 = Math.min(len, Math.max(t(x.p0), t(x.p1))),
+      y0 = Math.max(x.y0, z0),
+      y1 = Math.min(x.y1, z1);
+    if (t1 - t0 < 0.01 || y1 - y0 < 0.01) return;
+    const ar = (t1 - t0) * (y1 - y0);
+    x.rest -= ar;
+    R.push({ t0, t1, y0: y0 - z0, y1: y1 - z0, a: ar });
+  });
+  return R;
+}
 function xlWalls(b) {
   const L = bLv(b),
     px = pxMet(b),
     o = [],
-    l2 = l2on();
+    l2 = l2on(),
+    // LOD 200: Fenster, Türen, Pfosten-Riegel (wie „Fassade ohne Öffnungen“), je Seite zugeordnet; Rest gesammelt
+    OE = l2
+      ? l2FassadenOeffnungen(b).map((x) => ({
+          ...x,
+          rest: Math.hypot(x.p1[0] - x.p0[0], x.p1[1] - x.p0[1]) * (x.y1 - x.y0),
+        }))
+      : [];
   let zz = b._y || 0;
   b.levels.forEach((l, i) => {
     const f = lf(b, l),
@@ -122,6 +152,7 @@ function xlWalls(b) {
         h: l.h,
         zus: l2 ? zus : null,
         area: len * l.h + zus,
+        oe: l2 && !l.ug ? xlOeSeite(OE, a, c, len, z0, z1) : null,
       });
     });
   });
@@ -153,6 +184,8 @@ function xlWalls(b) {
         x: 1,
       });
   }
+  // nicht zugeordnete Öffnungen (z. B. in Loggia-Rückwänden): Fläche für die Nettotabelle
+  o.oeRest = OE.reduce((s, x) => s + Math.max(0, x.rest), 0);
   if (px.fas > 0.01)
     o.push({
       lv: 'Flächenpatches',
@@ -308,7 +341,8 @@ function xlSel() {
 }
 // ---- bemaßte Abwicklung als PNG
 const XLFC = ['#d6e4f0', '#cfe8d8', '#f3e3c3', '#f0d2c2', '#f6d6d6', '#e0d2ee', '#d4d4ef', '#d2e8ec'];
-function xlPng(b, W0) {
+function xlPng(b, W0, opt) {
+  const netto = !!(opt && opt.netto);
   const fz = (v, d) => v.toFixed(d).replace('.', ','),
     lv = [];
   W0.filter((w) => !w.x).forEach((w) => {
@@ -341,7 +375,13 @@ function xlPng(b, W0) {
   g.fillStyle = '#1d1d1b';
   g.font = 'bold 15px Arial';
   g.textAlign = 'left';
-  g.fillText('Abwicklung ' + (b.name || b.id) + ' – Fassaden, brutto, Maße in m', 12, 20);
+  g.fillText(
+    netto
+      ? 'Fassade ' + (b.name || b.id) + ' – abzüglich Öffnungen (Fenster, Türen, Pfosten-Riegel), Maße in m'
+      : 'Abwicklung ' + (b.name || b.id) + ' – Fassaden, brutto, Maße in m',
+    12,
+    20,
+  );
   let y = mT;
   lv.forEach((L) => {
     y += gap;
@@ -354,6 +394,29 @@ function xlPng(b, W0) {
       g.strokeStyle = '#333';
       g.lineWidth = 1;
       g.strokeRect(x, y, w, hh);
+      // LOD 200: Attika / Terrassenbrüstung / Schürze dieser Seite als Streifen über der Fläche
+      if (e.zus > 0.01) {
+        g.fillStyle = '#b9a77a';
+        g.fillRect(x, y - 4, w, 4);
+      }
+      // Fassade abzüglich Öffnungen: Aussparungen, nummeriert
+      if (netto && e.oe)
+        e.oe.forEach((oo, k) => {
+          const ox = x + oo.t0 * sc,
+            ow = (oo.t1 - oo.t0) * sc,
+            oy = y + hh - oo.y1 * sc,
+            oh = (oo.y1 - oo.y0) * sc;
+          g.fillStyle = '#ffffff';
+          g.fillRect(ox, oy, ow, oh);
+          g.strokeStyle = '#333';
+          g.strokeRect(ox, oy, ow, oh);
+          if (ow > 16 && oh > 10) {
+            g.fillStyle = '#333';
+            g.font = '8px Arial';
+            g.textAlign = 'center';
+            g.fillText(String(k + 1), ox + ow / 2, oy + oh / 2);
+          }
+        });
       if (L.ug) {
         g.strokeStyle = '#aaa';
         g.beginPath();
@@ -450,6 +513,46 @@ function xlPng(b, W0) {
     mL,
     y + 22,
   );
+  return { png: layB64(cv.toDataURL('image/png')), w: W, h: H };
+}
+/** Loggia-Wände als bemaßte Rechtecke nebeneinander (LOD 200; L: [{ x, len, h, nr }]). */
+function xlLoggiaBild(bn, L) {
+  if (!L.length) return null;
+  const fz = (v, d) => v.toFixed(d).replace('.', ','),
+    tw = L.reduce((s, w) => Math.max(s, w.x + w.len), 0),
+    th = Math.max(...L.map((w) => w.h)),
+    sc = Math.max(8, Math.min(60, 900 / tw, 260 / th)),
+    W = Math.ceil(tw * sc + 80),
+    H = Math.ceil(th * sc + 110),
+    K = 2,
+    cv = document.createElement('canvas');
+  cv.width = W * K;
+  cv.height = H * K;
+  const g = cv.getContext('2d');
+  g.scale(K, K);
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#1d1d1b';
+  g.font = 'bold 15px Arial';
+  g.textBaseline = 'middle';
+  g.fillText('Loggien ' + bn + ' – Rück- und Seitenwände, Maße in m', 12, 20);
+  const y0 = 60;
+  L.forEach((w) => {
+    const x = 40 + w.x * sc,
+      ww = w.len * sc,
+      hh = w.h * sc,
+      y = y0 + (th - w.h) * sc;
+    g.fillStyle = '#e6d8b8';
+    g.fillRect(x, y, ww, hh);
+    g.strokeStyle = '#333';
+    g.strokeRect(x, y, ww, hh);
+    g.fillStyle = '#222';
+    g.font = 'bold 11px Arial';
+    g.textAlign = 'center';
+    g.fillText(w.nr, x + ww / 2, y + hh / 2 - 7);
+    g.font = '10px Arial';
+    g.fillText(fz(w.len, 2) + ' × ' + fz(w.h, 2), x + ww / 2, y + hh / 2 + 7);
+  });
   return { png: layB64(cv.toDataURL('image/png')), w: W, h: H };
 }
 // ---- bemaßte Draufsichten (Grundriss, Dach, Terrasse, Lageplan): Kantenmaße im Maßkettenstil + Rechteckzerlegung
@@ -873,6 +976,10 @@ function xlPlace(s, q, items, media) {
       }
       q++;
     }
+    if (it.note) {
+      s.set(q, 1, it.note, 13);
+      q += 2;
+    }
   });
   return q;
 }
@@ -909,7 +1016,152 @@ function xlPlans(kind, d) {
   const b = d.b,
     bn = b.name || b.id,
     o = [];
-  if (kind === 'lev') {
+  if (kind === 'lev' && l2on()) {
+    // LOD 200: je Geschoss Wände (Bauteile) und Räume mit Nettofläche – die Flächen der Metriken (NGF, KF)
+    const R = l2NetKoerper(b, 'all', true),
+      N = l2Ngf(b),
+      E = l2Els(b).els;
+    bLv(b).forEach((lr, i) => {
+      const l = b.levels[i],
+        f = l ? lf(b, l) : lf(b, b.levels[b.levels.length - 1]),
+        rs = R.filter((k) => k.li === i),
+        an = xlAng(f),
+        L = [{ poly: f, fill: '#f7f6f2', stroke: '#222', lw: 1.6, dim: 1 }],
+        rects = [];
+      E.filter((e) => e.li === i && e.quads && /^(AW|TW|IN|TH)$/.test(e.kind)).forEach((e) =>
+        e.quads.forEach((qd) => L.push({ poly: qd, fill: e.kind === 'AW' ? '#4a4844' : '#7d8790' })),
+      );
+      rs.forEach((k, ri) => {
+        L.push({ poly: k.p, fill: '#dde8f2', stroke: '#5E7F92', lw: 0.8 });
+        (k.hs || []).forEach((h) => L.push({ poly: h, fill: '#f7f6f2', stroke: '#5E7F92', lw: 0.8 }));
+        const rc = xlDecomp([k.p], k.hs || [], an),
+          nm = (k.f && (k.f.n || k.f.name)) || 'Raum ' + (ri + 1);
+        rc.forEach((q, j) => {
+          q.n = 'R' + (ri + 1) + '.' + (j + 1);
+          q.bz = nm + ' – ' + lr.n;
+        });
+        rects.push(...rc);
+      });
+      L.push({ rects });
+      const im = xlPlan(`Grundriss ${bn} – ${lr.n} (LOD 200: Wände und Nettoflächen)`, L, { w: 760, h: 500 }),
+        lvN = N.lv[i] || {};
+      if (im)
+        o.push({
+          im,
+          cols: XLRC(0),
+          rows: xlRows(rects, null),
+          sum: 'NGF (R) ' + lr.n + ' – Räume',
+          ref: lvN.ngf != null ? lvN.ngf : null,
+          note:
+            'BGF ' +
+            lr.n +
+            ' = ' +
+            f1(lr.a, 2) +
+            ' m² · NGF (R) = ' +
+            f1(lvN.ngf || 0, 2) +
+            ' m²' +
+            (lvN.s ? ' · NGF (S) Balkone/Loggien = ' + f1(lvN.s, 2) + ' m²' : '') +
+            ' · KF (Wände) = BGF − NGF = ' +
+            f1(lvN.w || 0, 2) +
+            ' m² (dunkel: Außenwände, grau: Innenwände)',
+        });
+    });
+  } else if (kind === 'logg') {
+    // LOD 200: Loggien – Rück- und Seitenwände statt der Öffnung in der Fassadenebene (wie l2FassadeWert)
+    const W = l2LoggiaWaende(b);
+    if (!W.some((w) => w.art !== 'oeff')) return o;
+    const rows = [],
+      L = [];
+    let n = 0,
+      x = 0;
+    W.forEach((w) => {
+      const h = w.Q ? w.Q[2][1] - w.Q[0][1] : 0,
+        len = w.Q ? Math.hypot(w.Q[1][0] - w.Q[0][0], w.Q[1][2] - w.Q[0][2]) : 0;
+      if (w.art === 'oeff') {
+        n++;
+        rows.push({
+          nr: 'L' + n + '.0',
+          bz: 'Öffnung Loggia ' + n + ' – ' + w.nm + ' (abzüglich)',
+          form: 'Rechteck',
+          len: null,
+          br: null,
+          a: { f: () => null, v: -w.a },
+        });
+        return;
+      }
+      const nr =
+        'L' +
+        n +
+        '.' +
+        (w.art === 'rueck' ? 'R' : 'S' + (rows.filter((r) => r.nr.startsWith('L' + n + '.S')).length + 1));
+      rows.push({
+        nr,
+        bz: (w.art === 'rueck' ? 'Rückwand' : 'Seitenwand') + ' Loggia ' + n + ' – ' + w.nm,
+        form: 'Rechteck',
+        len,
+        br: h,
+        a: { f: (C, q) => (C.len && C.br ? `${C.len}${q}*${C.br}${q}` : null), v: w.a },
+      });
+      L.push({ x, len, h, nr });
+      x += len + 0.8;
+    });
+    const im = xlLoggiaBild(bn, L);
+    o.push({
+      im,
+      cols: XLRC(0),
+      rows,
+      sum: 'Loggien (Rück- und Seitenwände abzüglich Öffnungen)',
+      ref: W.reduce((s, w) => s + (w.art === 'oeff' ? -w.a : w.a), 0),
+    });
+  } else if (kind === 'netto') {
+    // LOD 200: Fassade abzüglich Öffnungen – je Seite brutto, darunter jede Öffnung als Abzug
+    const im = xlPng(b, d.W, { netto: 1 }),
+      rows = [];
+    d.W.filter((w) => !w.ug).forEach((w) => {
+      const id = w.lv + ' ' + w.nr;
+      if (w.len != null)
+        rows.push({
+          nr: id,
+          bz: w.dir + ' brutto' + (w.zus ? ' + Attika/Brüstung/Schürze' : ''),
+          form: 'Rechteck',
+          len: w.len,
+          br: w.h,
+          a: {
+            f: (C, q) =>
+              C.len && C.br ? `${C.len}${q}*${C.br}${q}` + (w.zus ? `+${w.zus.toFixed(3)}` : '') : null,
+            v: w.area,
+          },
+        });
+      else rows.push({ nr: id, bz: w.lv, form: '–', len: null, br: null, a: { f: () => null, v: w.area } });
+      (w.oe || []).forEach((oo, k) =>
+        rows.push({
+          nr: id + '.' + (k + 1),
+          bz: 'Öffnung (abzüglich)',
+          form: 'Rechteck',
+          len: oo.t1 - oo.t0,
+          br: oo.y1 - oo.y0,
+          a: { f: (C, q) => (C.len && C.br ? `-${C.len}${q}*${C.br}${q}` : null), v: -oo.a },
+        }),
+      );
+    });
+    if (d.W.oeRest > 0.01)
+      rows.push({
+        nr: '–',
+        bz: 'weitere Öffnungen (in Loggia-Rückwänden u. Ä., abzüglich)',
+        form: '–',
+        len: null,
+        br: null,
+        a: { f: () => null, v: -d.W.oeRest },
+      });
+    if (im)
+      o.push({
+        im,
+        cols: XLRC(0),
+        rows,
+        sum: 'Fassade ohne Öffnungen ' + bn,
+        ref: l2FassadeWert(b, d.m.fas) - l2FassadenOeffnungsFlaeche(b),
+      });
+  } else if (kind === 'lev') {
     const g = new Map();
     b.levels.forEach((l, i) => {
       const f = lf(b, l),

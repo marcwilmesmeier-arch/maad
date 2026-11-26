@@ -462,6 +462,8 @@ function xlBuild() {
             });
           }
           q += 2;
+          // LOD 200: Loggien (Rück-/Seitenwände) und Fassade abzüglich Öffnungen – nachvollziehbar je Posten
+          if (l2 && XL.img) q = xlPlace(s, q, xlPlans('logg', d).concat(xlPlans('netto', d)), media);
         });
       }
       if (tot) {
