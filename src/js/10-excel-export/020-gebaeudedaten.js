@@ -386,6 +386,15 @@ function xlFtTeile(b, w) {
   });
   return o;
 }
+/**
+ * Terrassenfläche als Zeichenlagen: genaue Flächen (Geschoss − Geschoss darüber − Innenhöfe, terrOf) mit Löchern
+ * und Kontur wie die Balkone; das Raster nur, wenn keine genaue Fläche vorliegt.
+ */
+function xlTerrLagen(r, fill) {
+  if (r.P && r.P.length)
+    return r.P.map((x) => ({ poly: x.o, holes: x.h || [], fill, stroke: '#4f7a45', lw: 0.8 }));
+  return [{ cells: r.q, st: r.st, fill }];
+}
 /** Füllfarbe eines Fassadentyps; merkt den Typ für die Legende. */
 const xlFtFarbe = (k, set) => (set.add(k || ''), xlFtInfo(k).c);
 /** Farbe und Name eines Fassadentyps ('' = ohne Typ). */
@@ -501,6 +510,7 @@ function xlTerr(b) {
       pb: ia >= 0 ? lf(b, b.levels[ia + 1]) : null,
       q: L.q,
       st: L.st,
+      P: L.P,
     });
   });
   if (px.terr > 0.01)
@@ -1000,6 +1010,7 @@ function xlPlan(title, Ls, o) {
     Ls = Ls.map((l) => {
       const n = { ...l };
       if (l.poly) n.poly = l.poly.map(ROT);
+      if (l.holes) n.holes = l.holes.map((h) => h.map(ROT));
       if (l.tris)
         n.tris = l.tris.map((t) => [...ROT([t[0], t[1]]), ...ROT([t[2], t[3]]), ...ROT([t[4], t[5]])]);
       if (l.rects) n.rects = l.rects.map((r) => ({ ...r, pts: r.pts.map(ROT) }));
@@ -1054,10 +1065,13 @@ function xlPlan(title, Ls, o) {
   const ox = (W - w * sc) / 2,
     X = (x) => ox + (x - x0) * sc,
     Y = (y) => mt + (y - y0) * sc;
-  const path = (p) => {
+  // Umriss samt Löchern (holes) als ein Pfad; gefüllt mit 'evenodd'
+  const path = (p, holes) => {
     g.beginPath();
-    p.forEach(([x, y], i) => (i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))));
-    g.closePath();
+    [p, ...(holes || [])].forEach((r) => {
+      r.forEach(([x, y], i) => (i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))));
+      g.closePath();
+    });
   };
   const halo = (t, x, y) => {
     g.lineWidth = 3;
@@ -1072,10 +1086,10 @@ function xlPlan(title, Ls, o) {
   g.fillText(title, 12, 18);
   Ls.forEach((l) => {
     if (l.fill && l.poly) {
-      path(l.poly);
+      path(l.poly, l.holes);
       g.fillStyle = l.fill;
       g.globalAlpha = l.alpha || 1;
-      g.fill();
+      g.fill('evenodd');
       g.globalAlpha = 1;
     }
     if (l.tris) {
@@ -1098,7 +1112,7 @@ function xlPlan(title, Ls, o) {
       l.cells.forEach(([x, y]) => g.fillRect(X(x) - 0.3, Y(y) - 0.3, s, s));
     }
     if (l.stroke && l.poly) {
-      path(l.poly);
+      path(l.poly, l.holes);
       g.strokeStyle = l.stroke;
       g.lineWidth = l.lw || 1.5;
       g.setLineDash(l.dash || []);
@@ -1661,7 +1675,7 @@ function xlPlans(kind, d) {
         rows = [];
       if (terr) {
         L.unshift({ poly: terr.pa, fill: '#f4f2ec', stroke: '#222', lw: 1.6, dim: 1 });
-        L.push({ cells: terr.q, st: terr.st, fill: '#9bbf8a' });
+        L.push(...xlTerrLagen(terr, '#9bbf8a'));
         rows.push(xlFl('T1', 'Terrasse auf ' + terr.lv, 'Terrasse', terr.area));
       }
       L.push(...xlWandLagen(b, li));
@@ -1707,7 +1721,7 @@ function xlPlans(kind, d) {
         `Terrasse ${bn} – auf ${r.lv}`,
         [
           { poly: r.pa, fill: '#f4f2ec', stroke: '#222', lw: 1.6, dim: 1 },
-          { cells: r.q, st: r.st, fill: '#bfe3c4' },
+          ...xlTerrLagen(r, '#bfe3c4'),
           {
             poly: r.pb,
             fill: '#d7d7d7',
