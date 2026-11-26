@@ -364,7 +364,11 @@ function xlBuild() {
       setw(s, cols);
       let q = 4;
       const opd = XL.opd || 0;
-      const mkRow = (w, bn) => {
+      const mkRow = (w, bn, W) => {
+        // LOD 200: Öffnungsanteil aus den modellierten Öffnungen (Fenster, Türen, Pfosten-Riegel), änderbar
+        const oa = xlOeFlaeche(w, W),
+          op = oa != null && w.area > 0.001 ? (100 * oa) / w.area : null,
+          pz = op != null ? op : opd;
         const base = {
           bld: bn,
           lv: w.lv,
@@ -373,7 +377,7 @@ function xlBuild() {
           len: nv(w.len),
           h: nv(w.h),
           zus: nv(w.zus),
-          op: null,
+          op,
         };
         base.area =
           w.len != null
@@ -388,7 +392,7 @@ function xlBuild() {
         base.net = {
           f: (L, r) =>
             L.area ? (L.op ? `${L.area}${r}*(1-N(${L.op}${r})/100)` : `${L.area}${r}*(1-${opd}/100)`) : null,
-          v: w.area * (1 - opd / 100),
+          v: w.area * (1 - pz / 100),
         };
         return base;
       };
@@ -409,23 +413,24 @@ function xlBuild() {
           const ws = d.W.slice().sort((a, c) => (a.x ? 1 : 0) - (c.x ? 1 : 0) || a.lvi - c.lvi),
             ug = ws.filter((w) => w.ug),
             og = ws.filter((w) => !w.ug);
-          const rows = ug.concat(og).map((w) => mkRow(w, bn)),
+          const rows = ug.concat(og).map((w) => mkRow(w, bn, d.W)),
             T = xlTbl(s, q, cols, rows);
           q = T.next;
           const nU = ug.length,
             rU1 = T.r0 + nU - 1,
             rO0 = T.r0 + nU;
           const ssum = (a) => a.reduce((x, w) => x + w.area, 0),
+            nsum = (a0, a1) => rows.slice(a0, a1).reduce((x, r) => x + r.net.v, 0),
             keys = ['len', 'area', 'net'];
           const vsU = {
               len: ug.reduce((x, w) => x + (w.len || 0), 0),
               area: ssum(ug),
-              net: ssum(ug) * (1 - opd / 100),
+              net: nsum(0, nU),
             },
             vsO = {
               len: og.filter((w) => !w.x).reduce((x, w) => x + w.len, 0),
               area: ssum(og),
-              net: ssum(og) * (1 - opd / 100),
+              net: nsum(nU),
             };
           if (nU) {
             xlSumRow(s, q, cols, T, 'Σ Untergeschoss-Außenwände (erdberührt)', keys, vsU, T.r0, rU1);
@@ -463,6 +468,8 @@ function xlBuild() {
           }
           q += 2;
           // LOD 200: Loggien (Rück-/Seitenwände) und Fassade abzüglich Öffnungen – nachvollziehbar je Posten
+          // Abwicklung nach Fassadentypen (Fassadendesigner bzw. Material je Geschoss)
+          if (XL.img) q = xlPlace(s, q, xlPlans('ftyp', d), media);
           if (l2 && XL.img) q = xlPlace(s, q, xlPlans('logg', d).concat(xlPlans('netto', d)), media);
         });
       }
@@ -482,9 +489,12 @@ function xlBuild() {
                   h: null,
                   area: 0,
                   op: null,
+                  oe: null,
                 });
             x.len += w.len || 0;
             x.area += w.area;
+            const oa = xlOeFlaeche(w, d.W);
+            if (oa != null) x.oe = (x.oe || 0) + oa;
           }),
         );
         const keys = Object.keys(g).sort(
@@ -495,21 +505,30 @@ function xlBuild() {
           for (let i = 2; i <= cols.length; i++) s.set(q, i, null, 14);
           q++;
         }
-        const rows = keys.map((k) => ({
-          ...g[k],
-          len: g[k].len || null,
-          net: {
-            f: (L, r) => (L.area ? `${L.area}${r}*(1-${opd}/100)` : null),
-            v: g[k].area * (1 - opd / 100),
-          },
-        }));
+        const rows = keys.map((k) => {
+          const op = g[k].oe != null && g[k].area > 0.001 ? (100 * g[k].oe) / g[k].area : null;
+          return {
+            ...g[k],
+            op,
+            len: g[k].len || null,
+            net: {
+              f: (L, r) =>
+                L.area
+                  ? L.op
+                    ? `${L.area}${r}*(1-N(${L.op}${r})/100)`
+                    : `${L.area}${r}*(1-${opd}/100)`
+                  : null,
+              v: g[k].area * (1 - (op != null ? op : opd) / 100),
+            },
+          };
+        });
         const T = xlTbl(s, q, cols, rows);
         q = T.next;
         const vs = {
           len: rows.reduce((a, r) => a + (r.len || 0), 0),
           area: rows.reduce((a, r) => a + r.area, 0),
         };
-        vs.net = vs.area * (1 - opd / 100);
+        vs.net = rows.reduce((a, r) => a + r.net.v, 0);
         xlSumRow(s, q, cols, T, 'Σ Fassade oberirdisch alle Gebäude', ['len', 'area', 'net'], vs, T.r0, T.r1);
         q++;
         const ugS = D.reduce((a, d) => a + d.W.filter((w) => w.ug).reduce((x, w) => x + w.area, 0), 0);

@@ -880,3 +880,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Excel-Zeichnungen (Grundrisse, Dachdraufsicht, Terrassen; nicht der Lageplan): `xlPlan(…, { rot })` dreht alle Lagen so,
   dass die längste Gebäudeseite waagerecht liegt (`xlAng`); Rasterzellen werden dafür zu Dreiecken, der Nordpfeil dreht
   mit, die Fußzeile weist darauf hin. Flächen und Maße bleiben unverändert.
+- Excel-Abwicklungen: `xlPlans('ftyp')` färbt die Abwicklung nach Fassadentypen (`xlFtTeile` rastert jede Seite mit
+  `w.geo` wie `ftWandAbschnitte`/`ftGiebelTyp`, `xlPng(…, { ft: 1 })`) und listet die Fläche je Seite und Typ.
+  `xlPlans('logg')` fasst Loggien gleicher Größe als Loggia-Typ mit Anzahl zusammen (Formel Anzahl × Länge × Höhe).
+  In LOD 200 füllt `xlOeFlaeche` die Spalte „Öffnungsanteil“ aus den modellierten Öffnungen (Spaltenname über
+  `n2`/`d2` in `xlColsLod`). Der Dachgeschoss-Umriss für Giebel/Drempel wird von doppelten und geraden
+  Zwischenpunkten befreit.

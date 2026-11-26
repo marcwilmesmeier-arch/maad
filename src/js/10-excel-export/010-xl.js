@@ -103,7 +103,12 @@ const XLC0 = {
     xlC('h', 'Höhe', 'm', 2, 'n', 10, 1),
     xlC('zus', 'Attika / Brüstung / Schürze', 'm²', 2, 'n', 14, 1, { l2: 1 }),
     xlC('area', 'Fläche brutto', 'm²', 2, 'n', 12, 1),
-    xlC('op', 'Öffnungsanteil (Eingabe)', '%', 0, 'n', 13, 1, { inp: 1 }),
+    // LOD 200: aus den modellierten Öffnungen ermittelt (n2/d2), weiterhin überschreibbar
+    xlC('op', 'Öffnungsanteil (Eingabe)', '%', 0, 'n', 13, 1, {
+      inp: 1,
+      n2: 'Öffnungsanteil (aus Modell)',
+      d2: 1,
+    }),
     xlC('net', 'Fläche netto', 'm²', 2, 'n', 12, 1),
   ],
   roof: [
@@ -154,7 +159,10 @@ const XLH = {
 /** Detaillierung des Exports: '200' (LOD 200, wie die Metriken in LOD 200) oder '100'. */
 const xlLod = () => XL.lod || (S.lod >= 200 ? '200' : '100');
 /** Spalten eines Blatts, die zur gewählten Detaillierung gehören (LOD-200-Spalten nur bei LOD 200). */
-const xlColsLod = (k) => (XL.cols[k] || []).filter((c) => !c.l2 || xlLod() === '200');
+const xlColsLod = (k) =>
+  (XL.cols[k] || [])
+    .filter((c) => !c.l2 || xlLod() === '200')
+    .map((c) => (c.n2 && xlLod() === '200' ? { ...c, n: c.n2, d: c.d2 != null ? c.d2 : c.d } : c));
 const XL = {
   scope: 'both',
   lod: null, // '100' | '200' – Detaillierung der Zahlen; null: wie im Modell gewählt
