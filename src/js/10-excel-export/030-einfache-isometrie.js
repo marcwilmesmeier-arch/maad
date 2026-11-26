@@ -377,6 +377,7 @@ function xlBuild() {
           len: nv(w.len),
           h: nv(w.h),
           zus: nv(w.zus),
+          lgg: nv(w.lg),
           op,
         };
         base.area =
@@ -384,7 +385,9 @@ function xlBuild() {
             ? {
                 f: (L, r) =>
                   L.len && L.h
-                    ? `${L.len}${r}*${L.h}${r}` + (L.zus && w.zus != null ? `+N(${L.zus}${r})` : '')
+                    ? `${L.len}${r}*${L.h}${r}` +
+                      (L.zus && w.zus != null ? `+N(${L.zus}${r})` : '') +
+                      (w.lg ? (L.lgg ? `-N(${L.lgg}${r})` : `-${w.lg.toFixed(3)}`) : '')
                     : null,
                 v: w.area,
               }

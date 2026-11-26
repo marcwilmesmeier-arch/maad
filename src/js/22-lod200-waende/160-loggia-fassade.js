@@ -29,10 +29,14 @@ function l2LoggiaWaende(b) {
           [p[0], o.y1, p[1]],
         ],
         L = (p, q) => Math.hypot(q[0] - p[0], q[1] - p[1]);
-      R.push({ art: 'oeff', a: L(A, B) * h, li, nm });
-      R.push({ art: 'rueck', Q: quad(Ai, Bi), a: L(Ai, Bi) * h, li, nm });
-      if (o.rl > 0.01) R.push({ art: 'seite', Q: quad(A, Ai), a: o.rl * h, li, nm });
-      if (o.rr > 0.01) R.push({ art: 'seite', Q: quad(B, Bi), a: o.rr * h, li, nm });
+      // Lage für den Excel-Export: Öffnung in der Fassadenebene (p0, p1, y0, y1), Außennormale je Wand (nx, nz)
+      const lab = L(A, B) || 1,
+        ux = (B[0] - A[0]) / lab,
+        uz = (B[1] - A[1]) / lab;
+      R.push({ art: 'oeff', a: L(A, B) * h, li, nm, p0: A, p1: B, y0: o.y0, y1: o.y1, lg: o });
+      R.push({ art: 'rueck', Q: quad(Ai, Bi), a: L(Ai, Bi) * h, li, nm, nx: o.n[0], nz: o.n[1] });
+      if (o.rl > 0.01) R.push({ art: 'seite', Q: quad(A, Ai), a: o.rl * h, li, nm, nx: ux, nz: uz });
+      if (o.rr > 0.01) R.push({ art: 'seite', Q: quad(B, Bi), a: o.rr * h, li, nm, nx: -ux, nz: -uz });
     });
   } catch (e) {
     logErr(e, 'l2LoggiaWaende');

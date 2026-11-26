@@ -102,6 +102,8 @@ const XLC0 = {
     xlC('len', 'Länge', 'm', 2, 'n', 10, 1),
     xlC('h', 'Höhe', 'm', 2, 'n', 10, 1),
     xlC('zus', 'Attika / Brüstung / Schürze', 'm²', 2, 'n', 14, 1, { l2: 1 }),
+    // LOD 200: in der Seite ausgesparte Loggia-Öffnung (die Loggia-Wände stehen in eigenen Zeilen „Loggien“)
+    xlC('lgg', 'Loggia-Öffnung (abzüglich)', 'm²', 2, 'n', 14, 1, { l2: 1 }),
     xlC('area', 'Fläche brutto', 'm²', 2, 'n', 12, 1),
     // LOD 200: aus den modellierten Öffnungen ermittelt (n2/d2), weiterhin überschreibbar
     xlC('op', 'Öffnungsanteil (Eingabe)', '%', 0, 'n', 13, 1, {

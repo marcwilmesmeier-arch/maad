@@ -886,3 +886,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   In LOD 200 füllt `xlOeFlaeche` die Spalte „Öffnungsanteil“ aus den modellierten Öffnungen (Spaltenname über
   `n2`/`d2` in `xlColsLod`). Der Dachgeschoss-Umriss für Giebel/Drempel wird von doppelten und geraden
   Zwischenpunkten befreit.
+- Loggien in den Excel-Abwicklungen (LOD 200): `xlLoggien` sammelt je Loggia Öffnung (Fassadenebene), Rück- und
+  Seitenwände samt ihrer Öffnungen und bildet Loggia-Typen (gleiche Maße, Öffnungen und Himmelsrichtung). `xlWalls`
+  spart die Loggia-Öffnung in der Seite aus (`w.lg`, `w.lgo`, Spalte „Loggia-Öffnung“) und führt je Typ eine Zeile
+  „Loggien“ (`w.lgg`, brutto = Anzahl × Wände). `xlPng` zeichnet die Aussparung gestrichelt und darunter die
+  Loggien-Reihe (brutto bzw. netto mit Öffnungen, Farbe wie die Seiten). Summe bleibt `l2FassadeWert`.

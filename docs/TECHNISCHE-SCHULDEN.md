@@ -283,3 +283,6 @@ Erledigt am 28.10.2026: 70 × `==` → `===`, 49 unbenutzte Variablen entfernt, 
   Fahrbahnhöhe = Brücke breiter) machte die Brücken am Ostwestfalendamm deutlich ungenauer (zurückgenommen). Offen:
   Geländer zwischen zusammenlaufenden Fahrbahnen, wenn die OSM-Breite zu klein ist und die Achsen mehr als 6 m Lücke
   lassen.
+- Münster, Gebäude 9: 4 Loggien im EG liegen 5–7 m innerhalb des EG-Umrisses (Fassadenfeld der Obergeschossflucht im
+  EG-Band). Sie zählen in der Kennzahl und erscheinen im Excel-Export als „Loggia-Öffnung außerhalb der Seiten“.
+  Ursache in `oeLoggiaEinschnitte`/Fassadendesigner prüfen.
