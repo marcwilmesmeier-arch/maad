@@ -858,5 +858,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
 - Excel-Export, Detaillierung (`XL.lod`, Auswahl oben im Dialog; Vorgabe: Stufe des Modells): `xlBuild` rechnet in der
   gewählten Stufe (S.lod während der Berechnung umgestellt, danach zurück). LOD 200 mit denselben Funktionen wie die
   Metriken und die Darstellung (BGF (R)/(S), BRI mit S, NGF, NRI, KF, Fassade abgewickelt und ohne Öffnungen; je
-  Geschoss NGF und KF); LOD-200-Spalten (`l2: 1`) nur bei LOD 200 (`xlColsLod`). Untertitel, Hinweis und Dateiname
-  nennen die Stufe.
+  Geschoss NGF und KF; BRI/NGF/NRI auch ober-/unterirdisch und (R)/(S) – alle Zeilen der Metriken); LOD-200-Spalten
+  (`l2: 1`) und das Blatt „Fassadentypen“ (`fdStats`) nur bei LOD 200 (`xlColsLod`). Abwicklungen in LOD 200: je Seite
+  Attika/Brüstung/Schürze (`l2FassadenZusatz` mit Kantenindex, Formel Länge × Höhe + Zusatz) und eine Zeile Loggien
+  (Rück-/Seitenwände − Öffnung) – Summe oberirdisch = Kennwert Fassadenfläche. LOD 100 bleibt unverändert
+  (vereinfachte Flächen und Volumen). Untertitel, Hinweis und Dateiname nennen die Stufe.

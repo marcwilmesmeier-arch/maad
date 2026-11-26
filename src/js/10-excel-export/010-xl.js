@@ -46,10 +46,18 @@ const XLV = [
   xlC('bri', 'BRI gesamt', 'm³', 1, 's', 12, 1),
   xlC('brioi', 'BRI oberirdisch', 'm³', 1, 's', 12, 0),
   xlC('briui', 'BRI unterirdisch', 'm³', 1, 's', 12, 0),
+  xlC('brir', 'BRI (R) Regelfall', 'm³', 1, 's', 12, 0, { l2: 1 }),
+  xlC('bris', 'BRI (S) Balkone/Loggien', 'm³', 1, 's', 12, 0, { l2: 1 }),
   xlC('ngf', 'NGF gesamt', 'm²', 1, 's', 12, 1, { l2: 1 }),
   xlC('ngfoi', 'NGF oberirdisch', 'm²', 1, 's', 12, 0, { l2: 1 }),
   xlC('ngfui', 'NGF unterirdisch', 'm²', 1, 's', 12, 0, { l2: 1 }),
+  xlC('ngfr', 'NGF (R) Regelfall', 'm²', 1, 's', 12, 0, { l2: 1 }),
+  xlC('ngfs', 'NGF (S) Balkone/Loggien', 'm²', 1, 's', 12, 0, { l2: 1 }),
   xlC('nri', 'NRI gesamt', 'm³', 1, 's', 12, 1, { l2: 1 }),
+  xlC('nrioi', 'NRI oberirdisch', 'm³', 1, 's', 12, 0, { l2: 1 }),
+  xlC('nriui', 'NRI unterirdisch', 'm³', 1, 's', 12, 0, { l2: 1 }),
+  xlC('nrir', 'NRI (R) Regelfall', 'm³', 1, 's', 12, 0, { l2: 1 }),
+  xlC('nris', 'NRI (S) Balkone/Loggien', 'm³', 1, 's', 12, 0, { l2: 1 }),
   xlC('kf', 'Konstruktionsfläche KF', 'm²', 1, 's', 13, 1, { l2: 1 }),
   xlC('fas', 'Fassadenfläche (oberirdisch, brutto)', 'm²', 1, 's', 16, 1),
   xlC('fasn', 'Fassade ohne Öffnungen', 'm²', 1, 's', 14, 1, { l2: 1 }),
@@ -69,6 +77,7 @@ const XLS = [
   ['terr', 'Terrassen'],
   ['use', 'Nutzungen'],
   ['plot', 'Grundstück'],
+  ['fdt', 'Fassadentypen', 1], // nur LOD 200 (wie die Fassade in den Metriken)
 ];
 const XLC0 = {
   sum: XLV,
@@ -92,6 +101,7 @@ const XLC0 = {
     xlC('dir', 'Himmelsrichtung', '', 0, 't', 12, 1),
     xlC('len', 'Länge', 'm', 2, 'n', 10, 1),
     xlC('h', 'Höhe', 'm', 2, 'n', 10, 1),
+    xlC('zus', 'Attika / Brüstung / Schürze', 'm²', 2, 'n', 14, 1, { l2: 1 }),
     xlC('area', 'Fläche brutto', 'm²', 2, 'n', 12, 1),
     xlC('op', 'Öffnungsanteil (Eingabe)', '%', 0, 'n', 13, 1, { inp: 1 }),
     xlC('net', 'Fläche netto', 'm²', 2, 'n', 12, 1),
@@ -120,6 +130,11 @@ const XLC0 = {
     xlC('bgf', 'BGF', 'm²', 1, 'n', 12, 1),
     xlC('bri', 'BRI', 'm³', 1, 'n', 12, 1),
   ],
+  fdt: [
+    xlC('bld', 'Gebäude', '', 0, 't', 20, 1),
+    xlC('typ', 'Fassadentyp', '', 0, 't', 24, 1),
+    xlC('area', 'Fläche', 'm²', 1, 'n', 12, 1),
+  ],
   plot: [
     xlC('g', 'Größe', '', 0, 't', 34, 1),
     xlC('v', 'Wert', '', 2, 'n', 14, 1),
@@ -129,11 +144,12 @@ const XLC0 = {
 const XLH = {
   sum: 'Summenzeile mit Excel-Formeln (SUMME/MAX). Kennwerte entsprechen der Analyse.',
   lev: 'Je Geschoss: Höhe, BGF, BRI, Umfang, Außenwandfläche.',
-  abw: 'Je Fassadenseite und Geschoss: Länge × Höhe (als Formel), Himmelsrichtung, Öffnungsanteil als Eingabespalte für die Nettofläche – dazu die bemaßte Abwicklungsgrafik.',
+  abw: 'Je Fassadenseite und Geschoss: Länge × Höhe (als Formel; LOD 200 dazu Attika, Terrassenbrüstung und Schürze je Seite und eine Zeile für die Loggien – die Summe oberirdisch ist der Kennwert Fassadenfläche), Himmelsrichtung, Öffnungsanteil als Eingabespalte für die Nettofläche – dazu die bemaßte Abwicklungsgrafik.',
   roof: 'Dachflächen nach Neigung und Ausrichtung, geneigte Fläche und Grundrissprojektion, Traufumfang.',
   terr: 'Terrassenflächen je Absatz mit Höhe und umschreibendem Rechteck.',
   use: 'BGF und BRI je Nutzung.',
   plot: 'Grundstücksfläche, GRZ/GFZ mit Grenzwerten, freie Flächen.',
+  fdt: 'Fassadenfläche je Fassadentyp (Fassadendesigner), wie unter „Fassade“ in den Metriken (nur LOD 200).',
 };
 /** Detaillierung des Exports: '200' (LOD 200, wie die Metriken in LOD 200) oder '100'. */
 const xlLod = () => XL.lod || (S.lod >= 200 ? '200' : '100');
@@ -143,7 +159,7 @@ const XL = {
   scope: 'both',
   lod: null, // '100' | '200' – Detaillierung der Zahlen; null: wie im Modell gewählt
   sel: 'sum',
-  sh: { sum: 1, lev: 1, abw: 1, roof: 1, terr: 1, use: 0, plot: 1 },
+  sh: { sum: 1, lev: 1, abw: 1, roof: 1, terr: 1, use: 0, plot: 1, fdt: 1 },
   shn: {},
   img: 1,
   opd: 0,

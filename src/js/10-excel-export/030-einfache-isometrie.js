@@ -365,10 +365,25 @@ function xlBuild() {
       let q = 4;
       const opd = XL.opd || 0;
       const mkRow = (w, bn) => {
-        const base = { bld: bn, lv: w.lv, nr: w.nr, dir: w.dir, len: nv(w.len), h: nv(w.h), op: null };
+        const base = {
+          bld: bn,
+          lv: w.lv,
+          nr: w.nr,
+          dir: w.dir,
+          len: nv(w.len),
+          h: nv(w.h),
+          zus: nv(w.zus),
+          op: null,
+        };
         base.area =
           w.len != null
-            ? { f: (L, r) => (L.len && L.h ? `${L.len}${r}*${L.h}${r}` : null), v: w.area }
+            ? {
+                f: (L, r) =>
+                  L.len && L.h
+                    ? `${L.len}${r}*${L.h}${r}` + (L.zus && w.zus != null ? `+N(${L.zus}${r})` : '')
+                    : null,
+                v: w.area,
+              }
             : w.area;
         base.net = {
           f: (L, r) =>
@@ -681,6 +696,38 @@ function xlBuild() {
           'Σ alle Gebäude',
           ['bgf', 'bri'],
           { bgf: rows.reduce((a, r) => a + r.bgf, 0), bri: rows.reduce((a, r) => a + r.bri, 0) },
+          T.r0,
+          T.r1,
+        );
+      }
+    }
+    // LOD 200: Fassadentypen wie in den Metriken (fdStats)
+    if (l2 && XL.sh.fdt && en('fdt').length) {
+      const rows = [];
+      D.forEach((d) => {
+        try {
+          const R = fdStats(d.b);
+          if (!R.cust) return;
+          S.ft
+            .filter((t) => R.t[t.k])
+            .forEach((t) => rows.push({ bld: d.b.name || d.b.id, typ: t.n, area: R.t[t.k].a }));
+        } catch (e) {
+          logErr(e, 'xlBuild>Fassadentypen');
+        }
+      });
+      if (rows.length) {
+        const s = mk('fdt', 'Fassadentypen'),
+          cols = en('fdt');
+        setw(s, cols);
+        const T = xlTbl(s, 4, cols, rows);
+        xlSumRow(
+          s,
+          T.next,
+          cols,
+          T,
+          'Summe',
+          ['area'],
+          { area: rows.reduce((a, r) => a + r.area, 0) },
           T.r0,
           T.r1,
         );

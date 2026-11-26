@@ -109,9 +109,10 @@ function l2FassadenBand(b, f, z0, z1, ohneOeff) {
  * Zusätzliche Fassadenflächen eines Geschosses in LOD 200 (wie die Außenkontur, 110-aussenkontur): Attika über dem
  * obersten Geschoss bei Flachdach (0,30 m), Brüstung an Terrassen, wo das Geschoss darüber zurückspringt (0,30 m), und
  * Schürze unter Überhängen, wo das Geschoss über das darunter hinausragt (Deckenstärke + L2_SCHUERZE). f Umriss des
- * Geschosses, fu/fo Umriss darunter/darüber (oder null), z0/z1 Unter-/Oberkante. Dreiecke [x, y, z, …].
+ * Geschosses, fu/fo Umriss darunter/darüber (oder null), z0/z1 Unter-/Oberkante, nur: nur die Kante mit diesem Index.
+ * Dreiecke [x, y, z, …].
  */
-function l2FassadenZusatz(b, f, fu, fo, z0, z1, oberstes) {
+function l2FassadenZusatz(b, f, fu, fo, z0, z1, oberstes, nur) {
   if (!l2on() || !f || f.length < 3) return [];
   const flach = !b.roof || !b.roof.type || b.roof.type === 'flat',
     schuerze = ((l2Els(b).els.find((e) => e.kind === 'DE') || {}).d || 0.22) + L2_SCHUERZE,
@@ -138,6 +139,8 @@ function l2FassadenZusatz(b, f, fu, fo, z0, z1, oberstes) {
         A[1],
       );
   f.forEach((a, i) => {
+    // nur: nur diese Kante (Abwicklung je Fassadenseite im Excel-Export)
+    if (nur != null && i !== nur) return;
     const c = f[(i + 1) % f.length],
       L = Math.hypot(c[0] - a[0], c[1] - a[1]);
     if (L < 0.01) return;

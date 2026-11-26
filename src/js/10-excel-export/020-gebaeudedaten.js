@@ -52,7 +52,15 @@ function xlVal(b) {
       o.ngfoi = n.o + n.so;
       o.ngfui = n.u + n.su;
       o.ngf = o.ngfoi + o.ngfui;
-      o.nri = nr.o + nr.u + (S2 ? sz.nri : 0);
+      o.ngfr = n.o + n.u;
+      o.ngfs = n.so + n.su;
+      o.brir = m.brioi - (S2 ? sz.loV : 0) + m.briui;
+      o.bris = S2 ? sz.bri : 0;
+      o.nrioi = nr.o + (S2 ? sz.nri : 0);
+      o.nriui = nr.u;
+      o.nrir = nr.o + nr.u;
+      o.nris = S2 ? sz.nri : 0;
+      o.nri = o.nrioi + o.nriui;
       o.kf = n.wo + n.wu;
       o.fas = l2FassadeWert(b, m.fas);
       o.fasn = o.fas - l2FassadenOeffnungsFlaeche(b);
@@ -66,9 +74,14 @@ function xlVal(b) {
 function xlWalls(b) {
   const L = bLv(b),
     px = pxMet(b),
-    o = [];
+    o = [],
+    l2 = l2on();
+  let zz = b._y || 0;
   b.levels.forEach((l, i) => {
-    const f = lf(b, l);
+    const f = lf(b, l),
+      z0 = zz,
+      z1 = zz + l.h;
+    zz = z1;
     let sa = 0;
     f.forEach((p, j) => {
       const q = f[(j + 1) % f.length];
@@ -82,6 +95,23 @@ function xlWalls(b) {
         dz = c[1] - a[1],
         len = Math.hypot(dx, dz);
       if (len < 0.05) return;
+      // ── Erweiterung aus 22-lod200-waende/160-loggia-fassade.js: LOD 200 – Attika, Terrassenbrüstung und Schürze
+      // dieser Seite (wie die Fassadenfläche in den Metriken)
+      const zus =
+        l2 && !l.ug
+          ? l2DreieckFlaeche(
+              l2FassadenZusatz(
+                b,
+                f,
+                i > 0 ? lf(b, b.levels[i - 1]) : null,
+                i + 1 < b.levels.length ? lf(b, b.levels[i + 1]) : null,
+                z0,
+                z1,
+                i === b.levels.length - 1,
+                j,
+              ),
+            )
+          : 0;
       o.push({
         lv: L[i].n,
         lvi: i,
@@ -90,7 +120,8 @@ function xlWalls(b) {
         dir: xlDir((sg * dz) / len, (-sg * dx) / len),
         len,
         h: l.h,
-        area: len * l.h,
+        zus: l2 ? zus : null,
+        area: len * l.h + zus,
       });
     });
   });
@@ -106,6 +137,22 @@ function xlWalls(b) {
       area: b._rp.aW,
       x: 1,
     });
+  // LOD 200: Loggien – Rück- und Seitenwände statt der Öffnung in der Fassadenebene (l2FassadeWert)
+  if (l2) {
+    const z = l2LoggiaZahlen(b);
+    if (z.oeff)
+      o.push({
+        lv: 'Loggien',
+        lvi: 98,
+        ug: false,
+        nr: 'Rück-/Seitenwände − Öffnung',
+        dir: 'versch.',
+        len: null,
+        h: null,
+        area: z.rueck + z.seite - z.oeff,
+        x: 1,
+      });
+  }
   if (px.fas > 0.01)
     o.push({
       lv: 'Flächenpatches',

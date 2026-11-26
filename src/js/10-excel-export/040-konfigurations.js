@@ -32,10 +32,12 @@ function xlRender() {
   const bl = S.bld.filter((b) => !b.ex);
   let h =
     '<h4>Tabellenblätter</h4>' +
-    XLS.map(
-      ([k, n]) =>
-        `<div class="xr ${XL.sel === k ? 'on' : ''}" onclick="xlSelS('${k}')"><input type="checkbox" ${XL.sh[k] ? 'checked' : ''} onclick="event.stopPropagation()" onchange="XL.sh['${k}']=this.checked?1:0;xlSave0()"><input type="text" value="${esc(XL.shn[k] || n)}" title="Name des Tabellenblatts" onclick="event.stopPropagation()" onchange="XL.shn['${k}']=this.value.trim();xlSave0()"></div>`,
-    ).join('') +
+    XLS.filter((x) => !x[2] || xlLod() === '200')
+      .map(
+        ([k, n]) =>
+          `<div class="xr ${XL.sel === k ? 'on' : ''}" onclick="xlSelS('${k}')"><input type="checkbox" ${XL.sh[k] ? 'checked' : ''} onclick="event.stopPropagation()" onchange="XL.sh['${k}']=this.checked?1:0;xlSave0()"><input type="text" value="${esc(XL.shn[k] || n)}" title="Name des Tabellenblatts" onclick="event.stopPropagation()" onchange="XL.shn['${k}']=this.value.trim();xlSave0()"></div>`,
+      )
+      .join('') +
     '<div class="xn">Blatt anklicken, um rechts die Spalten und Überschriften festzulegen.</div>';
   h +=
     '<h4>Gebäude</h4>' +
