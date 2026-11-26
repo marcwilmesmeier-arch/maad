@@ -1234,8 +1234,13 @@ function ctxBuild(list) {
   let tri = 0;
   list.sort((a, b) => Math.hypot(...cen(a.o)) - Math.hypot(...cen(b.o)));
   // Obergrenze (nach Abstand zur Mitte): früher 6000 – zu wenig für 2 × 2 km in Innenstädten (z. B. Darmstadt ~14 000)
+  // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runder Ausschnitt – Grundrisse bzw. Dreiecke am Kreis
+  // schneiden (auch Gebäude aus gespeicherten Ausschnitten und Nachladungen)
+  const rr = geoRundR();
   for (const b of list.slice(0, 25000)) {
-    const ge = b.tris ? triGeo(b) : bExtrude(b);
+    const bg = b.tris ? b : geoRundGrundriss(b);
+    if (!bg) continue;
+    const ge = b.tris ? (rr ? geoRundGebaeude(triGeo(b), b) : triGeo(b)) : bExtrude(bg);
     if (!ge) continue;
     const pos = ge.attributes.position.array,
       nor = ge.attributes.normal.array;

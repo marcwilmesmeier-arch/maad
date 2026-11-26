@@ -363,9 +363,21 @@ function skirtBuild() {
   // ── Erweiterung aus 02-geodaten/130-runder-ausschnitt.js: runder Ausschnitt – Kante und Boden als Kreis
   const rr = geoRundR();
   if (rr) {
-    const n = 4 * N,
-      ki = (i) => [rr * Math.cos((2 * Math.PI * i) / n), rr * Math.sin((2 * Math.PI * i) / n)];
-    edge(ki);
+    // Randpunkte genau wie die Geländekante (Rasterrand radial auf den Kreis) – Rand und Gelände schließen dicht
+    const RP = geoRundRand(),
+      n = RP.length - 1,
+      ki = (i) => RP[i];
+    {
+      const b = pos.length / 3;
+      for (let i = 0; i <= n; i++) {
+        const [x, z] = ki(i);
+        pos.push(x, gh(x, z), z, x, yb, z);
+      }
+      for (let i = 0; i < n; i++) {
+        const a = b + i * 2;
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+    }
     // Boden als Fächer um die Mitte (ki(n) schließt den Kreis)
     const b = pos.length / 3;
     pos.push(0, yb, 0);

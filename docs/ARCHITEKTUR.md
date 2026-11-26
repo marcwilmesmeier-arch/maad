@@ -906,7 +906,10 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Quadrat; `geoRundAcc` teilt Linien und schneidet Flächen am Kreis, Bebauungspläne werden zugeschnitten, Bäume mit
   Stamm außerhalb entfallen (`treesBuild`). Gebäudegrundrisse und Flurstücke schneidet `clipRing` wie am Quadrat,
   beim runden Ausschnitt zusätzlich am Kreis; Fahrbahnmarkierungen nur im Kreis. `geoRundNetz` legt Geländepunkte außerhalb radial auf den Kreis (rebuildTerrain, plmGeom),
-  `skirtBuild` baut eine runde Kante, `strFlaechen` beendet die Vektorflächen am Kreis.
+  `skirtBuild` baut die runde Kante aus genau diesen Randpunkten (`geoRundRand`, dicht), `strFlaechen` beendet die
+  Vektorflächen am Kreis. `ctxBuild` schneidet zusätzlich jedes Gebäude: Grundrisse (`geoRundGrundriss`, auch aus
+  gespeicherten Ausschnitten), LoD2-Dreiecke (`geoRundGebaeude`: Dreiecke am Kreis gekappt, Schnittwand entlang des
+  Kreises bis unter das Dach).
 - Ebenenreihenfolge der Vektorflächen: Wasser < Straßen < Grün < Wege (`h`, `po`); Wege sparen die Fahrbahn aus
   (`strFlaechen(…, ohne)`), Fahrbahnmarkierungen 8 cm über der Fahrbahn auf `strNetzHoehe`. Brückenstützen im
   Material der Brüstung (`matBW`).
