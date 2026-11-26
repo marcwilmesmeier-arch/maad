@@ -869,3 +869,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Loggien (`xlLoggiaBild`, Rück- und Seitenwände, Öffnung als Abzug); „Fassade abzüglich Öffnungen“ (`xlPng` mit
   `netto`, Öffnungen je Seite aus `xlOeSeite`, Rest als Sammelzeile) – Summe = „Fassade ohne Öffnungen“. In der
   Abwicklung Attika/Brüstung (oben) und Schürze (unten) an ihrer Stelle in der Farbe der Seite darunter (`zst`).
+- Excel-Abwicklung, Dachgeschoss: Giebel und Drempel (Wanddreiecke der Dachform `b._rp.pw`) werden den Seiten des
+  obersten Geschosses zugeordnet (alle Ecken auf der Flucht) und als eigene Reihe „Dachgeschoss“ in ihrer Form
+  gezeichnet (nur Außenkontur, Grundlinie gestrichelt); je Seite eine Tabellenzeile (`polys`, `hd`), nicht zuordenbare
+  Reste als Sammelzeile „Giebel“. Summe = Giebel-/Drempelfläche der Dachform (LOD 100 und 200 gleich).

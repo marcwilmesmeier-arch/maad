@@ -172,18 +172,88 @@ function xlWalls(b) {
       });
     });
   });
-  if (b._rp && b._rp.aW > 0.01)
-    o.push({
-      lv: 'Dach',
-      lvi: 99,
-      ug: false,
-      nr: 'Giebel',
-      dir: 'versch.',
-      len: null,
-      h: null,
-      area: b._rp.aW,
-      x: 1,
+  // Dachgeschoss: Giebel und Drempel (Wandflächen der Dachform) je Seite des obersten Geschosses, in ihrer Form
+  if (b._rp && b._rp.aW > 0.01) {
+    const pw = b._rp.pw || [],
+      fT = lf(b, b.levels[b.levels.length - 1]),
+      yB = (b._y || 0) + b.levels.reduce((s2, l) => s2 + l.h, 0),
+      seiten = fT.map(() => ({ polys: [], a: 0 }));
+    let sa = 0,
+      rest = 0;
+    fT.forEach((p, j) => {
+      const q = fT[(j + 1) % fT.length];
+      sa += p[0] * q[1] - q[0] * p[1];
     });
+    const sg = sa > 0 ? 1 : -1;
+    for (let k = 0; k + 8 < pw.length; k += 9) {
+      const P = [0, 1, 2].map((v) => [pw[k + v * 3], pw[k + v * 3 + 1], pw[k + v * 3 + 2]]),
+        ar =
+          0.5 *
+          Math.hypot(
+            (P[1][1] - P[0][1]) * (P[2][2] - P[0][2]) - (P[1][2] - P[0][2]) * (P[2][1] - P[0][1]),
+            (P[1][2] - P[0][2]) * (P[2][0] - P[0][0]) - (P[1][0] - P[0][0]) * (P[2][2] - P[0][2]),
+            (P[1][0] - P[0][0]) * (P[2][1] - P[0][1]) - (P[1][1] - P[0][1]) * (P[2][0] - P[0][0]),
+          );
+      // Seite, auf deren Flucht alle drei Ecken liegen
+      const j = fT.findIndex((a, jj) => {
+        const c = fT[(jj + 1) % fT.length],
+          L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+        return P.every((v) => {
+          const t = ((v[0] - a[0]) * (c[0] - a[0]) + (v[2] - a[1]) * (c[1] - a[1])) / L;
+          return (
+            Math.abs(((v[0] - a[0]) * -(c[1] - a[1]) + (v[2] - a[1]) * (c[0] - a[0])) / L) < 0.35 &&
+            t > -0.3 &&
+            t < L + 0.3
+          );
+        });
+      });
+      if (j < 0) {
+        rest += ar;
+        continue;
+      }
+      const a = fT[j],
+        c = fT[(j + 1) % fT.length],
+        L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+      seiten[j].polys.push(
+        P.map((v) => [((v[0] - a[0]) * (c[0] - a[0]) + (v[2] - a[1]) * (c[1] - a[1])) / L, v[1] - yB]),
+      );
+      seiten[j].a += ar;
+    }
+    let n = 0;
+    seiten.forEach((x, j) => {
+      if (x.a < 0.01) return;
+      const a = fT[j],
+        c = fT[(j + 1) % fT.length],
+        dx = c[0] - a[0],
+        dz = c[1] - a[1],
+        len = Math.hypot(dx, dz);
+      o.push({
+        lv: 'Dachgeschoss',
+        lvi: b.levels.length,
+        ug: false,
+        nr: 'G' + ++n,
+        dir: xlDir((sg * dz) / len, (-sg * dx) / len),
+        len,
+        h: null, // Giebel/Drempel: Fläche aus der Dachform (keine Rechteckformel)
+        hd: Math.max(...x.polys.flat().map((v) => v[1])),
+        area: x.a,
+        form: 'Giebel/Drempel',
+        polys: x.polys,
+      });
+    });
+    if (rest > 0.01)
+      o.push({
+        lv: 'Dach',
+        lvi: 99,
+        ug: false,
+        nr: 'Giebel',
+        dir: 'versch.',
+        len: null,
+        h: null,
+        area: rest,
+        x: 1,
+      });
+  }
   // LOD 200: Loggien – Rück- und Seitenwände statt der Öffnung in der Fassadenebene (l2FassadeWert)
   if (l2) {
     const z = l2LoggiaZahlen(b);
@@ -363,7 +433,8 @@ function xlPng(b, W0, opt) {
     lv = [];
   W0.filter((w) => !w.x).forEach((w) => {
     let q = lv.find((x) => x.i === w.lvi);
-    if (!q) lv.push((q = { i: w.lvi, n: w.lv, ug: w.ug, h: w.h, e: [] }));
+    if (!q) lv.push((q = { i: w.lvi, n: w.lv, ug: w.ug, h: w.hd != null ? w.hd : w.h, e: [] }));
+    if (w.hd != null) q.h = Math.max(q.h, w.hd);
     q.e.push(w);
   });
   if (!lv.length) return null;
@@ -408,10 +479,48 @@ function xlPng(b, W0, opt) {
     L.e.forEach((e) => {
       const w = e.len * sc;
       g.fillStyle = L.ug ? '#ddd' : XLFC[Math.max(0, XLD.indexOf(e.dir))];
-      g.fillRect(x, y, w, hh);
       g.strokeStyle = '#333';
       g.lineWidth = 1;
-      g.strokeRect(x, y, w, hh);
+      if (e.polys) {
+        // Dachgeschoss: Giebel und Drempel in ihrer Form (Dreiecke der Dachgeometrie), Grundlinie gestrichelt
+        e.polys.forEach((P) => {
+          g.beginPath();
+          P.forEach(([t, h], k) =>
+            k ? g.lineTo(x + t * sc, y + hh - h * sc) : g.moveTo(x + t * sc, y + hh - h * sc),
+          );
+          g.closePath();
+          g.fill();
+        });
+        // nur die Außenkontur der Form: Kanten, die zu genau einem Dreieck gehören (keine Triangulationsdiagonalen);
+        // die Grundlinie zeichnet die gestrichelte Linie
+        const kk = (p) => p[0].toFixed(3) + ',' + p[1].toFixed(3),
+          zahl = new Map(),
+          kanten = [];
+        e.polys.forEach((P) =>
+          P.forEach((p, k) => {
+            const q = P[(k + 1) % P.length],
+              key = [kk(p), kk(q)].sort().join('|');
+            zahl.set(key, (zahl.get(key) || 0) + 1);
+            kanten.push([p, q, key]);
+          }),
+        );
+        g.beginPath();
+        kanten.forEach(([p, q, key]) => {
+          if (zahl.get(key) > 1 || (Math.abs(p[1]) < 0.01 && Math.abs(q[1]) < 0.01)) return;
+          g.moveTo(x + p[0] * sc, y + hh - p[1] * sc);
+          g.lineTo(x + q[0] * sc, y + hh - q[1] * sc);
+        });
+        g.stroke();
+        g.setLineDash([4, 3]);
+        g.beginPath();
+        g.moveTo(x, y + hh);
+        g.lineTo(x + w, y + hh);
+        g.stroke();
+        g.setLineDash([]);
+      } else {
+        g.fillRect(x, y, w, hh);
+        g.strokeRect(x, y, w, hh);
+      }
       // LOD 200: Attika / Terrassenbrüstung (oben) und Schürze (unten) in der Farbe der Seite, an ihrer Stelle
       (e.zst || []).forEach((z) => {
         const zx = x + z.t0 * sc,
