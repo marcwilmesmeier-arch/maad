@@ -389,6 +389,7 @@ function xlTerr(b) {
       bx: x1 - x0,
       by: y1 - y0,
       area: L.area,
+      ia,
       pa: ia >= 0 ? lf(b, b.levels[ia]) : null,
       pb: ia >= 0 ? lf(b, b.levels[ia + 1]) : null,
       q: L.q,
@@ -647,6 +648,22 @@ function xlPng(b, W0, opt) {
     y + 22,
   );
   return { png: layB64(cv.toDataURL('image/png')), w: W, h: H };
+}
+/** Tabellenzeile einer ganzen Fläche (Raum, Einheit, Balkon) ohne Zerlegung: Wert aus dem Modell. */
+function xlFl(nr, bz, form, a) {
+  return { nr, bz, form, len: null, br: null, a: { f: () => null, v: a } };
+}
+/** Wände eines Geschosses (LOD 200) als Zeichenlagen: Außenwände dunkel, Innenwände grau. */
+function xlWandLagen(b, li) {
+  if (!l2on()) return [];
+  try {
+    return l2Els(b)
+      .els.filter((e) => e.li === li && e.quads && /^(AW|TW|IN|TH)$/.test(e.kind))
+      .flatMap((e) => e.quads.map((qd) => ({ poly: qd, fill: e.kind === 'AW' ? '#4a4844' : '#7d8790' })));
+  } catch (e) {
+    logErr(e, 'xlWandLagen');
+    return [];
+  }
 }
 /** Loggia-Wände als bemaßte Rechtecke nebeneinander (LOD 200; L: [{ x, len, h, nr }]). */
 function xlLoggiaBild(bn, L) {
@@ -1068,7 +1085,7 @@ function xlPlan(title, Ls, o) {
   g.fillStyle = '#777';
   g.font = '10px Arial';
   g.fillText(
-    'Maße in m · Norden oben · gestrichelt = Zerlegung in Rechtecke (R1, R2 … siehe Tabelle)',
+    o.fuss || 'Maße in m · Norden oben · gestrichelt = Zerlegung in Rechtecke (R1, R2 … siehe Tabelle)',
     mx,
     H - 14,
   );
@@ -1150,41 +1167,54 @@ function xlPlans(kind, d) {
     bn = b.name || b.id,
     o = [];
   if (kind === 'lev' && l2on()) {
-    // LOD 200: je Geschoss Wände (Bauteile) und Räume mit Nettofläche – die Flächen der Metriken (NGF, KF)
+    // LOD 200: je Geschoss wie die 3D-Darstellung der Metriken – Wände (Bauteile), Räume bzw. Einheiten als NGF (R),
+    // Balkone und Loggien als NGF (S); je Fläche eine Zeile (keine Zerlegung)
     const R = l2NetKoerper(b, 'all', true),
-      N = l2Ngf(b),
-      E = l2Els(b).els;
+      SF = l2SFlaechen(b),
+      N = l2Ngf(b);
     bLv(b).forEach((lr, i) => {
       const l = b.levels[i],
         f = l ? lf(b, l) : lf(b, b.levels[b.levels.length - 1]),
-        rs = R.filter((k) => k.li === i),
-        an = xlAng(f),
-        L = [{ poly: f, fill: '#f7f6f2', stroke: '#222', lw: 1.6, dim: 1 }],
-        rects = [];
-      E.filter((e) => e.li === i && e.quads && /^(AW|TW|IN|TH)$/.test(e.kind)).forEach((e) =>
-        e.quads.forEach((qd) => L.push({ poly: qd, fill: e.kind === 'AW' ? '#4a4844' : '#7d8790' })),
-      );
-      rs.forEach((k, ri) => {
-        L.push({ poly: k.p, fill: '#dde8f2', stroke: '#5E7F92', lw: 0.8 });
-        (k.hs || []).forEach((h) => L.push({ poly: h, fill: '#f7f6f2', stroke: '#5E7F92', lw: 0.8 }));
-        const rc = xlDecomp([k.p], k.hs || [], an),
-          nm = (k.f && (k.f.n || k.f.name)) || 'Raum ' + (ri + 1);
-        rc.forEach((q, j) => {
-          q.n = 'R' + (ri + 1) + '.' + (j + 1);
-          q.bz = nm + ' – ' + lr.n;
-        });
-        rects.push(...rc);
+        L = [{ poly: f, fill: '#f7f6f2', stroke: '#222', lw: 1.6, dim: 1 }].concat(xlWandLagen(b, i)),
+        rows = [];
+      // Teilstücke einer Fläche (beim Abziehen der Wände entstanden) wieder zu einem Raum bzw. einer Einheit
+      const raeume = new Map();
+      R.filter((k) => k.li === i).forEach((k) => {
+        const r = raeume.get(k.f) || { f: k.f, teile: [], a: 0 };
+        r.teile.push(k);
+        r.a += k.a;
+        raeume.set(k.f, r);
       });
-      L.push({ rects });
-      const im = xlPlan(`Grundriss ${bn} – ${lr.n} (LOD 200: Wände und Nettoflächen)`, L, { w: 760, h: 500 }),
+      [...raeume.values()].forEach((r, ri) => {
+        const fa = (r.f && S.fa.find((x) => x.k === r.f.fa)) || null,
+          nm = (r.f && r.f.n) || (fa ? fa.n : 'Raum'),
+          nr = 'R' + (ri + 1),
+          gross = r.teile.reduce((m, k) => (k.a > m.a ? k : m), r.teile[0]);
+        r.teile.forEach((k) => {
+          L.push({ poly: k.p, fill: '#d3e2f1', lab: k === gross ? [nr, nm, f1(r.a, 2) + ' m²'] : null });
+          (k.hs || []).forEach((h) => L.push({ poly: h, fill: '#f7f6f2', stroke: '#5E7F92', lw: 0.8 }));
+        });
+        rows.push(xlFl(nr, nm + ' – ' + lr.n, 'NGF (R)', r.a));
+      });
+      SF.filter((x) => x.li === i).forEach((x, si) => {
+        const nm = { ba: 'Balkon', lo: 'Loggia', bl: 'Balkon/Loggia' }[x.art] || 'Balkon',
+          nr = 'S' + (si + 1);
+        L.push({ poly: x.pts, fill: '#7ea3cc', stroke: '#3f6385', lw: 0.8, lab: [nr, f1(x.a, 2) + ' m²'] });
+        rows.push(xlFl(nr, nm + ' – ' + lr.n, 'NGF (S)', x.a));
+      });
+      const im = xlPlan(`Grundriss ${bn} – ${lr.n} (LOD 200: Wände, NGF R und S)`, L, {
+          w: 760,
+          h: 500,
+          fuss: 'Maße in m · Norden oben · R = Räume/Einheiten (NGF R), S = Balkone/Loggien (NGF S), Flächen siehe Tabelle',
+        }),
         lvN = N.lv[i] || {};
       if (im)
         o.push({
           im,
           cols: XLRC(0),
-          rows: xlRows(rects, null),
-          sum: 'NGF (R) ' + lr.n + ' – Räume',
-          ref: lvN.ngf != null ? lvN.ngf : null,
+          rows,
+          sum: 'NGF ' + lr.n + ' (R und S)',
+          ref: (lvN.ngf || 0) + (lvN.s || 0),
           note:
             'BGF ' +
             lr.n +
@@ -1192,9 +1222,9 @@ function xlPlans(kind, d) {
             f1(lr.a, 2) +
             ' m² · NGF (R) = ' +
             f1(lvN.ngf || 0, 2) +
-            ' m²' +
-            (lvN.s ? ' · NGF (S) Balkone/Loggien = ' + f1(lvN.s, 2) + ' m²' : '') +
-            ' · KF (Wände) = BGF − NGF = ' +
+            ' m² (hellblau)' +
+            (lvN.s ? ' · NGF (S) Balkone/Loggien = ' + f1(lvN.s, 2) + ' m² (dunkelblau)' : '') +
+            ' · KF (Wände) = BGF − NGF (R) = ' +
             f1(lvN.w || 0, 2) +
             ' m² (dunkel: Außenwände, grau: Innenwände)',
         });
@@ -1366,6 +1396,55 @@ function xlPlans(kind, d) {
             ? d.R.find((r) => !r.t && r.typ.startsWith('Änderung')).area
             : 0),
       });
+  } else if (kind === 'terr' && l2on()) {
+    // LOD 200: Terrassen und Balkone grün im Grundriss des Geschosses, das darauf steht (mit Wänden); Geschosse nur mit
+    // Balkonen bekommen ebenso einen Plan
+    const SF = l2SFlaechen(b),
+      gesehen = new Set();
+    const plan = (li, titel, terr) => {
+      const l = b.levels[li];
+      if (!l) return;
+      gesehen.add(li);
+      const L = [{ poly: lf(b, l), fill: '#f7f6f2', stroke: '#222', lw: 1.6, dim: 1 }],
+        rows = [];
+      if (terr) {
+        L.unshift({ poly: terr.pa, fill: '#f4f2ec', stroke: '#222', lw: 1.6, dim: 1 });
+        L.push({ cells: terr.q, st: terr.st, fill: '#9bbf8a' });
+        rows.push(xlFl('T1', 'Terrasse auf ' + terr.lv, 'Terrasse', terr.area));
+      }
+      L.push(...xlWandLagen(b, li));
+      SF.filter((x) => x.li === li).forEach((x, si) => {
+        const nm = { ba: 'Balkon', lo: 'Loggia', bl: 'Balkon/Loggia' }[x.art] || 'Balkon',
+          nr = 'B' + (si + 1);
+        L.push({ poly: x.pts, fill: '#9bbf8a', stroke: '#4f7a45', lw: 0.8, lab: [nr, f1(x.a, 2) + ' m²'] });
+        rows.push(xlFl(nr, nm + ' – ' + (b.levels[li].name || lname(b, li)), 'Balkon/Loggia', x.a));
+      });
+      const im = xlPlan(titel, L, {
+        w: 700,
+        h: 460,
+        fuss: 'Maße in m · Norden oben · grün = Terrasse, Balkone und Loggien, Flächen siehe Tabelle',
+      });
+      if (im && rows.length)
+        o.push({
+          im,
+          cols: XLRC(0),
+          rows,
+          sum: titel.replace(/^Grundriss /, ''),
+          ref: rows.reduce((s2, r) => s2 + r.a.v, 0),
+        });
+    };
+    d.T.forEach((r) => {
+      if (r.pa && r.ia != null && r.ia >= 0)
+        plan(r.ia + 1, `Terrasse ${bn} – auf ${r.lv} (LOD 200: Wände, Terrasse und Balkone grün)`, r);
+    });
+    [...new Set(SF.map((x) => x.li))].forEach((li) => {
+      if (typeof li === 'number' && !gesehen.has(li))
+        plan(
+          li,
+          `Grundriss ${bn} – ${b.levels[li].name || lname(b, li)}: Balkone und Loggien (LOD 200)`,
+          null,
+        );
+    });
   } else if (kind === 'terr') {
     d.T.forEach((r) => {
       if (!r.pa) return;

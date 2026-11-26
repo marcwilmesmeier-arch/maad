@@ -873,3 +873,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   obersten Geschosses zugeordnet (alle Ecken auf der Flucht) und als eigene Reihe „Dachgeschoss“ in ihrer Form
   gezeichnet (nur Außenkontur, Grundlinie gestrichelt); je Seite eine Tabellenzeile (`polys`, `hd`), nicht zuordenbare
   Reste als Sammelzeile „Giebel“. Summe = Giebel-/Drempelfläche der Dachform (LOD 100 und 200 gleich).
+- Excel LOD 200, Grundrisse und Terrassen (wie die 3D-Darstellungen der Metriken, ohne Zerlegung): je Geschoss Wände
+  (`xlWandLagen`), Räume/Einheiten als NGF (R) hellblau (Teilstücke einer Fläche zu einem Raum zusammengefasst, eine
+  Zeile je Raum, `xlFl`), Balkone/Loggien als NGF (S) dunkelblau (`l2SFlaechen`); Summe gegen NGF (R + S). Terrassen:
+  Grundriss des Geschosses darauf mit Wänden, Terrasse und Balkone grün; Geschosse nur mit Balkonen eigener Plan.
