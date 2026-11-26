@@ -598,6 +598,8 @@ function fxVis() {
     lw = LY.find((l) => l[1] === 'water');
   if (FX.grass) FX.grass.visible = (!lg || !!lg[2]) && !!S.m3 && fxOn('grass');
   if (FX.water) FX.water.visible = (!lw || !!lw[2]) && fxOn('water');
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Grün- und Wasserfläche nicht unter Gras bzw. Wasser
+  strSichtbar();
   /* Flurkonturen, Flurnummern, Straßennamen, Bebauungsplan liegen sonst 45–60 cm über Gelände = exakt auf Voxeloberflächen (Z-Fighting/Flackern): bei sichtbarem Gras 40 cm höher legen */
   const up = FX.grass && FX.grass.visible && !FX.flat ? 0.4 : 0;
   [G.parcels, G.flab, G.rnam, G.bplan].forEach((g) => {

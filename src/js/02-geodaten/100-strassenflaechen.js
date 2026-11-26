@@ -1,20 +1,24 @@
 // ======================= STRASSENFLÄCHEN ALS VEKTORFLÄCHE =======================
-// Straßen (OSM-Achsen mit Breite, GEO.acc.line.roads) werden nicht mehr ins Kartenbild gemalt (unscharf aus der Nähe),
-// sondern als eigene Fläche 15 cm unter dem Gelände angelegt, mit senkrechter Kante („Bordstein“) zum Gelände; das
-// Gelände bekommt dort ein Loch (Maske im Geländeshader). Einmündungen werden mit einem Standardradius ausgerundet:
-// morphologisches Schließen (Straßenband um r verbreitern, dann um r verschmälern) über ein Distanzfeld, Umriss als
-// Vektor (Marching Squares mit Interpolation, vereinfacht). Farbe: Layer-Farbe der Straßen (S.lc.roads).
+// Straßen (OSM-Achsen mit Breite, GEO.acc.line.roads), Geh- und Radwege mit Plätzen (Fußgängerbereiche),
+// Grünflächen und Gewässer (Flächen und Wasserläufe mit Breite) werden nicht ins Kartenbild gemalt (unscharf aus der Nähe), sondern als scharfe, einfarbige
+// Vektorfläche knapp über das Gelände gelegt (ohne Rand, ohne Bordstein; das Gelände bleibt unverändert).
+// Einmündungen werden mit einem Standardradius ausgerundet: morphologisches Schließen (Band um r verbreitern, dann um
+// r verschmälern) über ein Distanzfeld, Umriss als Vektor (Marching Squares mit Interpolation, vereinfacht), dann
+// trianguliert und dem Gelände nachgeführt. Farbe: Layer-Farbe (S.lc.roads, .paths, .green).
 
 const STR = {
   uG: { value: 1 }, // Kantenlänge des Geländes (m)
   T: 0,
-  // Ebenen: Straßen (15 cm tief, Einmündungen 4 m ausgerundet) und Fuß-/Radwege (5 cm, 1,5 m); Maske je Ebene:
-  // R = 128 + 100 · Abstand zum Rand (m), > 128 = innen; G > 128 = Brücke über Wasser (dort bleibt das Gelände)
+  // Ebenen: Straßen (6 cm über dem Gelände, Einmündungen 4 m ausgerundet), Fuß-/Radwege und Plätze (4 cm, 1,5 m),
+  // Grünflächen (2 cm) und Wasser (1 cm), beide 1 m ausgerundet; h: Höhe über dem Gelände, die obere Ebene deckt
+  // die untere.
+  // Maske je Ebene: R = 128 + 100 · Abstand zum Rand (m), > 128 = innen
   E: {
     roads: {
       lc: 'roads',
       grp: 'roads',
-      tief: 0.15,
+      h: 0.06,
+      deck: 0.15, // Brückendeck: Fahrbahn so weit unter der Deckkante (Bauwerk, strBrueckenBau)
       r: 4,
       uM: { value: null },
       sig: '',
@@ -24,8 +28,32 @@ const STR = {
     paths: {
       lc: 'paths',
       grp: 'paths',
-      tief: 0.05,
+      h: 0.04,
+      deck: 0.05,
       r: 1.5,
+      uM: { value: null },
+      sig: '',
+      aktiv: false,
+      ringe: [],
+    },
+    green: {
+      lc: 'green',
+      grp: 'green',
+      h: 0.02,
+      deck: 0,
+      r: 1, // Ecken leicht ausgerundet
+      uM: { value: null },
+      sig: '',
+      aktiv: false,
+      ringe: [],
+    },
+    water: {
+      lc: 'water',
+      grp: 'water',
+      h: 0.01,
+      deck: 0,
+      r: 1,
+
       uM: { value: null },
       sig: '',
       aktiv: false,
@@ -422,45 +450,6 @@ function strUmriss(F, N, c, G) {
   });
   return out;
 }
-/** Leere Maske (1 × 1) als Platzhalter, bis die Ebene gebaut ist. */
-function strLeer() {
-  const t = new T.DataTexture(new Uint8Array([0, 0]), 1, 1, T.RGFormat);
-  t.needsUpdate = true;
-  return t;
-}
-/**
- * Geländeshader: Loch, wo eine Straßen- oder Wegmaske innen ist, außer unter Brücken über Wasser (auch in den
- * Hilfsdurchgängen von Realistisch+).
- */
-function strGelaendeShader(m) {
-  if (!m || m.userData.strShader) return;
-  m.userData.strShader = 1;
-  // vorhandene Erweiterungen (Baumscheiben im Gelände, pitPatch) bleiben erhalten
-  const vor = m.onBeforeCompile !== T.Material.prototype.onBeforeCompile ? m.onBeforeCompile : null,
-    vorKey = vor && m.customProgramCacheKey ? m.customProgramCacheKey() : '';
-  for (const E of Object.values(STR.E)) if (!E.uM.value) E.uM.value = strLeer();
-  m.onBeforeCompile = (sh, r) => {
-    if (vor) vor(sh, r);
-    sh.uniforms.uStrM = STR.E.roads.uM;
-    sh.uniforms.uStrP = STR.E.paths.uM;
-    sh.uniforms.uStrG = STR.uG;
-    sh.vertexShader =
-      'varying vec2 vStrW;\n' +
-      sh.vertexShader.replace(
-        '#include <begin_vertex>',
-        '#include <begin_vertex>\nvStrW = (modelMatrix * vec4(transformed, 1.0)).xz;',
-      );
-    sh.fragmentShader =
-      'uniform sampler2D uStrM, uStrP;\nuniform float uStrG;\nvarying vec2 vStrW;\n' +
-      sh.fragmentShader.replace(
-        'void main() {',
-        'void main() {\n  vec2 strU = vStrW / uStrG + 0.5;\n  vec4 strM = texture2D(uStrM, strU), strP = texture2D(uStrP, strU);\n' +
-          '  if ((strM.r > 0.502 && strM.g < 0.5) || (strP.r > 0.502 && strP.g < 0.5)) discard;',
-      );
-  };
-  m.customProgramCacheKey = () => 'strGelaende2' + vorKey;
-  m.needsUpdate = true;
-}
 /** Nach dem Zeichnen der Kartenebenen (ctxPaint): Straßen- und Wegflächen bauen bzw. nur umfärben. */
 function strAktualisieren(acc) {
   const L = (acc && acc.line) || {},
@@ -470,6 +459,8 @@ function strAktualisieren(acc) {
         lines: (L.paths || []).concat(L.cycle || []),
         fills: (acc && acc.fill && acc.fill.paths) || [],
       },
+      green: { lines: [], fills: (acc && acc.fill && acc.fill.green) || [] },
+      water: { lines: L.water || [], fills: (acc && acc.fill && acc.fill.water) || [] },
     },
     neu = [];
   for (const k in STR.E) {
@@ -490,7 +481,7 @@ function strAktualisieren(acc) {
       ':' +
       E.r +
       ':' +
-      E.tief +
+      E.h +
       '|' +
       strGrundstueckSig();
     if (sig === E.sig) strFarbe(E);
@@ -503,9 +494,10 @@ function strAktualisieren(acc) {
   clearTimeout(STR.T);
   STR.T = setTimeout(() => {
     try {
-      gst('Straßen- und Wegflächen werden angelegt …');
+      gst('Straßen-, Weg- und Grünflächen werden angelegt …');
       neu.forEach(([E, q]) => strBauen(E, q.lines, q.fills));
-      gst('Straßen- und Wegflächen angelegt.');
+      strSichtbar();
+      gst('Straßen-, Weg- und Grünflächen angelegt.');
       // ── Erweiterung aus 02-geodaten/110-fahrbahnmarkierungen.js: Markierungen auf den neuen Flächen
       fbmAktualisieren();
       // ── Erweiterung aus 02-geodaten/120-gleise.js: Gleise auf Bahnbrücken brauchen die Brückenhöhen
@@ -538,7 +530,6 @@ function strFarbe(E) {
   if (!E.mat) return;
   const f = S.lc[E.lc] || '#a8a8a8';
   E.mat.color.set(f);
-  E.matK.color.set(shade(f, 0.82));
   // Brückenfahrbahn wie die Straße, Brüstung und Tragwerk in Geländefarbe
   if (E.matB) E.matB.color.set(f);
   if (E.matBW) E.matBW.color.set(S.lc.terrain || '#d4d2cc');
@@ -1214,7 +1205,7 @@ function strDeckHoehe(x, z, u, br, art) {
       if (d >= r || d >= bd) return;
       if (!br && u && Math.abs(u[0] * B.Nn[j][1] - u[1] * B.Nn[j][0]) < 0.9) return;
       bd = d;
-      best = B.Z[j] - (STR.E[art] ? STR.E[art].tief : STR.E.roads.tief) + (B.dz || 0);
+      best = B.Z[j] - (STR.E[art] ? STR.E[art].deck : STR.E.roads.deck) + (B.dz || 0);
     });
   });
   return best;
@@ -1368,7 +1359,7 @@ function strBrueckenBau(E, mk) {
     E.matR = new T.MeshLambertMaterial({ side: T.DoubleSide });
   }
   strFarbe(E);
-  const t = E.tief,
+  const t = E.deck,
     oben = [],
     obenR = [],
     bau = [],
@@ -1564,7 +1555,73 @@ function strBrueckeZ(P, S0, G0, w, ha0, hb0) {
     return z * a + G0[k] * (1 - a);
   });
 }
-/** Ebene E (Straßen oder Wege) aus Achsen und Flächen bauen. */
+/**
+ * Flächen [{ o, h }] als Dreiecke (Positionen x, y, z), dem Gelände nachgeführt: trianguliert, Dreiecke bis zur
+ * Kantenlänge s geteilt, jede Ecke auf Geländehöhe + h.
+ */
+function strDrapieren(ringe, h, s) {
+  const out = [],
+    s2 = s * s,
+    teile = (a, b, c, tiefe) => {
+      const ab = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2,
+        bc = (b[0] - c[0]) ** 2 + (b[1] - c[1]) ** 2,
+        ca = (c[0] - a[0]) ** 2 + (c[1] - a[1]) ** 2,
+        m = Math.max(ab, bc, ca);
+      if (m <= s2 || tiefe > 12) {
+        // gegen den Uhrzeigersinn von oben gesehen (Vorderseite nach oben)
+        const kr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        for (const p of kr < 0 ? [a, b, c] : [a, c, b]) out.push(p[0], gh(p[0], p[1]) + h, p[1]);
+        return;
+      }
+      // längste Kante halbieren
+      if (m === ab) {
+        const q = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        teile(a, q, c, tiefe + 1);
+        teile(q, b, c, tiefe + 1);
+      } else if (m === bc) {
+        const q = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
+        teile(a, b, q, tiefe + 1);
+        teile(a, q, c, tiefe + 1);
+      } else {
+        const q = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2];
+        teile(a, b, q, tiefe + 1);
+        teile(q, b, c, tiefe + 1);
+      }
+    };
+  (ringe || []).forEach((P) => {
+    try {
+      const o = P.o.map((p) => new T.Vector2(p[0], p[1])),
+        H = (P.h || []).map((r) => r.map((p) => new T.Vector2(p[0], p[1]))),
+        alle = [P.o].concat(P.h || []).flat();
+      T.ShapeUtils.triangulateShape(o, H).forEach(([i, j, k]) => teile(alle[i], alle[j], alle[k], 0));
+    } catch (e) {
+      logErr(e, 'strDrapieren');
+    }
+  });
+  return new Float32Array(out);
+}
+/**
+ * Sichtbarkeit der Vektorflächen nach den Ebenen (Straßen; Geh-/Radwege; Grünflächen und Wasser – nicht unter den
+ * Effekten Gras bzw. Wasser in „Realistisch“).
+ */
+function strSichtbar() {
+  const an = (k) => {
+      const L = LY.find((l) => l[1] === k);
+      return !L || !!L[2];
+    },
+    fx = (k) => typeof FX !== 'undefined' && FX[k] && FX[k].visible,
+    v = {
+      roads: an('roads'),
+      paths: an('paths') || an('cycle'),
+      green: an('green') && !fx('grass'),
+      water: an('water') && !fx('water'),
+    };
+  for (const k in STR.E)
+    G[STR.E[k].grp].children.forEach((o) => {
+      if (o.userData.str) o.visible = v[k];
+    });
+}
+/** Ebene E (Straßen, Wege oder Grünflächen) aus Achsen und Flächen bauen. */
 function strBauen(E, alle, fills) {
   strWeg(E);
   // als Brücke gekennzeichnete Achsen (OSM brunnel=bridge) werden als eigenes Bauwerk gebaut (strBrueckenBau), nicht
@@ -1574,11 +1631,10 @@ function strBauen(E, alle, fills) {
   const roads = alle.filter((r) => !r.br || r.flach);
   const G0 = GEO.size,
     R = strFlaechen(roads, G0, E.r, fills),
-    t = E.tief,
     N = R.N,
     c = R.c;
   E.ringe = R.ringe;
-  // Maske fürs Gelände und die Straßenfläche: R = Abstand zum Rand (G bleibt 0: Brücken baut strBrueckenBau)
+  // Maske (Abfragen „liegt auf der Straße“, z. B. Markierungen, Wege an Straßen): R = Abstand zum Rand
   const mk2 = new Uint8Array(N * N * 2);
   for (let k = 0; k < N * N; k++) mk2[2 * k] = Math.max(0, Math.min(255, Math.round(128 + R.F[k] * 100)));
   if (E.uM.value) E.uM.value.dispose();
@@ -1587,43 +1643,31 @@ function strBauen(E, alle, fills) {
   tx.needsUpdate = true;
   E.uM.value = tx;
   STR.uG.value = G0;
-  strGelaendeShader(S.terr.material);
   if (!E.mat) {
-    // Fläche: Geländenetz, nur innerhalb des Umrisses gezeichnet (Rand scharf aus dem Abstandsfeld); Wege nicht
-    // dort, wo eine Straße liegt (die Straße hat Vorrang)
-    const weg = E === STR.E.paths;
-    for (const x of Object.values(STR.E)) if (!x.uM.value) x.uM.value = strLeer();
-    E.mat = new T.MeshLambertMaterial({ side: T.DoubleSide });
-    E.mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uStrM = E.uM;
-      sh.uniforms.uStrR = STR.E.roads.uM;
-      sh.uniforms.uStrG = STR.uG;
-      sh.vertexShader =
-        'varying vec2 vStrW;\n' +
-        sh.vertexShader.replace(
-          '#include <begin_vertex>',
-          '#include <begin_vertex>\nvStrW = (modelMatrix * vec4(transformed, 1.0)).xz;',
-        );
-      sh.fragmentShader =
-        'uniform sampler2D uStrM, uStrR;\nuniform float uStrG;\nvarying vec2 vStrW;\n' +
-        sh.fragmentShader.replace(
-          'void main() {',
-          'void main() {\n  if (texture2D(uStrM, vStrW / uStrG + 0.5).r <= 0.502) discard;' +
-            (weg ? '\n  if (texture2D(uStrR, vStrW / uStrG + 0.5).r > 0.502) discard;' : ''),
-        );
-    };
-    E.mat.customProgramCacheKey = () => 'strFlaeche' + (weg ? 'W' : 'S');
-    E.matK = new T.MeshLambertMaterial({ side: T.DoubleSide });
+    // einfarbig: Normalen senkrecht (keine Schattierung durch die Geländeneigung), Schatten werden empfangen;
+    // Polygonversatz je Ebene, damit die obere Ebene ohne Flimmern deckt
+    const ix =
+      Object.keys(STR.E).length - Object.keys(STR.E).indexOf(Object.keys(STR.E).find((k) => STR.E[k] === E));
+    E.mat = new T.MeshLambertMaterial({
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2 * ix,
+    });
   }
   strFarbe(E);
-  const roadM = E === STR.E.paths && STR.E.roads.aktiv ? STR.E.roads.uM.value.image : null,
-    aufStrasse = (a, b2) => {
-      if (!roadM) return false;
-      const n2 = roadM.width,
-        i = Math.floor(((a + G0 / 2) / G0) * n2),
-        j = Math.floor(((b2 + G0 / 2) / G0) * n2);
-      return i >= 0 && j >= 0 && i < n2 && j < n2 && roadM.data[2 * (j * n2 + i)] > 128;
-    };
+  const pos = strDrapieren(E.ringe, E.h, Math.max(0.5, Math.min(2, G0 / (GEO.N || 256))));
+  if (pos.length) {
+    const ge = new T.BufferGeometry();
+    ge.setAttribute('position', new T.BufferAttribute(pos, 3));
+    const nr = new Float32Array(pos.length);
+    for (let i = 1; i < nr.length; i += 3) nr[i] = 1;
+    ge.setAttribute('normal', new T.BufferAttribute(nr, 3));
+    const o = new T.Mesh(ge, E.mat);
+    o.receiveShadow = true;
+    o.userData.str = 1;
+    o.raycast = () => {};
+    G[E.grp].add(o);
+  }
   const mk = (ge, m) => {
     const o = new T.Mesh(ge, m);
     o.receiveShadow = true;
@@ -1632,50 +1676,9 @@ function strBauen(E, alle, fills) {
     G[E.grp].add(o);
     return o;
   };
-  // Fläche: 15 cm unter dem Gelände
-  {
-    const ge = new T.PlaneGeometry(G0, G0, GEO.N, GEO.N);
-    ge.rotateX(-Math.PI / 2);
-    const p = ge.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      p.setY(i, gh(p.getX(i), p.getZ(i)) - t);
-    }
-    ge.computeVertexNormals();
-    mk(ge, E.mat);
-  }
-  // Bordstein entlang des Umrisses (alle ≤ 1 m)
-  const kan = [];
-  R.ringe.forEach((P) =>
-    [P.o].concat(P.h).forEach((r) =>
-      r.forEach((p, i) => {
-        const q = r[(i + 1) % r.length],
-          L = Math.hypot(q[0] - p[0], q[1] - p[1]),
-          n = Math.max(1, Math.ceil(L));
-        for (let k = 0; k < n; k++) {
-          const A = [p[0] + ((q[0] - p[0]) * k) / n, p[1] + ((q[1] - p[1]) * k) / n],
-            C = [p[0] + ((q[0] - p[0]) * (k + 1)) / n, p[1] + ((q[1] - p[1]) * (k + 1)) / n];
-          // Weg an einer Straße: keine Kante (die Straße liegt tiefer und hat ihren eigenen Bordstein)
-          if (aufStrasse((A[0] + C[0]) / 2, (A[1] + C[1]) / 2)) continue;
-          // Bordstein: Straße bis Gelände
-          const ya = gh(A[0], A[1]),
-            yc = gh(C[0], C[1]),
-            u0 = -t,
-            u1 = 0.02;
-          kan.push(A[0], ya + u0, A[1], C[0], yc + u0, C[1], C[0], yc + u1, C[1]);
-          kan.push(A[0], ya + u0, A[1], C[0], yc + u1, C[1], A[0], ya + u1, A[1]);
-        }
-      }),
-    ),
-  );
-  if (kan.length) {
-    const ge = new T.BufferGeometry();
-    ge.setAttribute('position', new T.BufferAttribute(new Float32Array(kan), 3));
-    ge.computeVertexNormals();
-    mk(ge, E.matK);
-  }
-  // ── Brückenbauwerke (Deck, Plattenstirn, Brüstung, Pfeiler) aus den gekennzeichneten Achsen
+  // ── Brückenbauwerke (Deck, Plattenstirn, Brüstung, Pfeiler) aus den gekennzeichneten Achsen (nicht bei Grün)
   try {
-    strBrueckenBau(E, mk);
+    if (E.deck) strBrueckenBau(E, mk);
   } catch (er) {
     logErr(er, 'strBauen');
   }

@@ -767,6 +767,8 @@ function recomp() {
       // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Straßen und Wege liegen als Vektorfläche im Gelände
       if (k === 'roads' && STR.E.roads.aktiv) continue;
       if ((k === 'paths' || k === 'cycle') && STR.E.paths.aktiv) continue;
+      if (k === 'green' && STR.E.green.aktiv) continue;
+      if (k === 'water' && STR.E.water.aktiv) continue;
       const L = LY.find((l) => l[1] === k);
       if (!L || !L[2]) continue;
       x.globalAlpha = L[3];
@@ -782,6 +784,8 @@ function recomp() {
     }
     x.globalAlpha = 1;
     if (GEO.tex) GEO.tex.needsUpdate = true;
+    // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Vektorflächen folgen den Ebenen-Schaltern
+    strSichtbar();
   })();
   try {
     ovRepaint();

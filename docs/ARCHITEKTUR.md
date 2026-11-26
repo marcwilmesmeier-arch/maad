@@ -891,3 +891,9 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   spart die Loggia-Öffnung in der Seite aus (`w.lg`, `w.lgo`, Spalte „Loggia-Öffnung“) und führt je Typ eine Zeile
   „Loggien“ (`w.lgg`, brutto = Anzahl × Wände). `xlPng` zeichnet die Aussparung gestrichelt und darunter die
   Loggien-Reihe (brutto bzw. netto mit Öffnungen, Farbe wie die Seiten). Summe bleibt `l2FassadeWert`.
+- Straßen, Geh-/Radwege mit Plätzen, Grünflächen und Wasser (`STR.E.roads/paths/green/water`) liegen als scharfe,
+  einfarbige Vektorflächen ohne Rand knapp über dem Gelände (`h` 6/4/2/1 cm, Polygonversatz je Ebene). Umriss wie
+  bisher aus `strFlaechen` (Ausrundung `r`, ohne Grundstück), dann `strDrapieren`: trianguliert, bis zur
+  Geländemaschenweite geteilt und jeder Punkt auf `gh() + h` – die Fläche folgt der Geländeform. Das Gelände wird nicht
+  mehr ausgeschnitten oder abgesenkt (kein Geländeshader, kein Bordstein). `strSichtbar` richtet sich nach den Ebenen
+  und blendet Grün/Wasser unter den Effekten Gras/Wasser aus. Brückendecks: `E.deck` (Fahrbahn unter Deckkante).

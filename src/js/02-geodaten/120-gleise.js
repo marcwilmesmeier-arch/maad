@@ -77,12 +77,12 @@ function glsHoehe(x, z, br, tram) {
       const d = Math.hypot(q[0] - x, q[1] - z);
       if (d < r && d < bd) {
         bd = d;
-        best = B.Z[j] - STR.E.roads.tief + (B.dz || 0);
+        best = B.Z[j] - STR.E.roads.deck + (B.dz || 0);
       }
     });
   });
   if (best != null) return best;
-  if (tram && typeof fbmAufStrasse === 'function' && fbmAufStrasse(x, z)) return gh(x, z) - STR.E.roads.tief;
+  if (tram && typeof fbmAufStrasse === 'function' && fbmAufStrasse(x, z)) return gh(x, z) + STR.E.roads.h;
   return glsDom(x, z);
 }
 /**

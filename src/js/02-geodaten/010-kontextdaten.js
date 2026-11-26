@@ -392,9 +392,8 @@ function rebuildTerrain() {
   GEO.tex.anisotropy = Math.min(16, ren.capabilities.getMaxAnisotropy());
   S.terr.material.dispose();
   S.terr.material = new T.MeshLambertMaterial({ map: GEO.tex });
-  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Loch für die Straßenfläche, die dem neuen Gelände folgt
+  // ── Erweiterung aus 02-geodaten/100-strassenflaechen.js: Vektorflächen dem neuen Gelände nachführen
   try {
-    strGelaendeShader(S.terr.material);
     Object.values(STR.E).forEach((E) => (E.sig = ''));
     if (GEO.acc) strAktualisieren(GEO.acc);
   } catch (e) {
