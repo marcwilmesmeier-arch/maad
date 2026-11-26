@@ -725,6 +725,15 @@ function canopy(DG, DO, bl, skip, ex) {
   return canopyBasis.apply(this, arguments);
 }
 // canopy() ohne die Erweiterungen darüber – wird von canopy() gezielt aufgerufen
+/** Kurze Tunnel (bis 150 m, Unterführungen) aus den Kartendaten – für das Kronenmodell wie Brücken behandelt. */
+function baumTunnel(acc) {
+  return ((acc && acc.line && acc.line.tunnel) || []).filter((t) => {
+    let L = 0;
+    for (let i = 1; i < t.l.length; i++)
+      L += Math.hypot(t.l[i][0] - t.l[i - 1][0], t.l[i][1] - t.l[i - 1][1]);
+    return L <= 150;
+  });
+}
 function canopyBasis(DG, DO, bl, skip, ex) {
   if (!DG || DG.fail || !DO || DO.fail || DG.w !== DO.w || DG.h !== DO.h)
     return {
@@ -862,21 +871,42 @@ function canopyBasis(DG, DO, bl, skip, ex) {
     },
     // Stamm (Kronenmitte) im Wasser: Karten-/Uferungenauigkeit und kleine Inseln werden toleriert – erst mehr als 6 m vom Ufer (Schiffe, Stege, Masten mitten im Wasser) fliegt der „Baum“ raus; Inseln (Löcher im Wasser) zählen als Land
     inWater = (x, z) => wd(x, z) > 6,
+    // Brücken und kurze Unterführungen (Deckel über einem Einschnitt): an der Achse (halbe Breite + 1 m) nie ein Baum;
+    // bis 10 m daneben auch dann nicht, wenn die „Krone“ im DOM höchstens 2,5 m über der Brücke an der nächsten
+    // Achsstelle liegt – das ist Brückenrand, Geländer oder Kappe (die Kartenbreite ist oft kleiner als die Brücke)
+    domAbs = (x, z) => {
+      const [u, v] = toIJ(x, z),
+        i = Math.floor(u),
+        j = Math.floor(v);
+      if (i < 0 || j < 0 || i >= W || j >= Hh) return null;
+      const h = DO.data[j * W + i];
+      return h > -400 && h < 4500 ? h : null;
+    },
     nearBr = (x, z) =>
       ex &&
-      ex.br &&
-      ex.br.some((o) => {
+      [...(ex.br || []).map((o) => [o, 1]), ...(ex.tu || []).map((o) => [o, 0])].some(([o, immer]) => {
         const L = o.l,
           d = o.w / 2;
+        let best = 1e9,
+          bp = null;
         for (let a = 1; a < L.length; a++) {
           const ax = L[a - 1][0],
             az = L[a - 1][1],
             dx = L[a][0] - ax,
             dz = L[a][1] - az,
-            t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
-          if (Math.hypot(x - ax - t * dx, z - az - t * dz) < d) return true;
+            t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1))),
+            dd = Math.hypot(x - ax - t * dx, z - az - t * dz);
+          if (dd < best) {
+            best = dd;
+            bp = [ax + t * dx, az + t * dz];
+          }
         }
-        return false;
+        if (!bp) return false;
+        if (immer && best < d + 1) return true;
+        if (best > d + 10) return false;
+        const hk = domAbs(x, z),
+          hb = domAbs(bp[0], bp[1]);
+        return hk != null && hb != null && hk <= hb + 2.5;
       });
   for (let j = R; j < Hh - R; j++)
     for (let i = R; i < W - R; i++) {

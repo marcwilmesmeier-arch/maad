@@ -851,3 +851,7 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   Terrassen (wo das Geschoss darüber zurückspringt, 0,30 m) und Schürze unter Überhängen (Deckenstärke + 10 cm):
   `l2FassadenZusatz` (160-loggia-fassade), Kanten in 25-cm-Stücken wie die Außenkontur geprüft. In LOD 200 zählen sie auch
   zur Kennzahl (`l2FassadeWert` + `l2FassadenZusatzFlaeche`; „ohne Öffnungen“ baut darauf auf), in LOD 100 nicht.
+- Kronenmodell und Brücken (`canopyBasis`, 070-baumkataster): an Brückenachsen (halbe Breite + 1 m) nie ein Baum; bis
+  10 m daneben auch nicht, wenn die Krone im DOM höchstens 2,5 m über der Brücke an der nächsten Achsstelle liegt
+  (Brückenrand, Geländer – die Kartenbreite ist oft kleiner als die Brücke). Kurze Tunnel bis 150 m (`baumTunnel`,
+  Unterführungen unter Gleisen) werden mit derselben DOM-Prüfung ausgenommen.

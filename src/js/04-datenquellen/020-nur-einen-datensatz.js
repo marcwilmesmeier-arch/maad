@@ -30,7 +30,7 @@ async function geoPart(tab, extra) {
             (() => {
               try {
                 const a = ctxCollect(s2.tiles);
-                return { water: a.fill.water, br: a.bridges };
+                return { water: a.fill.water, br: a.bridges, tu: baumTunnel(a) };
               } catch (e) {
                 return null;
               }

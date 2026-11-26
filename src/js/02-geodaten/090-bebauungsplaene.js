@@ -630,7 +630,11 @@ async function geoRun(lon, lat, size, label, snap) {
         ? snap.cn
         : S.canopyOn === false
           ? { list: [], msg: 'Kronenmodell ausgeschaltet.' }
-          : canopy(GEO.dgm, DM, acc.b, OT.list, { water: acc.fill.water, br: acc.bridges });
+          : canopy(GEO.dgm, DM, acc.b, OT.list, {
+              water: acc.fill.water,
+              br: acc.bridges,
+              tu: baumTunnel(acc),
+            });
     } catch (e) {
       cn = { list: [], msg: 'Kronenmodell: ' + e.message };
     }
