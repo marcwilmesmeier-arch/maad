@@ -877,3 +877,6 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   (`xlWandLagen`), Räume/Einheiten als NGF (R) hellblau (Teilstücke einer Fläche zu einem Raum zusammengefasst, eine
   Zeile je Raum, `xlFl`), Balkone/Loggien als NGF (S) dunkelblau (`l2SFlaechen`); Summe gegen NGF (R + S). Terrassen:
   Grundriss des Geschosses darauf mit Wänden, Terrasse und Balkone grün; Geschosse nur mit Balkonen eigener Plan.
+- Excel-Zeichnungen (Grundrisse, Dachdraufsicht, Terrassen; nicht der Lageplan): `xlPlan(…, { rot })` dreht alle Lagen so,
+  dass die längste Gebäudeseite waagerecht liegt (`xlAng`); Rasterzellen werden dafür zu Dreiecken, der Nordpfeil dreht
+  mit, die Fußzeile weist darauf hin. Flächen und Maße bleiben unverändert.

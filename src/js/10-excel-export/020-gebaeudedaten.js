@@ -851,6 +851,34 @@ function xlAng(f) {
 }
 function xlPlan(title, Ls, o) {
   o = o || {};
+  // Drehung: längste Gebäudeseite waagerecht (o.rot = deren Winkel); alle Lagen vorab gedreht, Rasterzellen als Dreiecke
+  const rc0 = Math.cos(-(o.rot || 0)),
+    rs0 = Math.sin(-(o.rot || 0)),
+    ROT = (p) => [p[0] * rc0 - p[1] * rs0, p[0] * rs0 + p[1] * rc0];
+  if (o.rot)
+    Ls = Ls.map((l) => {
+      const n = { ...l };
+      if (l.poly) n.poly = l.poly.map(ROT);
+      if (l.tris)
+        n.tris = l.tris.map((t) => [...ROT([t[0], t[1]]), ...ROT([t[2], t[3]]), ...ROT([t[4], t[5]])]);
+      if (l.rects) n.rects = l.rects.map((r) => ({ ...r, pts: r.pts.map(ROT) }));
+      if (l.cells) {
+        n.tris = (n.tris || []).concat(
+          l.cells.flatMap(([x, y]) => {
+            const a = ROT([x, y]),
+              b = ROT([x + l.st, y]),
+              c = ROT([x + l.st, y + l.st]),
+              d = ROT([x, y + l.st]);
+            return [
+              [...a, ...b, ...c],
+              [...a, ...c, ...d],
+            ];
+          }),
+        );
+        delete n.cells;
+      }
+      return n;
+    });
   const fz = (v, d) => v.toFixed(d).replace('.', ',');
   let x0 = 1e9,
     x1 = -1e9,
@@ -1059,19 +1087,27 @@ function xlPlan(title, Ls, o) {
   g.strokeStyle = '#111';
   g.fillStyle = '#111';
   g.lineWidth = 1.5;
-  g.beginPath();
-  g.moveTo(W - 30, 52);
-  g.lineTo(W - 30, 24);
-  g.stroke();
-  g.beginPath();
-  g.moveTo(W - 30, 20);
-  g.lineTo(W - 35, 30);
-  g.lineTo(W - 25, 30);
-  g.closePath();
-  g.fill();
-  g.font = 'bold 11px Arial';
-  g.textAlign = 'center';
-  g.fillText('N', W - 30, 60);
+  // Nordpfeil (Norden = −y der Karte), mit der Zeichnung gedreht
+  {
+    const nv = ROT([0, -1]),
+      qx = -nv[1],
+      qy = nv[0],
+      cx0 = W - 30,
+      cy0 = 38;
+    g.beginPath();
+    g.moveTo(cx0 - nv[0] * 14, cy0 - nv[1] * 14);
+    g.lineTo(cx0 + nv[0] * 10, cy0 + nv[1] * 10);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(cx0 + nv[0] * 18, cy0 + nv[1] * 18);
+    g.lineTo(cx0 + nv[0] * 8 + qx * 5, cy0 + nv[1] * 8 + qy * 5);
+    g.lineTo(cx0 + nv[0] * 8 - qx * 5, cy0 + nv[1] * 8 - qy * 5);
+    g.closePath();
+    g.fill();
+    g.font = 'bold 11px Arial';
+    g.textAlign = 'center';
+    g.fillText('N', cx0 + nv[0] * 28, cy0 + nv[1] * 28 + 4);
+  }
   let sb = 1;
   for (const c of [1, 2, 5, 10, 20, 50, 100, 200]) if (c <= w / 2.5) sb = c;
   g.lineWidth = 3;
@@ -1085,7 +1121,9 @@ function xlPlan(title, Ls, o) {
   g.fillStyle = '#777';
   g.font = '10px Arial';
   g.fillText(
-    o.fuss || 'Maße in m · Norden oben · gestrichelt = Zerlegung in Rechtecke (R1, R2 … siehe Tabelle)',
+    (
+      o.fuss || 'Maße in m · Norden oben · gestrichelt = Zerlegung in Rechtecke (R1, R2 … siehe Tabelle)'
+    ).replace('Norden oben', o.rot ? 'längste Gebäudeseite waagerecht (Nordpfeil beachten)' : 'Norden oben'),
     mx,
     H - 14,
   );
@@ -1205,6 +1243,7 @@ function xlPlans(kind, d) {
       const im = xlPlan(`Grundriss ${bn} – ${lr.n} (LOD 200: Wände, NGF R und S)`, L, {
           w: 760,
           h: 500,
+          rot: xlAng(f),
           fuss: 'Maße in m · Norden oben · R = Räume/Einheiten (NGF R), S = Balkone/Loggien (NGF S), Flächen siehe Tabelle',
         }),
         lvN = N.lv[i] || {};
@@ -1339,7 +1378,7 @@ function xlPlans(kind, d) {
       const im = xlPlan(
         `Grundriss ${bn} – ${nm}`,
         [{ poly: x.f, fill: '#ece9e1', stroke: '#222', lw: 1.8, dim: 1, rects: rc }],
-        { w: 700, h: 460 },
+        { w: 700, h: 460, rot: xlAng(x.f) },
       );
       if (im)
         o.push({
@@ -1383,7 +1422,7 @@ function xlPlans(kind, d) {
       rows = xlRows(rc, 0);
     }
     L.push({ poly: f, stroke: '#222', lw: 1.8, dim: 1 });
-    const im = xlPlan(`Dachdraufsicht ${bn}`, L, { w: 760, h: 500 });
+    const im = xlPlan(`Dachdraufsicht ${bn}`, L, { w: 760, h: 500, rot: an });
     if (im)
       o.push({
         im,
@@ -1422,6 +1461,7 @@ function xlPlans(kind, d) {
       const im = xlPlan(titel, L, {
         w: 700,
         h: 460,
+        rot: xlAng(lf(b, l)),
         fuss: 'Maße in m · Norden oben · grün = Terrasse, Balkone und Loggien, Flächen siehe Tabelle',
       });
       if (im && rows.length)
@@ -1465,7 +1505,7 @@ function xlPlans(kind, d) {
           },
           { rects: rc },
         ],
-        { w: 700, h: 460 },
+        { w: 700, h: 460, rot: xlAng(r.pa) },
       );
       if (im) o.push({ im, cols: XLRC(0), rows: xlRows(rc, null), sum: 'Terrasse auf ' + r.lv, ref: r.area });
     });
