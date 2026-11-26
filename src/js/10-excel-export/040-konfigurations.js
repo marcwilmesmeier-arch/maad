@@ -12,9 +12,10 @@ function xlOpen() {
     document.head.appendChild(st);
   }
   el.innerHTML =
-    '<div id="xlTop"><b>Excel-Export</b><select id="xlScope" onchange="xlPut(\'scope\',this.value)" title="Umfang"><option value="total">Gesamt</option><option value="each">Je Gebäude</option><option value="both">Je Gebäude + Gesamt</option></select><span style="flex:1"></span><button class="pri" id="xlGo" onclick="xlExport()">Excel exportieren</button><button class="sm" onclick="xlClose()">Schließen</button></div><div id="xlBody"><div id="xlL"></div><div id="xlR"></div></div>';
+    '<div id="xlTop"><b>Excel-Export</b><select id="xlScope" onchange="xlPut(\'scope\',this.value)" title="Umfang"><option value="total">Gesamt</option><option value="each">Je Gebäude</option><option value="both">Je Gebäude + Gesamt</option></select><select id="xlLod" onchange="xlPut(\'lod\',this.value)" title="Detaillierung der Zahlen: LOD 100 (Gebäudehülle) oder LOD 200 (Bauteile: NGF, NRI, KF, Sonderfall S, Fassade abgewickelt) – wie die Metriken in dieser Stufe"><option value="100">LOD 100</option><option value="200">LOD 200</option></select><span style="flex:1"></span><button class="pri" id="xlGo" onclick="xlExport()">Excel exportieren</button><button class="sm" onclick="xlClose()">Schließen</button></div><div id="xlBody"><div id="xlL"></div><div id="xlR"></div></div>';
   el.style.display = 'flex';
   $('xlScope').value = XL.scope;
+  $('xlLod').value = xlLod();
   xlRender();
 }
 function xlClose() {
@@ -48,16 +49,19 @@ function xlRender() {
       : '<div class="xn">Noch kein Gebäude.</div>');
   h += `<h4>Optionen</h4><div class="xr"><span style="flex:1">Projekttitel</span><input type="text" style="max-width:150px" value="${esc(XL.title)}" placeholder="${esc((S.project && S.project.name) || 'maad')}" onchange="XL.title=this.value.trim();xlSave0()"></div><div class="xr"><input type="checkbox" ${XL.img ? 'checked' : ''} onchange="XL.img=this.checked?1:0;xlSave0()"><span style="flex:1">Bemaßte Zeichnungen einbetten (Abwicklung, Grundrisse, Dach, Terrassen, Lageplan)</span></div><div class="xr"><span style="flex:1">Öffnungsanteil Standard (%)</span><input type="number" min="0" max="90" step="1" style="width:64px" value="${XL.opd}" onchange="XL.opd=Math.max(0,Math.min(90,+this.value||0));xlSave0()"></div>`;
   $('xlL').innerHTML = h;
+  if ($('xlLod')) $('xlLod').value = xlLod();
   const k = XL.sel,
     n = (XLS.find((x) => x[0] === k) || [0, ''])[1];
   let r = `<h4 style="margin-top:2px">Spalten – ${esc(XL.shn[k] || n)}</h4><div style="display:flex;gap:6px;margin-bottom:6px"><button class="sm" onclick="xlAll(1)">Alle</button><button class="sm" onclick="xlAll(0)">Keine</button><button class="sm" onclick="xlReset()">Überschriften zurücksetzen</button></div>`;
   r += XL.cols[k]
+    .map((c, i) => [c, i])
+    .filter(([c]) => !c.l2 || xlLod() === '200')
     .map(
-      (c, i) =>
+      ([c, i]) =>
         `<div class="xr"><input type="checkbox" ${c.on ? 'checked' : ''} onchange="XL.cols['${k}'][${i}].on=this.checked?1:0;xlSave0()"><input type="text" value="${esc(xlLab(c))}" title="Überschrift in der Excel-Tabelle" onchange="XL.cols['${k}'][${i}].l=this.value.trim()===xlDef(XL.cols['${k}'][${i}])?'':this.value.trim();xlSave0()"><small>${c.t === 't' ? 'Text' : 'Zahl'}${c.inp ? ' · Eingabe' : ''}</small></div>`,
     )
     .join('');
-  r += `<div class="xn">${XLH[k] || ''}</div>`;
+  r += `<div class="xn">${XLH[k] || ''} Zahlen in ${xlLod() === '200' ? 'LOD 200 (Bauteile – wie die Metriken in LOD 200)' : 'LOD 100 (Gebäudehülle)'}.</div>`;
   $('xlR').innerHTML = r;
 }
 function xlSelS(k) {

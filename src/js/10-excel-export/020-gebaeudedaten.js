@@ -35,6 +35,31 @@ function xlVal(b) {
     grz: k ? k.grz : null,
     gfz: k ? k.gfz : null,
   };
+  // ── Erweiterung aus 22-lod200-waende: LOD 200 – dieselben Zahlen wie die Metriken in LOD 200 (zoBldHtml):
+  // BRI mit Sonderfall S, Fassade abgewickelt (Loggien, Attika, Schürze), NGF, NRI, KF, BGF (R)/(S)
+  if (l2on())
+    try {
+      const sz = l2SZahlen(b),
+        S2 = sz && sz.a > 0,
+        n = l2Ngf(b),
+        nr = l2Nri(b);
+      o.bgfs = S2 ? sz.a : 0;
+      o.bgfr = o.bgf - (S2 ? sz.lo : 0);
+      if (S2) {
+        o.brioi = m.brioi - sz.loV + sz.bri;
+        o.bri = o.brioi + o.briui;
+      }
+      o.ngfoi = n.o + n.so;
+      o.ngfui = n.u + n.su;
+      o.ngf = o.ngfoi + o.ngfui;
+      o.nri = nr.o + nr.u + (S2 ? sz.nri : 0);
+      o.kf = n.wo + n.wu;
+      o.fas = l2FassadeWert(b, m.fas);
+      o.fasn = o.fas - l2FassadenOeffnungsFlaeche(b);
+      o._lv = n.lv; // je Geschoss: ngf, w (KF)
+    } catch (e) {
+      logErr(e, 'xlVal');
+    }
   o.fasb = o.bgf > 0 ? o.fas / o.bgf : 0;
   return o;
 }

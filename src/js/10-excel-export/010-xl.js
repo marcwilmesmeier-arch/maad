@@ -40,10 +40,19 @@ const XLV = [
   xlC('bgf', 'BGF gesamt', 'm²', 1, 's', 12, 1),
   xlC('bgfoi', 'BGF oberirdisch', 'm²', 1, 's', 12, 0),
   xlC('bgfui', 'BGF unterirdisch', 'm²', 1, 's', 12, 0),
+  // nur LOD 200 (l2: 1): Sonderfall S (DIN 277), Nettoflächen, Konstruktionsfläche – wie im Metrik-Panel
+  xlC('bgfr', 'BGF (R) Regelfall', 'm²', 1, 's', 12, 1, { l2: 1 }),
+  xlC('bgfs', 'BGF (S) Balkone/Loggien', 'm²', 1, 's', 12, 1, { l2: 1 }),
   xlC('bri', 'BRI gesamt', 'm³', 1, 's', 12, 1),
   xlC('brioi', 'BRI oberirdisch', 'm³', 1, 's', 12, 0),
   xlC('briui', 'BRI unterirdisch', 'm³', 1, 's', 12, 0),
+  xlC('ngf', 'NGF gesamt', 'm²', 1, 's', 12, 1, { l2: 1 }),
+  xlC('ngfoi', 'NGF oberirdisch', 'm²', 1, 's', 12, 0, { l2: 1 }),
+  xlC('ngfui', 'NGF unterirdisch', 'm²', 1, 's', 12, 0, { l2: 1 }),
+  xlC('nri', 'NRI gesamt', 'm³', 1, 's', 12, 1, { l2: 1 }),
+  xlC('kf', 'Konstruktionsfläche KF', 'm²', 1, 's', 13, 1, { l2: 1 }),
   xlC('fas', 'Fassadenfläche (oberirdisch, brutto)', 'm²', 1, 's', 16, 1),
+  xlC('fasn', 'Fassade ohne Öffnungen', 'm²', 1, 's', 14, 1, { l2: 1 }),
   xlC('dach', 'Dachfläche', 'm²', 1, 's', 12, 1),
   xlC('terr', 'Terrassenfläche', 'm²', 1, 's', 12, 1),
   xlC('fasb', 'Fassade / BGF', '', 2, 'q', 11, 0),
@@ -71,6 +80,8 @@ const XLC0 = {
     xlC('h', 'Geschosshöhe', 'm', 2, 'n', 11, 1),
     xlC('bgf', 'BGF', 'm²', 1, 'n', 11, 1),
     xlC('bri', 'BRI', 'm³', 1, 'n', 11, 1),
+    xlC('ngf', 'NGF', 'm²', 1, 'n', 11, 1, { l2: 1 }),
+    xlC('kf', 'KF', 'm²', 1, 'n', 11, 1, { l2: 1 }),
     xlC('umf', 'Umfang', 'm', 2, 'n', 11, 0),
     xlC('wand', 'Außenwandfläche brutto', 'm²', 1, 'n', 14, 1),
   ],
@@ -124,8 +135,13 @@ const XLH = {
   use: 'BGF und BRI je Nutzung.',
   plot: 'Grundstücksfläche, GRZ/GFZ mit Grenzwerten, freie Flächen.',
 };
+/** Detaillierung des Exports: '200' (LOD 200, wie die Metriken in LOD 200) oder '100'. */
+const xlLod = () => XL.lod || (S.lod >= 200 ? '200' : '100');
+/** Spalten eines Blatts, die zur gewählten Detaillierung gehören (LOD-200-Spalten nur bei LOD 200). */
+const xlColsLod = (k) => (XL.cols[k] || []).filter((c) => !c.l2 || xlLod() === '200');
 const XL = {
   scope: 'both',
+  lod: null, // '100' | '200' – Detaillierung der Zahlen; null: wie im Modell gewählt
   sel: 'sum',
   sh: { sum: 1, lev: 1, abw: 1, roof: 1, terr: 1, use: 0, plot: 1 },
   shn: {},
@@ -140,7 +156,7 @@ function xlInit() {
   try {
     const j = JSON.parse(localStorage.getItem('lot_xl') || 'null');
     if (j) {
-      for (const f of ['scope', 'sel', 'img', 'opd', 'title']) if (j[f] != null) XL[f] = j[f];
+      for (const f of ['scope', 'sel', 'img', 'opd', 'title', 'lod']) if (j[f] != null) XL[f] = j[f];
       Object.assign(XL.sh, j.sh || {});
       Object.assign(XL.shn, j.shn || {});
       XL.off = j.off || [];
@@ -171,6 +187,7 @@ function xlSave0() {
       'lot_xl',
       JSON.stringify({
         scope: XL.scope,
+        lod: XL.lod,
         sel: XL.sel,
         img: XL.img,
         opd: XL.opd,

@@ -855,3 +855,8 @@ sichtbaren Tastaturfokus, `color-scheme` und reduzierte Bewegung.
   10 m daneben auch nicht, wenn die Krone im DOM höchstens 2,5 m über der Brücke an der nächsten Achsstelle liegt
   (Brückenrand, Geländer – die Kartenbreite ist oft kleiner als die Brücke). Kurze Tunnel bis 150 m (`baumTunnel`,
   Unterführungen unter Gleisen) werden mit derselben DOM-Prüfung ausgenommen.
+- Excel-Export, Detaillierung (`XL.lod`, Auswahl oben im Dialog; Vorgabe: Stufe des Modells): `xlBuild` rechnet in der
+  gewählten Stufe (S.lod während der Berechnung umgestellt, danach zurück). LOD 200 mit denselben Funktionen wie die
+  Metriken und die Darstellung (BGF (R)/(S), BRI mit S, NGF, NRI, KF, Fassade abgewickelt und ohne Öffnungen; je
+  Geschoss NGF und KF); LOD-200-Spalten (`l2: 1`) nur bei LOD 200 (`xlColsLod`). Untertitel, Hinweis und Dateiname
+  nennen die Stufe.
